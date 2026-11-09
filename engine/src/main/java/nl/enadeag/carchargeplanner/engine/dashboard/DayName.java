@@ -18,8 +18,8 @@ public sealed interface DayName {
     /**
      * The name of a day.
      *
-     * @param date the day to name
-     * @param today the day the plan was made, in the home's time zone
+     * @param date the day to name, never null
+     * @param today the day the plan was made, in the home's time zone, never null
      * @return {@link Today} for {@code today}, {@link Tomorrow} for the day after, {@link Other} for any other day
      */
     static DayName of(LocalDate date, LocalDate today) {

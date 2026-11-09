@@ -43,7 +43,8 @@ class DayMapper(planned: Outlook.Planned) {
     fun map(days: List<DashboardDay>): List<DayModel> = days.map(::map)
 
     private fun map(shown: DashboardDay): DayModel {
-        val day = plans[shown.date()] ?: throw IllegalArgumentException("the plan has no day ${shown.date()}")
+        val date = shown.name().date()
+        val day = plans[date] ?: throw IllegalArgumentException("the plan has no day $date")
         val main = day.windows().firstOrNull()
         val kind = when {
             main != null -> DayKind.SOLAR

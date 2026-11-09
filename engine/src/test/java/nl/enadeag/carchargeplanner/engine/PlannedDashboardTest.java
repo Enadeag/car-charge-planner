@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
+import nl.enadeag.carchargeplanner.engine.dashboard.PlanParts;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
@@ -44,7 +45,7 @@ class PlannedDashboardTest {
 
         assertThat(dashboard.days()).extracting(DashboardDay::name).containsExactly(new DayName.Today(TODAY),
                 new DayName.Tomorrow(TODAY.plusDays(1)), new DayName.Other(TODAY.plusDays(2)));
-        assertThat(dashboard).isEqualTo(DashboardView.of(MADE_AT, SunnyDays.TZ, planned.days(), 0.4));
+        assertThat(dashboard).isEqualTo(DashboardView.of(new PlanParts(MADE_AT, SunnyDays.TZ, planned.days(), 0.4)));
         assertThat(dashboard.days().get(0).chart().baseloadKw()).isEqualTo(0.4);
     }
 

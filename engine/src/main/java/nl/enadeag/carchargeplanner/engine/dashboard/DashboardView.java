@@ -1,9 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.dashboard;
 
-import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -19,19 +16,17 @@ public record DashboardView(List<DashboardDay> days) {
     }
 
     /**
-     * The dashboard of a plan, from its parts. Nothing reads the clock: "now" is the moment the plan was made.
+     * The dashboard of a plan, from its parts. Clients use {@code Outlook.Planned.dashboard}; this is the engine's own
+     * seam. Nothing reads the clock: "now" is the moment the plan was made.
      *
-     * @param madeAt when the plan was made; its day in {@code zone} is today
-     * @param zone the home's time zone, in which the days and times are meant
-     * @param days the plan of each day, today first; may be empty
-     * @param baseloadKw the baseload in kW, 0 or more
+     * @param parts the plan's parts, never null
      * @return one dashboard day per plan day, in the same order
      */
-    public static DashboardView of(Instant madeAt, ZoneId zone, List<DayPlan> days, double baseloadKw) {
-        LocalDate today = madeAt.atZone(zone).toLocalDate();
-        var charts = new DayCharts(madeAt, zone, days, baseloadKw);
-        return new DashboardView(days.stream()
-                .map(day -> new DashboardDay(day.date(), DayName.of(day.date(), today), charts.chart(day)))
+    public static DashboardView of(PlanParts parts) {
+        LocalDate today = parts.madeAt().atZone(parts.zone()).toLocalDate();
+        var charts = new ChartBuilder(parts);
+        return new DashboardView(parts.days().stream()
+                .map(day -> new DashboardDay(DayName.of(day.date(), today), charts.chart(day)))
                 .toList());
     }
 }

@@ -49,8 +49,9 @@ class DashboardRecordsTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"2, 2, 1", "3, 2, 1", "2, 3, -0.1", "2, 3, NaN"})
-    void aStepRunsForwardsAndItsPowerIsNotNegative(double start, double end, double kw) {
+    @CsvSource({"2, 2, 1", "3, 2, 1", "2, 3, -0.1", "2, 3, NaN",
+        "2, 3, Infinity", "2, 3, -Infinity"})
+    void aStepRunsForwardsAndItsPowerIsFiniteAndNotNegative(double start, double end, double kw) {
         assertThatThrownBy(() -> new DayChart.Step(start, end, kw, NOON)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -67,23 +68,37 @@ class DashboardRecordsTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"0", "-1", "NaN"})
+    @CsvSource({"0", "-1", "NaN", "Infinity"})
     void aPeakHasPower(double kw) {
         assertThatThrownBy(() -> new DayChart.Peak(kw, NOON)).isInstanceOf(IllegalArgumentException.class);
     }
 
-    @Test
-    void aDaysNameIsOfThatDay() {
-        var chart = chart(6, 20, 1, 0.3);
+    @ParameterizedTest
+    @CsvSource({"-0.5", "NaN"})
+    void aMomentIsNotBeforeTheStartOfTheDay(double hour) {
+        assertThatThrownBy(() -> new DayChart.Moment(hour, NOON)).isInstanceOf(IllegalArgumentException.class);
+    }
 
-        assertThat(new DashboardDay(DAY, new DayName.Other(DAY), chart).name()).isEqualTo(new DayName.Other(DAY));
-        assertThatThrownBy(() -> new DashboardDay(DAY, new DayName.Today(DAY.plusDays(1)), chart))
-                .isInstanceOf(IllegalArgumentException.class);
+    @Test
+    void aMomentAtTheStartOfTheDayIsMade() {
+        assertThat(new DayChart.Moment(0, NOON).hour()).isEqualTo(0);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"-0.5, 3", "NaN, 3", "1, -1", "1, 25"})
+    void aTickIsNotBeforeTheStartOfTheDayAndItsClockHourIsFrom0To24(double hour, int clockHour) {
+        assertThatThrownBy(() -> new DayChart.Tick(hour, clockHour, NOON)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0, 0", "24, 24"})
+    void aTickAtTheEdgesOfTheClockIsMade(double hour, int clockHour) {
+        assertThat(new DayChart.Tick(hour, clockHour, NOON).clockHour()).isEqualTo(clockHour);
     }
 
     @Test
     void aDashboardKeepsItsOwnDays() {
-        var days = new ArrayList<>(List.of(new DashboardDay(DAY, new DayName.Today(DAY), chart(6, 20, 1, 0.3))));
+        var days = new ArrayList<>(List.of(new DashboardDay(new DayName.Today(DAY), chart(6, 20, 1, 0.3))));
         var dashboard = new DashboardView(days);
 
         days.clear();

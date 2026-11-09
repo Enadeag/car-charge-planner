@@ -57,7 +57,7 @@ public record DayChart(
      *
      * @param startHour the hour the step starts
      * @param endHour the hour the step ends, after {@code startHour}
-     * @param kw the expected solar power in kW, 0 or more
+     * @param kw the expected solar power in kW, finite and 0 or more
      * @param start the moment the step starts
      */
     public record Step(double startHour, double endHour, double kw, Instant start) {
@@ -65,16 +65,16 @@ public record DayChart(
         /**
          * Checks the order and the power.
          *
-         * @throws IllegalArgumentException when the step does not run forwards or its power is negative or not a
-         *     number
+         * @throws IllegalArgumentException when the step does not run forwards or its power is negative, infinite or
+         *     not a number
          */
         public Step {
             if (!(endHour > startHour)) {
                 throw new IllegalArgumentException("a step must end after it starts, not " + startHour + " to "
                         + endHour);
             }
-            if (!(kw >= 0)) {
-                throw new IllegalArgumentException("a step's power must not be negative, not " + kw + " kW");
+            if (!(kw >= 0) || Double.isInfinite(kw)) {
+                throw new IllegalArgumentException("a step's power must be finite and 0 or more, not " + kw + " kW");
             }
         }
     }
@@ -105,26 +105,52 @@ public record DayChart(
     /**
      * A moment on the chart.
      *
-     * @param hour the hour from the start of the day
+     * @param hour the hour from the start of the day, 0 or more
      * @param at the moment itself, for its clock time
      */
     public record Moment(double hour, Instant at) {
+
+        /**
+         * Checks the hour.
+         *
+         * @throws IllegalArgumentException when the hour is negative or not a number
+         */
+        public Moment {
+            if (!(hour >= 0)) {
+                throw new IllegalArgumentException("a moment's hour must be 0 or more, not " + hour);
+            }
+        }
     }
 
     /**
      * A whole clock hour on the time axis.
      *
-     * @param hour the hour from the start of the day, in real time
+     * @param hour the hour from the start of the day, in real time, 0 or more
      * @param clockHour the hour on the clock, from 0 to 24, where 24 is the start of the next day
      * @param at the moment, whose clock time is the tick's label
      */
     public record Tick(double hour, int clockHour, Instant at) {
+
+        /**
+         * Checks the hour and the clock hour.
+         *
+         * @throws IllegalArgumentException when the hour is negative or not a number, or the clock hour is not from 0
+         *     to 24
+         */
+        public Tick {
+            if (!(hour >= 0)) {
+                throw new IllegalArgumentException("a tick's hour must be 0 or more, not " + hour);
+            }
+            if (clockHour < 0 || clockHour > 24) {
+                throw new IllegalArgumentException("a tick's clock hour must be from 0 to 24, not " + clockHour);
+            }
+        }
     }
 
     /**
      * The day's highest solar power.
      *
-     * @param kw the power in kW, more than 0
+     * @param kw the power in kW, finite and more than 0
      * @param at the start of the forecast step with that power
      */
     public record Peak(double kw, Instant at) {
@@ -132,11 +158,11 @@ public record DayChart(
         /**
          * Checks the power.
          *
-         * @throws IllegalArgumentException when the power is not more than 0
+         * @throws IllegalArgumentException when the power is not more than 0 or is infinite
          */
         public Peak {
-            if (!(kw > 0)) {
-                throw new IllegalArgumentException("a peak's power must be more than 0, not " + kw + " kW");
+            if (!(kw > 0) || Double.isInfinite(kw)) {
+                throw new IllegalArgumentException("a peak's power must be finite and more than 0, not " + kw + " kW");
             }
         }
     }

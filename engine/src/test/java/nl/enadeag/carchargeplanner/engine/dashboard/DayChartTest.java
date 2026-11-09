@@ -57,7 +57,7 @@ class DayChartTest {
             var date = TODAY.plusDays(i);
             plans.add(day(date, List.of(), forecast(date, kw.apply(date))));
         }
-        return DashboardView.of(madeAt, AMSTERDAM, plans, baseloadKw).days();
+        return DashboardView.of(new PlanParts(madeAt, AMSTERDAM, plans, baseloadKw)).days();
     }
 
     private static DayChart today(double... kw) {
@@ -65,7 +65,7 @@ class DayChartTest {
     }
 
     private static DayChart only(Instant madeAt, DayPlan day) {
-        return DashboardView.of(madeAt, AMSTERDAM, List.of(day), BASELOAD_KW).days().get(0).chart();
+        return DashboardView.of(new PlanParts(madeAt, AMSTERDAM, List.of(day), BASELOAD_KW)).days().get(0).chart();
     }
 
     private static double[] hours(double kw, int... sunnyHours) {
@@ -137,7 +137,7 @@ class DayChartTest {
 
     @Test
     void aPlanWithoutDaysHasNoDashboardDays() {
-        assertThat(DashboardView.of(at(TODAY, 9), AMSTERDAM, List.of(), BASELOAD_KW).days()).isEmpty();
+        assertThat(DashboardView.of(new PlanParts(at(TODAY, 9), AMSTERDAM, List.of(), BASELOAD_KW)).days()).isEmpty();
     }
 
     @Test
@@ -213,7 +213,8 @@ class DayChartTest {
         var plans = List.of(day(yesterday, List.of(), forecast(yesterday, allDay)),
                 day(TODAY, List.of(), forecast(TODAY, allDay)));
 
-        var days = DashboardView.of(TODAY.atStartOfDay(AMSTERDAM).toInstant(), AMSTERDAM, plans, BASELOAD_KW).days();
+        var madeAt = TODAY.atStartOfDay(AMSTERDAM).toInstant();
+        var days = DashboardView.of(new PlanParts(madeAt, AMSTERDAM, plans, BASELOAD_KW)).days();
 
         assertThat(days.get(0).chart().toHour()).isEqualTo(24);
         assertThat(days).extracting(day -> day.chart().now().map(DayChart.Moment::hour))
@@ -271,6 +272,47 @@ class DayChartTest {
         var chart = only(date.atTime(0, 30).atZone(AMSTERDAM).toInstant(), day(date, List.of(), forecast(date, kw)));
 
         assertThat(chart.ticks()).extracting(DayChart.Tick::clockHour).hasSize(24).doesNotContain(2);
+    }
+
+    @Test
+    void theLongDayHasOneTickForTheRepeatedClockHourAtItsFirstTimeAtRealHourTwo() {
+        var date = LocalDate.of(2026, 10, 25);
+        var kw = new double[25];
+        Arrays.fill(kw, 1);
+
+        var chart = only(date.atTime(0, 30).atZone(AMSTERDAM).toInstant(), day(date, List.of(), forecast(date, kw)));
+
+        assertThat(chart.ticks()).filteredOn(tick -> tick.clockHour() == 2)
+                .containsExactly(new DayChart.Tick(2, 2, at(date, 2)));
+        assertThat(at(date, 2)).isEqualTo(Instant.parse("2026-10-25T00:00:00Z"));
+    }
+
+    /**
+     * Pins what happens today for a clock change of 30 minutes, which no rule was written for: on Lord Howe Island
+     * the clocks go from 02:00 to 02:30 on 2026-10-04. The tick for clock hour 2 is kept, as the zone moves its time
+     * 02:00 forward to 02:30, and stands at real hour 2, the moment the clocks jumped; clock hour 3 is then half an
+     * hour later than a whole real hour. The day is 23.5 hours long.
+     */
+    @Test
+    void aClockChangeOfHalfAnHourKeepsTheTickOfTheSkippedHourAtTheMomentTheClocksJump() {
+        var zone = ZoneId.of("Australia/Lord_Howe");
+        var date = LocalDate.of(2026, 10, 4);
+        var midnight = date.atStartOfDay(zone);
+        var steps = IntStream.range(0, 47).mapToObj(half -> new ForecastStep(midnight.plusMinutes(30L * half)
+                .toInstant(), midnight.plusMinutes(30L * (half + 1)).toInstant(), 1)).toList();
+        var plan = day(date, List.of(), steps);
+
+        var chart = DashboardView.of(new PlanParts(midnight.toInstant(), zone, List.of(plan), BASELOAD_KW)).days()
+                .get(0).chart();
+
+        assertThat(chart.toHour()).isEqualTo(23.5);
+        var jump = date.atTime(2, 0).atZone(zone).toInstant();
+        assertThat(jump).isEqualTo(Instant.parse("2026-10-03T15:30:00Z"));
+        assertThat(chart.ticks()).filteredOn(tick -> tick.clockHour() == 2)
+                .containsExactly(new DayChart.Tick(2, 2, jump));
+        assertThat(chart.ticks()).filteredOn(tick -> tick.clockHour() == 3).extracting(DayChart.Tick::hour)
+                .containsExactly(2.5);
+        assertThat(chart.ticks()).hasSize(25);
     }
 
     @Test

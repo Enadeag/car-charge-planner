@@ -83,9 +83,9 @@ public final class DayMapper {
     }
 
     private DayModel map(DashboardDay shown) {
-        var day = plans.get(shown.date());
+        var day = plans.get(shown.name().date());
         if (day == null) {
-            throw new IllegalArgumentException("the plan has no day " + shown.date());
+            throw new IllegalArgumentException("the plan has no day " + shown.name().date());
         }
         return day.windows().isEmpty() ? withoutWindow(day, shown) : withWindow(day, shown);
     }

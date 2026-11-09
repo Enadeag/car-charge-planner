@@ -16,7 +16,7 @@ import java.util.Optional;
  * The days of one plan as the solar chart shows them, in the home's time zone. All days share one power scale, so they
  * can be compared.
  */
-final class DayCharts {
+final class ChartBuilder {
 
     /** Less power than this counts as no sun: a forecast's dawn and dusk. */
     private static final double SUN_KW = 0.01;
@@ -37,17 +37,16 @@ final class DayCharts {
     /**
      * Makes the charts of one plan.
      *
-     * @param madeAt when the plan was made; on today's chart this is "now"
-     * @param zone the home's time zone, in which the days start and the clock hours are told
-     * @param days all the plan's days, whose highest solar power sets the shared scale; may be empty
-     * @param baseloadKw the baseload in kW, 0 or more
+     * @param parts the plan's parts, never null: when it was made, which on today's chart is "now"; the home's time
+     *     zone, in which the days start and the clock hours are told; all its days, whose highest solar power sets the
+     *     shared scale; and the baseload
      */
-    DayCharts(Instant madeAt, ZoneId zone, List<DayPlan> days, double baseloadKw) {
-        this.zone = zone;
-        this.madeAt = madeAt;
+    ChartBuilder(PlanParts parts) {
+        this.zone = parts.zone();
+        this.madeAt = parts.madeAt();
         this.today = madeAt.atZone(zone).toLocalDate();
-        this.baseloadKw = baseloadKw;
-        double peak = days.stream().flatMap(day -> day.forecast().stream())
+        this.baseloadKw = parts.baseloadKw();
+        double peak = parts.days().stream().flatMap(day -> day.forecast().stream())
                 .mapToDouble(ForecastStep::powerKw).max().orElse(0);
         this.scaleKw = Math.max(1, Math.ceil(Math.max(peak, baseloadKw)));
     }
@@ -55,13 +54,14 @@ final class DayCharts {
     /**
      * A day's chart.
      *
-     * @param day one of the plan's days
+     * @param day one of the plan's days, never null
      * @return the chart, showing the hours with sun and an hour on either side, within the day; 06:00 to 20:00 for a
      *     day without sun
      */
     DayChart chart(DayPlan day) {
         var start = day.date().atStartOfDay(zone);
-        var shown = shownHours(day, start);
+        var sunny = day.forecast().stream().filter(step -> step.powerKw() > SUN_KW).toList();
+        var shown = shownHours(sunny, start);
         double from = shown.from();
         double to = shown.to();
         var steps = day.forecast().stream()
@@ -77,8 +77,7 @@ final class DayCharts {
         var now = day.date().equals(today) && madeAtHour >= from && madeAtHour <= to
                 ? Optional.of(new DayChart.Moment(madeAtHour, madeAt)) : Optional.<DayChart.Moment>empty();
         // of two equal peaks the first is taken
-        var peak = day.forecast().stream().max(Comparator.comparingDouble(ForecastStep::powerKw))
-                .filter(step -> step.powerKw() > SUN_KW)
+        var peak = sunny.stream().max(Comparator.comparingDouble(ForecastStep::powerKw))
                 .map(step -> new DayChart.Peak(step.powerKw(), step.start()));
         return new DayChart(from, to, scaleKw, steps, baseloadKw, windows, now, ticks(start, from, to), peak);
     }
@@ -87,8 +86,7 @@ final class DayCharts {
      * From the hour before the first sun to the hour after the last, within the day, or 06:00 to 20:00 for a day
      * without sun.
      */
-    private ShownHours shownHours(DayPlan day, ZonedDateTime start) {
-        var sunny = day.forecast().stream().filter(step -> step.powerKw() > SUN_KW).toList();
+    private ShownHours shownHours(List<ForecastStep> sunny, ZonedDateTime start) {
         if (sunny.isEmpty()) {
             return new ShownHours(DARK_FROM, DARK_TO);
         }
@@ -97,7 +95,10 @@ final class DayCharts {
                 Math.min(dayHours, Math.ceil(hoursFrom(start, sunny.get(sunny.size() - 1).end())) + MARGIN_HOURS));
     }
 
-    /** Every whole clock hour that lies within the hours shown; one the clocks skip on the short day is left out. */
+    /**
+     * Every whole clock hour that lies within the hours shown; one the clocks skip on the short day is left out, and
+     * on the 25-hour day the repeated clock hour gets one tick, at its first time.
+     */
     private List<DayChart.Tick> ticks(ZonedDateTime start, double from, double to) {
         var ticks = new ArrayList<DayChart.Tick>();
         for (int clockHour = 0; clockHour <= LAST_CLOCK_HOUR; clockHour++) {
