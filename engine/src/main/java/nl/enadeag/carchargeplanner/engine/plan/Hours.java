@@ -4,8 +4,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 
-/** Time arithmetic on instants, so a daylight saving switch never changes how long something lasts. */
-final class Hours {
+/**
+ * Time arithmetic on instants, so a daylight saving switch never changes how long something lasts. The planner and the
+ * dashboard's model share it.
+ */
+public final class Hours {
 
     private static final double NANOS_PER_HOUR = 3_600e9;
     private static final long FIVE_MINUTES_NANOS = Duration.ofMinutes(5).toNanos();
@@ -16,11 +19,11 @@ final class Hours {
     /**
      * The real time between two moments.
      *
-     * @param start the earlier moment
-     * @param end the later moment
-     * @return the hours from start to end
+     * @param start the moment to count from
+     * @param end the moment to count to, usually the later one
+     * @return the hours from start to end; negative when end is before start
      */
-    static double between(Instant start, Instant end) {
+    public static double between(Instant start, Instant end) {
         return Duration.between(start, end).toNanos() / NANOS_PER_HOUR;
     }
 

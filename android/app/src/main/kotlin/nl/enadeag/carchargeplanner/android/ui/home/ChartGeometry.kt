@@ -3,9 +3,9 @@ package nl.enadeag.carchargeplanner.android.ui.home
 import kotlin.math.max
 import nl.enadeag.carchargeplanner.android.home.BatteryLevels
 import nl.enadeag.carchargeplanner.android.home.ChargeLevels
-import nl.enadeag.carchargeplanner.android.home.SolarChart
 import nl.enadeag.carchargeplanner.android.ui.ChartInk
 import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
 
 /**
  * Where the solar chart's plot lies in the chart, and the hours and power it spans: turns hours and kW into pixels.
@@ -77,14 +77,17 @@ internal data class CurvePoint(val hour: Double, val kw: Double)
  * @return 0 at the first step's start, each step's middle, 0 at the last step's end; without steps a flat line at 0
  *     over the hours shown
  */
-internal fun curveOf(steps: List<SolarChart.Step>, fromHour: Double, toHour: Double): List<CurvePoint> {
+internal fun curveOf(steps: List<DayChart.Step>, fromHour: Double, toHour: Double): List<CurvePoint> {
     if (steps.isEmpty()) {
         return listOf(CurvePoint(fromHour, 0.0), CurvePoint(toHour, 0.0))
     }
-    return listOf(CurvePoint(max(fromHour, steps.first().startHour), 0.0)) +
-        steps.map { CurvePoint(it.midHour.coerceIn(fromHour, toHour), it.kw) } +
-        CurvePoint(minOf(toHour, steps.last().endHour), 0.0)
+    return listOf(CurvePoint(max(fromHour, steps.first().startHour()), 0.0)) +
+        steps.map { CurvePoint(it.midHour.coerceIn(fromHour, toHour), it.kw()) } +
+        CurvePoint(minOf(toHour, steps.last().endHour()), 0.0)
 }
+
+/** The middle of a step, where the curve passes through its power. */
+private val DayChart.Step.midHour: Double get() = (startHour() + endHour()) / 2
 
 /**
  * A tick's label, placed.
@@ -93,7 +96,7 @@ internal fun curveOf(steps: List<SolarChart.Step>, fromHour: Double, toHour: Dou
  * @property left the label's left edge in pixels from the chart's left
  * @property width the label's width in pixels
  */
-internal data class PlacedTick(val tick: SolarChart.Tick, val left: Float, val width: Float)
+internal data class PlacedTick(val tick: DayChart.Tick, val left: Float, val width: Float)
 
 /** Which ticks the time axis marks, so that their labels never overlap, however large the font or small the chart. */
 internal object TimeAxis {
@@ -113,15 +116,15 @@ internal object TimeAxis {
      * @return the ticks to mark, in time order; when even every twelfth hour does not fit, as many of those as fit
      *     from the left
      */
-    fun fit(chart: SolarChart, plot: PlotArea, gap: Float, labelWidth: (SolarChart.Tick) -> Float): List<PlacedTick> {
+    fun fit(chart: DayChart, plot: PlotArea, gap: Float, labelWidth: (DayChart.Tick) -> Float): List<PlacedTick> {
         for (every in EVERY_HOURS) {
-            val placed = chart.ticksEvery(every).map { place(it, plot, labelWidth(it)) }
+            val placed = ticksEvery(chart, every).map { place(it, plot, labelWidth(it)) }
             if (placed.zipWithNext().all { (one, next) -> fits(one, next, gap) }) {
                 return placed
             }
         }
         val kept = mutableListOf<PlacedTick>()
-        chart.ticksEvery(EVERY_HOURS.last()).map { place(it, plot, labelWidth(it)) }.forEach { tick ->
+        ticksEvery(chart, EVERY_HOURS.last()).map { place(it, plot, labelWidth(it)) }.forEach { tick ->
             if (kept.isEmpty() || fits(kept.last(), tick, gap)) {
                 kept += tick
             }
@@ -129,8 +132,18 @@ internal object TimeAxis {
         return kept
     }
 
-    private fun place(tick: SolarChart.Tick, plot: PlotArea, labelWidth: Float) = PlacedTick(tick,
-        (plot.x(tick.hour) - labelWidth / 2).coerceIn(plot.left, max(plot.left, plot.right - labelWidth)), labelWidth)
+    /**
+     * The ticks of every so many clock hours, such as 00, 03, 06.
+     *
+     * @param chart the day's chart, with every whole hour as a tick
+     * @param hours the clock hours between two ticks, more than 0
+     * @return the ticks whose clock hour is a multiple of [hours], in time order
+     */
+    private fun ticksEvery(chart: DayChart, hours: Int): List<DayChart.Tick> =
+        chart.ticks().filter { it.clockHour() % hours == 0 }
+
+    private fun place(tick: DayChart.Tick, plot: PlotArea, labelWidth: Float) = PlacedTick(tick,
+        (plot.x(tick.hour()) - labelWidth / 2).coerceIn(plot.left, max(plot.left, plot.right - labelWidth)), labelWidth)
 
     private fun fits(one: PlacedTick, next: PlacedTick, gap: Float) = one.left + one.width + gap <= next.left
 }
@@ -233,31 +246,33 @@ internal data class SolarDrawing(val plot: PlotArea, val shapes: List<Shape>, va
          * @return the drawing; the plot is as wide as the chart leaves beside the scale's words, and as high as it
          *     leaves above the axis's labels
          */
-        fun of(chart: SolarChart, width: Float, height: Float, dp: Float, lineHeight: Float, scaleWidth: Float,
-            zeroWidth: Float, nowWidth: Float, tickWidth: (SolarChart.Tick) -> Float): SolarDrawing {
+        fun of(chart: DayChart, width: Float, height: Float, dp: Float, lineHeight: Float, scaleWidth: Float,
+            zeroWidth: Float, nowWidth: Float, tickWidth: (DayChart.Tick) -> Float): SolarDrawing {
             val gap = GAP_DP * dp
             val left = max(scaleWidth, zeroWidth) + gap
             val plot = PlotArea(left, lineHeight / 2, max(0f, width - left - gap),
-                max(0f, height - lineHeight * 1.5f - gap), chart.fromHour, chart.toHour, chart.scaleKw)
-            val grid = listOf(chart.scaleKw, chart.scaleKw / 2, 0.0).map {
+                max(0f, height - lineHeight * 1.5f - gap), chart.fromHour(), chart.toHour(), chart.scaleKw())
+            val grid = listOf(chart.scaleKw(), chart.scaleKw() / 2, 0.0).map {
                 Shape.Line(Point(plot.left, plot.y(it)), Point(plot.right, plot.y(it)), ChartInk.GRID_LINE, GRID_PX)
             }
-            val windows = chart.windows.flatMap {
-                val start = plot.x(it.startHour)
-                val end = plot.x(it.endHour)
+            val windows = chart.windows().flatMap {
+                val start = plot.x(it.startHour())
+                val end = plot.x(it.endHour())
                 listOf(Shape.Rect(start, plot.top, end - start, plot.height, ChartInk.CAR_AREA),
                     Shape.Line(Point(start, plot.bottom), Point(end, plot.bottom), ChartInk.CAR, WINDOW_MARK_DP * dp,
                         round = true))
             }
-            val curve = curveOf(chart.steps, chart.fromHour, chart.toHour).map { Point(plot.x(it.hour), plot.y(it.kw)) }
-            val house = Shape.Line(Point(plot.left, plot.y(chart.houseKw)), Point(plot.right, plot.y(chart.houseKw)),
-                ChartInk.MUTED, DASHED_DP * dp, dashed = true)
-            val nowX = chart.now?.let { plot.x(it.hour) }
+            val curve = curveOf(chart.steps(), chart.fromHour(), chart.toHour())
+                .map { Point(plot.x(it.hour), plot.y(it.kw)) }
+            val baseloadY = plot.y(chart.baseloadKw())
+            val baseload = Shape.Line(Point(plot.left, baseloadY), Point(plot.right, baseloadY), ChartInk.MUTED,
+                DASHED_DP * dp, dashed = true)
+            val nowX = chart.now().orElse(null)?.let { plot.x(it.hour()) }
             val now = nowX?.let {
                 Shape.Line(Point(it, plot.top), Point(it, plot.bottom), ChartInk.TEXT, DASHED_DP * dp, dashed = true)
             }
             val shapes = grid + windows + Shape.Area(curve, ChartInk.SOLAR_AREA) +
-                Shape.Area(curve, ChartInk.SOLAR, CURVE_DP * dp) + house + listOfNotNull(now)
+                Shape.Area(curve, ChartInk.SOLAR, CURVE_DP * dp) + baseload + listOfNotNull(now)
             return SolarDrawing(plot, shapes, TimeAxis.fit(chart, plot, gap * 2, tickWidth), plot.bottom + gap,
                 Point(0f, plot.top - lineHeight / 2), Point(0f, plot.bottom - lineHeight / 2),
                 nowX?.let { Point(minOf(it + gap / 2, plot.right - nowWidth), plot.top) })

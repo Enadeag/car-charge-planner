@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
@@ -16,7 +17,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -39,6 +42,8 @@ public final class DayMapper {
     private final Set<LocalDate> departures;
     /** The trips made with this car, which keep it away on the days from their departure to their return. */
     private final List<Trip> trips;
+    /** The plan's days, by their date. */
+    private final Map<LocalDate, DayPlan> plans;
     private final SolarChartMapper charts;
     private final BatteryMapper batteries;
 
@@ -61,27 +66,33 @@ public final class DayMapper {
                 .map(advice -> advice.trip().firstDay(zone))
                 .collect(Collectors.toSet());
         this.trips = trips.stream().filter(trip -> !trip.notWithThisCar()).toList();
-        this.charts = new SolarChartMapper(planned, messages);
+        this.plans = planned.days().stream().collect(Collectors.toMap(DayPlan::date, Function.identity()));
+        this.charts = new SolarChartMapper(zone, messages);
         this.batteries = new BatteryMapper(planned, messages);
     }
 
     /**
      * The days in words.
      *
-     * @param days the plan's days, today first; may be empty
+     * @param days the dashboard's days of the plan, today first; may be empty
      * @return one day model per day, in the same order
+     * @throws IllegalArgumentException when a day is not one of the plan's
      */
-    public List<DayModel> map(List<DayPlan> days) {
+    public List<DayModel> map(List<DashboardDay> days) {
         return days.stream().map(this::map).toList();
     }
 
-    private DayModel map(DayPlan day) {
-        return day.windows().isEmpty() ? withoutWindow(day) : withWindow(day);
+    private DayModel map(DashboardDay shown) {
+        var day = plans.get(shown.name().date());
+        if (day == null) {
+            throw new IllegalArgumentException("the plan has no day " + shown.name().date());
+        }
+        return day.windows().isEmpty() ? withoutWindow(day, shown) : withWindow(day, shown);
     }
 
-    private DayModel withWindow(DayPlan day) {
+    private DayModel withWindow(DayPlan day, DashboardDay shown) {
         var window = day.windows().getFirst();
-        var title = messages.title(day.date(), today);
+        var title = messages.title(shown.name());
         var solarSharePct = messages.whole(window.solarSharePct().value());
         var facts = List.of(
                 messages.text(TextKey.DAY_SET, window.amps(), messages.decimal(window.powerKw())),
@@ -96,37 +107,38 @@ public final class DayMapper {
         var spoken = messages.text(TextKey.DAY_SPOKEN, title, messages.time(window.start(), zone),
                 messages.time(window.end(), zone), window.amps(), solarSharePct);
         var note = sentences(laterWindows(day), noteFor(day));
-        return new DayModel(day.date(), messages.tab(day.date(), today), title, DayKind.SOLAR, messages.text(TextKey.DAY_WINDOW),
-                span(window), facts, chips, note, spoken, charts.map(day), batteries.map(day));
+        return new DayModel(day.date(), messages.tab(shown.name()), title, DayKind.SOLAR, messages.text(TextKey.DAY_WINDOW),
+                span(window), facts, chips, note, spoken, charts.map(shown), batteries.map(day));
     }
 
     /**
      * A day without a window says why: the grid advice, or a trip. The day a trip leaves says nothing, as the trip's
      * advice on its tab tells what the battery needs.
      */
-    private DayModel withoutWindow(DayPlan day) {
+    private DayModel withoutWindow(DayPlan day, DashboardDay shown) {
         var none = messages.text(TextKey.DAY_NONE);
         if (day.date().equals(gridDay)) {
-            return withoutWindow(day, DayKind.GRID, messages.text(TextKey.DAY_GRID), messages.text(TextKey.DAY_GRID_WHY));
+            return withoutWindow(day, shown, DayKind.GRID, messages.text(TextKey.DAY_GRID),
+                    messages.text(TextKey.DAY_GRID_WHY));
         }
         if (departures.contains(day.date())) {
-            return withoutWindow(day, DayKind.NONE, none, "");
+            return withoutWindow(day, shown, DayKind.NONE, none, "");
         }
         if (awayOnATrip(day.date())) {
-            return withoutWindow(day, DayKind.NONE, none, messages.text(TextKey.DAY_NONE_TRIP));
+            return withoutWindow(day, shown, DayKind.NONE, none, messages.text(TextKey.DAY_NONE_TRIP));
         }
-        return withoutWindow(day, DayKind.NONE, none, messages.text(TextKey.DAY_NONE_WHY));
+        return withoutWindow(day, shown, DayKind.NONE, none, messages.text(TextKey.DAY_NONE_WHY));
     }
 
     private boolean awayOnATrip(LocalDate date) {
         return trips.stream().anyMatch(trip -> trip.covers(date, zone));
     }
 
-    private DayModel withoutWindow(DayPlan day, DayKind kind, String heading, String why) {
-        var title = messages.title(day.date(), today);
+    private DayModel withoutWindow(DayPlan day, DashboardDay shown, DayKind kind, String heading, String why) {
+        var title = messages.title(shown.name());
         var spoken = sentences(title + ": " + heading.toLowerCase(messages.locale()) + ".", why);
-        return new DayModel(day.date(), messages.tab(day.date(), today), title, kind, heading, "", List.of(), List.of(batteryChip(day)),
-                sentences(why, noteFor(day)), spoken, charts.map(day), batteries.map(day));
+        return new DayModel(day.date(), messages.tab(shown.name()), title, kind, heading, "", List.of(), List.of(batteryChip(day)),
+                sentences(why, noteFor(day)), spoken, charts.map(shown), batteries.map(day));
     }
 
     /**

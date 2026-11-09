@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 
 /**
  * A one-off away period that has not ended, as the dashboard lists it, in the home's time zone, with the stored period

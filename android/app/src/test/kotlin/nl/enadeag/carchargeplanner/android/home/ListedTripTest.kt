@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -31,8 +32,8 @@ class ListedTripTest {
         assertThat(listed.firstDay).isEqualTo(today)
         assertThat(listed.lastDay).isEqualTo(today)
         assertThat(listed.sameDay).isTrue()
-        assertThat(listed.departureDay).isEqualTo(DayName.Today)
-        assertThat(listed.returnDay).isEqualTo(DayName.Today)
+        assertThat(listed.departureDay).isEqualTo(DayName.Today(today))
+        assertThat(listed.returnDay).isEqualTo(DayName.Today(today))
     }
 
     @Test
@@ -43,7 +44,7 @@ class ListedTripTest {
         assertThat((1L..3L).map { listed.covers(today.plusDays(it)) }).containsOnly(true)
         assertThat(listed.covers(today.plusDays(4))).isFalse()
         assertThat(listed.sameDay).isFalse()
-        assertThat(listed.departureDay).isEqualTo(DayName.Tomorrow)
+        assertThat(listed.departureDay).isEqualTo(DayName.Tomorrow(today.plusDays(1)))
         assertThat(listed.returnDay).isEqualTo(DayName.Other(today.plusDays(3)))
     }
 
@@ -55,7 +56,7 @@ class ListedTripTest {
         assertThat(listed.covers(today)).isTrue()
         assertThat(listed.covers(today.plusDays(1))).isFalse()
         assertThat(listed.sameDay).isFalse()
-        assertThat(listed.returnDay).isEqualTo(DayName.Tomorrow)
+        assertThat(listed.returnDay).isEqualTo(DayName.Tomorrow(today.plusDays(1)))
     }
 
     @Test
@@ -86,8 +87,8 @@ class ListedTripTest {
     @Test
     fun aLastDayBeforeTheFirstIsRefused() {
         assertThatThrownBy {
-            ListedTrip(trip(at(today, "07:30"), at(today, "18:00")), today, today.minusDays(1), DayName.Today,
-                DayName.Today, true)
+            ListedTrip(trip(at(today, "07:30"), at(today, "18:00")), today, today.minusDays(1), DayName.Today(today),
+                DayName.Today(today), true)
         }.isInstanceOf(IllegalArgumentException::class.java)
     }
 }

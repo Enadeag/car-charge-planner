@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.text;
 
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
 import java.math.RoundingMode;
 import java.text.MessageFormat;
 import java.text.NumberFormat;
@@ -108,29 +109,26 @@ public final class Messages {
     /**
      * A day's short name, for its tab.
      *
-     * @param day the day to name
-     * @param today the day the plan was made, in the owner's home
+     * @param day the day to name, as the dashboard's model names it
      * @return "Today", or the weekday's short name such as "Fri" in English and "Vr" in Dutch
      */
-    public String tab(LocalDate day, LocalDate today) {
-        return day.equals(today) ? text(TextKey.DAY_TODAY) : capitalised(day.getDayOfWeek().getDisplayName(TextStyle.SHORT, locale()));
+    public String tab(DayName day) {
+        return day instanceof DayName.Today ? text(TextKey.DAY_TODAY)
+                : capitalised(day.date().getDayOfWeek().getDisplayName(TextStyle.SHORT, locale()));
     }
 
     /**
      * A day's name, as a title.
      *
-     * @param day the day to name
-     * @param today the day the plan was made, in the owner's home
+     * @param day the day to name, as the dashboard's model names it
      * @return "Today", "Tomorrow", or the weekday such as "Sunday"
      */
-    public String title(LocalDate day, LocalDate today) {
-        if (day.equals(today)) {
-            return text(TextKey.DAY_TODAY);
-        }
-        if (day.equals(today.plusDays(1))) {
-            return text(TextKey.DAY_TOMORROW);
-        }
-        return capitalised(weekday(day));
+    public String title(DayName day) {
+        return switch (day) {
+            case DayName.Today _ -> text(TextKey.DAY_TODAY);
+            case DayName.Tomorrow _ -> text(TextKey.DAY_TOMORROW);
+            case DayName.Other other -> capitalised(weekday(other.date()));
+        };
     }
 
     /**
@@ -141,13 +139,21 @@ public final class Messages {
      * @return "today", "tomorrow", or the weekday as the language writes it there: "Sunday" in English, "zondag" in Dutch
      */
     public String inSentence(LocalDate day, LocalDate today) {
-        if (day.equals(today)) {
-            return text(TextKey.DAY_TODAY_IN_SENTENCE);
-        }
-        if (day.equals(today.plusDays(1))) {
-            return text(TextKey.DAY_TOMORROW_IN_SENTENCE);
-        }
-        return weekday(day);
+        return inSentence(DayName.of(day, today));
+    }
+
+    /**
+     * A day's name as it goes in the middle of a sentence.
+     *
+     * @param day the day to name, as the dashboard's model names it
+     * @return "today", "tomorrow", or the weekday as the language writes it there: "Sunday" in English, "zondag" in Dutch
+     */
+    public String inSentence(DayName day) {
+        return switch (day) {
+            case DayName.Today _ -> text(TextKey.DAY_TODAY_IN_SENTENCE);
+            case DayName.Tomorrow _ -> text(TextKey.DAY_TOMORROW_IN_SENTENCE);
+            case DayName.Other other -> weekday(other.date());
+        };
     }
 
     /**
@@ -159,10 +165,19 @@ public final class Messages {
      *     Dutch
      */
     public String date(LocalDate day, LocalDate today) {
-        if (day.equals(today) || day.equals(today.plusDays(1))) {
-            return title(day, today);
-        }
-        return capitalised(DateTimeFormatter.ofPattern("EEE d MMM", locale()).format(day));
+        return date(DayName.of(day, today));
+    }
+
+    /**
+     * A day's name for a list that may reach beyond the coming week.
+     *
+     * @param day the day to name, as the dashboard's model names it
+     * @return "Today", "Tomorrow", or the short weekday and date such as "Sat 17 Oct" in English and "Za 17 okt" in
+     *     Dutch
+     */
+    public String date(DayName day) {
+        return day instanceof DayName.Other other
+                ? capitalised(DateTimeFormatter.ofPattern("EEE d MMM", locale()).format(other.date())) : title(day);
     }
 
     /**

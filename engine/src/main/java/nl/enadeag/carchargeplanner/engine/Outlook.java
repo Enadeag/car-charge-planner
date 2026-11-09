@@ -1,18 +1,23 @@
 package nl.enadeag.carchargeplanner.engine;
 
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView;
+import nl.enadeag.carchargeplanner.engine.dashboard.PlanParts;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /** What the engine tells its clients after planning: a plan, or why there is none. */
@@ -79,6 +84,23 @@ public sealed interface Outlook {
                     .flatMap(day -> day.windows().stream())
                     .filter(window -> window.end().isAfter(madeAt))
                     .findFirst();
+        }
+
+        /**
+         * What the dashboard shows of this plan, as numbers, hours and flags; each client writes the words and draws
+         * it. "Now" is {@code madeAt}.
+         *
+         * @param away the stored one-off away periods, in order of their start; may be empty, never null; not used
+         *     yet, the later parts of #341 add them to the dashboard
+         * @param trips the stored trips, in order of their departure; may be empty, never null; not used yet, the
+         *     later parts of #341 add them to the dashboard
+         * @return the dashboard, with a day for each of the plan's days
+         * @throws NullPointerException when {@code away} or {@code trips} is null
+         */
+        public DashboardView dashboard(List<OneOffAwayPeriod> away, List<Trip> trips) {
+            Objects.requireNonNull(away, "away");
+            Objects.requireNonNull(trips, "trips");
+            return DashboardView.of(new PlanParts(madeAt, zone, days, baseloadKw));
         }
     }
 

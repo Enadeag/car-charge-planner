@@ -47,7 +47,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.android.R
-import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.ui.components.BarPage
 import nl.enadeag.carchargeplanner.android.ui.components.DateDialog
@@ -56,6 +55,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.HeldButton
 import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 import nl.enadeag.carchargeplanner.android.ui.components.TimeButton
 import nl.enadeag.carchargeplanner.android.ui.components.TimeDialog
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 
 /** The unit of a trip's distance, after it in the entry; kilometres only until #311. */
 internal const val DISTANCE_UNIT = "km"

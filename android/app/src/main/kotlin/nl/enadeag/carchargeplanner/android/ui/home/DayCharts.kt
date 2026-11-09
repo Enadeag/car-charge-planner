@@ -184,11 +184,11 @@ private fun SolarPlot(day: DayModel, words: DashboardWords, colours: SourceColou
     val axis = MaterialTheme.typography.labelSmall.copy(color = colours.muted)
     val nowStyle = axis.copy(color = colours.text)
     val nowText = stringResource(R.string.chart_now)
-    val scale = remember(measurer, axis, chart, words) { measurer.measure(words.scale(chart.scaleKw), axis) }
+    val scale = remember(measurer, axis, chart, words) { measurer.measure(words.scale(chart.scaleKw()), axis) }
     val zero = remember(measurer, axis, words) { measurer.measure(words.whole(0.0), axis) }
     val now = remember(measurer, nowStyle, nowText) { measurer.measure(nowText, nowStyle) }
     val labels = remember(measurer, axis, chart, words) {
-        chart.ticks.associateWith { measurer.measure(words.tick(it), axis) }
+        chart.ticks().associateWith { measurer.measure(words.tick(it), axis) }
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val density = LocalDensity.current

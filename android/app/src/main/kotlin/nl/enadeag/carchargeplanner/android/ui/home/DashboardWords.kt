@@ -21,15 +21,15 @@ import nl.enadeag.carchargeplanner.android.home.ChargeLevels
 import nl.enadeag.carchargeplanner.android.home.ComingAway
 import nl.enadeag.carchargeplanner.android.home.DayKind
 import nl.enadeag.carchargeplanner.android.home.DayModel
-import nl.enadeag.carchargeplanner.android.home.DayName
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.GridAdviceModel
 import nl.enadeag.carchargeplanner.android.home.ListedTrip
 import nl.enadeag.carchargeplanner.android.home.NoWindowWhy
-import nl.enadeag.carchargeplanner.android.home.SolarChart
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.android.home.TripAdviceModel
 import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge
 import nl.enadeag.carchargeplanner.engine.plan.Window
 
@@ -59,7 +59,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @return "Today", or the weekday's short name, such as "Tue"
      */
     fun tab(day: DayModel): String =
-        if (day.name == DayName.Today) text(R.string.day_today) else capitalised(weekday(day.date, TextStyle.SHORT))
+        if (day.name is DayName.Today) text(R.string.day_today) else capitalised(weekday(day.date, TextStyle.SHORT))
 
     /**
      * A day's name as a title, which is also what a screen reader says for its tab.
@@ -68,9 +68,9 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @return "Today", "Tomorrow", or the weekday, such as "Sunday"
      */
     fun title(day: DayName): String = when (day) {
-        DayName.Today -> text(R.string.day_today)
-        DayName.Tomorrow -> text(R.string.day_tomorrow)
-        is DayName.Other -> capitalised(weekday(day.date, TextStyle.FULL))
+        is DayName.Today -> text(R.string.day_today)
+        is DayName.Tomorrow -> text(R.string.day_tomorrow)
+        is DayName.Other -> capitalised(weekday(day.date(), TextStyle.FULL))
     }
 
     /**
@@ -80,9 +80,9 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @return "today", "tomorrow", or the weekday as the language writes it there: "Sunday", "zondag"
      */
     fun inSentence(day: DayName): String = when (day) {
-        DayName.Today -> text(R.string.day_today_in_sentence)
-        DayName.Tomorrow -> text(R.string.day_tomorrow_in_sentence)
-        is DayName.Other -> weekday(day.date, TextStyle.FULL)
+        is DayName.Today -> text(R.string.day_today_in_sentence)
+        is DayName.Tomorrow -> text(R.string.day_tomorrow_in_sentence)
+        is DayName.Other -> weekday(day.date(), TextStyle.FULL)
     }
 
     /**
@@ -92,8 +92,8 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @return "Today", "Tomorrow", or the short weekday and date as the phone writes them, such as "Sat, Oct 17"
      */
     fun date(day: DayName): String = when (day) {
-        DayName.Today, DayName.Tomorrow -> title(day)
-        is DayName.Other -> capitalised(shortDate.format(day.date))
+        is DayName.Today, is DayName.Tomorrow -> title(day)
+        is DayName.Other -> capitalised(shortDate.format(day.date()))
     }
 
     /**
@@ -327,7 +327,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @param tick the tick
      * @return such as "15" or "3 PM"
      */
-    fun tick(tick: SolarChart.Tick): String = hour.format(tick.at)
+    fun tick(tick: DayChart.Tick): String = hour.format(tick.at())
 
     /**
      * The power at the top of the chart.
@@ -347,12 +347,13 @@ internal class DashboardWords(private val resources: Resources, private val loca
      */
     fun chart(day: DayModel): String {
         val title = title(day.name)
-        val peak = day.chart.peak ?: return text(R.string.chart_spoken_no_solar, title)
-        val solar = text(R.string.chart_spoken, title, decimal(peak.kw), time(peak.at), decimal(day.chart.houseKw))
+        val peak = day.chart.peak().orElse(null) ?: return text(R.string.chart_spoken_no_solar, title)
+        val solar = text(R.string.chart_spoken, title, decimal(peak.kw()), time(peak.at()),
+            decimal(day.chart.baseloadKw()))
         val windows = listOfNotNull(day.main?.window) + day.later
         val charging = if (windows.isEmpty()) "" else text(R.string.chart_spoken_windows,
             windows.joinToString(", ") { spokenSpan(it) })
-        val now = day.chart.now?.let { text(R.string.chart_spoken_now, time(it.at)) }.orEmpty()
+        val now = day.chart.now().orElse(null)?.let { text(R.string.chart_spoken_now, time(it.at())) }.orEmpty()
         return listOf(solar, charging, now).filter { it.isNotEmpty() }.joinToString(" ")
     }
 
@@ -395,12 +396,12 @@ internal class DashboardWords(private val resources: Resources, private val loca
         val after = whole(day.battery.afterPct.value())
         val minimum = whole(levels.minimum.value())
         val target = whole(levels.target.value())
-        val said = if (day.name != DayName.Today) {
+        val said = if (day.name !is DayName.Today) {
             text(R.string.battery_spoken_day, start, inSentence(day.name), after, minimum, target)
         } else {
             text(R.string.battery_spoken_today, start, after, minimum, target)
         }
-        val assumed = if (day.name == DayName.Today && day.assumedLevel != null) text(R.string.battery_assumed) else ""
+        val assumed = if (day.name is DayName.Today && day.assumedLevel != null) text(R.string.battery_assumed) else ""
         val afterTrip = day.battery.afterTripPct?.let { text(R.string.battery_spoken_after_trip, whole(it.value())) }
             .orEmpty()
         return listOf(said, assumed, afterTrip).filter { it.isNotEmpty() }.joinToString(" ")

@@ -1,9 +1,10 @@
 package nl.enadeag.carchargeplanner.android.ui.home
 
 import java.time.Instant
+import java.util.Optional
 import nl.enadeag.carchargeplanner.android.home.BatteryLevels
 import nl.enadeag.carchargeplanner.android.home.ChargeLevels
-import nl.enadeag.carchargeplanner.android.home.SolarChart
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
 import nl.enadeag.carchargeplanner.android.ui.ChartInk
 import nl.enadeag.carchargeplanner.android.ui.home.BatteryBarLayout.Mark
 import nl.enadeag.carchargeplanner.android.ui.home.BatteryBarLayout.Row
@@ -52,8 +53,8 @@ class ChartGeometryTest {
 
     @Test
     fun theCurvePassesThroughEachStepsMiddleAndClosesAtNothingWithinTheHoursShown() {
-        val steps = listOf(SolarChart.Step(5.0, 6.0, 0.1), SolarChart.Step(6.0, 7.0, 1.0),
-            SolarChart.Step(7.0, 8.0, 2.0), SolarChart.Step(15.0, 17.0, 0.5))
+        val steps = listOf(DayChart.Step(5.0, 6.0, 0.1, Instant.EPOCH), DayChart.Step(6.0, 7.0, 1.0, Instant.EPOCH),
+            DayChart.Step(7.0, 8.0, 2.0, Instant.EPOCH), DayChart.Step(15.0, 17.0, 0.5, Instant.EPOCH))
 
         assertThat(curveOf(steps, 6.0, 16.0)).containsExactly(CurvePoint(6.0, 0.0), CurvePoint(6.0, 0.1),
             CurvePoint(6.5, 1.0), CurvePoint(7.5, 2.0), CurvePoint(16.0, 0.5), CurvePoint(16.0, 0.0))
@@ -67,16 +68,26 @@ class ChartGeometryTest {
     }
 
     private fun ticks(hours: IntRange) =
-        hours.map { SolarChart.Tick(it.toDouble(), it, Instant.EPOCH.plusSeconds(it * 3600L)) }
+        hours.map { DayChart.Tick(it.toDouble(), it, Instant.EPOCH.plusSeconds(it * 3600L)) }
+
+    /** A chart up to 4 kW; its moments are left at the epoch, as the drawing uses only the hours. */
+    private fun dayChart(from: Double, to: Double, ticks: List<DayChart.Tick>, steps: List<DayChart.Step> = listOf(),
+        baseloadKw: Double = 0.3, windows: List<DayChart.WindowBand> = listOf(), now: Double? = null) =
+        DayChart(from, to, 4.0, steps, baseloadKw, windows,
+            Optional.ofNullable(now?.let { DayChart.Moment(it, Instant.EPOCH) }), ticks, Optional.empty())
 
     /** Every hour from 6:00 to 16:00 as a tick, on a plain day. */
-    private val chart = SolarChart(6.0, 16.0, 4.0, listOf(), 0.3, listOf(), null, ticks(6..16), null)
+    private val chart = dayChart(6.0, 16.0, ticks(6..16))
+
+    /** That day with sun from 9:00 to 10:00, the baseload at 1 kW, a window from 11:00 to 13:00 and now at 8:00. */
+    private val busy = dayChart(6.0, 16.0, ticks(6..16), steps = listOf(DayChart.Step(9.0, 10.0, 2.0, Instant.EPOCH)),
+        baseloadKw = 1.0, windows = listOf(DayChart.WindowBand(11.0, 13.0, Instant.EPOCH, Instant.EPOCH)), now = 8.0)
 
     private fun fit(labelWidth: Float, plot: PlotArea = this.plot) = TimeAxis.fit(chart, plot, 4f) { labelWidth }
 
     @Test
     fun theAxisMarksEveryThirdHourWhenTheLabelsFit() {
-        assertThat(fit(16f).map { it.tick.clockHour }).containsExactly(6, 9, 12, 15)
+        assertThat(fit(16f).map { it.tick.clockHour() }).containsExactly(6, 9, 12, 15)
     }
 
     @Test
@@ -84,7 +95,7 @@ class ChartGeometryTest {
         val normal = fit(16f)
         val twice = fit(32f)
 
-        assertThat(twice.map { it.tick.clockHour }).containsExactly(6, 12)
+        assertThat(twice.map { it.tick.clockHour() }).containsExactly(6, 12)
         assertThat(twice.size).isLessThan(normal.size)
     }
 
@@ -104,7 +115,7 @@ class ChartGeometryTest {
 
     @Test
     fun aLabelIsCentredUnderItsHourButKeptWithinThePlotAsOnTheDesktop() {
-        val placed = fit(16f).associate { it.tick.clockHour to it.left }
+        val placed = fit(16f).associate { it.tick.clockHour() to it.left }
         val toFifteen = TimeAxis.fit(chart, PlotArea(20f, 5f, 90f, 50f, 6.0, 15.0, 4.0), 4f) { 16f }
 
         assertThat(placed[9]).isEqualTo(42f)
@@ -114,15 +125,15 @@ class ChartGeometryTest {
 
     @Test
     fun whenNotEvenEveryTwelfthHourFitsAsManyAsFitAreMarkedFromTheLeft() {
-        val day = SolarChart(0.0, 24.0, 4.0, listOf(), 0.3, listOf(), null, ticks(0..24), null)
+        val day = dayChart(0.0, 24.0, ticks(0..24))
 
         val placed = TimeAxis.fit(day, PlotArea(0f, 0f, 60f, 50f, 0.0, 24.0, 4.0), 4f) { 25f }
 
-        assertThat(placed.map { it.tick.clockHour }).containsExactly(0, 24)
+        assertThat(placed.map { it.tick.clockHour() }).containsExactly(0, 24)
     }
 
     /** From 3:00 to 18:00, so the ticks of 6:00 to 15:00 lie 60 px from either edge, at 20 px an hour. */
-    private val wide = SolarChart(3.0, 18.0, 4.0, listOf(), 0.3, listOf(), null, ticks(6..15), null)
+    private val wide = dayChart(3.0, 18.0, ticks(6..15))
 
     @ParameterizedTest
     @CsvSource("56, '6, 9, 12, 15'", "57, '6, 12'")
@@ -130,24 +141,24 @@ class ChartGeometryTest {
         // every third hour is 60 px apart: 56 px of label and 4 px of gap fit exactly
         val placed = TimeAxis.fit(wide, PlotArea(0f, 0f, 300f, 50f, 3.0, 18.0, 4.0), 4f) { labelWidth }
 
-        assertThat(placed.joinToString { it.tick.clockHour.toString() }).isEqualTo(marked)
+        assertThat(placed.joinToString { it.tick.clockHour().toString() }).isEqualTo(marked)
     }
 
     @Test
     fun everyLabelMustFitNotOnlyThoseOfOnePair() {
         // noon's label is wider, so it overlaps nine o'clock's while six and nine fit
         val placed = TimeAxis.fit(wide, PlotArea(0f, 0f, 300f, 50f, 3.0, 18.0, 4.0), 4f) {
-            if (it.clockHour == 12) 100f else 56f
+            if (it.clockHour() == 12) 100f else 56f
         }
 
-        assertThat(placed.map { it.tick.clockHour }).containsExactly(6, 12)
+        assertThat(placed.map { it.tick.clockHour() }).containsExactly(6, 12)
     }
 
     /**
      * The drawing of a chart with a scale 16 px wide and a 0 of 8 px, at a dp of [dp] px and lines of 10 px: 124 by 69
      * px at a dp of 1 px leaves the plot of [plot].
      */
-    private fun drawing(chart: SolarChart, width: Float = 124f, height: Float = 69f, dp: Float = 1f,
+    private fun drawing(chart: DayChart, width: Float = 124f, height: Float = 69f, dp: Float = 1f,
         tickWidth: Float = 10f) =
         SolarDrawing.of(chart, width, height, dp, 10f, 16f, 8f, 20f) { tickWidth }
 
@@ -168,15 +179,12 @@ class ChartGeometryTest {
         // a plot of 300 px from 20 px on: every third hour is 60 px apart, so 52 px of label and 8 px of gap fit
         val drawing = drawing(wide, width = 324f, tickWidth = labelWidth)
 
-        assertThat(drawing.ticks.joinToString { it.tick.clockHour.toString() }).isEqualTo(marked)
+        assertThat(drawing.ticks.joinToString { it.tick.clockHour().toString() }).isEqualTo(marked)
     }
 
     @Test
     fun theDrawingIsTheGridTheWindowsTheCurveTheHouseAndNowInTheChartsColours() {
-        val day = chart.copy(steps = listOf(SolarChart.Step(9.0, 10.0, 2.0)), houseKw = 1.0,
-            windows = listOf(SolarChart.Span(11.0, 13.0)), now = SolarChart.Moment(8.0, Instant.EPOCH))
-
-        val drawing = drawing(day)
+        val drawing = drawing(busy)
 
         val curve = listOf(Point(50f, 55f), Point(55f, 30f), Point(60f, 55f))
         assertThat(drawing.plot).isEqualTo(plot)
@@ -198,11 +206,9 @@ class ChartGeometryTest {
     fun everySizeOfTheSolarDrawingThatIsInDpGrowsWithTheDp(dp: Float) {
         val gap = 4 * dp
         val left = 16f + gap
-        val day = chart.copy(steps = listOf(SolarChart.Step(9.0, 10.0, 2.0)), houseKw = 1.0,
-            windows = listOf(SolarChart.Span(11.0, 13.0)), now = SolarChart.Moment(8.0, Instant.EPOCH))
 
         // a plot of 100 by 50 px from 6:00 to 16:00, whatever the dp
-        val drawing = drawing(day, width = left + 100f + gap, height = 15f + gap + 50f, dp = dp)
+        val drawing = drawing(busy, width = left + 100f + gap, height = 15f + gap + 50f, dp = dp)
 
         fun x(hour: Double) = left + (hour.toFloat() - 6f) * 10f
         val curve = listOf(Point(x(9.0), 55f), Point(x(9.5), 30f), Point(x(10.0), 55f))
@@ -223,7 +229,7 @@ class ChartGeometryTest {
 
     @Test
     fun nowsWordsStayWithinThePlotAtItsRightEdge() {
-        val late = drawing(chart.copy(now = SolarChart.Moment(15.9, Instant.EPOCH)))
+        val late = drawing(dayChart(6.0, 16.0, ticks(6..16), now = 15.9))
 
         assertThat(late.nowAt).isEqualTo(Point(100f, 5f))
     }

@@ -217,7 +217,7 @@ How far a system or an integration is known to work. **Supported**: a person che
 _Avoid_: Experimental, unofficial, verified
 
 **Dashboard**:
-The one screen that shows the plan: the next charge window, grid advice, today's solar curve, the battery and the coming days. It opens from the tray as a popup, or as a window in window mode.
+The one screen that shows the plan: the next charge window, grid advice, today's solar curve, the battery and the coming days. It opens from the tray as a popup, or as a window in window mode. The engine's dashboard model gives what the dashboard shows as numbers, hours and flags; each client writes the words and draws it.
 _Avoid_: Popup (only one of the places it appears), plan window, main screen
 
 **Engine**:
