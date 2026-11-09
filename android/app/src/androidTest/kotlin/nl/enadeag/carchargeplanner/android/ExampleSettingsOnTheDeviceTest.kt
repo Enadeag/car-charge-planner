@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.engine.Engine
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.notify.Notifier
 import org.junit.After
@@ -44,7 +45,7 @@ class ExampleSettingsOnTheDeviceTest {
     fun theDocsExampleIsReadThroughTheEngine() = runBlocking {
         val assets = InstrumentationRegistry.getInstrumentation().context.assets
         assets.open("example-engine.json").use { input ->
-            File(folder, AppEngine.SETTINGS_FILE).outputStream().use { input.copyTo(it) }
+            File(folder, Engine.CONFIG_FILE_NAME).outputStream().use { input.copyTo(it) }
         }
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val platform = (app.applicationContext as CarChargePlannerApp).platform

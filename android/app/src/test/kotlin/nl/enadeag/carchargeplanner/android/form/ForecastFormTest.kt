@@ -3,12 +3,12 @@ package nl.enadeag.carchargeplanner.android.form
 import androidx.lifecycle.SavedStateHandle
 import java.io.IOException
 import java.util.Optional
-import nl.enadeag.carchargeplanner.android.AppEngine
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.store.StoredKeys
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet
+import nl.enadeag.carchargeplanner.engine.forecast.Providers
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
@@ -24,7 +24,7 @@ class ForecastFormTest {
     }
 
     private val handle = SavedStateHandle()
-    private val providers = AppEngine.providers(NO_NETWORK).let { known ->
+    private val providers = Providers.standard(NO_NETWORK).let { known ->
         known.ids().map { known.find(it).orElseThrow().info() }
     }
     private val form = ForecastForm(handle, providers)

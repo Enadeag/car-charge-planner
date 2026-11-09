@@ -24,25 +24,13 @@ import nl.enadeag.carchargeplanner.desktop.system.Tray;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Engine;
-import nl.enadeag.carchargeplanner.engine.away.AwayFile;
-import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
-import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
-import nl.enadeag.carchargeplanner.engine.forecast.ForecastCache;
-import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
-import nl.enadeag.carchargeplanner.engine.forecast.Providers;
-import nl.enadeag.carchargeplanner.engine.forecast.providers.ForecastSolar;
-import nl.enadeag.carchargeplanner.engine.forecast.providers.OpenMeteo;
-import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
-import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.notify.Notifier;
-import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
 import nl.enadeag.carchargeplanner.engine.secrets.CalendarLeftovers;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
-import nl.enadeag.carchargeplanner.engine.trip.TripFile;
 import nl.enadeag.carchargeplanner.host.AppName;
 import nl.enadeag.carchargeplanner.host.DataLocation;
 import nl.enadeag.carchargeplanner.host.Host;
@@ -57,7 +45,6 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
@@ -326,14 +313,7 @@ public final class DesktopApp {
     }
 
     private Engine engine(HttpGet http, ApiKeys apiKeys, Path dataFolder, Notifier notifier) {
-        var providers = new Providers(List.of(new OpenMeteo(http), new ForecastSolar(http)));
-        var cache = new ForecastCache(dataFolder.resolve("forecasts"), files);
-        var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json"), files),
-                new ToldTrips(dataFolder.resolve("trip-notices.json"), files), notifier);
-        return new Engine(new ConfigFile(configPath, files), new ForecastService(providers, cache, apiKeys), providers,
-                apiKeys, new AwayFile(dataFolder.resolve("away.json"), files),
-                new TripFile(dataFolder.resolve("trips.json"), files),
-                new BatteryFile(dataFolder.resolve("battery.json"), files), Clock.systemUTC(), announcer,
+        return Engine.inFolder(dataFolder, configPath, http, files, apiKeys, notifier, Clock.systemUTC(),
                 Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
     }
 

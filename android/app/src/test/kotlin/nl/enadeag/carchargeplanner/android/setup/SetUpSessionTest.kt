@@ -19,6 +19,7 @@ import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import org.assertj.core.api.Assertions.assertThat
@@ -50,6 +51,13 @@ class SetUpSessionTest {
     @Test
     fun theWelcomeNamesTheProviderSetUpAsks() = runTest {
         assertThat(session().providerName()).isEqualTo("Open-Meteo")
+    }
+
+    @Test
+    fun setUpDraftsTheFirstProviderOfferedAsThePrimary() = runTest {
+        access.offered = access.providers().reversed()
+
+        assertThat(session().flow.config().forecast().primary()).isEqualTo(ProviderId("forecast-solar"))
     }
 
     @Test

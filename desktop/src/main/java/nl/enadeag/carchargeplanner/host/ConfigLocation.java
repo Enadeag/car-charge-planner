@@ -1,19 +1,17 @@
 package nl.enadeag.carchargeplanner.host;
 
+import nl.enadeag.carchargeplanner.engine.Engine;
 import java.nio.file.Path;
 import java.util.Map;
 
-/** Where the engine's config file is, on each system: the folder the user's settings usually go to. */
+/** Where the engine's settings file is, on each system: the folder the user's settings usually go to. */
 public final class ConfigLocation {
-
-    /** The name of the config file inside the app's folder. */
-    static final String FILE_NAME = "engine.json";
 
     private ConfigLocation() {
     }
 
     /**
-     * Where the config file is when the user names none.
+     * Where the settings file is when the user names none.
      *
      * @param os the system the app runs on; Windows has a folder of its own, the others share the XDG one
      * @param environment the environment variables; {@code APPDATA} must be present on Windows, {@code XDG_CONFIG_HOME}
@@ -23,7 +21,7 @@ public final class ConfigLocation {
      * @throws NullPointerException on Windows when {@code APPDATA} is missing from the environment
      */
     public static Path defaultPath(Os os, Map<String, String> environment, Path home) {
-        return systemFolder(os, environment, home).resolve(AppName.ID).resolve(FILE_NAME);
+        return systemFolder(os, environment, home).resolve(AppName.ID).resolve(Engine.CONFIG_FILE_NAME);
     }
 
     /**

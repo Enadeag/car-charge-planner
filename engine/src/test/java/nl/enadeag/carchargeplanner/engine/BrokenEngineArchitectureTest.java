@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastThatKnowsAProvider;
 import java.io.InputStream;
 import java.net.ProxySelector;
 import java.net.URL;
@@ -109,6 +110,16 @@ class BrokenEngineArchitectureTest {
                 .hasMessageContaining("System.setProperties(")
                 .hasMessageContaining("System.clearProperty(")
                 .hasMessageContaining("System.getProperties(");
+    }
+
+    @Test
+    void aForecastClassBesideProvidersThatKnowsAProviderBreaksTheRule() {
+        var forecast = new ClassFileImporter().importClasses(ForecastThatKnowsAProvider.class);
+
+        assertThatThrownBy(() -> EngineArchitectureTest.onlyProvidersKnowsTheProvidersClasses.check(forecast))
+                .isInstanceOf(AssertionError.class)
+                .hasMessageContaining("ForecastThatKnowsAProvider")
+                .hasMessageContaining("OpenMeteo");
     }
 
     @Test

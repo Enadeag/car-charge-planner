@@ -25,7 +25,7 @@ import nl.enadeag.carchargeplanner.android.store.Saves
  * @param phoneZone the phone's time zone as it is now: the home has it until a place is chosen, and typed coordinates
  *     get it
  * @param language the app's language now, as the place search takes it, such as "nl"
- * @param access the engine's place search and connection check
+ * @param access the engine's providers, of which set-up asks the first, their place search and the connection check
  * @param saves the app's saves, which outlive the screen; the session shows each outcome they give
  * @param scope where the search and the check run, the screen's
  * @param ended gets a save's outcome that ends set-up: [SaveOutcome.Saved], or a settings file that cannot be used
@@ -64,7 +64,7 @@ class SetUpSession(handle: SavedStateHandle, numbers: NumberText, phoneZone: () 
         data class Failed(val detail: String) : Finishing
     }
 
-    private val draft = SetUpFlow.draft(phoneZone())
+    private val draft = SetUpFlow.draft(phoneZone(), access.providers().first().id())
 
     /** The steps and their forms. */
     val flow = SetUpFlow(handle, numbers, draft, phoneZone)

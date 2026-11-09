@@ -31,7 +31,7 @@ class SetUpFlowTest {
     private val handle = SavedStateHandle()
     private val numbers = NumberText(Locale.ENGLISH)
     private val amsterdam = ZoneId.of("Europe/Amsterdam")
-    private val draft = SetUpFlow.draft(amsterdam)
+    private val draft = SetUpFlow.draft(amsterdam, ProviderId("open-meteo"))
     private val flow = SetUpFlow(handle, numbers, draft) { amsterdam }
     private val utrecht = Place("Utrecht", Coordinates(52.0907, 5.1214), ZoneId.of("Europe/Amsterdam"), "", "", "")
 
