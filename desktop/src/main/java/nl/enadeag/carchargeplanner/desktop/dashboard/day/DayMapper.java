@@ -9,7 +9,6 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels;
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
-import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView;
 import nl.enadeag.carchargeplanner.engine.dashboard.MainCharge;
 import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
@@ -19,122 +18,114 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/** The days of a plan as the dashboard's tabs show them, in words, in the time zone of the owner's home. */
+/** The days of one plan as the dashboard's tabs show them, in words, in the time zone of the owner's home. */
 public final class DayMapper {
 
     private final Messages messages;
+    private final ZoneId zone;
+    private final ChargeLevels levels;
+    private final SolarChartMapper charts;
+    private final BatteryMapper batteries;
 
     /**
-     * Makes the mapper.
+     * Makes the mapper for one plan's days.
      *
-     * @param messages the texts, in the owner's language
+     * @param messages the texts, in the owner's language; never null
+     * @param zone the home's time zone, in which the times are told; never null
+     * @param levels the plan's minimum and target, which the battery bars mark; never null
      */
-    public DayMapper(Messages messages) {
+    public DayMapper(Messages messages, ZoneId zone, ChargeLevels levels) {
         this.messages = messages;
+        this.zone = zone;
+        this.levels = levels;
+        this.charts = new SolarChartMapper(zone, messages);
+        this.batteries = new BatteryMapper(messages);
     }
 
     /**
      * The days in words.
      *
-     * @param dashboard the engine's dashboard of the plan, whose days, today first, are told in its time zone; may
-     *     have no days
+     * @param days the engine's days of the plan, today first; may be empty, never null
      * @return one day model per day, in the same order
      */
-    public List<DayModel> map(DashboardView dashboard) {
-        var words = new Words(dashboard.zone(), dashboard.levels());
-        return dashboard.days().stream().map(words::map).toList();
+    public List<DayModel> map(List<DashboardDay> days) {
+        return days.stream().map(this::map).toList();
     }
 
-    /** The words of one dashboard's days. */
-    private final class Words {
+    private DayModel map(DashboardDay day) {
+        return day.main().map(main -> withWindow(day, main)).orElseGet(() -> withoutWindow(day));
+    }
 
-        private final ZoneId zone;
-        private final ChargeLevels levels;
-        private final SolarChartMapper charts;
-        private final BatteryMapper batteries;
+    private DayModel withWindow(DashboardDay day, MainCharge main) {
+        var window = main.window();
+        var title = messages.title(day.name());
+        var solarSharePct = messages.whole(window.solarSharePct().value());
+        var facts = List.of(
+                messages.text(TextKey.DAY_SET, window.amps(), messages.decimal(window.powerKw())),
+                messages.text(TextKey.DAY_ENERGY, messages.decimal(window.energyKwh())));
+        var chips = new ArrayList<ChipModel>();
+        chips.add(new ChipModel(EnergySource.SOLAR, messages.text(TextKey.DAY_SOLAR_SHARE, solarSharePct)));
+        chips.add(batteryChip(day.battery()));
+        main.gridKwh().ifPresent(kwh -> chips.add(new ChipModel(EnergySource.GRID,
+                messages.text(TextKey.DAY_FROM_GRID, messages.decimal(kwh)))));
+        var spoken = messages.text(TextKey.DAY_SPOKEN, title, messages.time(window.start(), zone),
+                messages.time(window.end(), zone), window.amps(), solarSharePct);
+        var note = sentences(laterWindows(day.later()), assumedNote(day));
+        return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(),
+                messages.text(TextKey.DAY_WINDOW), span(window), facts, chips, note, spoken, charts.map(day),
+                batteries.map(day, levels));
+    }
 
-        Words(ZoneId zone, ChargeLevels levels) {
-            this.zone = zone;
-            this.levels = levels;
-            this.charts = new SolarChartMapper(zone, messages);
-            this.batteries = new BatteryMapper(messages);
+    /** The day a trip leaves says nothing, as the trip's advice on its tab tells what the battery needs. */
+    private DayModel withoutWindow(DashboardDay day) {
+        var reason = day.noWindow().orElseThrow();
+        var heading = messages.text(reason == NoWindowReason.GRID ? TextKey.DAY_GRID : TextKey.DAY_NONE);
+        var why = switch (reason) {
+            case GRID -> messages.text(TextKey.DAY_GRID_WHY);
+            case DEPARTURE -> "";
+            case AWAY -> messages.text(TextKey.DAY_NONE_TRIP);
+            case NOT_NEEDED -> messages.text(TextKey.DAY_NONE_WHY);
+        };
+        var title = messages.title(day.name());
+        var spoken = sentences(title + ": " + heading.toLowerCase(messages.locale()) + ".", why);
+        return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(), heading, "", List.of(),
+                List.of(batteryChip(day.battery())), sentences(why, assumedNote(day)), spoken, charts.map(day),
+                batteries.map(day, levels));
+    }
+
+    /**
+     * The levels at the start and after charging; on a day a trip leaves also the level the trip leaves at the
+     * end of the day, and without a charge before it only the start and the end.
+     */
+    private ChipModel batteryChip(BatteryLevels battery) {
+        var start = messages.whole(battery.startPct().value());
+        var after = messages.whole(battery.afterPct().value());
+        if (battery.afterTripPct().isEmpty()) {
+            return new ChipModel(EnergySource.CAR, messages.text(TextKey.DAY_BATTERY, start, after));
         }
+        var end = messages.whole(battery.afterTripPct().get().value());
+        return new ChipModel(EnergySource.CAR, battery.chargesBeforeTrip()
+                ? messages.text(TextKey.DAY_BATTERY_CHARGE_TRIP, start, after, end)
+                : messages.text(TextKey.DAY_BATTERY_TRIP, start, end));
+    }
 
-        DayModel map(DashboardDay day) {
-            return day.main().map(main -> withWindow(day, main)).orElseGet(() -> withoutWindow(day));
+    private String laterWindows(List<Window> later) {
+        if (later.isEmpty()) {
+            return "";
         }
+        return messages.text(TextKey.DAY_LATER_WINDOWS, later.stream()
+                .map(window -> messages.text(TextKey.DAY_LATER_WINDOW, span(window), window.amps()))
+                .collect(Collectors.joining(", ")));
+    }
 
-        private DayModel withWindow(DashboardDay day, MainCharge main) {
-            var window = main.window();
-            var title = messages.title(day.name());
-            var solarSharePct = messages.whole(window.solarSharePct().value());
-            var facts = List.of(
-                    messages.text(TextKey.DAY_SET, window.amps(), messages.decimal(window.powerKw())),
-                    messages.text(TextKey.DAY_ENERGY, messages.decimal(window.energyKwh())));
-            var chips = new ArrayList<ChipModel>();
-            chips.add(new ChipModel(EnergySource.SOLAR, messages.text(TextKey.DAY_SOLAR_SHARE, solarSharePct)));
-            chips.add(batteryChip(day.battery()));
-            main.gridKwh().ifPresent(kwh -> chips.add(new ChipModel(EnergySource.GRID,
-                    messages.text(TextKey.DAY_FROM_GRID, messages.decimal(kwh)))));
-            var spoken = messages.text(TextKey.DAY_SPOKEN, title, messages.time(window.start(), zone),
-                    messages.time(window.end(), zone), window.amps(), solarSharePct);
-            var note = sentences(laterWindows(day.later()), assumedNote(day));
-            return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(),
-                    messages.text(TextKey.DAY_WINDOW), span(window), facts, chips, note, spoken, charts.map(day),
-                    batteries.map(day, levels));
-        }
+    private String assumedNote(DashboardDay day) {
+        return day.assumedLevel()
+                .map(level -> messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(level.value())))
+                .orElse("");
+    }
 
-        /** The day a trip leaves says nothing, as the trip's advice on its tab tells what the battery needs. */
-        private DayModel withoutWindow(DashboardDay day) {
-            var reason = day.noWindow().orElseThrow();
-            var heading = messages.text(reason == NoWindowReason.GRID ? TextKey.DAY_GRID : TextKey.DAY_NONE);
-            var why = switch (reason) {
-                case GRID -> messages.text(TextKey.DAY_GRID_WHY);
-                case DEPARTURE -> "";
-                case AWAY -> messages.text(TextKey.DAY_NONE_TRIP);
-                case NOT_NEEDED -> messages.text(TextKey.DAY_NONE_WHY);
-            };
-            var title = messages.title(day.name());
-            var spoken = sentences(title + ": " + heading.toLowerCase(messages.locale()) + ".", why);
-            return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(), heading, "", List.of(),
-                    List.of(batteryChip(day.battery())), sentences(why, assumedNote(day)), spoken, charts.map(day),
-                    batteries.map(day, levels));
-        }
-
-        /**
-         * The levels at the start and after charging; on a day a trip leaves also the level the trip leaves at the
-         * end of the day, and without a charge before it only the start and the end.
-         */
-        private ChipModel batteryChip(BatteryLevels battery) {
-            var start = messages.whole(battery.startPct().value());
-            var after = messages.whole(battery.afterPct().value());
-            if (battery.afterTripPct().isEmpty()) {
-                return new ChipModel(EnergySource.CAR, messages.text(TextKey.DAY_BATTERY, start, after));
-            }
-            var end = messages.whole(battery.afterTripPct().get().value());
-            return new ChipModel(EnergySource.CAR, battery.chargesBeforeTrip()
-                    ? messages.text(TextKey.DAY_BATTERY_CHARGE_TRIP, start, after, end)
-                    : messages.text(TextKey.DAY_BATTERY_TRIP, start, end));
-        }
-
-        private String laterWindows(List<Window> later) {
-            if (later.isEmpty()) {
-                return "";
-            }
-            return messages.text(TextKey.DAY_LATER_WINDOWS, later.stream()
-                    .map(window -> messages.text(TextKey.DAY_LATER_WINDOW, span(window), window.amps()))
-                    .collect(Collectors.joining(", ")));
-        }
-
-        private String assumedNote(DashboardDay day) {
-            return day.assumedLevel()
-                    .map(level -> messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(level.value())))
-                    .orElse("");
-        }
-
-        private String span(Window window) {
-            return messages.span(window.start(), window.end(), zone);
-        }
+    private String span(Window window) {
+        return messages.span(window.start(), window.end(), zone);
     }
 
     private static String sentences(String... sentences) {
