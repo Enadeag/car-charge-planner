@@ -2,8 +2,8 @@ package nl.enadeag.carchargeplanner.android.ui.home
 
 import java.time.Instant
 import java.util.Optional
-import nl.enadeag.carchargeplanner.android.home.BatteryLevels
-import nl.enadeag.carchargeplanner.android.home.ChargeLevels
+import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
+import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
 import nl.enadeag.carchargeplanner.android.ui.ChartInk
 import nl.enadeag.carchargeplanner.android.ui.home.BatteryBarLayout.Mark
@@ -242,7 +242,7 @@ class ChartGeometryTest {
         assertThat(drawing.nowAt).isNull()
     }
 
-    private val battery = BatteryLevels(Percent(40.0), Percent(50.0))
+    private val battery = BatteryLevels.of(Percent(40.0), Percent(50.0))
 
     private fun bar(battery: BatteryLevels = this.battery, minimum: Double = 20.0, target: Double = 80.0,
         width: Float = 200f, minimumLabel: Float = 30f, targetLabel: Float = 30f, dp: Float = 1f) =
@@ -355,14 +355,14 @@ class ChartGeometryTest {
 
     @Test
     fun anEmptyBatteryDrawsOnlyTheTrackAndTheMarks() {
-        val empty = bar(BatteryLevels(Percent(0.0), Percent(0.0)))
+        val empty = bar(BatteryLevels.of(Percent(0.0), Percent(0.0)))
 
         assertThat(empty.shapes).containsExactlyElementsOf(track + marks(40f, 160f))
     }
 
     @Test
     fun anEmptyBatteryThatChargesDrawsTheLevelAfterChargingWithoutALineAtTheStart() {
-        val charged = bar(BatteryLevels(Percent(0.0), Percent(50.0)))
+        val charged = bar(BatteryLevels.of(Percent(0.0), Percent(50.0)))
 
         assertThat(charged.shapes).containsExactlyElementsOf(track + listOf(
             Shape.Rect(0f, 4f, 100f, 16f, ChartInk.CAR_AFTER, 8f),
@@ -371,7 +371,7 @@ class ChartGeometryTest {
 
     @Test
     fun aFullBatteryFillsTheTrackWithoutALineBetweenTheLevels() {
-        val full = bar(BatteryLevels(Percent(100.0), Percent(100.0)))
+        val full = bar(BatteryLevels.of(Percent(100.0), Percent(100.0)))
 
         assertThat(full.shapes).containsExactlyElementsOf(track + listOf(
             Shape.Rect(0f, 4f, 200f, 16f, ChartInk.CAR_AFTER, 8f),

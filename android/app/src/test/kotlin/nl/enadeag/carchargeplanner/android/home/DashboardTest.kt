@@ -8,7 +8,10 @@ import java.util.Optional
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
+import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice
@@ -54,7 +57,8 @@ class DashboardTest {
 
         assertThat(after.trips).containsExactly(before.describe(trip))
         assertThat(after.trips.single().departureDay).isEqualTo(DayName.Tomorrow(today.plusDays(1)))
-        assertThat(after.copy(trips = listOf())).isEqualTo(before)
+        assertThat(after.view).isEqualTo(before.planned.dashboard(listOf(), listOf(trip)))
+        assertThat(after.copy(trips = listOf(), view = before.view)).isEqualTo(before)
     }
 
     @Test
@@ -217,7 +221,8 @@ class DashboardTest {
     fun aPlanWhoseFirstDayIsNotTodayShowsNoGridAdvice() {
         val advice = GridAdvice(today.plusDays(2), 12.0, 18.0, 7.4, Optional.empty(), Optional.empty())
         val shown = dashboard(gridAdvice = advice)
-        val later = shown.copy(days = shown.days.drop(1))
+        val view = shown.view
+        val later = shown.copy(view = DashboardView(view.madeAt(), view.zone(), view.days().drop(1), view.levels()))
 
         assertThat(later.days.map { later.adviceOn(it) }).containsOnlyNulls()
     }
@@ -225,13 +230,6 @@ class DashboardTest {
     @Test
     fun theBatteryBarsMarkThePlansMinimumAndTargetChargeLevels() {
         assertThat(dashboard().levels).isEqualTo(ChargeLevels(Percent(20.0), Percent(80.0)))
-    }
-
-    @Test
-    fun theChargeLevelsRefuseAMinimumAboveTheTargetButTakeOneEqualToIt() {
-        assertThatThrownBy { ChargeLevels(Percent(81.0), Percent(80.0)) }
-            .isInstanceOf(IllegalArgumentException::class.java)
-        assertThat(ChargeLevels(Percent(80.0), Percent(80.0)).minimum).isEqualTo(Percent(80.0))
     }
 
     @Test
@@ -278,72 +276,12 @@ class DashboardTest {
         return Dashboard.of(Plans.planned(madeAt, days, gridAdvice = grid, tripAdvice = advice), listOf(), trips)
     }
 
-    @Test
-    fun aDayAwayOnATripWithoutAWindowSaysSoAndOtherDaysThatTheCarNeedsNoCharging() {
-        val away = trip(today.plusDays(1), "07:00", today.plusDays(1), "19:00")
 
-        val shown = withTrips(listOf(away))
 
-        assertThat(shown.days.map(shown::noWindowWhy))
-            .containsExactly(NoWindowWhy.NOT_NEEDED, NoWindowWhy.AWAY, NoWindowWhy.NOT_NEEDED)
-    }
 
-    @Test
-    fun theDayATripTheAdviceIsForLeavesSaysNothingAsItsAdviceTellsWhatTheBatteryNeeds() {
-        val leaving = trip(today.plusDays(1), "07:00", today.plusDays(2), "19:00")
 
-        val shown = withTrips(listOf(leaving), listOf(advice(leaving)))
 
-        assertThat(shown.days.map(shown::noWindowWhy)).containsExactly(NoWindowWhy.NOT_NEEDED, null, NoWindowWhy.AWAY)
-    }
 
-    @Test
-    fun theGridAdvicesDayStillSaysGridAndADayWithAWindowIsUnchangedByATrip() {
-        val leaving = trip(today, "13:00", today.plusDays(2), "19:00")
-
-        val shown = withTrips(listOf(leaving), listOf(advice(leaving)), gridDay = today.plusDays(1),
-            windowOn = today.plusDays(2))
-
-        assertThat(shown.days.map(shown::noWindowWhy)).containsExactly(null, NoWindowWhy.GRID, null)
-        assertThat(shown.days[2].kind).isEqualTo(DayKind.SOLAR)
-    }
-
-    @Test
-    fun aTripMadeWithoutThisCarKeepsNobodyAway() {
-        val other = trip(today.plusDays(1), "07:00", today.plusDays(1), "19:00", notWithThisCar = true)
-
-        val shown = withTrips(listOf(other))
-
-        assertThat(shown.noWindowWhy(shown.days[1])).isEqualTo(NoWindowWhy.NOT_NEEDED)
-    }
-
-    @Test
-    fun aTripThatCanChargeAtItsDestinationStillKeepsTheCarAway() {
-        val leaving = trip(today, "13:00", today.plusDays(2), "19:00", canChargeThere = true)
-
-        val shown = withTrips(listOf(leaving), listOf(advice(leaving)))
-
-        assertThat(shown.days.map(shown::noWindowWhy)).containsExactly(null, NoWindowWhy.AWAY, NoWindowWhy.AWAY)
-    }
-
-    @Test
-    fun aReturnAtMidnightBelongsToTheDayBefore() {
-        val overnight = trip(today, "20:00", today.plusDays(1), "00:00")
-
-        val shown = withTrips(listOf(overnight))
-
-        assertThat(shown.days.map(shown::noWindowWhy))
-            .containsExactly(NoWindowWhy.AWAY, NoWindowWhy.NOT_NEEDED, NoWindowWhy.NOT_NEEDED)
-    }
-
-    @Test
-    fun aTripUnderWayThatLeftThisMorningKeepsTodayAwayAlthoughItHasNoAdvice() {
-        val underWay = trip(today, "07:30", today, "18:00")
-
-        val shown = withTrips(listOf(underWay))
-
-        assertThat(shown.noWindowWhy(shown.days[0])).isEqualTo(NoWindowWhy.AWAY)
-    }
 
     @Test
     fun theStoredTripsTellTheAwayDaysAtOnceWithoutANewPlan() {
@@ -353,8 +291,22 @@ class DashboardTest {
         val ticked = shown.withTrips(listOf(Trip(away.departure(), away.returnTime(), 100.0, false, true)))
         val removed = shown.withTrips(listOf())
 
-        assertThat(ticked.noWindowWhy(ticked.days[1])).isEqualTo(NoWindowWhy.NOT_NEEDED)
-        assertThat(removed.noWindowWhy(removed.days[1])).isEqualTo(NoWindowWhy.NOT_NEEDED)
+        assertThat(shown.days[1].noWindow()).contains(NoWindowReason.AWAY)
+        assertThat(ticked.days[1].noWindow()).contains(NoWindowReason.NOT_NEEDED)
+        assertThat(removed.days[1].noWindow()).contains(NoWindowReason.NOT_NEEDED)
+    }
+
+    @Test
+    fun theStoredAwayPeriodsKeepTheDaysAsTheStoredTripsMakeThem() {
+        val away = trip(today.plusDays(1), "07:00", today.plusDays(1), "19:00")
+        val shown = withTrips(listOf(away))
+        val period = OneOffAwayPeriod(at(today.plusDays(2), "09:00"), at(today.plusDays(2), "12:00"))
+
+        val changed = shown.withAway(listOf(period))
+
+        assertThat(changed.view).isEqualTo(shown.planned.dashboard(listOf(period), listOf(away)))
+        assertThat(changed.days[1].noWindow()).contains(NoWindowReason.AWAY)
+        assertThat(changed.away).isEqualTo(ComingAway.of(listOf(period), amsterdam, madeAt.toInstant()))
     }
 
     @Test

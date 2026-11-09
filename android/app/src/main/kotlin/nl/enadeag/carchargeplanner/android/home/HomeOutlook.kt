@@ -143,8 +143,9 @@ class HomeOutlook(private val access: EngineAccess, private val scope: Coroutine
     }
 
     /**
-     * Shows the one-off away periods as the engine stored them after the owner added or removed one, at once, then
-     * asks for the plan again as [planAgain] does, the plan shown staying in view until the new one comes.
+     * Shows the one-off away periods as the engine stored them after the owner added or removed one, at once, with the
+     * engine's dashboard made again from the plan shown; then asks for the plan again as [planAgain] does, the plan
+     * shown staying in view until the new one comes.
      *
      * @param periods the stored periods after the change, in order of their start
      */
@@ -154,7 +155,8 @@ class HomeOutlook(private val access: EngineAccess, private val scope: Coroutine
     }
 
     /**
-     * Shows the trips as the engine stored them after the owner changed or removed one, at once, then asks for the plan
+     * Shows the trips as the engine stored them after the owner changed or removed one, at once, with the engine's
+     * dashboard made again from the plan shown, so a day the car is no longer away says so; then asks for the plan
      * again as [planAgain] does, the plan shown staying in view until the new one comes.
      *
      * @param trips the stored trips after the change, in order of their departure

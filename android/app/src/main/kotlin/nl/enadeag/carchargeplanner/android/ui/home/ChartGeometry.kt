@@ -1,10 +1,10 @@
 package nl.enadeag.carchargeplanner.android.ui.home
 
 import kotlin.math.max
-import nl.enadeag.carchargeplanner.android.home.BatteryLevels
-import nl.enadeag.carchargeplanner.android.home.ChargeLevels
 import nl.enadeag.carchargeplanner.android.ui.ChartInk
 import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
+import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
 
 /**
@@ -378,12 +378,12 @@ internal data class BatteryBarLayout(val width: Float, val dp: Float, val line: 
          */
         fun of(battery: BatteryLevels, levels: ChargeLevels, width: Float, minimumLabel: Float, targetLabel: Float,
             line: Float, dp: Float): BatteryBarLayout {
-            val minimumX = x(levels.minimum, width)
-            val targetX = x(levels.target, width)
+            val minimumX = x(levels.minimum(), width)
+            val targetX = x(levels.target(), width)
             val minimumLeft = labelLeft(minimumX, minimumLabel, width)
             val targetLeft = labelLeft(targetX, targetLabel, width)
             val apart = minimumLeft + minimumLabel + GAP_DP * dp <= targetLeft
-            return BatteryBarLayout(width, dp, line, x(battery.startPct, width), x(battery.afterPct, width),
+            return BatteryBarLayout(width, dp, line, x(battery.start(), width), x(battery.after(), width),
                 Mark(minimumX, minimumLeft, Row.FIRST), Mark(targetX, targetLeft, if (apart) Row.FIRST else Row.SECOND))
         }
 
