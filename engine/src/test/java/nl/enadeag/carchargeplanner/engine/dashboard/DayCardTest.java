@@ -226,6 +226,25 @@ class DayCardTest {
     }
 
     @Test
+    void aTripLeavingJustAfterMidnightKeepsTheCarAwayFromThatHomeDayNotFromTheDayBeforeInUtc() {
+        var leaving = new Trip(at(TOMORROW, 0, 30), at(DAY_AFTER, 18, 0), 300, false);
+
+        var shown = days(threeDaysWithoutWindows(), Optional.empty(), List.of(), List.of(leaving));
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.NOT_NEEDED),
+                Optional.of(NoWindowReason.AWAY), Optional.of(NoWindowReason.AWAY));
+    }
+
+    @Test
+    void aTripBackJustAfterMidnightKeepsTheCarAwayThatHomeDayAlthoughUtcIsStillTheDayBefore() {
+        var back = new Trip(at(TODAY, 18, 0), at(DAY_AFTER, 0, 30), 300, false);
+
+        var shown = days(threeDaysWithoutWindows(), Optional.empty(), List.of(), List.of(back));
+
+        assertThat(reasons(shown)).containsOnly(Optional.of(NoWindowReason.AWAY));
+    }
+
+    @Test
     void aTripThatCanChargeAtItsDestinationStillKeepsTheCarAway() {
         var leaving = new Trip(at(TODAY, 13, 0), at(DAY_AFTER, 19, 0), 300, true);
 
