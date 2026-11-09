@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.home
 
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Optional
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
@@ -25,16 +26,22 @@ class SourceFigureTest {
 
         assertThat(SourceFigure.of(day).map { it.source to it }).containsExactly(
             EnergySource.SOLAR to SourceFigure.SolarShare(day.main().orElseThrow().window().solarSharePct()),
-            EnergySource.CAR to SourceFigure.Battery(BatteryLevels.of(Percent(40.0), Percent(50.0))),
+            EnergySource.CAR to SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(50.0), Optional.empty())),
             EnergySource.GRID to SourceFigure.FromGrid(0.69))
+    }
+
+    @Test
+    fun theGridFigureHoldsWhatTheMainWindowTakesFromTheGrid() {
+        val day = day(listOf(Plans.window(amsterdam, today, 13, 15, importKwh = 0.69)))
+
+        assertThat(SourceFigure.of(day).filterIsInstance<SourceFigure.FromGrid>().map { it.kwh }).containsExactly(0.69)
     }
 
     @Test
     fun aDayWithoutAWindowShowsOnlyItsBattery() {
         val day = day(listOf())
 
-        assertThat(SourceFigure.of(day)).containsExactly(SourceFigure.Battery(BatteryLevels.of(Percent(40.0),
-            Percent(40.0))))
+        assertThat(SourceFigure.of(day)).containsExactly(SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(40.0), Optional.empty())))
     }
 
     @Test

@@ -36,19 +36,19 @@ public final class BatteryMapper {
      */
     public BatteryModel map(DashboardDay day, ChargeLevels levels) {
         var battery = day.battery();
-        double level = battery.start().value();
-        double after = battery.after().value();
-        double minimum = levels.minimum().value();
-        double target = levels.target().value();
+        double level = battery.startPct().value();
+        double after = battery.afterPct().value();
+        double minimum = levels.minimumPct().value();
+        double target = levels.targetPct().value();
         boolean isToday = day.name() instanceof DayName.Today;
         var spoken = isToday
                 ? sentences(messages.text(TextKey.BATTERY_SPOKEN_TODAY, pct(level), pct(after), pct(minimum), pct(target)),
                         day.assumedLevel().isPresent() ? messages.text(TextKey.BATTERY_ASSUMED) : "")
                 : messages.text(TextKey.BATTERY_SPOKEN_DAY, pct(level), messages.inSentence(day.name()),
                         pct(after), pct(minimum), pct(target));
-        if (battery.afterTrip().isPresent()) {
+        if (battery.afterTripPct().isPresent()) {
             spoken = sentences(spoken,
-                    messages.text(TextKey.BATTERY_SPOKEN_AFTER_TRIP, pct(battery.afterTrip().get().value())));
+                    messages.text(TextKey.BATTERY_SPOKEN_AFTER_TRIP, pct(battery.afterTripPct().get().value())));
         }
         return new BatteryModel(level, after, minimum, target, levels(battery),
                 messages.text(TextKey.BATTERY_MINIMUM, pct(minimum)), messages.text(TextKey.BATTERY_TARGET, pct(target)),
@@ -57,12 +57,12 @@ public final class BatteryMapper {
 
     /** Without a charge before the trip, the level after charging is the start's, and is left out. */
     private String levels(BatteryLevels battery) {
-        var level = pct(battery.start().value());
-        var after = pct(battery.after().value());
-        if (battery.afterTrip().isEmpty()) {
+        var level = pct(battery.startPct().value());
+        var after = pct(battery.afterPct().value());
+        if (battery.afterTripPct().isEmpty()) {
             return messages.text(TextKey.BATTERY_LEVELS, level, after);
         }
-        var end = pct(battery.afterTrip().get().value());
+        var end = pct(battery.afterTripPct().get().value());
         return battery.chargesBeforeTrip() ? messages.text(TextKey.BATTERY_LEVELS_CHARGE_TRIP, level, after, end)
                 : messages.text(TextKey.BATTERY_LEVELS_TRIP, level, end);
     }

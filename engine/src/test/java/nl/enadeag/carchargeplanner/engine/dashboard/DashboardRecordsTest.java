@@ -14,9 +14,11 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class DashboardRecordsTest {
 
@@ -24,17 +26,12 @@ class DashboardRecordsTest {
     private static final LocalDate DAY = LocalDate.of(2026, 6, 1);
 
     @ParameterizedTest
-    @CsvSource({"50, 50, true", "49.5, 50, true", "49.4, 50, false", "40, 60, false", "50, 50.4, true"})
-    void batteryLevelsRefuseAFlagThatContradictsTheWholePercentages(double start, double after, boolean flag) {
-        assertThatThrownBy(() -> new BatteryLevels(new Percent(start), new Percent(after), Optional.empty(), flag))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("chargesBeforeTrip");
-    }
+    @CsvSource({"50, 50, false", "49.5, 50, false", "50, 50.4, false", "49.4999, 50, true", "49.4, 50, true",
+        "50, 50.5, true", "40, 60, true"})
+    void aDayChargesBeforeTheTripExactlyWhenTheWholePercentagesDiffer(double start, double after, boolean charges) {
+        var levels = new BatteryLevels(new Percent(start), new Percent(after), Optional.empty());
 
-    @ParameterizedTest
-    @CsvSource({"50, 50, false", "49.5, 50, false", "49.4, 50, true", "40, 60, true"})
-    void batteryLevelsAcceptAFlagThatAgreesWithTheWholePercentages(double start, double after, boolean flag) {
-        assertThat(new BatteryLevels(new Percent(start), new Percent(after), Optional.empty(), flag)
-                .chargesBeforeTrip()).isEqualTo(flag);
+        assertThat(levels.chargesBeforeTrip()).isEqualTo(charges);
     }
 
     private static DayChart chart(double from, double to, double scale, double baseload) {
@@ -117,18 +114,17 @@ class DashboardRecordsTest {
     }
 
     private static final Window WINDOW = new Window(NOON, NOON.plusSeconds(3600), 10, 2.3, 2.3, 0);
-    private static final Optional<MainCharge> MAIN = Optional.of(new MainCharge(WINDOW, Optional.empty()));
-    private static final BatteryLevels BATTERY = BatteryLevels.of(new Percent(40), new Percent(50));
+    private static final Optional<MainCharge> MAIN = Optional.of(new MainCharge(WINDOW, OptionalDouble.empty()));
+    private static final BatteryLevels BATTERY = new BatteryLevels(new Percent(40), new Percent(50), Optional.empty());
 
-    private static DashboardDay day(DayKind kind, Optional<MainCharge> main, List<Window> later,
-            Optional<NoWindowReason> noWindow) {
-        return new DashboardDay(new DayName.Today(DAY), kind, main, later, noWindow, BATTERY, Optional.empty(),
+    private static DashboardDay day(Optional<MainCharge> main, List<Window> later, Optional<NoWindowReason> noWindow) {
+        return new DashboardDay(new DayName.Today(DAY), main, later, noWindow, BATTERY, Optional.empty(),
                 chart(6, 20, 1, 0.3));
     }
 
     @Test
     void aDashboardKeepsItsOwnDays() {
-        var days = new ArrayList<>(List.of(day(DayKind.SOLAR, MAIN, List.of(), Optional.empty())));
+        var days = new ArrayList<>(List.of(day(MAIN, List.of(), Optional.empty())));
         var dashboard = new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), days,
                 new ChargeLevels(new Percent(20), new Percent(80)));
 
@@ -140,7 +136,7 @@ class DashboardRecordsTest {
     @Test
     void aDayKeepsItsOwnLaterWindows() {
         var later = new ArrayList<>(List.of(WINDOW));
-        var day = day(DayKind.SOLAR, MAIN, later, Optional.empty());
+        var day = day(MAIN, later, Optional.empty());
 
         later.clear();
 
@@ -148,44 +144,41 @@ class DashboardRecordsTest {
     }
 
     @Test
-    void aDayWithOrWithoutAWindowAndOfEachKindIsMade() {
-        assertThat(day(DayKind.SOLAR, MAIN, List.of(WINDOW), Optional.empty()).main()).isEqualTo(MAIN);
-        assertThat(day(DayKind.GRID, Optional.empty(), List.of(), Optional.of(NoWindowReason.GRID)).kind())
-                .isEqualTo(DayKind.GRID);
-        for (var reason : List.of(NoWindowReason.DEPARTURE, NoWindowReason.AWAY, NoWindowReason.NOT_NEEDED)) {
-            assertThat(day(DayKind.NONE, Optional.empty(), List.of(), Optional.of(reason)).noWindow()).contains(reason);
-        }
+    void aDayWithAMainWindowKeepsItAndIsASolarDay() {
+        var day = day(MAIN, List.of(WINDOW), Optional.empty());
+
+        assertThat(day.main()).isEqualTo(MAIN);
+        assertThat(day.kind()).isEqualTo(DayKind.SOLAR);
     }
 
     @Test
-    void aDayHasAMainWindowExactlyWhenItIsASolarDay() {
-        assertThatThrownBy(() -> day(DayKind.SOLAR, Optional.empty(), List.of(), Optional.of(NoWindowReason.GRID)))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> day(DayKind.GRID, MAIN, List.of(), Optional.of(NoWindowReason.GRID)))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> day(DayKind.NONE, MAIN, List.of(), Optional.of(NoWindowReason.AWAY)))
-                .isInstanceOf(IllegalArgumentException.class);
+    void aDayWithoutAWindowBecauseOfTheGridAdviceIsAGridDay() {
+        assertThat(day(Optional.empty(), List.of(), Optional.of(NoWindowReason.GRID)).kind()).isEqualTo(DayKind.GRID);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = NoWindowReason.class, names = "GRID", mode = EnumSource.Mode.EXCLUDE)
+    void aDayWithoutAWindowForAnotherReasonIsOfNoKind(NoWindowReason reason) {
+        assertThat(day(Optional.empty(), List.of(), Optional.of(reason)).kind()).isEqualTo(DayKind.NONE);
+    }
+
+    @ParameterizedTest
+    @EnumSource(NoWindowReason.class)
+    void aDayWithoutAWindowKeepsItsReason(NoWindowReason reason) {
+        assertThat(day(Optional.empty(), List.of(), Optional.of(reason)).noWindow()).contains(reason);
     }
 
     @Test
     void aDayWithoutAMainWindowHasNoLaterOnes() {
-        assertThatThrownBy(() -> day(DayKind.NONE, Optional.empty(), List.of(WINDOW),
+        assertThatThrownBy(() -> day(Optional.empty(), List.of(WINDOW),
                 Optional.of(NoWindowReason.NOT_NEEDED))).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void aDayHasAReasonWithoutAWindowExactlyWhenItHasNoWindow() {
-        assertThatThrownBy(() -> day(DayKind.SOLAR, MAIN, List.of(), Optional.of(NoWindowReason.NOT_NEEDED)))
+        assertThatThrownBy(() -> day(MAIN, List.of(), Optional.of(NoWindowReason.NOT_NEEDED)))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> day(DayKind.NONE, Optional.empty(), List.of(), Optional.empty()))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    void aDayIsAGridDayExactlyWhenTheGridAdviceIsWhyItHasNoWindow() {
-        assertThatThrownBy(() -> day(DayKind.GRID, Optional.empty(), List.of(), Optional.of(NoWindowReason.AWAY)))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> day(DayKind.NONE, Optional.empty(), List.of(), Optional.of(NoWindowReason.GRID)))
+        assertThatThrownBy(() -> day(Optional.empty(), List.of(), Optional.empty()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -193,30 +186,30 @@ class DashboardRecordsTest {
     void onlyTodayHasAnAssumedLevel() {
         var tomorrow = DAY.plusDays(1);
 
-        assertThatThrownBy(() -> new DashboardDay(new DayName.Tomorrow(tomorrow), DayKind.SOLAR, MAIN, List.of(),
-                Optional.empty(), BATTERY, Optional.of(new Percent(40)), chart(6, 20, 1, 0.3)))
+        assertThatThrownBy(() -> new DashboardDay(new DayName.Tomorrow(tomorrow), MAIN, List.of(), Optional.empty(),
+                BATTERY, Optional.of(new Percent(40)), chart(6, 20, 1, 0.3)))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThat(new DashboardDay(new DayName.Today(DAY), DayKind.SOLAR, MAIN, List.of(), Optional.empty(), BATTERY,
+        assertThat(new DashboardDay(new DayName.Today(DAY), MAIN, List.of(), Optional.empty(), BATTERY,
                 Optional.of(new Percent(40)), chart(6, 20, 1, 0.3)).assumedLevel()).contains(new Percent(40));
     }
 
     @ParameterizedTest
     @CsvSource({"0", "-0.1", "NaN", "Infinity"})
     void theMainWindowsGridEnergyIsFiniteAndMoreThanZero(double kwh) {
-        assertThatThrownBy(() -> new MainCharge(WINDOW, Optional.of(kwh))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new MainCharge(WINDOW, OptionalDouble.of(kwh))).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void theMainWindowTakesALittleGridEnergyOrNone() {
-        assertThat(new MainCharge(WINDOW, Optional.of(0.01)).gridKwh()).contains(0.01);
-        assertThat(new MainCharge(WINDOW, Optional.empty()).gridKwh()).isEmpty();
+        assertThat(new MainCharge(WINDOW, OptionalDouble.of(0.01)).gridKwh()).hasValue(0.01);
+        assertThat(new MainCharge(WINDOW, OptionalDouble.empty()).gridKwh()).isEmpty();
     }
 
     @Test
     void theChargeLevelsRefuseAMinimumAboveTheTargetButTakeOneEqualToIt() {
         assertThatThrownBy(() -> new ChargeLevels(new Percent(81), new Percent(80)))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThat(new ChargeLevels(new Percent(80), new Percent(80)).minimum()).isEqualTo(new Percent(80));
+        assertThat(new ChargeLevels(new Percent(80), new Percent(80)).minimumPct()).isEqualTo(new Percent(80));
     }
 
     @Test

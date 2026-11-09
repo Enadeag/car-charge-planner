@@ -378,12 +378,12 @@ internal data class BatteryBarLayout(val width: Float, val dp: Float, val line: 
          */
         fun of(battery: BatteryLevels, levels: ChargeLevels, width: Float, minimumLabel: Float, targetLabel: Float,
             line: Float, dp: Float): BatteryBarLayout {
-            val minimumX = x(levels.minimum(), width)
-            val targetX = x(levels.target(), width)
+            val minimumX = x(levels.minimumPct(), width)
+            val targetX = x(levels.targetPct(), width)
             val minimumLeft = labelLeft(minimumX, minimumLabel, width)
             val targetLeft = labelLeft(targetX, targetLabel, width)
             val apart = minimumLeft + minimumLabel + GAP_DP * dp <= targetLeft
-            return BatteryBarLayout(width, dp, line, x(battery.start(), width), x(battery.after(), width),
+            return BatteryBarLayout(width, dp, line, x(battery.startPct(), width), x(battery.afterPct(), width),
                 Mark(minimumX, minimumLeft, Row.FIRST), Mark(targetX, targetLeft, if (apart) Row.FIRST else Row.SECOND))
         }
 

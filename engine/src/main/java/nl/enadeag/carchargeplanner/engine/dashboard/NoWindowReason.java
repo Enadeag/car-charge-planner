@@ -1,20 +1,17 @@
 package nl.enadeag.carchargeplanner.engine.dashboard;
 
-/** Why a day without a charge window has none, as its card says. */
+/** Why a day without a charge window has none. */
 public enum NoWindowReason {
 
-    /** Solar power is not enough to stay above the minimum charge level: the grid advice says what to do. */
+    /** The day is the grid advice's day, whatever the trips. */
     GRID,
 
-    /**
-     * A trip the plan advises on leaves that day: the card says nothing, as the trip's advice tells what the battery
-     * needs.
-     */
+    /** A trip the plan advises on leaves that day; the dashboard says nothing more, the trip advice does. */
     DEPARTURE,
 
-    /** The car is away on a trip made with it, or there is too little solar power while it is home. */
+    /** The car is away that day on a stored trip made with it, by {@code Trip.covers} in the home's time zone. */
     AWAY,
 
-    /** The car needs no charging, or there is too little solar power for it. */
+    /** None of the above: the car needs no charging that day. */
     NOT_NEEDED
 }

@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -87,7 +88,8 @@ class BatteryMapperTest {
         var disagree = new ArrayList<String>();
 
         written.forEach((start, startText) -> written.forEach((after, afterText) -> {
-            if (BatteryLevels.of(new Percent(start), new Percent(after)).chargesBeforeTrip() == startText.equals(afterText)) {
+            var levels = new BatteryLevels(new Percent(start), new Percent(after), Optional.empty());
+            if (levels.chargesBeforeTrip() == startText.equals(afterText)) {
                 disagree.add(start + " and " + after);
             }
         }));

@@ -185,9 +185,9 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * and the end of the day after the trip; or, with a charge before the trip, all three.
      */
     private fun battery(levels: BatteryLevels, plain: Int, trip: Int, chargeAndTrip: Int): String {
-        val start = whole(levels.start().value())
-        val after = whole(levels.after().value())
-        val end = levels.afterTrip().orElse(null)?.let { whole(it.value()) } ?: return text(plain, start, after)
+        val start = whole(levels.startPct().value())
+        val after = whole(levels.afterPct().value())
+        val end = levels.afterTripPct().orElse(null)?.let { whole(it.value()) } ?: return text(plain, start, after)
         return if (levels.chargesBeforeTrip()) text(chargeAndTrip, start, after, end) else text(trip, start, end)
     }
 
@@ -371,7 +371,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @param levels the charge levels
      * @return such as "min 30%"
      */
-    fun minimum(levels: ChargeLevels): String = text(R.string.battery_minimum, whole(levels.minimum().value()))
+    fun minimum(levels: ChargeLevels): String = text(R.string.battery_minimum, whole(levels.minimumPct().value()))
 
     /**
      * The target's mark on the battery bar.
@@ -379,7 +379,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @param levels the charge levels
      * @return such as "target 80%"
      */
-    fun target(levels: ChargeLevels): String = text(R.string.battery_target, whole(levels.target().value()))
+    fun target(levels: ChargeLevels): String = text(R.string.battery_target, whole(levels.targetPct().value()))
 
     /**
      * A day's battery bar in words, as a screen reader reads it.
@@ -391,17 +391,17 @@ internal class DashboardWords(private val resources: Resources, private val loca
      *     day a trip leaves, followed by the level after the trip
      */
     fun battery(day: DashboardDay, levels: ChargeLevels): String {
-        val start = whole(day.battery().start().value())
-        val after = whole(day.battery().after().value())
-        val minimum = whole(levels.minimum().value())
-        val target = whole(levels.target().value())
+        val start = whole(day.battery().startPct().value())
+        val after = whole(day.battery().afterPct().value())
+        val minimum = whole(levels.minimumPct().value())
+        val target = whole(levels.targetPct().value())
         val said = if (day.name() !is DayName.Today) {
             text(R.string.battery_spoken_day, start, inSentence(day.name()), after, minimum, target)
         } else {
             text(R.string.battery_spoken_today, start, after, minimum, target)
         }
         val assumed = if (day.assumedLevel().isPresent) text(R.string.battery_assumed) else ""
-        val afterTrip = day.battery().afterTrip().orElse(null)
+        val afterTrip = day.battery().afterTripPct().orElse(null)
             ?.let { text(R.string.battery_spoken_after_trip, whole(it.value())) }
             .orEmpty()
         return listOf(said, assumed, afterTrip).filter { it.isNotEmpty() }.joinToString(" ")

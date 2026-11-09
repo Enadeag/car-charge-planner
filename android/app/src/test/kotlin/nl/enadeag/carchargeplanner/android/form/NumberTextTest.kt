@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.form
 
 import java.util.Locale
+import java.util.Optional
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
@@ -98,7 +99,7 @@ class NumberTextTest {
 
             val disagree = levels.flatMap { start ->
                 levels.filter { after ->
-                    BatteryLevels.of(Percent(start), Percent(after)).chargesBeforeTrip() ==
+                    BatteryLevels(Percent(start), Percent(after), Optional.empty()).chargesBeforeTrip() ==
                         (written[start] == written[after])
                 }.map { after -> "$start and $after" }
             }

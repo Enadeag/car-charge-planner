@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -35,9 +36,7 @@ final class DayBuilder {
     /**
      * Makes the days of one plan.
      *
-     * @param parts the plan's parts, never null: when it was made, whose day in the home's time zone is today; the
-     *     zone; the battery level and whether it is assumed; the grid advice, whose day is the grid's; the trip
-     *     advice, whose trips' first days are departure days; and the stored trips, which keep the car away
+     * @param parts the plan's parts; never null
      */
     DayBuilder(PlanParts parts) {
         this.zone = parts.zone();
@@ -64,16 +63,16 @@ final class DayBuilder {
         var windows = day.windows();
         if (windows.isEmpty()) {
             var reason = noWindow(date);
-            return new DashboardDay(name, reason == NoWindowReason.GRID ? DayKind.GRID : DayKind.NONE,
-                    Optional.empty(), List.of(), Optional.of(reason), battery(day), assumedToday, chart);
+            return new DashboardDay(name, Optional.empty(), List.of(), Optional.of(reason), battery(day), assumedToday,
+                    chart);
         }
-        return new DashboardDay(name, DayKind.SOLAR, Optional.of(main(windows.get(0))),
-                windows.subList(1, windows.size()), Optional.empty(), battery(day), assumedToday, chart);
+        return new DashboardDay(name, Optional.of(main(windows.get(0))), windows.subList(1, windows.size()),
+                Optional.empty(), battery(day), assumedToday, chart);
     }
 
     private static MainCharge main(Window window) {
         double grid = window.importKwh();
-        return new MainCharge(window, grid >= NO_GRID_KWH ? Optional.of(grid) : Optional.empty());
+        return new MainCharge(window, grid >= NO_GRID_KWH ? OptionalDouble.of(grid) : OptionalDouble.empty());
     }
 
     /** The grid advice's day says so whatever the trips; the departure comes before being away on the trip. */
@@ -92,8 +91,9 @@ final class DayBuilder {
 
     private BatteryLevels battery(DayPlan day) {
         if (departures.contains(day.date())) {
-            return BatteryLevels.leaving(day.startLevelPct(), day.levelAfterChargingPct(), day.endLevelPct());
+            return new BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct(),
+                    Optional.of(day.endLevelPct()));
         }
-        return BatteryLevels.of(day.startLevelPct(), day.levelAfterChargingPct());
+        return new BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct(), Optional.empty());
     }
 }

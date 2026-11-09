@@ -7,58 +7,23 @@ import java.util.Optional;
  * A day's battery levels: at the start of the day and after its charging, and on the day a trip the plan advises on
  * leaves, at the end of the day, after the trip.
  *
- * @param start at the start of the day; today's at the moment the plan was made
- * @param after after the day's charging; the start's when the day has none
- * @param afterTrip at the end of the day a trip the plan advises on leaves, after the trip; empty on any other day
- * @param chargesBeforeTrip true when the start and the level after charging differ in whole percent, rounded half up;
- *     false when they read the same
+ * @param startPct at the start of the day, never null; today's at the moment the plan was made
+ * @param afterPct after the day's charging, never null; the start's when the day has none
+ * @param afterTripPct at the end of the day a trip the plan advises on leaves, after the trip; empty on any other
+ *     day, never null
  */
-public record BatteryLevels(Percent start, Percent after, Optional<Percent> afterTrip, boolean chargesBeforeTrip) {
+public record BatteryLevels(Percent startPct, Percent afterPct, Optional<Percent> afterTripPct) {
 
     /**
-     * Makes the levels of a day.
+     * Whether the day charges before the trip, which is when the start and the level after charging differ in whole
+     * percent. Without it a client shows only the start and the level after the trip.
      *
-     * @throws IllegalArgumentException when {@code chargesBeforeTrip} is not what the start and the level after
-     *     charging give: true exactly when they differ in whole percent, rounded half up
-     */
-    public BatteryLevels {
-        if (chargesBeforeTrip != differ(start, after)) {
-            throw new IllegalArgumentException("chargesBeforeTrip must be true exactly when the whole percentages "
-                    + "differ, rounded half up: start " + start.value() + " and after " + after.value()
-                    + " given with " + chargesBeforeTrip);
-        }
-    }
-
-    /**
-     * The levels of a day no trip the plan advises on leaves.
+     * <p>A level is shown as a whole percentage, rounded half up; within 0 to 100 a tie is an exact half, which
+     * {@link Math#round(double)} rounds up too.
      *
-     * @param start the level at the start of the day, never null
-     * @param after the level after the day's charging, never null
-     * @return the levels, without a level after a trip
+     * @return true when the start and the level after charging differ in whole percent; false when they read the same
      */
-    public static BatteryLevels of(Percent start, Percent after) {
-        return new BatteryLevels(start, after, Optional.empty(), differ(start, after));
-    }
-
-    /**
-     * The levels of the day a trip the plan advises on leaves. Without a charge before the trip, which is when the
-     * start and the level after charging read the same in whole percent, a client shows only the start and the level
-     * after the trip.
-     *
-     * @param start the level at the start of the day, never null
-     * @param after the level after the day's charging, never null
-     * @param afterTrip the level at the end of the day, after the trip, never null
-     * @return the levels, with the one after the trip
-     */
-    public static BatteryLevels leaving(Percent start, Percent after, Percent afterTrip) {
-        return new BatteryLevels(start, after, Optional.of(afterTrip), differ(start, after));
-    }
-
-    /**
-     * Both apps write a level as a whole percentage rounded half up. Within 0 to 100 a tie is an exact half, which
-     * {@link Math#round(double)} rounds up too, so this agrees with what they write.
-     */
-    private static boolean differ(Percent start, Percent after) {
-        return Math.round(start.value()) != Math.round(after.value());
+    public boolean chargesBeforeTrip() {
+        return Math.round(startPct.value()) != Math.round(afterPct.value());
     }
 }

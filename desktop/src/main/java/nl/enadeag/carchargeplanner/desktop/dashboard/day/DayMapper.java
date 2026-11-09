@@ -106,12 +106,12 @@ public final class DayMapper {
          * end of the day, and without a charge before it only the start and the end.
          */
         private ChipModel batteryChip(BatteryLevels battery) {
-            var start = messages.whole(battery.start().value());
-            var after = messages.whole(battery.after().value());
-            if (battery.afterTrip().isEmpty()) {
+            var start = messages.whole(battery.startPct().value());
+            var after = messages.whole(battery.afterPct().value());
+            if (battery.afterTripPct().isEmpty()) {
                 return new ChipModel(EnergySource.CAR, messages.text(TextKey.DAY_BATTERY, start, after));
             }
-            var end = messages.whole(battery.afterTrip().get().value());
+            var end = messages.whole(battery.afterTripPct().get().value());
             return new ChipModel(EnergySource.CAR, battery.chargesBeforeTrip()
                     ? messages.text(TextKey.DAY_BATTERY_CHARGE_TRIP, start, after, end)
                     : messages.text(TextKey.DAY_BATTERY_TRIP, start, end));

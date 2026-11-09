@@ -13,9 +13,11 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DayCardTest {
 
@@ -83,7 +85,7 @@ class DayCardTest {
                 .get(0);
 
         assertThat(day.kind()).isEqualTo(DayKind.SOLAR);
-        assertThat(day.main()).contains(new MainCharge(first, Optional.empty()));
+        assertThat(day.main()).contains(new MainCharge(first, OptionalDouble.empty()));
         assertThat(day.later()).containsExactly(second, third);
         assertThat(day.noWindow()).isEmpty();
     }
@@ -98,11 +100,11 @@ class DayCardTest {
 
     @ParameterizedTest
     @CsvSource({"0.05, true", "0.0499999, false", "0, false", "0.69, true"})
-    void theMainWindowShowsWhatItTakesFromTheGridFromAHundredthOfAKilowattHourOnly(double importKwh, boolean shown) {
+    void theMainWindowShowsWhatItTakesFromTheGridFromFiveHundredthsOfAKilowattHourOnly(double importKwh, boolean shown) {
         var main = days(List.of(day(TODAY, List.of(window(TODAY, 11, 14, importKwh)))), Optional.empty(), List.of(),
                 List.of()).get(0).main().orElseThrow();
 
-        assertThat(main.gridKwh()).isEqualTo(shown ? Optional.of(importKwh) : Optional.empty());
+        assertThat(main.gridKwh()).isEqualTo(shown ? OptionalDouble.of(importKwh) : OptionalDouble.empty());
     }
 
     @Test
@@ -111,6 +113,30 @@ class DayCardTest {
 
         assertThat(shown).extracting(DashboardDay::assumedLevel)
                 .containsExactly(Optional.of(new Percent(40)), Optional.empty(), Optional.empty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2026-03-29", "2026-10-25"})
+    void todayIsTheHomesDateOnTheDaysTheClocksChange(String date) {
+        var changeDay = LocalDate.parse(date);
+        var plan = List.of(day(changeDay, List.of()), day(changeDay.plusDays(1), List.of()));
+
+        var shown = view(at(changeDay, 0, 30), plan, true, Optional.empty(), List.of(), List.of()).days();
+
+        assertThat(shown).extracting(DashboardDay::name)
+                .containsExactly(new DayName.Today(changeDay), new DayName.Tomorrow(changeDay.plusDays(1)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2026-03-29", "2026-10-25"})
+    void theAssumedLevelIsOnTheHomesDateOnTheDaysTheClocksChange(String date) {
+        var changeDay = LocalDate.parse(date);
+        var plan = List.of(day(changeDay, List.of()), day(changeDay.plusDays(1), List.of()));
+
+        var shown = view(at(changeDay, 0, 30), plan, true, Optional.empty(), List.of(), List.of()).days();
+
+        assertThat(shown).extracting(DashboardDay::assumedLevel)
+                .containsExactly(Optional.of(new Percent(40)), Optional.empty());
     }
 
     @Test
@@ -180,7 +206,7 @@ class DayCardTest {
 
         assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.NOT_NEEDED),
                 Optional.of(NoWindowReason.AWAY), Optional.of(NoWindowReason.DEPARTURE));
-        assertThat(shown).extracting(day -> day.battery().afterTrip())
+        assertThat(shown).extracting(day -> day.battery().afterTripPct())
                 .containsExactly(Optional.empty(), Optional.empty(), Optional.of(new Percent(55)));
     }
 
@@ -221,12 +247,13 @@ class DayCardTest {
 
         assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.NOT_NEEDED),
                 Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.AWAY));
-        assertThat(shown).extracting(day -> day.battery().afterTrip())
+        assertThat(shown).extracting(day -> day.battery().afterTripPct())
                 .containsExactly(Optional.empty(), Optional.of(new Percent(55)), Optional.empty());
     }
 
     @Test
-    void aTripLeavingJustAfterMidnightKeepsTheCarAwayFromThatHomeDayNotFromTheDayBeforeInUtc() {
+    void aTripLeavingJustAfterMidnightIsAwayFromThatHomeDay() {
+        // 00:30 in Amsterdam in summer is 22:30 the day before in UTC
         var leaving = new Trip(at(TOMORROW, 0, 30), at(DAY_AFTER, 18, 0), 300, false);
 
         var shown = days(threeDaysWithoutWindows(), Optional.empty(), List.of(), List.of(leaving));
@@ -236,7 +263,8 @@ class DayCardTest {
     }
 
     @Test
-    void aTripBackJustAfterMidnightKeepsTheCarAwayThatHomeDayAlthoughUtcIsStillTheDayBefore() {
+    void aTripBackJustAfterMidnightIsAwayThatHomeDay() {
+        // 00:30 in Amsterdam in summer is 22:30 the day before in UTC
         var back = new Trip(at(TODAY, 18, 0), at(DAY_AFTER, 0, 30), 300, false);
 
         var shown = days(threeDaysWithoutWindows(), Optional.empty(), List.of(), List.of(back));
@@ -263,7 +291,7 @@ class DayCardTest {
 
         assertThat(shown.kind()).isEqualTo(DayKind.SOLAR);
         assertThat(shown.noWindow()).isEmpty();
-        assertThat(shown.battery().afterTrip()).contains(new Percent(55));
+        assertThat(shown.battery().afterTripPct()).contains(new Percent(55));
     }
 
     @Test
@@ -274,8 +302,8 @@ class DayCardTest {
         var shown = days(plan, Optional.empty(), List.of(advice(leaving)), List.of(leaving));
 
         assertThat(shown).extracting(DashboardDay::battery).containsExactly(
-                new BatteryLevels(new Percent(40), new Percent(60), Optional.empty(), true),
-                new BatteryLevels(new Percent(60), new Percent(74), Optional.of(new Percent(30)), true));
+                new BatteryLevels(new Percent(40), new Percent(60), Optional.empty()),
+                new BatteryLevels(new Percent(60), new Percent(74), Optional.of(new Percent(30))));
     }
 
     @ParameterizedTest
@@ -289,7 +317,6 @@ class DayCardTest {
         var shown = days(plan, Optional.empty(), List.of(advice(leaving)), List.of(leaving)).get(0).battery();
 
         assertThat(shown.chargesBeforeTrip()).isEqualTo(charges);
-        assertThat(BatteryLevels.of(new Percent(start), new Percent(after)).chargesBeforeTrip()).isEqualTo(charges);
     }
 
     @Test

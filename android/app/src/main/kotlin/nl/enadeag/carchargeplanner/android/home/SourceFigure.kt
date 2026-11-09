@@ -62,7 +62,7 @@ sealed interface SourceFigure {
         fun of(day: DashboardDay): List<SourceFigure> {
             val main = day.main().orElse(null)
             return listOfNotNull(main?.let { SolarShare(it.window().solarSharePct()) }, Battery(day.battery()),
-                main?.gridKwh()?.orElse(null)?.let { FromGrid(it) })
+                main?.gridKwh()?.takeIf { it.isPresent }?.let { FromGrid(it.asDouble) })
         }
     }
 }
