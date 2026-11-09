@@ -5,7 +5,6 @@ import java.nio.file.Path
 import java.time.Instant
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.yield
-import nl.enadeag.carchargeplanner.android.AppEngine
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
@@ -16,6 +15,7 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
+import nl.enadeag.carchargeplanner.engine.forecast.Providers
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsProblem
@@ -68,8 +68,10 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     /** The answers of the place searches, which wait until completed, in the order asked. */
     val searches = mutableListOf<CompletableDeferred<PlaceResults?>>()
 
-    /** The app's own providers, whose information never reaches the network. */
-    override fun providers(): List<ProviderInfo> = PROVIDERS
+    /** The providers offered, in order: the app's own, whose information never reaches the network. */
+    var offered: List<ProviderInfo> = PROVIDERS
+
+    override fun providers(): List<ProviderInfo> = offered
 
     /** As the app's providers: Open-Meteo has a place search, Forecast.Solar none. */
     override fun hasPlaceSearch(provider: ProviderId) = provider.value() == "open-meteo"
@@ -261,7 +263,7 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     }
 
     private companion object {
-        val PROVIDERS: List<ProviderInfo> = AppEngine.providers { throw IOException("no network in these tests") }
+        val PROVIDERS: List<ProviderInfo> = Providers.standard { throw IOException("no network in these tests") }
             .let { known -> known.ids().map { id -> known.find(id).get().info() } }
     }
 }

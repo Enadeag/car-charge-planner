@@ -26,8 +26,8 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId
  *
  * @param handle the set-up screen's saved state
  * @param numbers how the screen's language writes numbers
- * @param draft the config set-up starts from, [draft] for the phone's time zone; made again the same way after the
- *     system ended the app
+ * @param draft the config set-up starts from, [draft] for the phone's time zone and the first provider offered; made
+ *     again the same way after the system ended the app
  * @param phoneZone the phone's time zone as it is now, which typed coordinates get
  */
 class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, private val draft: EngineConfig,
@@ -42,12 +42,13 @@ class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, priva
 
         /**
          * What set-up starts from: no place chosen yet, the typical home with its values marked as typical, the
-         * recommended planning preferences, and Open-Meteo without a fallback.
+         * recommended planning preferences, and the primary provider without a fallback.
          *
          * @param phoneZone the phone's time zone, which the home has until a place is chosen
+         * @param primary the provider set-up asks, the first the app offers
          * @return the draft
          */
-        fun draft(phoneZone: ZoneId): EngineConfig = EngineConfig.setUpDraft(phoneZone, ProviderId("open-meteo"))
+        fun draft(phoneZone: ZoneId, primary: ProviderId): EngineConfig = EngineConfig.setUpDraft(phoneZone, primary)
     }
 
     /** Where the home is; set-up needs a place chosen. */
