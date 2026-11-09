@@ -165,6 +165,20 @@ class DayChartTest {
         assertThat(chart.toHour()).isEqualTo(24);
     }
 
+    /** Sun from 09:00 to 16:00 on the clock: real hours 10 to 17 on the long day, 8 to 15 on the short one. */
+    @ParameterizedTest
+    @CsvSource({"2026-10-25, 25, 10, 9.0, 18.0", "2026-03-29, 23, 8, 7.0, 16.0"})
+    void theMarginAroundTheSunCountsRealHoursOnTheShortAndTheLongDay(LocalDate date, int dayHours, int sunFromHour,
+            double fromHour, double toHour) {
+        var kw = new double[dayHours];
+        Arrays.fill(kw, sunFromHour, sunFromHour + 7, 1);
+
+        var chart = only(date.atTime(0, 30).atZone(AMSTERDAM).toInstant(), day(date, List.of(), forecast(date, kw)));
+
+        assertThat(chart.fromHour()).isEqualTo(fromHour);
+        assertThat(chart.toHour()).isEqualTo(toHour);
+    }
+
     @ParameterizedTest
     @CsvSource({"3.2, 0.3, 4.0", "0.4, 0.3, 1.0", "0.0, 0.0, 1.0", "2.0, 2.4, 3.0", "4.0, 0.3, 4.0"})
     void everyDayHasOneScaleTheWholeKilowattAboveTheHighestSunOrTheBaseload(double peak, double baseload, double scale) {
