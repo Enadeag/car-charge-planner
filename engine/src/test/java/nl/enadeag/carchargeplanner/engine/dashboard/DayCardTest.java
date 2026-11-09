@@ -203,6 +203,25 @@ class DayCardTest {
     }
 
     @Test
+    void aTripThatLeftThisMorningKeepsTheCarAwayTodayWithoutAdvice() {
+        var underWay = trip(TODAY, 7, TODAY, 18);
+
+        var shown = days(threeDaysWithoutWindows(), Optional.empty(), List.of(), List.of(underWay));
+
+        assertThat(shown.get(0).noWindow()).contains(NoWindowReason.AWAY);
+    }
+
+    @Test
+    void aTripThatCanChargeAtItsDestinationStillKeepsTheCarAway() {
+        var leaving = new Trip(at(TODAY, 13, 0), at(DAY_AFTER, 19, 0), 300, true);
+
+        var shown = days(threeDaysWithoutWindows(), Optional.empty(), List.of(advice(leaving)), List.of(leaving));
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.DEPARTURE),
+                Optional.of(NoWindowReason.AWAY), Optional.of(NoWindowReason.AWAY));
+    }
+
+    @Test
     void aDayWithAWindowIsTheSameWhateverTheTrips() {
         var leaving = trip(TODAY, 18, TODAY, 22);
         var plan = List.of(day(TODAY, List.of(window(TODAY, 11, 14, 0))));
