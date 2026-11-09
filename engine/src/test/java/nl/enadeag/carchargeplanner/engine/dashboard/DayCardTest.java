@@ -213,6 +213,19 @@ class DayCardTest {
     }
 
     @Test
+    void theDepartureDayIsTheHomesDayAlsoWhenUtcIsStillTheDayBefore() {
+        // 01:00 on tomorrow in Amsterdam in summer is 23:00 today in UTC
+        var leaving = trip(TOMORROW, 1, DAY_AFTER, 18);
+
+        var shown = days(threeDaysWithoutWindows(), Optional.empty(), List.of(advice(leaving)), List.of(leaving));
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.NOT_NEEDED),
+                Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.AWAY));
+        assertThat(shown).extracting(day -> day.battery().afterTrip())
+                .containsExactly(Optional.empty(), Optional.of(new Percent(55)), Optional.empty());
+    }
+
+    @Test
     void aTripThatCanChargeAtItsDestinationStillKeepsTheCarAway() {
         var leaving = new Trip(at(TODAY, 13, 0), at(DAY_AFTER, 19, 0), 300, true);
 
