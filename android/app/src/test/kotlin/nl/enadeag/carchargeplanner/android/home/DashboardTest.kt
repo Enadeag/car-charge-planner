@@ -133,6 +133,8 @@ class DashboardTest {
         val shown = dashboard(gridAdvice = advice)
 
         assertThat(shown.gridAdvice).isEqualTo(shown.view.gridAdvice().orElseThrow())
+        assertThat(shown.gridAdvice!!.day().date()).isEqualTo(today.plusDays(1))
+        assertThat(shown.gridAdvice!!.energyKwh()).isEqualTo(7.4)
         assertThat(dashboard().gridAdvice).isNull()
     }
 
@@ -179,7 +181,7 @@ class DashboardTest {
 
     @Test
     fun gridAdviceShowsOnTodaysTabAndNoOther() {
-        val advice = GridAdvice(today.plusDays(1), 12.0, 18.0, 7.4, Optional.empty(), Optional.empty())
+        val advice = GridAdvice(today.plusDays(1), 12.0, 8.0, 7.4, Optional.empty(), Optional.empty())
         val shown = dashboard(gridAdvice = advice)
 
         assertThat(shown.days.map { shown.adviceOn(it) }).containsExactly(shown.gridAdvice, null, null)
@@ -187,7 +189,7 @@ class DashboardTest {
 
     @Test
     fun aPlanWhoseFirstDayIsNotTodayShowsNoGridAdvice() {
-        val advice = GridAdvice(today.plusDays(2), 12.0, 18.0, 7.4, Optional.empty(), Optional.empty())
+        val advice = GridAdvice(today.plusDays(2), 12.0, 8.0, 7.4, Optional.empty(), Optional.empty())
         val shown = dashboard(gridAdvice = advice)
         val view = shown.view
         val later = shown.copy(view = DashboardView(view.madeAt(), view.zone(), view.days().drop(1), view.levels(),

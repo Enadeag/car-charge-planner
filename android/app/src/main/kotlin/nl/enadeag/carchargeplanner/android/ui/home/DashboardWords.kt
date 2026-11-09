@@ -232,9 +232,9 @@ internal class DashboardWords(private val resources: Resources, private val loca
      */
     fun adviceTitle(advice: GridAdviceView): String {
         val energy = decimal(advice.energyKwh())
-        val charge = advice.charge().orElse(null)
-        return if (charge != null) {
-            text(R.string.advice_title_window, energy, inSentence(charge.day()), span(charge.window()))
+        val window = advice.window().orElse(null)
+        return if (window != null) {
+            text(R.string.advice_title_window, energy, inSentence(window.day()), span(window.window()))
         } else {
             text(R.string.advice_title_no_window, energy, inSentence(advice.day()))
         }
@@ -244,15 +244,16 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * Grid advice's detail: why, and what to set.
      *
      * @param advice the advice
+     * @param levels the plan's charge levels, whose minimum the advice's end level is told against
      * @return such as "Without it the battery ends Sunday at 17%, below the minimum of 30%. Set 16 A (3.7 kW), …"
      */
-    fun adviceDetail(advice: GridAdviceView): String {
-        val minimum = whole(advice.minimumPct().value())
+    fun adviceDetail(advice: GridAdviceView, levels: ChargeLevels): String {
+        val minimum = whole(levels.minimumPct().value())
         val why = if (advice.runsEmpty()) text(R.string.advice_runs_empty, inSentence(advice.day()), minimum)
             else text(R.string.advice_ends_low, inSentence(advice.day()), whole(advice.endLevelPct()), minimum)
-        val charge = advice.charge().orElse(null)
-        val settings = if (charge != null) text(R.string.advice_set, charge.window().amps(),
-            decimal(charge.window().powerKw()), whole(charge.chargeLimitPct().value()))
+        val window = advice.window().orElse(null)
+        val settings = if (window != null) text(R.string.advice_set, window.window().amps(),
+            decimal(window.window().powerKw()), whole(window.chargeLimitPct().value()))
             else text(R.string.advice_no_room)
         return "$why $settings"
     }

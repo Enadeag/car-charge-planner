@@ -12,13 +12,22 @@ import java.util.Optional;
  * @param zone the home's time zone, never null, in which the days and times are meant
  * @param days the plan's days, today first, in the plan's order; may be empty
  * @param levels the minimum and target charge levels, which every day's battery bar marks
- * @param gridAdvice the plan's grid advice; never null, empty when the plan gives none
+ * @param gridAdvice the plan's grid advice; never null, empty when the plan gives none; its end level is below the
+ *     levels' minimum
  */
 public record DashboardView(Instant madeAt, ZoneId zone, List<DashboardDay> days, ChargeLevels levels,
         Optional<GridAdviceView> gridAdvice) {
 
-    /** Keeps a copy of the days. */
+    /**
+     * Keeps a copy of the days and checks the grid advice against the minimum.
+     *
+     * @throws IllegalArgumentException when the grid advice's end level is not below the levels' minimum
+     */
     public DashboardView {
+        if (gridAdvice.isPresent() && !(gridAdvice.get().endLevelPct() < levels.minimumPct().value())) {
+            throw new IllegalArgumentException("the grid advice's end level must be below the minimum of "
+                    + levels.minimumPct().value() + "%, not " + gridAdvice.get().endLevelPct() + "%");
+        }
         days = List.copyOf(days);
     }
 

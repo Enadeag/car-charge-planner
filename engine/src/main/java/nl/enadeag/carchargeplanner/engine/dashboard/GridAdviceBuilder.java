@@ -21,12 +21,12 @@ final class GridAdviceBuilder {
         var zone = parts.zone();
         var today = parts.madeAt().atZone(zone).toLocalDate();
         return parts.gridAdvice().map(advice -> new GridAdviceView(DayName.of(advice.day(), today),
-                advice.energyKwh(), advice.endLevelPct(), parts.minimumPct(), charge(advice, zone, today)));
+                advice.energyKwh(), advice.endLevelPct(), window(advice, zone, today)));
     }
 
     /** The window's day is that of its start in the home's zone; the charge limit comes with the window. */
-    private static Optional<GridAdviceView.Charge> charge(GridAdvice advice, ZoneId zone, LocalDate today) {
-        return advice.window().map(window -> new GridAdviceView.Charge(window,
+    private static Optional<GridWindow> window(GridAdvice advice, ZoneId zone, LocalDate today) {
+        return advice.window().map(window -> new GridWindow(window,
                 DayName.of(window.start().atZone(zone).toLocalDate(), today), advice.chargeLimitPct().orElseThrow()));
     }
 }

@@ -75,6 +75,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.BarScaffold
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.android.ui.components.inEnglish
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
@@ -326,7 +327,7 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                         TripAdviceCard(words.tripAdvice(it, day.name().date(), dashboard.today), it.source, adjust)
                     }
                 }
-                dashboard.adviceOn(day)?.let { GridAdviceCard(it, words) }
+                dashboard.adviceOn(day)?.let { GridAdviceCard(it, dashboard.levels, words) }
                 SolarCard(day, words)
                 BatteryCard(day, dashboard.levels, words, battery.takeIf { day.name() is DayName.Today })
                 TripsCard(dashboard, day, words, trips, inView = index == selected)
@@ -425,13 +426,13 @@ private fun DayCard(day: DashboardDay, words: DashboardWords) {
 
 /** Grid advice, on today's tab: how much, when, why and what to set. */
 @Composable
-private fun GridAdviceCard(advice: GridAdviceView, words: DashboardWords) {
+private fun GridAdviceCard(advice: GridAdviceView, levels: ChargeLevels, words: DashboardWords) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SourceChip(stringResource(R.string.advice_label), LocalSourceColours.current.of(EnergySource.GRID),
                 modifier = Modifier.semantics { heading() })
             Text(words.adviceTitle(advice), style = MaterialTheme.typography.titleMedium)
-            Text(words.adviceDetail(advice), style = MaterialTheme.typography.bodyMedium)
+            Text(words.adviceDetail(advice, levels), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

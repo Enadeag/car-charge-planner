@@ -61,8 +61,9 @@ final class TrayStatusMapper {
 
     private TrayStatus plan(Outlook.Planned planned) {
         // the grid advice does not depend on the stored away periods and trips, which the tray does not have
-        var advice = planned.dashboard(List.of(), List.of()).gridAdvice()
-                .map(new GridAdviceMapper(planned.zone(), messages)::map);
+        var dashboard = planned.dashboard(List.of(), List.of());
+        var advice = dashboard.gridAdvice()
+                .map(new GridAdviceMapper(dashboard.zone(), dashboard.levels(), messages)::map);
         if (advice.isPresent()) {
             return new TrayStatus(StatusDot.GRID, advice.get().title());
         }
