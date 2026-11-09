@@ -99,6 +99,7 @@ public sealed interface Outlook {
          */
         public DashboardView dashboard(List<OneOffAwayPeriod> away, List<Trip> trips) {
             Objects.requireNonNull(away, "away");
+            Objects.requireNonNull(trips, "trips");
             return DashboardView.of(new PlanParts(madeAt, zone, days, baseloadKw, batteryLevelPct, batteryAssumed,
                     gridAdvice, tripAdvice, minimumPct, targetPct, trips));
         }
