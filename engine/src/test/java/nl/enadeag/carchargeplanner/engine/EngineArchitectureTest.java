@@ -464,6 +464,15 @@ class EngineArchitectureTest {
             .because("the engine's parts depend one way, so each can be read and tested alone (ADR 0001)");
 
     @ArchTest
+    static final ArchRule onlyProvidersKnowsTheProvidersClasses = noClasses()
+            .that().resideInAPackage(ENGINE + ".forecast..")
+            .and().resideOutsideOfPackage(ENGINE + ".forecast.providers..")
+            .and().doNotHaveSimpleName("Providers")
+            .should().dependOnClassesThat().resideInAPackage(ENGINE + ".forecast.providers..")
+            .because("Providers.standard is the one place that knows the providers' classes, so the providers depend "
+                    + "on the forecast and not back (#389, ADR 0001)");
+
+    @ArchTest
     static final ArchRule engineSubPackagesDoNotReachUpIntoTheEngine = noClasses()
             .that().resideInAPackage(ENGINE + "..")
             .and().resideOutsideOfPackage(ENGINE)
