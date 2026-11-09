@@ -14,7 +14,6 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import nl.enadeag.carchargeplanner.android.AppEngine
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.ConfigForm
 import nl.enadeag.carchargeplanner.android.form.ForecastForm
@@ -31,6 +30,7 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.House
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet
+import nl.enadeag.carchargeplanner.engine.forecast.Providers
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -112,7 +112,7 @@ class SettingsEditTest {
 
     @Test
     fun theForecastScreenSavesItsKeysFirst() = runTest {
-        val providers = AppEngine.providers(HttpGet { throw java.io.IOException("no network") })
+        val providers = Providers.standard(HttpGet { throw java.io.IOException("no network") })
         val forecast = ForecastForm(SavedStateHandle(), providers.ids().map { providers.find(it).orElseThrow().info() })
         forecast.load(shown)
         forecast.loadKeys(StoredKeys.Read(Secrets.NONE))

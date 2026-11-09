@@ -36,6 +36,7 @@ import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.TripSave
 import nl.enadeag.carchargeplanner.android.ui.notify.Notifications
 import nl.enadeag.carchargeplanner.android.ui.notify.createNoticeChannels
+import nl.enadeag.carchargeplanner.engine.Engine
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet
@@ -131,7 +132,7 @@ class RoundWorkerTest {
         val folder = onDisk { Files.createDirectories(app.filesDir.toPath().resolve("end-to-end")) }
         val morning = DAY.atTime(6, 0).atZone(ZONE).toInstant()
         onDisk {
-            Files.copy(EXAMPLE, folder.resolve(AppEngine.SETTINGS_FILE))
+            Files.copy(EXAMPLE, folder.resolve(Engine.CONFIG_FILE_NAME))
             storeForecast(folder, fetchedAt = morning.minus(Duration.ofMinutes(5)))
         }
         val asked = mutableListOf<HttpGet.Request>()
@@ -179,7 +180,7 @@ class RoundWorkerTest {
     private fun appAccess(name: String, at: Instant): ReschedulingAccess {
         val folder = onDisk { Files.createDirectories(app.filesDir.toPath().resolve(name)) }
         onDisk {
-            Files.copy(EXAMPLE, folder.resolve(AppEngine.SETTINGS_FILE))
+            Files.copy(EXAMPLE, folder.resolve(Engine.CONFIG_FILE_NAME))
             storeForecast(folder, fetchedAt = at.minus(Duration.ofMinutes(5)))
         }
         val clock = Clock.fixed(at, ZoneOffset.UTC)
