@@ -66,7 +66,6 @@ public final class ToldTrips {
         }
     }
 
-    /** The JSON shape of the trips. */
     private static final class Format implements FileFormat<List<ToldTrip>> {
 
         @Override

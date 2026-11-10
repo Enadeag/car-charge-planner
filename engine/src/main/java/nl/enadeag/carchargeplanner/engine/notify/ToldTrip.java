@@ -15,12 +15,6 @@ import java.util.Optional;
  */
 public record ToldTrip(Instant departure, boolean chargeStartTold, Optional<Double> askedGridPct, boolean shortTold) {
 
-    /**
-     * Nothing told yet about a trip.
-     *
-     * @param departure the departure of the trip
-     * @return the trip without any notice told
-     */
     static ToldTrip nothing(Instant departure) {
         return new ToldTrip(departure, false, Optional.empty(), false);
     }

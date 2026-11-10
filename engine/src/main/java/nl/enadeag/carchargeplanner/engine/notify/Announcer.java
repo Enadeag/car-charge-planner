@@ -197,7 +197,6 @@ public final class Announcer {
                 && Duration.between(source.fetchedAt(), now).compareTo(MAX_FORECAST_AGE) <= 0;
     }
 
-    /** The plan's solar windows and the grid advice's window, as announcements. */
     private static List<Announcement> candidates(List<DayPlan> days, GridAdvice advice, EngineConfig config) {
         var candidates = candidates(days, config);
         advice.window().ifPresent(window -> candidates.add(new Announcement(AnnouncementKind.GRID_CHARGE, window,
@@ -206,7 +205,6 @@ public final class Announcer {
         return candidates;
     }
 
-    /** The plan's solar windows, as announcements. */
     private static List<Announcement> candidates(List<DayPlan> days, EngineConfig config) {
         var found = new ArrayList<Announcement>();
         days.forEach(day -> day.windows().forEach(window ->

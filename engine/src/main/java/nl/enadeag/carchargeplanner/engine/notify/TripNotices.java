@@ -52,12 +52,7 @@ final class TripNotices {
     private final Notifier notifier;
     private final Map<Instant, ToldTrip> told = new LinkedHashMap<>();
 
-    /**
-     * Makes the notices and reads what was told before the app was last stopped.
-     *
-     * @param store where what was told is kept between runs
-     * @param notifier what tells the owner
-     */
+    /** Makes the notices and reads what was told before the app was last stopped. */
     TripNotices(ToldTrips store, Notifier notifier) {
         this.store = store;
         this.notifier = notifier;
@@ -65,12 +60,7 @@ final class TripNotices {
     }
 
     /**
-     * Tells the owner each notice about the trips that is due, and remembers it.
-     *
      * @param advice the plan's advice per trip, in order of departure
-     * @param level the battery level the plan starts from
-     * @param now the current moment
-     * @param config the system and preferences the plan was made for
      */
     void tellDue(List<TripAdvice> advice, PlanLevel level, Instant now, EngineConfig config) {
         boolean changed = false;
@@ -136,10 +126,6 @@ final class TripNotices {
      * Whether a trip depends on the battery level being right: it needs a grid charge or is short, or the plan
      * leaves it less than {@link #TIGHT_MARGIN_PCT} above what it needs while solar power did not fill the battery to
      * the target. A battery charged to the target or above is not tight: more solar power would follow a lower level.
-     *
-     * @param advice the plan's advice for the trip
-     * @param targetPct the target charge level of the battery
-     * @return true when the trip needs a grid charge, is short, or leaves with little to spare
      */
     static boolean isTight(TripAdvice advice, Percent targetPct) {
         double departure = advice.departureLevelPct().value();
@@ -151,9 +137,6 @@ final class TripNotices {
      * The first moment, from now on, at which the start of a trip's grid charge is due and not told yet. The battery
      * check and a short trip are left out: they wait for the rounds that come anyway.
      *
-     * @param advice the plan's advice per trip; possibly none
-     * @param now the current moment
-     * @param lead the notification lead time
      * @return the earliest such moment, now when one is due now; empty when none is to come
      */
     Optional<Instant> nextChargeStart(List<TripAdvice> advice, Instant now, Duration lead) {
