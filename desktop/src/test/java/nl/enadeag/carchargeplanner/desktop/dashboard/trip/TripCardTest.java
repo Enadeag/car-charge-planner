@@ -16,7 +16,6 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
-import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +55,7 @@ class TripCardTest {
         Fx.run(() -> {
             card = new TripCard(() -> { }, ENGLISH);
             card.onChange(added::add, (trip, changedTrip) -> changed.add(List.of(trip, changedTrip)), removed::add,
-                    InstantSource.fixed(trips.madeAt()));
+                    Models.CLOCK);
             card.show(day.date(), day.title(), day.trips(), trips);
             stage = Scenes.show(card, ColorScheme.LIGHT);
         });
@@ -190,7 +189,7 @@ class TripCardTest {
 
     @Test
     void aTripInMilesIsShownAndSavedInMiles() throws Exception {
-        var miles = new TripsModel(Models.BRUSSELS, Models.TRIPS.madeAt(), Units.IMPERIAL);
+        var miles = new TripsModel(Models.BRUSSELS, Units.IMPERIAL);
         show(Models.CLOUDY_TOMORROW.withTrips(List.of()), miles);
 
         openEntry();

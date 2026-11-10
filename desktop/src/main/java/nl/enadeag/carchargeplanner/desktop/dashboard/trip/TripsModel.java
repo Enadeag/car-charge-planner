@@ -2,18 +2,16 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.trip;
 
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
-import java.time.Instant;
 import java.time.ZoneId;
 
 /**
- * What the trips the owner entered are told and entered in: the time zone, the moment of the plan they belong to and
- * the units the distances are in. Each day carries its own trips, as {@link Listed}.
+ * What the trips the owner entered are told and entered in: the time zone and the units the distances are in. Each day
+ * carries its own trips, as {@link Listed}.
  *
  * @param zone the time zone of the owner's home
- * @param madeAt the moment the plan was made
  * @param units the units the distances are shown and typed in
  */
-public record TripsModel(ZoneId zone, Instant madeAt, Units units) {
+public record TripsModel(ZoneId zone, Units units) {
 
     /**
      * One trip in words.

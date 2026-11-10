@@ -406,7 +406,7 @@ class OutlookMapperTest {
                 .containsExactly(List.of(), List.of(away), List.of(away), List.of(away),
                         List.of("Away 08:00 – 18:00 · 200 km there and back"));
         assertThat(plan.days().get(1).trips()).extracting(TripsModel.Listed::trip).containsExactly(LONG_TRIP);
-        assertThat(plan.trips()).isEqualTo(new TripsModel(BRUSSELS, at(TODAY, 8, 12), Units.METRIC));
+        assertThat(plan.trips()).isEqualTo(new TripsModel(BRUSSELS, Units.METRIC));
     }
 
     @Test
@@ -420,7 +420,6 @@ class OutlookMapperTest {
         assertThat(plan.away().coming()).containsExactly(
                 new OneOffAwayModel.Listed(tomorrow, "Tomorrow, all day", "Remove Tomorrow, all day"));
         assertThat(plan.away().zone()).isEqualTo(BRUSSELS);
-        assertThat(plan.away().madeAt()).isEqualTo(at(TODAY, 8, 12));
     }
 
     @Test

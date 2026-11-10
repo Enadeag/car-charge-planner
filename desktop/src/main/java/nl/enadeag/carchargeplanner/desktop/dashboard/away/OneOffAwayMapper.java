@@ -3,7 +3,6 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway;
-import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -12,19 +11,16 @@ public final class OneOffAwayMapper {
 
     private final Messages messages;
     private final ZoneId zone;
-    private final Instant madeAt;
 
     /**
      * Makes the mapper for one plan.
      *
      * @param zone the time zone of the owner's home, in which the times are told
-     * @param madeAt the moment the plan was made
      * @param messages the texts, in the owner's language
      */
-    public OneOffAwayMapper(ZoneId zone, Instant madeAt, Messages messages) {
+    public OneOffAwayMapper(ZoneId zone, Messages messages) {
         this.messages = messages;
         this.zone = zone;
-        this.madeAt = madeAt;
     }
 
     /**
@@ -42,7 +38,7 @@ public final class OneOffAwayMapper {
                             messages.text(TextKey.ONE_OFF_REMOVE_SPOKEN, text));
                 })
                 .toList();
-        return new OneOffAwayModel(zone, madeAt, listed);
+        return new OneOffAwayModel(zone, listed);
     }
 
     private String describe(ComingAway away) {

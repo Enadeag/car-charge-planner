@@ -86,15 +86,13 @@ public final class Models {
     public static final OneOffAwayPeriod AWAY_SUNDAY = OneOffAwayPeriod.on(TODAY.plusDays(2), LocalTime.of(10, 0), LocalTime.of(16, 30),
             BRUSSELS);
 
-    /** Made at 08:12 today, with an away period tomorrow and one on Sunday. */
-    public static final OneOffAwayModel AWAY = new OneOffAwayModel(BRUSSELS,
-            TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant(), List.of(
+    /** An away period tomorrow and one on Sunday. */
+    public static final OneOffAwayModel AWAY = new OneOffAwayModel(BRUSSELS, List.of(
             new OneOffAwayModel.Listed(AWAY_TOMORROW, "Tomorrow, all day", "Remove Tomorrow, all day"),
             new OneOffAwayModel.Listed(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30", "Remove Sun 5 Jul, 10:00 – 16:30")));
 
-    /** Made at 08:12 today, in km. */
-    public static final TripsModel TRIPS = new TripsModel(BRUSSELS, TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant(),
-            Units.METRIC);
+    /** In km. */
+    public static final TripsModel TRIPS = new TripsModel(BRUSSELS, Units.METRIC);
 
     /** Saturday's trip, which needs a grid charge tonight, as today's tab tells it. */
     public static final TripAdviceModel ADVICE_SATURDAY_TODAY = new TripAdviceModel(EnergySource.GRID, "Trip advice",
@@ -116,8 +114,8 @@ public final class Models {
             "The plan charges enough for it: the battery is at 62% when you leave.",
             "Assuming a battery level of 50%.");
 
-    /** A clock that stays at the moment {@link #AWAY}'s plan was made. */
-    public static final InstantSource CLOCK = InstantSource.fixed(AWAY.madeAt());
+    /** A clock that stays at 08:12 today, when the plan of these models was made. */
+    public static final InstantSource CLOCK = InstantSource.fixed(TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant());
 
     private Models() {
     }

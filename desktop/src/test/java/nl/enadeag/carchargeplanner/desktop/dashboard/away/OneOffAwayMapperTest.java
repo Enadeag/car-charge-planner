@@ -31,14 +31,13 @@ class OneOffAwayMapperTest {
     })
     void theComingPeriodsAreToldByDayAndTime(Language language, String today, String tomorrow, String nextWeek,
             String overDays) {
-        var now = TODAY.atTime(11, 0).atZone(BRUSSELS).toInstant();
         var overSeveralDays = new OneOffAwayPeriod(TODAY.plusDays(6).atTime(18, 0).atZone(BRUSSELS).toInstant(),
                 TODAY.plusDays(8).atTime(12, 0).atZone(BRUSSELS).toInstant());
         var periods = List.of(part(TODAY, 10, 12), OneOffAwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS),
                 part(TODAY.plusDays(5), 9, 17), overSeveralDays);
         var coming = periods.stream().map(period -> ComingAway.describe(period, BRUSSELS, TODAY)).toList();
 
-        var model = new OneOffAwayMapper(BRUSSELS, now, new Messages(language)).map(coming);
+        var model = new OneOffAwayMapper(BRUSSELS, new Messages(language)).map(coming);
 
         assertThat(model.coming()).extracting(OneOffAwayModel.Listed::text)
                 .containsExactly(today, tomorrow, nextWeek, overDays);

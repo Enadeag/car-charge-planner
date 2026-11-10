@@ -1,19 +1,17 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
-import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 
 /**
- * The away periods the owner entered for specific days that have not ended yet, in words, with the time zone and the
- * moment of the plan they belong to.
+ * The away periods the owner entered for specific days that have not ended yet, in words, with the time zone of the
+ * owner's home.
  *
  * @param zone the time zone of the owner's home
- * @param madeAt the moment the plan was made
- * @param coming the periods that had not ended at {@code madeAt}, in their stored order; may be empty
+ * @param coming the periods that had not ended when the plan was made, in their stored order; may be empty
  */
-public record OneOffAwayModel(ZoneId zone, Instant madeAt, List<Listed> coming) {
+public record OneOffAwayModel(ZoneId zone, List<Listed> coming) {
 
     /**
      * Keeps a copy of the periods, so the model cannot change afterwards.

@@ -127,8 +127,8 @@ public final class OutlookMapper {
                             .orElse(model);
                 })
                 .toList();
-        var coming = new OneOffAwayMapper(dashboard.zone(), dashboard.madeAt(), messages).map(dashboard.away());
-        return new DashboardModel.Plan(days, coming, new TripsModel(dashboard.zone(), dashboard.madeAt(), units),
+        var coming = new OneOffAwayMapper(dashboard.zone(), messages).map(dashboard.away());
+        return new DashboardModel.Plan(days, coming, new TripsModel(dashboard.zone(), units),
                 footer(dashboard.footer(), dashboard.zone()));
     }
 
