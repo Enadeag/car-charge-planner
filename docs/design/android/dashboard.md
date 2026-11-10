@@ -2,6 +2,8 @@
 
 Decisions about the home: the day pages and their cards, the chart and the battery bar, the battery level, the trips and their advice, the one-off away periods, and the entries that change them.
 
+What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken names, saved state) is in [screens.md](screens.md); read it too.
+
 ### The page
 
 - A day's page holds, in this order: the notice after a save, the stale warning, the refused-key warning and the notifications card (these four on the page in view only), the zone line, the day card, a trip advice card per trip, the grid advice, the solar chart, the Car battery card, the Trips card, the away list and the footer. Everything scrolls, nothing is pinned, so the page keeps its room at 200% on a small phone on its side (#335).
@@ -45,7 +47,7 @@ Decisions about the home: the day pages and their cards, the chart and the batte
 
 ### Trips card
 
-- Each day's page lists the trips of that day (`DashboardView.tripsOn`), in the stored order, a trip under way or back in the last day included, without a mark; otherwise "No trip entered for this day." Without a plan there is no Trips card, as on the desktop: by design (#375).
+- Each day's page lists the trips of that day (`DashboardView.tripsOn`), in the stored order, a trip under way or back in the last day included, without a mark; otherwise "No trip entered for this day." A trip beyond the forecast's days is not seen until its day has a tab, as on the desktop. Without a plan there is no Trips card, as on the desktop: by design (#375).
 - A trip reads as the desktop's ("Away 07:30 – 18:00 · 300 km there and back", with the days when it returns on another day), on the phone's clock in whole km, spoken "Away from 07:30 to 18:00, 300 km there and back" (#375).
 - Its two choices are checkboxes in whole toggleable rows; a tap saves at once and shows the new state while saving. A failed choice springs back with "Not saved: the trip could not be written." and no Undo; one that worked says nothing (#375).
 - Rows are keyed by the trip, and a trip a choice changed keeps the key of the trip it was, so the focus stays on it (#375).
@@ -55,23 +57,29 @@ Decisions about the home: the day pages and their cards, the chart and the batte
 ### Trip entry
 
 - **Add** ("Add trip", "Toevoegen: rit") is in the Trips card's heading row, **Change** ("Change the trip …", "Wijzigen: rit …") beside each Remove. The entry is a full-width dialog, at most 600 dp of content, with the title as heading, Close (×) in Up's place and Save in its top app bar; Back is Close, and a tap beside does not close it (#376).
-- The four buttons "Departure day", "Departure time", "Return day", "Return time" ("Vertrekdag", "Vertrektijd", "Terugkomstdag", "Terugkomsttijd") go two to a row, under "Times in <zone>" when the zone is not the phone's; then the distance there and back, with "km" from `DISTANCE_UNIT` and at most 16 characters, and "I can charge at the destination" (#376).
-- The date picker offers today up to today + 20 days, widened to the opened trip's days or Add's page day, with "Keyboard"/"Calendar" ("Toetsenbord"/"Kalender") to switch to typing. It sits in a dialog no wider than the screen, the calendar scrolling sideways, because Material's `DatePickerDialog` is cut off on a 320 dp phone and scaling would draw days under 48 dp; its UTC-midnight millis never pass through a zone (#376).
-- Change opens on the trip to the minute; a distance left as shown keeps the trip's exact distance, so a trip listed as 0 km still saves (#376).
-- Save checks, with the clock at Save, the return after the departure, the return not passed, then the distance, read as set-up reads a number; only the first problem shows, in a polite live region, with the focus on its control (#376).
+- The four buttons "Departure day", "Departure time", "Return day", "Return time" ("Vertrekdag", "Vertrektijd", "Terugkomstdag", "Terugkomsttijd") go two to a row, under "Times in <zone>" when the zone is not the phone's; then the distance there and back and "I can charge at the destination" (#376).
+- The distance field shows "km" (from `DISTANCE_UNIT`) only once it has the focus or a value, keeps its first 16 characters, and its keyboard's Done saves (#376).
+- The date picker offers today up to today + 20 days, widened to the opened trip's days or Add's page day, with "Keyboard"/"Calendar" ("Toetsenbord"/"Kalender") to switch to typing; OK without a date keeps the day. It sits in a dialog no wider than the screen, the calendar scrolling sideways, because Material's `DatePickerDialog` is cut off on a 320 dp phone and scaling would draw days under 48 dp; its UTC-midnight millis never pass through a zone (#376).
+- Change opens on the trip in the home's zone, to the minute, and keeps its "Not with this car" unseen; seconds are dropped at Save. A distance left as shown keeps the trip's exact distance, so a trip listed as 0 km still saves (#376).
+- Save checks, with the clock at Save, the return after the departure (a departure in the spring-forward gap counts as the hour after), the return not passed, then the distance, read as set-up reads a number (else "Type the distance as a number, such as 120."); only the first problem shows, in a polite live region, with the focus on its control (#376).
 - The reading order is title, Close, Save, then the fields; the focus starts on "Departure day". Save says "Saved: <trip>." and puts the focus on that trip's Change, else on Add, else on the title (#376).
+- After a picker or "Discard changes?" the focus returns to the control that last had it; after a failed Save it goes to the title (#376).
+- "Discard changes?" asks only when the trimmed draft differs from how the entry opened: "The trip you entered is not saved yet." (#376).
+- The saved state keeps the draft, how the entry opened and the day it opened on, so the window and the day names stay the same after the system ended the app; an entry kept there that cannot be read is closed and forgotten (#376).
 
 ### Away list
 
 - The "Car away" row ends with **Add**, spoken "Add away period" ("Toevoegen: afwezigheid"); each coming period has **Remove**, spoken with its period ("Remove Tomorrow, all day", "Verwijderen: …") (#338).
 - Add opens a dialog for the page's day, named in its title ("Car away on Thursday, November 5"), on **All day**, with **Part of the day** ready at 09:00 to 17:00 (#338).
-- A time opens Material's `TimePicker` on the phone's 12- or 24-hour clock, with a text button "Keyboard"/"Clock" ("Toetsenbord"/"Klok") in its content to switch to typing, because the `modeToggleButton` slot cannot hold it beside Cancel and OK at 200% or in Dutch (#338).
-- Times are in the home's zone. Save refuses an end not after the start and a period already ended. A day the clocks change is 23 or 25 hours all day; a time in the repeated hour is its first (#338).
-- Remove acts at once; its snackbar "Removed: …" has **Undo**, which adds the period back. Failures carry the English details and stay until the next notice or Close. After a Remove the focus goes to the period before, or after, or the line that says there is none (#338).
+- A time opens Material's `TimePicker` on the phone's 12- or 24-hour clock, with a text button "Keyboard"/"Clock" ("Toetsenbord"/"Klok") in its content to switch to typing and back, the mode kept when the phone turns, because the `modeToggleButton` slot cannot hold it beside Cancel and OK at 200% or in Dutch (#338).
+- Times are in the home's zone. Save refuses an end not after the start and a period already ended, under the end time, or under the choice for all day, in a polite live region. A day the clocks change is 23 or 25 hours all day; a time in the repeated hour is its first (#338).
+- A failed save says "Not saved: the away time could not be written." ("Niet opgeslagen: de afwezige tijd kon niet worden geschreven.") with the English details (#338).
+- Remove acts at once; its snackbar "Removed: …" has **Undo**, which adds the period back. A failed Remove says "Not removed: the away time could not be written." ("Niet verwijderd: de afwezige tijd kon niet worden geschreven."); failures carry the English details and stay until the next notice or Close. After a Remove the focus goes to the period before, or after, or the line that says there is none (#338).
 
 ### Changes and entries
 
 - The trip, away and battery entries each run their changes one at a time on a `ChangeQueue` of their own; while one runs, a choice, Remove, Add or Save does nothing (#393).
+- Away and trip changes return `Saved` or `Failed(detail)` and never throw; a failed change makes no new plan (#338).
 - An Undo tapped while another change runs waits for it and for its outcome to show, then runs, with "Saved: …" and the focus on the restored row (#375).
 - `EngineOnDispatcher` holds no lock for away and trip changes, as the engine's file changes are atomic (#382).
 - The entries share one `SaveState` (`Idle`, `Saving`, `Failed(detail)`) and `EntryFlow` ("Discard changes?", the save, the refusals count); Settings keeps its own `SaveState` with `Saved` and `KeysNotSaved` (#393).

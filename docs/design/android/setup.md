@@ -2,6 +2,8 @@
 
 Decisions about the first-run set-up: its steps, the check, Finish, the time zone and the place search, which Settings' Location page shares.
 
+What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken names, saved state) is in [screens.md](screens.md); read it too.
+
 ### Steps and Back
 
 - Set-up is seven steps, without a navigation library: Welcome, Location, Panels, Car, Charger, More (the house and the weekly away periods) and Check (#314).
@@ -12,7 +14,7 @@ Decisions about the first-run set-up: its steps, the check, Finish, the time zon
 ### Check and Finish
 
 - The check runs on entering the Check step, on coming back to it, and after the system ended the app; a failure shows **Check again** and the English details, and Finish stays on (#314).
-- While saving, Finish is off and shows progress. Saved opens the dashboard without a message; Failed keeps the English details and **Try again**, in a live region. A newer settings file opens the "update the app" screen; a refused value goes back to its step with a line that says why (#314).
+- While saving, Finish is off and shows progress. Saved opens the dashboard without a message; Failed keeps the English details and **Try again**, in a live region. A newer settings file opens the "update the app" screen; a value the engine refuses goes back to the first step with a refused value, with a line that says why (#314).
 
 ### Time zone
 
@@ -20,11 +22,11 @@ Decisions about the first-run set-up: its steps, the check, Finish, the time zon
 
 ### Place search
 
-- The search runs on the Search button or the keyboard's Search key, never per keystroke, in the app's language (`place_search_language`, `en` or `nl`), and shows at most 8 places (#314).
+- The search runs on the Search button or the keyboard's Search key, never per keystroke, in the app's language (`place_search_language`, `en` or `nl`), and shows at most 8 places; labels are told apart only among those shown (#314).
 - The typed text is at most 100 characters and survives the system ending the app; the results do not (#314).
 - Results are list rows with dividers, at least 48 dp high, whose labels wrap; a label is cut at 100 characters, so the field, the card and the saved state hold the same text (#343).
-- After a choice the field shows the place's label, and a card under the Search button says "Chosen: <place>", "Coordinates: <lat>, <lon>" and "Time zone: <zone>", the form's zone. Dutch separates the coordinates with a semicolon ("Coördinaten: 52,0907; 5,1214"), because a comma is ambiguous next to a decimal comma (#343).
-- The card shows only after a choice in this session and goes, with the field emptied, when typed coordinates forget the place. In Settings it leaves out the coordinates, stays after Save and goes when the page is left (#343).
+- After a choice the field shows the place's label and stays editable, the coordinates toggle does not open, and a card under the Search button says "Chosen: <place>", "Coordinates: <lat>, <lon>" and "Time zone: <zone>", the form's zone. Dutch separates the coordinates with a semicolon ("Coördinaten: 52,0907; 5,1214"), because a comma is ambiguous next to a decimal comma (#343).
+- The card shows only after a choice in this session, stays while the field is edited and while searching again, and goes, with the field emptied, when typed coordinates forget the place. In Settings it leaves out the coordinates, stays after Save and goes when the page is left (#343).
 - TalkBack's focus moves to the card once per choice, so turning the phone or coming back to the step does not move it again (#343).
 
 ### Language and words

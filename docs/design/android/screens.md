@@ -16,8 +16,10 @@ Decisions that hold on every screen of the app: the top app bar, buttons, snackb
 
 ### Dialogs
 
-- An entry dialog's title is a heading; Save shows its progress, and nothing closes while it saves. A failed save is read at once with the English details. Back or a tap beside it with changes asks "Discard changes?"; when it closes the focus goes back to the button that opened it, or to the title when that button is not on the page in view (#338).
+- An entry dialog's title is a heading; Save shows its progress, and nothing closes while it saves. A failed save is read at once with the English details. In the battery and away dialogs Back or a tap beside, with something changed, asks "Discard changes?" and Cancel closes without asking; when a dialog closes the focus goes back to the button that opened it, or to the title when that button is not on the page in view (#338).
+- The trip entry never closes on a tap beside it; Back is its Close (#376).
 
 ### Saved state
 
-- Each screen's saved state ends with it: a screen forgets what it kept when it closes, and an entry kept in the saved state that can no longer be read is closed and forgotten (#315).
+- Each screen's saved state ends with it: Settings forgets its page, its question and its texts when it closes, and set-up its step and texts when the home opens (#315).
+- An entry restored from the saved state that can no longer be read (a time-zone update removed its zone) is closed and forgotten (#338).
