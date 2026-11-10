@@ -64,6 +64,24 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         val returnTime: LocalTime, val distance: String, val canCharge: Boolean) {
 
         companion object {
+            /** The departure time a new trip opens with, the desktop's. */
+            val FIRST_DEPARTURE: LocalTime = LocalTime.of(8, 0)
+
+            /** The return time a new trip opens with, the desktop's. */
+            val FIRST_RETURN: LocalTime = LocalTime.of(18, 0)
+
+            /** The most characters the distance takes, more than any distance needs. */
+            const val DISTANCE_LENGTH = 16
+
+            /**
+             * A new trip's fields as the entry opens on them: both days the same, from [FIRST_DEPARTURE] to
+             * [FIRST_RETURN], with no distance and "I can charge at the destination" off.
+             *
+             * @param day the day the trip leaves and returns
+             * @return the fields
+             */
+            fun new(day: LocalDate) = Fields(day, FIRST_DEPARTURE, day, FIRST_RETURN, "", false)
+
             /**
              * A stored trip's fields as the entry opens on them.
              *

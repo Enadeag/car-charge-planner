@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import nl.enadeag.carchargeplanner.android.form.forget
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
@@ -40,6 +41,13 @@ internal class TripDraftKept(private val handle: SavedStateHandle) {
         private const val RETURN_TIME = "$PREFIX.returnTime"
         private const val DISTANCE = "$PREFIX.distance"
         private const val CAN_CHARGE = "$PREFIX.canCharge"
+
+        /**
+         * Forgets everything the trip entry kept in the handle.
+         *
+         * @param handle the screen's saved state
+         */
+        fun forget(handle: SavedStateHandle) = handle.forget(listOf(PREFIX))
     }
 
     /**
@@ -95,8 +103,7 @@ internal class TripDraftKept(private val handle: SavedStateHandle) {
                 Instant.parse(text(OPENED_DEPARTURE)), Instant.parse(text(OPENED_RETURN)), text(OPENED_KM).toDouble(),
                 flag(OPENED_CAN_CHARGE), flag(OPENED_NOT_WITH)) else null
             val first = if (opened == null) {
-                val day = LocalDate.parse(text(FIRST_DAY))
-                TripDraft.Fields(day, TripEntry.FIRST_DEPARTURE, day, TripEntry.FIRST_RETURN, "", false)
+                TripDraft.Fields.new(LocalDate.parse(text(FIRST_DAY)))
             } else {
                 TripDraft.Fields.of(opened, zone, text(FIRST_DISTANCE))
             }
@@ -110,18 +117,18 @@ internal class TripDraftKept(private val handle: SavedStateHandle) {
             if (fields.returnDay !in draft.days) {
                 unreadable(RETURN_DAY)
             }
-            if (fields.distance.length > TripEntry.DISTANCE_LENGTH) {
+            if (fields.distance.length > TripDraft.Fields.DISTANCE_LENGTH) {
                 unreadable(DISTANCE)
             }
             draft
         } catch (_: DateTimeException) {
             // a zone a time-zone update removed, or a value that is no date or time: the entry is closed
-            TripEntry.forget(handle)
+            forget(handle)
             null
         } catch (_: IllegalArgumentException) {
             // a value missing, not of its kind or not one the entry puts, such as a distance that is no number or a
             // trip the engine refuses
-            TripEntry.forget(handle)
+            forget(handle)
             null
         }
     }

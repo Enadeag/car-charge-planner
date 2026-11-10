@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import nl.enadeag.carchargeplanner.android.form.NumberText
-import nl.enadeag.carchargeplanner.android.form.forget
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.TripSave
 import nl.enadeag.carchargeplanner.engine.trip.Trip
@@ -117,21 +116,12 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
         /** How many days, from today, the entry offers, as the desktop does. */
         const val DAYS_OFFERED = 21
 
-        /** The departure time a new trip opens with, the desktop's. */
-        val FIRST_DEPARTURE: LocalTime = LocalTime.of(8, 0)
-
-        /** The return time a new trip opens with, the desktop's. */
-        val FIRST_RETURN: LocalTime = LocalTime.of(18, 0)
-
-        /** The most characters the distance takes, more than any distance needs. */
-        const val DISTANCE_LENGTH = 16
-
         /**
          * Forgets everything the entry kept in the handle, as the home it belongs to ends.
          *
          * @param handle the screen's saved state
          */
-        fun forget(handle: SavedStateHandle) = handle.forget(listOf(TripDraftKept.PREFIX))
+        fun forget(handle: SavedStateHandle) = TripDraftKept.forget(handle)
     }
 
     private val changes = ChangeQueue<Notice>(scope)
@@ -177,15 +167,14 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
     val saving: StateFlow<SaveState> = flow.saving
 
     /**
-     * Opens the entry of a new trip on a day: both days that day, from [FIRST_DEPARTURE] to [FIRST_RETURN], with no
-     * distance and "I can charge at the destination" off. One already open stays as it is, and while a change runs
-     * it does nothing.
+     * Opens the entry of a new trip on a day, with the fields of [TripDraft.Fields.new]. One already open stays as it
+     * is, and while a change runs it does nothing.
      *
      * @param day the page's day, on which the trip leaves and returns
      * @param zone the home's time zone, in which the days and times are read
      */
     fun add(day: LocalDate, zone: ZoneId) {
-        open(TripDraft.Mode.ADD, zone, TripDraft.Fields(day, FIRST_DEPARTURE, day, FIRST_RETURN, "", false), null)
+        open(TripDraft.Mode.ADD, zone, TripDraft.Fields.new(day), null)
     }
 
     /**
@@ -231,9 +220,9 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
     /**
      * Puts the distance typed; the problem shown goes.
      *
-     * @param text what the field holds, of which the first [DISTANCE_LENGTH] characters are kept
+     * @param text what the field holds, of which the first [TripDraft.Fields.DISTANCE_LENGTH] characters are kept
      */
-    fun distance(text: String) = edit { it.copy(distance = text.take(DISTANCE_LENGTH)) }
+    fun distance(text: String) = edit { it.copy(distance = text.take(TripDraft.Fields.DISTANCE_LENGTH)) }
 
     /**
      * Puts whether the owner can charge the car where the trip goes; the problem shown goes.
