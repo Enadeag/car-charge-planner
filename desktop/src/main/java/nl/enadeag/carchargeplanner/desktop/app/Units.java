@@ -17,7 +17,6 @@ public enum Units {
     /** The length of a mile in km. */
     public static final double KM_PER_MILE = 1.609344;
 
-    /** The countries that still measure road distances in miles. */
     private static final Set<String> MILES = Set.of("US", "GB", "LR", "MM");
 
     private final String code;
