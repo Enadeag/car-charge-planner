@@ -193,7 +193,7 @@ class DashboardTest {
         val shown = dashboard(gridAdvice = advice)
         val view = shown.view
         val later = shown.copy(view = DashboardView(view.madeAt(), view.zone(), view.days().drop(1), view.levels(),
-            view.gridAdvice()))
+            view.startLevel(), view.gridAdvice(), view.tripAdvice()))
 
         assertThat(later.days.map { later.adviceOn(it) }).containsOnlyNulls()
     }
@@ -276,7 +276,7 @@ class DashboardTest {
 
         val shown = withTrips(listOf(leavingToday, tomorrow, later, dayAfter), advice)
 
-        assertThat(shown.days.map { day -> shown.tripAdviceOn(day).map { it.departure } }).containsExactly(
+        assertThat(shown.days.map { day -> shown.tripAdviceOn(day).map { it.trip().departure() } }).containsExactly(
             listOf(leavingToday.departure(), tomorrow.departure(), dayAfter.departure()),
             listOf(tomorrow.departure(), later.departure()),
             listOf(dayAfter.departure()))

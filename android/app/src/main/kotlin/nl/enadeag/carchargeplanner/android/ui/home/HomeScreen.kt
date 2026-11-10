@@ -57,12 +57,10 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.Dashboard
-import nl.enadeag.carchargeplanner.android.home.EnergySource
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.NotificationCard
-import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.ui.LocalSourceColours
@@ -78,6 +76,7 @@ import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource
 import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
@@ -323,8 +322,8 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 DayCard(day, words)
                 // by the trip, so a card keeps its place in the composition when a trip before it goes
                 dashboard.tripAdviceOn(day).forEach {
-                    key(it.departure, it.distanceKm) {
-                        TripAdviceCard(words.tripAdvice(it, day.name().date(), dashboard.today), it.source, adjust)
+                    key(it.trip().departure(), it.trip().distanceKm()) {
+                        TripAdviceCard(words.tripAdvice(it, day.name(), dashboard.startLevel), it.source(), adjust)
                     }
                 }
                 dashboard.adviceOn(day)?.let { GridAdviceCard(it, dashboard.levels, words) }

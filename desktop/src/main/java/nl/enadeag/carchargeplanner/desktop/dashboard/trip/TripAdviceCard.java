@@ -25,11 +25,10 @@ public final class TripAdviceCard extends VBox {
     /**
      * Makes the card, without Adjust until {@link #onAdjust(Runnable)}.
      *
-     * @param advice the trip's advice; never null
-     * @param wording the advice's words for the tab the card shows on, from {@link TripAdviceModel#on}
+     * @param advice the trip's advice in the words of the tab the card shows on; never null
      * @param messages the texts, in the owner's language
      */
-    public TripAdviceCard(TripAdviceModel advice, TripAdviceModel.Wording wording, Messages messages) {
+    public TripAdviceCard(TripAdviceModel advice, Messages messages) {
         adjust = new Button(messages.text(TextKey.TRIP_ADVICE_ADJUST));
         adjust.getStyleClass().addAll("flat", "small");
         adjust.setMinWidth(USE_PREF_SIZE);
@@ -44,12 +43,12 @@ public final class TripAdviceCard extends VBox {
         level.getStyleClass().add("trip-advice-level");
         getChildren().setAll(
                 new Chip(new ChipModel(advice.source(), advice.label())),
-                paragraph(wording.title(), "advice-title"),
-                paragraph(wording.plan(), "advice-detail"),
+                paragraph(advice.title(), "advice-title"),
+                paragraph(advice.plan(), "advice-detail"),
                 level);
         getStyleClass().addAll("card", "advice-card", "trip-advice", Glyphs.styleClass(advice.source()));
         setAccessibleRole(AccessibleRole.TEXT);
-        setAccessibleText(advice.spoken(wording));
+        setAccessibleText(advice.spoken());
         setFocusTraversable(true);
     }
 

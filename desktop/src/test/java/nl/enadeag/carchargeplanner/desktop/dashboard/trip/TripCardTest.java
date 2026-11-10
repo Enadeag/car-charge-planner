@@ -57,7 +57,7 @@ class TripCardTest {
             card = new TripCard(() -> { }, ENGLISH);
             card.onChange(added::add, (trip, changedTrip) -> changed.add(List.of(trip, changedTrip)), removed::add,
                     InstantSource.fixed(trips.madeAt()));
-            card.show(day, trips);
+            card.show(day.date(), day.title(), trips);
             stage = Scenes.show(card, ColorScheme.LIGHT);
         });
     }
@@ -114,7 +114,7 @@ class TripCardTest {
         var shownAgain = new TripsModel(Models.BRUSSELS, Models.TRIPS.madeAt(), Units.METRIC,
                 List.of(new TripsModel.Listed(withoutTheCar, SATURDAY, SATURDAY, TripOrigin.BY_HAND, listed.text(),
                         listed.originText(), listed.changeSpoken(), listed.removeSpoken())));
-        Fx.run(() -> card.show(Models.CLOUDY_TOMORROW, shownAgain));
+        Fx.run(() -> card.show(Models.CLOUDY_TOMORROW.date(), Models.CLOUDY_TOMORROW.title(), shownAgain));
         Fx.settle();
         var focused = Fx.call(() -> stage.getScene().getFocusOwner());
         assertThat(focused).isInstanceOf(CheckBox.class);
@@ -246,7 +246,7 @@ class TripCardTest {
     void escapeClosesTheEntryWithoutSavingAndAnotherDayClosesItToo() throws Exception {
         show(Models.CLOUDY_TOMORROW, Models.TRIPS);
         openEntry();
-        Fx.run(() -> card.show(Models.CLOUDY_TOMORROW, Models.TRIPS));
+        Fx.run(() -> card.show(Models.CLOUDY_TOMORROW.date(), Models.CLOUDY_TOMORROW.title(), Models.TRIPS));
         assertThat(entering()).isTrue();
 
         Fx.run(() -> card.editor().fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false,
@@ -254,7 +254,7 @@ class TripCardTest {
         assertThat(entering()).isFalse();
 
         openEntry();
-        Fx.run(() -> card.show(Models.GRID_SUNDAY, Models.TRIPS));
+        Fx.run(() -> card.show(Models.GRID_SUNDAY.date(), Models.GRID_SUNDAY.title(), Models.TRIPS));
         assertThat(entering()).isFalse();
         assertThat(added).isEmpty();
     }

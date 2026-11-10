@@ -1,5 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.parts;
 
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
+
 /**
  * A short figure about one source of energy, as a {@link Chip} shows it: "92% solar".
  *
