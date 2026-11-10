@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Finds the charge windows and their charge power in the forecast surplus. */
 final class WindowFinder {
 
     private static final double EPS = 1e-9;
@@ -22,12 +21,6 @@ final class WindowFinder {
     private final PlanningPreferences preferences;
     private final Duration minWindow;
 
-    /**
-     * Makes a finder for one home and one set of preferences.
-     *
-     * @param system the home and equipment
-     * @param preferences the planning preferences, for the minimum window length and the import tolerance
-     */
     WindowFinder(HomeSystem system, PlanningPreferences preferences) {
         this.system = system;
         this.preferences = preferences;
@@ -39,7 +32,6 @@ final class WindowFinder {
      *
      * @param forecast the forecast, in any order
      * @param now the current moment; earlier time is cut off
-     * @param unavailable the times in which the charger is not free
      * @return the runs in time order
      */
     List<SurplusRun> runs(List<ForecastStep> forecast, Instant now, List<BlockedTime> unavailable) {
@@ -76,8 +68,6 @@ final class WindowFinder {
     /**
      * Groups runs by day: a run belongs to the local date it starts on, even when it goes on past midnight.
      *
-     * @param runs the runs to group, such as every run in the forecast; may be empty
-     * @param zone the time zone that decides the dates
      * @return the runs of each date that has one, in the order they were given
      */
     static Map<LocalDate, List<SurplusRun>> byDay(List<SurplusRun> runs, ZoneId zone) {
@@ -91,7 +81,6 @@ final class WindowFinder {
     /**
      * Picks the windows, one per run at most, that deliver the energy needed.
      *
-     * @param runs the runs of one day
      * @param neededKwh the wall-side energy to take from the solar surplus in kWh; import within the tolerance is not
      *     counted toward it
      * @return the chosen windows in time order; they may fall short when the runs hold too little surplus

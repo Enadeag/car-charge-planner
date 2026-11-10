@@ -150,7 +150,6 @@ public final class GridAdvisor {
         return !window.start().isBefore(from) && !window.end().isAfter(to);
     }
 
-    /** The share of the battery an energy from the wall fills. */
     private double percentOf(double wallKwh) {
         return wallKwh * system.charger().efficiency() / system.car().usableBatteryKwh() * 100;
     }

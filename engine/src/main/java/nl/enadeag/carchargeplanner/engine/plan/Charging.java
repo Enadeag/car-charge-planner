@@ -8,7 +8,6 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/** The arithmetic of surplus and charge power. */
 final class Charging {
 
     /** A level this little above a whole percentage is the plan's rounding, not a percent more to charge. */
@@ -22,8 +21,6 @@ final class Charging {
      * already accounted for the panels.
      *
      * @param step the forecast step, whose power is the whole system's expected AC output in kW
-     * @param system the home and equipment, for the house's own use
-     * @param preferences the planning preferences, for the margin
      * @return the usable surplus in kW, 0 or more
      */
     static double usableSurplusKw(ForecastStep step, HomeSystem system, PlanningPreferences preferences) {
@@ -36,7 +33,6 @@ final class Charging {
      * three).
      *
      * @param amps the current per phase in A
-     * @param charger the charger, for its voltage and number of phases
      * @return the charge power in kW, measured at the wall
      */
     static double powerKw(int amps, Charger charger) {
@@ -47,7 +43,6 @@ final class Charging {
      * The current for a power: whole amps per phase, rounded down, at most the charger's maximum.
      *
      * @param powerKw the power the current must fit under in kW, 0 or more
-     * @param charger the charger, for its voltage, phases and maximum
      * @return the current per phase in A; below the charger's minimum when the power is too low to charge
      */
     static int ampsFor(double powerKw, Charger charger) {
@@ -57,7 +52,6 @@ final class Charging {
     /**
      * Rounds an energy to six decimals, so amounts that differ only by floating-point noise compare as equal.
      *
-     * @param kwh the energy in kWh
      * @return the energy in kWh, rounded half to even
      */
     static double roundKwh(double kwh) {

@@ -122,8 +122,6 @@ public final class Planner {
     }
 
     /**
-     * The charging for each trip in turn, each one after the trips before it are settled.
-     *
      * @param forNextTrips per trip, the part of the battery it also charges for the trips after it, as their own legs
      *     cannot
      */
@@ -135,21 +133,16 @@ public final class Planner {
         return charges;
     }
 
-    /** What every projection of one plan shares. */
     private record Input(List<ForecastStep> forecast, double levelPct, Instant now, List<Window> running,
             Map<LocalDate, List<SurplusRun>> runsByDay, Map<LocalDate, List<ForecastStep>> stepsByDay,
             LocalDate lastDay) {
     }
 
     /**
-     * How the plan charges for one trip.
-     *
-     * @param trip the trip
      * @param tripPct the part of the battery the trip takes, there and back or only there
      * @param requiredPct the level the trip needs at its departure; above 100 when even a full battery is not enough
      * @param forNextTripsPct the part of the battery charged on top for the trips after it, whose legs cannot
      * @param boostFrom the first day whose solar power may charge above the target level for the trip
-     * @param grid the grid charge, none or one
      */
     private record TripCharge(Trip trip, double tripPct, double requiredPct, double forNextTripsPct,
             LocalDate boostFrom, List<TripGridCharge> grid) {
@@ -159,7 +152,6 @@ public final class Planner {
         }
     }
 
-    /** The levels around one departure in a projection. */
     private record Departure(double solarPct, double departurePct, double returnPct) {
     }
 
@@ -422,9 +414,6 @@ public final class Planner {
     }
 
     /**
-     * The energy to bring the battery from a level to the target charge level.
-     *
-     * @param levelPct the battery level to start from
      * @return the wall-side energy in kWh, 0 when the level is at or above the target
      */
     double energyNeededKwh(Percent levelPct) {
@@ -443,7 +432,6 @@ public final class Planner {
         return km * tripKwhPerKm() / system.car().usableBatteryKwh() * 100;
     }
 
-    /** How many km of a trip a share of the battery holds. */
     private double kmFor(double pct) {
         return pct / 100 * system.car().usableBatteryKwh() / tripKwhPerKm();
     }

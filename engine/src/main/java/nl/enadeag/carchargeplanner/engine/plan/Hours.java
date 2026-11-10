@@ -30,9 +30,7 @@ public final class Hours {
     /**
      * A moment some hours later, in real time.
      *
-     * @param moment the moment to start from
      * @param hours the hours to add, rounded to whole nanoseconds
-     * @return the later moment
      */
     static Instant plus(Instant moment, double hours) {
         return moment.plusNanos(Math.round(hours * NANOS_PER_HOUR));
@@ -41,8 +39,6 @@ public final class Hours {
     /**
      * Rounds a moment up to whole five minutes of real time since its local midnight.
      *
-     * @param moment the moment to round
-     * @param zone the time zone that decides which midnight counts
      * @return the moment itself when it is already on a five-minute mark, otherwise the next one
      */
     static Instant ceilToFiveMinutes(Instant moment, ZoneId zone) {
@@ -51,24 +47,10 @@ public final class Hours {
         return midnight.plusNanos((long) Math.ceil(steps - 1e-9) * FIVE_MINUTES_NANOS);
     }
 
-    /**
-     * The earlier of two moments.
-     *
-     * @param a one moment
-     * @param b the other moment
-     * @return the earlier of the two
-     */
     static Instant earliest(Instant a, Instant b) {
         return a.isBefore(b) ? a : b;
     }
 
-    /**
-     * The later of two moments.
-     *
-     * @param a one moment
-     * @param b the other moment
-     * @return the later of the two
-     */
     static Instant latest(Instant a, Instant b) {
         return a.isAfter(b) ? a : b;
     }
