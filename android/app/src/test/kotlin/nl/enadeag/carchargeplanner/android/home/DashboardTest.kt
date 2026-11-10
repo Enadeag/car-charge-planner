@@ -175,6 +175,7 @@ class DashboardTest {
 
         val changed = shown.withTrips(listOf(trip))
 
+        // Only this line guards note 1 of #404, the old withTrips bug: the view leaves ended periods out anyway
         assertThat(changed.storedAway).containsExactly(endedThisMorning, coming)
         assertThat(changed.view).isEqualTo(shown.planned.dashboard(listOf(endedThisMorning, coming), listOf(trip)))
     }
