@@ -120,9 +120,6 @@ open class CarChargePlannerApp : Application(), BackgroundHost {
      * Makes a part that asks for the app's folders, which Android makes on the first ask, before the main thread's
      * policy is set. The process starts without one; Robolectric makes each test's Application on the same main thread,
      * where the app of an earlier test set it already.
-     *
-     * @param make what makes the part
-     * @return the part
      */
     private fun <T> beforeThePolicy(make: () -> T): T {
         val policy = StrictMode.allowThreadDiskWrites()
@@ -139,12 +136,7 @@ open class CarChargePlannerApp : Application(), BackgroundHost {
 
     internal companion object {
 
-        /**
-         * Sets the main thread's policy in the debug build only; the release build keeps none.
-         *
-         * @param debug whether this is the debug build
-         * @param set what puts the policy on the calling thread
-         */
+        /** Sets the main thread's policy in the debug build only; the release build keeps none. */
         fun applyMainThreadPolicy(
             debug: Boolean,
             set: (StrictMode.ThreadPolicy) -> Unit = StrictMode::setThreadPolicy,
@@ -158,8 +150,6 @@ open class CarChargePlannerApp : Application(), BackgroundHost {
          * What the debug build allows on the main thread: no disk reads, disk writes or network from the app's own
          * code, or the app crashes at once, so a call that should run off the main thread is found while developing.
          * Such a call from the system's or a vendor's code alone is logged as a warning ([MainThreadViolations]).
-         *
-         * @return a new policy, with a listener of its own
          */
         fun mainThreadPolicy(): StrictMode.ThreadPolicy = StrictMode.ThreadPolicy.Builder()
             .detectDiskReads()

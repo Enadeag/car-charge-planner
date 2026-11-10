@@ -169,12 +169,7 @@ class BackgroundRounds(private val access: () -> EngineAccess,
     }
 }
 
-/**
- * Cancels the alarm, then the work: in that order, as cancelling the work may stop the round that calls this.
- *
- * @param alarm the alarm for the next notice
- * @param work the work that asks the providers
- */
+/** Cancels the alarm, then the work: in that order, as cancelling the work may stop the round that calls this. */
 internal fun stopAll(alarm: NoticeAlarm, work: RoundWork) {
     alarm.cancel()
     work.cancel()

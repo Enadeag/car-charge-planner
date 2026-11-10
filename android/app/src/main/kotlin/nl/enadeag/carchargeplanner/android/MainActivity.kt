@@ -42,18 +42,10 @@ class MainActivity : ComponentActivity() {
         /** The class name of the activity's alias in the manifest, which only the app itself can start. */
         private const val NOTICE_TAP = "nl.enadeag.carchargeplanner.android.NoticeTap"
 
-        /**
-         * Where a notification's intent goes: the activity through its alias, which only the app itself can start.
-         *
-         * @param context the app's context
-         * @return the alias in the app's package
-         */
+        /** Where a notification's intent goes: the activity through its alias, which only the app itself can start. */
         internal fun noticeTap(context: Context): ComponentName = ComponentName(context, NOTICE_TAP)
 
         /**
-         * The data of a notification's intent, which names the notification.
-         *
-         * @param tag the notification's tag
          * @return such as `notice:battery_check:1780300800`
          */
         internal fun noticeUri(tag: String): Uri = Uri.fromParts(NOTICE_SCHEME, tag, null)

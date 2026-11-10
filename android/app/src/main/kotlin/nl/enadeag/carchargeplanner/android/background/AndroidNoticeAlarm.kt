@@ -35,8 +35,6 @@ class AndroidNoticeAlarm(private val context: Context) : NoticeAlarm {
     }
 
     /**
-     * The alarm's intent.
-     *
      * @param flag [PendingIntent.FLAG_UPDATE_CURRENT] to make it when there is none, or [PendingIntent.FLAG_NO_CREATE]
      * @return the intent; null with [PendingIntent.FLAG_NO_CREATE] when there is none
      */
