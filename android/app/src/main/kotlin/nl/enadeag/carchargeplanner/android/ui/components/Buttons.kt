@@ -81,12 +81,7 @@ internal fun AppTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, e
 @Composable
 internal fun SaveButton(busy: Boolean, onClick: () -> Unit, enabled: Boolean = true) {
     AppTextButton(onClick = onClick, enabled = enabled && !busy) {
-        if (busy) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            Text(stringResource(R.string.saving), modifier = Modifier.padding(start = 8.dp))
-        } else {
-            Text(stringResource(R.string.action_save))
-        }
+        SaveLabel(busy)
     }
 }
 
@@ -109,4 +104,34 @@ internal fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier =
             disabled()
         }
     }, colors = if (busy) colours.copy(contentColor = colours.disabledContentColor) else colours, content = content)
+}
+
+/**
+ * An entry's Save, as a [HeldButton]: held while any of the entry's changes runs, so it keeps the focus, and showing
+ * its progress while the entry's own save runs.
+ *
+ * @param saving true while the entry's own save runs
+ * @param held true while any of the entry's changes runs, its own save among them
+ * @param onSave saves
+ */
+@Composable
+internal fun SaveAction(saving: Boolean, held: Boolean, onSave: () -> Unit) {
+    HeldButton(busy = held, onClick = onSave) {
+        SaveLabel(saving)
+    }
+}
+
+/**
+ * Save's words, or its progress while it saves.
+ *
+ * @param saving true while the save runs
+ */
+@Composable
+private fun SaveLabel(saving: Boolean) {
+    if (saving) {
+        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+        Text(stringResource(R.string.saving), modifier = Modifier.padding(start = 8.dp))
+    } else {
+        Text(stringResource(R.string.action_save))
+    }
 }

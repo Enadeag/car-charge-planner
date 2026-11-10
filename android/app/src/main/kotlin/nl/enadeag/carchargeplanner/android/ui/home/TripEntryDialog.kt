@@ -8,12 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -30,7 +28,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -47,11 +44,14 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.android.R
+import nl.enadeag.carchargeplanner.android.home.SaveState
+import nl.enadeag.carchargeplanner.android.home.TripDraft
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.ui.components.BarPage
 import nl.enadeag.carchargeplanner.android.ui.components.DateDialog
 import nl.enadeag.carchargeplanner.android.ui.components.DiscardChangesDialog
-import nl.enadeag.carchargeplanner.android.ui.components.HeldButton
+import nl.enadeag.carchargeplanner.android.ui.components.FocusOnWindow
+import nl.enadeag.carchargeplanner.android.ui.components.SaveAction
 import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 import nl.enadeag.carchargeplanner.android.ui.components.TimeButton
 import nl.enadeag.carchargeplanner.android.ui.components.TimeDialog
@@ -124,9 +124,9 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
     val refusals by entry.refusals.collectAsStateWithLifecycle()
     val saving by entry.saving.collectAsStateWithLifecycle()
     val asked by entry.discardAsked.collectAsStateWithLifecycle()
-    val busy by entry.busy.collectAsStateWithLifecycle()
-    val savingNow = saving == TripEntry.SaveState.Saving
-    val failed = saving as? TripEntry.SaveState.Failed
+    val held by entry.busy.collectAsStateWithLifecycle()
+    val savingNow = saving == SaveState.Saving
+    val failed = saving as? SaveState.Failed
     val words = dashboardWords(draft.zone)
     var picking by rememberSaveable { mutableStateOf<Picking?>(null) }
     var spot by rememberSaveable { mutableStateOf(Spot.DEPARTURE_DAY) }
@@ -137,14 +137,8 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
     val fields = draft.fields
     Dialog(onDismissRequest = { entry.back() }, properties = DialogProperties(usePlatformDefaultWidth = false,
         dismissOnClickOutside = false, decorFitsSystemWindows = false)) {
-        // the dialog's own window: a control can take the focus only once that window has it, which comes after the
-        // dialog is drawn, and again when a picker or the question over it closes
-        val windowFocused = LocalWindowInfo.current.isWindowFocused
-        LaunchedEffect(windowFocused) {
-            if (windowFocused) {
-                focus.getValue(spot).requestFocus()
-            }
-        }
+        // in the dialog's own window, also when a picker or the question over it closes
+        FocusOnWindow { focus.getValue(spot) }
         LaunchedEffect(refusals) {
             val field = problem?.field ?: return@LaunchedEffect
             spot = if (field == TripEntry.Field.RETURN) Spot.RETURN_DAY else Spot.DISTANCE
@@ -157,18 +151,9 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
             }
         }
         val noted = { at: Spot -> Modifier.onFocusChanged { if (it.isFocused) spot = at } }
-        BarPage(stringResource(if (draft.mode == TripEntry.Mode.ADD) R.string.trip_add_title
+        BarPage(stringResource(if (draft.mode == TripDraft.Mode.ADD) R.string.trip_add_title
             else R.string.trip_change_title), focus.getValue(Spot.TOP), onUp = null,
-            actions = {
-                HeldButton(busy = busy, onClick = { entry.save() }) {
-                    if (savingNow) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Text(stringResource(R.string.saving), modifier = Modifier.padding(start = 8.dp))
-                    } else {
-                        Text(stringResource(R.string.action_save))
-                    }
-                }
-            },
+            actions = { SaveAction(saving = savingNow, held = held) { entry.save() } },
             lead = {
                 Column(Modifier.padding(bottom = if (failed != null) 16.dp else 0.dp)) {
                     SaveFailure(stringResource(R.string.trip_not_saved), failed?.detail)
@@ -311,9 +296,9 @@ private fun dayName(words: DashboardWords, today: LocalDate, day: LocalDate): St
     words.date(DayName.of(day, today))
 
 /** The text of why Save refused the trip. */
-private fun problemId(problem: TripEntry.Problem): Int = when (problem) {
-    TripEntry.Problem.RETURN_NOT_AFTER_DEPARTURE -> R.string.trip_return_before_departure
-    TripEntry.Problem.PASSED -> R.string.trip_passed
-    TripEntry.Problem.DISTANCE_NOT_A_NUMBER -> R.string.trip_distance_not_a_number
-    TripEntry.Problem.DISTANCE_NOT_POSITIVE -> R.string.trip_distance_not_positive
+private fun problemId(problem: TripDraft.Problem): Int = when (problem) {
+    TripDraft.Problem.RETURN_NOT_AFTER_DEPARTURE -> R.string.trip_return_before_departure
+    TripDraft.Problem.PASSED -> R.string.trip_passed
+    TripDraft.Problem.DISTANCE_NOT_A_NUMBER -> R.string.trip_distance_not_a_number
+    TripDraft.Problem.DISTANCE_NOT_POSITIVE -> R.string.trip_distance_not_positive
 }

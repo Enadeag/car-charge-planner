@@ -5,7 +5,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
 import nl.enadeag.carchargeplanner.android.form.FormState
 import nl.enadeag.carchargeplanner.android.form.NumberText
@@ -21,10 +20,10 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
  * number, or one outside that range is refused with its problem, never rounded or clamped, and nothing is saved. A
  * save that worked closes the entry, says so once and has the plan made again; one that failed keeps the entry open
  * with what was typed and why. Back, or a tap beside the entry, asks before it throws a typed level away; Cancel
- * throws it away at once, as its name says. While a save runs, nothing closes the entry. Whether it is open, the typed
- * text and the question survive turning the phone and the system ending the app in the [SavedStateHandle], and are
- * forgotten when it closes; what a save came to and the problem shown are not kept, as Save shows them again. Called
- * from the main thread.
+ * throws it away at once, as its name says. While a save runs, nothing closes the entry, the field takes no typing
+ * and another Save does nothing. Whether it is open, the typed text and the question survive turning the phone and
+ * the system ending the app in the [SavedStateHandle], and are forgotten when it closes; what a save came to and the
+ * problem shown are not kept, as Save shows them again. Called from the main thread.
  *
  * @param handle the screen's saved state
  * @param numbers reads the whole number typed
@@ -33,7 +32,7 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
  * @param saved called once a level is stored, so a new plan is made from it
  */
 class BatteryEntry(private val handle: SavedStateHandle, private val numbers: NumberText,
-    private val access: EngineAccess, private val scope: CoroutineScope, private val saved: () -> Unit) {
+    private val access: EngineAccess, scope: CoroutineScope, private val saved: () -> Unit) {
 
     /** The entry's one field. */
     enum class Field {
@@ -41,21 +40,11 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
         LEVEL,
     }
 
-    /** Where the entry's Save is. */
-    sealed interface SaveState {
+    /** What a save came to, for the screen to say once. */
+    sealed interface Notice {
 
-        /** Not saving, and no save failed since the entry opened or the last save. */
-        data object Idle : SaveState
-
-        /** The level is being saved; Save, Cancel and Back wait. */
-        data object Saving : SaveState
-
-        /**
-         * The level could not be stored; the entry keeps what was typed.
-         *
-         * @property detail the system's or the engine's words, in English
-         */
-        data class Failed(val detail: String) : SaveState
+        /** A level was stored. */
+        data object Saved : Notice
     }
 
     companion object {
@@ -75,10 +64,8 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
     private val form = FormState(handle, PREFIX, Field.entries)
     private val openNow = MutableStateFlow(handle.get<Boolean>(OPEN) == true)
     private val textNow = MutableStateFlow(form.text(Field.LEVEL))
-    private val discardNow = MutableStateFlow(handle.get<Boolean>(DISCARD) == true)
-    private val savingNow = MutableStateFlow<SaveState>(SaveState.Idle)
-    private val savedNow = MutableStateFlow(false)
-    private val problemsShownNow = MutableStateFlow(0)
+    private val changes = ChangeQueue<Notice>(scope)
+    private val flow = EntryFlow(handle, DISCARD, changes, { openNow.value }, { textNow.value.isNotEmpty() }, ::closed)
 
     /** True while the entry is open. */
     val open: StateFlow<Boolean> = openNow.asStateFlow()
@@ -90,16 +77,19 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
     val problems: StateFlow<Map<Field, FieldProblem>> = form.problems
 
     /** True while Back asks whether to throw the typed level away. */
-    val discardAsked: StateFlow<Boolean> = discardNow.asStateFlow()
+    val discardAsked: StateFlow<Boolean> = flow.discardAsked
 
     /** Where the entry's Save is. */
-    val saving: StateFlow<SaveState> = savingNow.asStateFlow()
+    val saving: StateFlow<SaveState> = flow.saving
 
-    /** True once a level was stored, until the screen said so, as [savedShown] tells. */
-    val savedToShow: StateFlow<Boolean> = savedNow.asStateFlow()
+    /** True while a save runs; Save is held then. */
+    val busy: StateFlow<Boolean> = changes.busy
+
+    /** What the last save came to, until the screen said so, as [noticeShown] tells; null when nothing is to say. */
+    val notice: StateFlow<Notice?> = changes.notice
 
     /** How many times Save showed a problem, so the screen can move the focus to the field. */
-    val problemsShown: StateFlow<Int> = problemsShownNow.asStateFlow()
+    val refusals: StateFlow<Int> = flow.refusals
 
     /** Opens the entry, empty; one already open stays as it is. */
     fun open() {
@@ -112,66 +102,46 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
     }
 
     /**
-     * Puts what the owner typed; the field's problem goes.
+     * Puts what the owner typed; the field's problem goes. While a save runs it does nothing.
      *
      * @param text what the field holds now
      */
     fun edit(text: String) {
-        form.edit(Field.LEVEL, text)
-        textNow.value = text
+        if (flow.takesEdits) {
+            form.edit(Field.LEVEL, text)
+            textNow.value = text
+        }
     }
 
-    /**
-     * Saves the typed level, or shows why it cannot be saved. While a save runs it does nothing.
-     */
-    fun save() {
-        if (!openNow.value || savingNow.value == SaveState.Saving) {
-            return
-        }
-        val level = level() ?: return
-        savingNow.value = SaveState.Saving
-        // a save cut off as the home ends may still have stored the level
-        scope.launch {
-            when (val outcome = access.saveBatteryLevel(level)) {
-                BatteryLevelSave.Saved -> {
-                    close()
-                    savedNow.value = true
-                    saved()
-                }
-                is BatteryLevelSave.Failed -> savingNow.value = SaveState.Failed(outcome.detail)
+    /** Saves the typed level, or shows why it cannot be saved. While a save runs it does nothing. */
+    fun save() = flow.save(::level) { level ->
+        when (val outcome = access.saveBatteryLevel(level)) {
+            BatteryLevelSave.Saved -> {
+                changes.say(Notice.Saved)
+                saved()
+                null
             }
+            is BatteryLevelSave.Failed -> outcome.detail
         }
     }
 
     /** Cancel: closes the entry and throws away what was typed; while a save runs it does nothing. */
-    fun cancel() {
-        if (savingNow.value != SaveState.Saving) {
-            close()
-        }
-    }
+    fun cancel() = flow.discard()
 
     /**
      * Back, or a tap beside the entry: with a level typed, asks whether to throw it away; without, closes. While a save
      * runs it does nothing.
      */
-    fun back() {
-        when {
-            savingNow.value == SaveState.Saving -> Unit
-            textNow.value.isNotEmpty() -> ask(true)
-            else -> close()
-        }
-    }
+    fun back() = flow.back()
 
-    /** Throws the typed level away and closes, as the owner chose Discard. */
-    fun discard() = close()
+    /** Throws the typed level away and closes, as the owner chose Discard; while a save runs it does nothing. */
+    fun discard() = flow.discard()
 
     /** Stays in the entry with what was typed, as the owner chose Keep editing. */
-    fun keepEditing() = ask(false)
+    fun keepEditing() = flow.keepEditing()
 
     /** The screen said the level was saved, a message that goes by itself, so it is not said again after turning. */
-    fun savedShown() {
-        savedNow.value = false
-    }
+    fun noticeShown() = changes.noticeShown()
 
     /** The typed level; null when it is refused, its problem then shown. */
     private fun level(): Percent? {
@@ -183,25 +153,17 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
                 else FieldProblem.NotFrom0To100
         }
         form.show(mapOf(Field.LEVEL to problem))
-        problemsShownNow.value++
         return null
     }
 
-    private fun ask(asking: Boolean) {
-        if (asking) handle[DISCARD] = true else handle.remove<Boolean>(DISCARD)
-        discardNow.value = asking
-    }
-
-    private fun close() {
+    private fun closed() {
         forget(handle)
         clear()
-        discardNow.value = false
         openNow.value = false
     }
 
     private fun clear() {
         form.forget()
         textNow.value = ""
-        savingNow.value = SaveState.Idle
     }
 }

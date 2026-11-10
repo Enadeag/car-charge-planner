@@ -46,7 +46,7 @@ class BatteryEntryTest {
         assertThat(entry.open.value).isTrue()
         assertThat(entry.text.value).isEmpty()
         assertThat(entry.problems.value).isEmpty()
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Idle)
+        assertThat(entry.saving.value).isEqualTo(SaveState.Idle)
     }
 
     @ParameterizedTest
@@ -71,7 +71,7 @@ class BatteryEntryTest {
 
         assertThat(entry.problems.value)
             .containsExactlyEntriesOf(mapOf(BatteryEntry.Field.LEVEL to FieldProblem.NotAWholeNumber))
-        assertThat(entry.problemsShown.value).isEqualTo(1)
+        assertThat(entry.refusals.value).isEqualTo(1)
         assertThat(access.batteryLevels).isEmpty()
         assertThat(entry.open.value).isTrue()
     }
@@ -86,10 +86,10 @@ class BatteryEntryTest {
 
         assertThat(entry.problems.value)
             .containsExactlyEntriesOf(mapOf(BatteryEntry.Field.LEVEL to FieldProblem.NotFrom0To100))
-        assertThat(entry.problemsShown.value).isEqualTo(1)
+        assertThat(entry.refusals.value).isEqualTo(1)
         assertThat(access.batteryLevels).isEmpty()
         assertThat(entry.open.value).isTrue()
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Idle)
+        assertThat(entry.saving.value).isEqualTo(SaveState.Idle)
         assertThat(plannedAgain).isZero()
     }
 
@@ -128,7 +128,7 @@ class BatteryEntryTest {
         entry.save()
         runCurrent()
 
-        assertThat(entry.problemsShown.value).isEqualTo(2)
+        assertThat(entry.refusals.value).isEqualTo(2)
     }
 
     @Test
@@ -163,10 +163,10 @@ class BatteryEntryTest {
         runCurrent()
 
         assertThat(entry.open.value).isFalse()
-        assertThat(entry.savedToShow.value).isTrue()
+        assertThat(entry.notice.value).isEqualTo(BatteryEntry.Notice.Saved)
         assertThat(plannedAgain).isEqualTo(1)
-        entry.savedShown()
-        assertThat(entry.savedToShow.value).isFalse()
+        entry.noticeShown()
+        assertThat(entry.notice.value).isNull()
     }
 
     @Test
@@ -192,9 +192,9 @@ class BatteryEntryTest {
 
         assertThat(entry.open.value).isTrue()
         assertThat(entry.text.value).isEqualTo("64")
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Failed(
+        assertThat(entry.saving.value).isEqualTo(SaveState.Failed(
             "battery.json is not written: written by a newer version of the app"))
-        assertThat(entry.savedToShow.value).isFalse()
+        assertThat(entry.notice.value).isNull()
         assertThat(plannedAgain).isZero()
     }
 
@@ -208,7 +208,7 @@ class BatteryEntryTest {
         entry.cancel()
         entry.open()
 
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Idle)
+        assertThat(entry.saving.value).isEqualTo(SaveState.Idle)
     }
 
     @Test
@@ -233,7 +233,7 @@ class BatteryEntryTest {
         val entry = typed("64")
         entry.save()
         runCurrent()
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Saving)
+        assertThat(entry.saving.value).isEqualTo(SaveState.Saving)
 
         entry.save()
         entry.cancel()
@@ -258,7 +258,7 @@ class BatteryEntryTest {
         assertThat(entry.discardAsked.value).isFalse()
         assertThat(batteryKeys()).isEmpty()
         assertThat(access.batteryLevels).isEmpty()
-        assertThat(entry.savedToShow.value).isFalse()
+        assertThat(entry.notice.value).isNull()
     }
 
     @Test
@@ -368,5 +368,134 @@ class BatteryEntryTest {
 
         assertThat(batteryKeys()).isEmpty()
         assertThat(handle.keys()).containsExactlyInAnyOrder("batteryish", "car.text.BATTERY")
+    }
+
+    @Test
+    fun whileASaveRunsTheEntryIsBusyAndASecondSaveStartsNothing() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+
+        val busy = entry.busy.value
+        entry.save()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(busy).isTrue()
+        assertThat(entry.busy.value).isFalse()
+        assertThat(access.batteryLevels).containsExactly(Percent(64.0))
+        assertThat(entry.refusals.value).isZero()
+    }
+
+    @Test
+    fun whileASaveRunsTypingIsIgnored() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        access.batteryFails = "No space left on device"
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+
+        entry.edit("70")
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(entry.text.value).isEqualTo("64")
+        assertThat(entry(handle.afterTheSystemEndedTheApp()).text.value).isEqualTo("64")
+    }
+
+    @Test
+    fun whileASaveRunsDiscardDoesNothing() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        access.batteryFails = "No space left on device"
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+
+        entry.discard()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(entry.open.value).isTrue()
+        assertThat(entry.text.value).isEqualTo("64")
+    }
+
+    @Test
+    fun aClosedEntryHoldsNoTypedLevelOrProblem() = runTest {
+        val entry = typed("101")
+        entry.save()
+
+        entry.cancel()
+
+        assertThat(entry.text.value).isEmpty()
+        assertThat(entry.problems.value).isEmpty()
+    }
+
+    @Test
+    fun anEntryOpensEmptyAlsoWhenTheSavedStateHeldATypedLevelWithoutTheEntryOpen() = runTest {
+        handle["battery.text.LEVEL"] = "64"
+        val entry = entry()
+
+        entry.open()
+
+        assertThat(entry.text.value).isEmpty()
+    }
+
+    @Test
+    fun aKeptQuestionWithoutAnOpenEntryDoesNotShow() = runTest {
+        handle["battery.discard"] = true
+
+        val entry = entry()
+
+        assertThat(entry.discardAsked.value).isFalse()
+    }
+
+    @Test
+    fun theSavedNoticeComesWithTheEndOfTheSave() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+        val whileSaving = entry.notice.value
+
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(whileSaving).isNull()
+        assertThat(entry.notice.value).isEqualTo(BatteryEntry.Notice.Saved)
+    }
+
+    @Test
+    fun aSaveThatFailedSaysNothingThroughTheNotice() = runTest {
+        access.batteryFails = "No space left on device"
+        val entry = typed("70")
+
+        entry.save()
+        runCurrent()
+
+        assertThat(entry.saving.value).isEqualTo(SaveState.Failed("No space left on device"))
+        assertThat(entry.notice.value).isNull()
+    }
+
+    /** The field's text is put in the handle directly, as typing is ignored while the save runs. */
+    @Test
+    fun whileASaveRunsSaveCountsNoRefusalAlsoForATextItWouldRefuse() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+        handle["battery.text.LEVEL"] = "no number"
+
+        entry.save()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(entry.refusals.value).isZero()
+        assertThat(entry.problems.value).isEmpty()
     }
 }

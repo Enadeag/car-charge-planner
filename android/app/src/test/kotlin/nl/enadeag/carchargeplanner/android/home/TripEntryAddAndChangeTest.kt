@@ -16,12 +16,11 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.TripDraft.Fields
+import nl.enadeag.carchargeplanner.android.home.TripDraft.Mode
+import nl.enadeag.carchargeplanner.android.home.TripDraft.Problem
 import nl.enadeag.carchargeplanner.android.home.TripEntry.Field
-import nl.enadeag.carchargeplanner.android.home.TripEntry.Fields
-import nl.enadeag.carchargeplanner.android.home.TripEntry.Mode
 import nl.enadeag.carchargeplanner.android.home.TripEntry.Notice
-import nl.enadeag.carchargeplanner.android.home.TripEntry.Problem
-import nl.enadeag.carchargeplanner.android.home.TripEntry.SaveState
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.ui.components.PickerDays
 import nl.enadeag.carchargeplanner.engine.trip.Trip
@@ -140,6 +139,24 @@ class TripEntryAddAndChangeTest {
         assertThat(trip).isEqualTo(expected)
         assertThat(access.trips).containsExactly(expected)
         assertThat(entry.closedOn).isEqualTo(expected)
+    }
+
+    @Test
+    fun aChangeDiscardedAfterAnotherChangeWasSavedClosesOnItsOwnTripNotTheSavedOne() = runTest {
+        val first = trip(today.plusDays(1), "07:30", today.plusDays(1), "18:00", 300.0)
+        val second = trip(today.plusDays(2), "08:00", today.plusDays(2), "17:00", 150.0)
+        access.trips = listOf(first, second)
+        val entry = entry()
+        entry.change(first, amsterdam)
+        entry.distance("310")
+        saved(entry)
+        assertThat(entry.closedOn).isNotEqualTo(second)
+
+        entry.change(second, amsterdam)
+        entry.distance("160")
+        entry.discard()
+
+        assertThat(entry.closedOn).isEqualTo(second)
     }
 
     @Test
@@ -347,10 +364,10 @@ class TripEntryAddAndChangeTest {
     @Test
     fun aDistanceTooLargeToBeANumberIsNoNumber() {
         val fields = Fields(today, LocalTime.of(8, 0), today, LocalTime.of(18, 0), "1" + "0".repeat(400), false)
-        val draft = TripEntry.Draft(Mode.ADD, amsterdam, today, fields, null, fields)
+        val draft = TripDraft(Mode.ADD, amsterdam, today, fields, null, fields)
 
         assertThat(draft.check(clock.now, NumberText(Locale.ENGLISH)))
-            .isEqualTo(TripEntry.Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER))
+            .isEqualTo(TripDraft.Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER))
     }
 
     @ParameterizedTest
@@ -662,5 +679,23 @@ class TripEntryAddAndChangeTest {
         TripEntry.forget(handle)
 
         assertThat(handle.keys()).isEmpty()
+    }
+
+    @Test
+    fun anEntryOpenedAndNotChangedComesBackAfterTheSystemEndedTheApp() = runTest {
+        val entry = added()
+
+        val again = entry(handle.afterTheSystemEndedTheApp())
+
+        assertThat(again.draft.value).isEqualTo(entry.draft.value)
+    }
+
+    @Test
+    fun aKeptQuestionWithoutAKeptEntryDoesNotShow() = runTest {
+        handle["tripEntry.discard"] = true
+
+        val entry = entry()
+
+        assertThat(entry.discardAsked.value).isFalse()
     }
 }

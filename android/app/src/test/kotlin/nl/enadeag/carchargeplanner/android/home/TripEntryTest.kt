@@ -10,7 +10,6 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.form.NumberText
-import nl.enadeag.carchargeplanner.android.home.TripEntry.Choice
 import nl.enadeag.carchargeplanner.android.home.TripEntry.Notice
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.engine.trip.Trip
@@ -37,7 +36,7 @@ class TripEntryTest {
         access.trips = listOf(trip, other)
         val entry = entry()
 
-        entry.choose(trip, Choice.NOT_WITH_THIS_CAR, true)
+        entry.choose(trip, TripChoice.NOT_WITH_THIS_CAR, true)
         runCurrent()
 
         val changed = Trip(trip.departure(), trip.returnTime(), 300.0, false, true)
@@ -52,20 +51,20 @@ class TripEntryTest {
         access.trips = listOf(other)
         val entry = entry()
 
-        entry.choose(other, Choice.CAN_CHARGE, false)
+        entry.choose(other, TripChoice.CAN_CHARGE, false)
         runCurrent()
 
         assertThat(access.trips).containsExactly(Trip(other.departure(), other.returnTime(), 80.0, false, false))
     }
 
     @ParameterizedTest
-    @EnumSource(Choice::class)
-    fun eachChoiceTellsAndPutsOnlyItsOwnFlag(choice: Choice) {
+    @EnumSource(TripChoice::class)
+    fun eachChoiceTellsAndPutsOnlyItsOwnFlag(choice: TripChoice) {
         val on = choice.put(trip, true)
 
         assertThat(choice.of(on)).isTrue()
         assertThat(choice.of(choice.put(on, false))).isFalse()
-        assertThat(Choice.entries.filter { it != choice }.map { it.of(on) }).containsOnly(false)
+        assertThat(TripChoice.entries.filter { it != choice }.map { it.of(on) }).containsOnly(false)
         assertThat(listOf(on.departure(), on.returnTime(), on.distanceKm()))
             .containsExactly(trip.departure(), trip.returnTime(), trip.distanceKm())
     }
@@ -77,11 +76,11 @@ class TripEntryTest {
         access.tripGate = gate
         val entry = entry()
 
-        entry.choose(trip, Choice.CAN_CHARGE, true)
+        entry.choose(trip, TripChoice.CAN_CHARGE, true)
         runCurrent()
-        assertThat(entry.pending.value).isEqualTo(TripEntry.Pending(trip, Choice.CAN_CHARGE, true))
+        assertThat(entry.pending.value).isEqualTo(TripEntry.Pending(trip, TripChoice.CAN_CHARGE, true))
         assertThat(entry.busy.value).isTrue()
-        entry.choose(other, Choice.CAN_CHARGE, false)
+        entry.choose(other, TripChoice.CAN_CHARGE, false)
         entry.remove(other)
         runCurrent()
         assertThat(access.tripChanges).hasSize(1)
@@ -98,7 +97,7 @@ class TripEntryTest {
         access.tripFails = "written by a newer version of the app"
         val entry = entry()
 
-        entry.choose(trip, Choice.NOT_WITH_THIS_CAR, true)
+        entry.choose(trip, TripChoice.NOT_WITH_THIS_CAR, true)
         runCurrent()
 
         assertThat(entry.pending.value).isNull()
@@ -136,12 +135,12 @@ class TripEntryTest {
         entry.noticeShown()
         val gate = CompletableDeferred<Unit>()
         access.tripGate = gate
-        entry.choose(other, Choice.NOT_WITH_THIS_CAR, true)
+        entry.choose(other, TripChoice.NOT_WITH_THIS_CAR, true)
         runCurrent()
 
         entry.undo(trip)
         runCurrent()
-        assertThat(access.tripChanges).containsExactly("remove" to trip, "change" to Choice.NOT_WITH_THIS_CAR.put(
+        assertThat(access.tripChanges).containsExactly("remove" to trip, "change" to TripChoice.NOT_WITH_THIS_CAR.put(
             other, true))
         gate.complete(Unit)
         runCurrent()
@@ -227,7 +226,7 @@ class TripEntryTest {
 
         entry.remove(trip)
         runCurrent()
-        entry.choose(trip, Choice.CAN_CHARGE, true)
+        entry.choose(trip, TripChoice.CAN_CHARGE, true)
 
         assertThat(entry.pending.value).isNull()
         assertThat(access.tripChanges).containsExactly("remove" to trip)

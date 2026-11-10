@@ -176,11 +176,13 @@ internal fun TimeField(label: String, text: String, onEdit: (String) -> Unit, pr
  * @param onAction what the action key does; null to move on to the next field
  * @param announceProblem whether a screen reader reads a problem as it comes, for a field that keeps the focus while
  *     its problem shows; otherwise the problem is read with the field once the focus moves to it
+ * @param readOnly true while it keeps the focus but takes no typing, as while what it holds is saved
  */
 @Composable
 internal fun EntryField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
     problem: FieldProblem?, typical: Boolean, focus: FocusRequester, modifier: Modifier = Modifier,
-    imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null, announceProblem: Boolean = false) {
+    imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null, announceProblem: Boolean = false,
+    readOnly: Boolean = false) {
     val problemSentence = problem?.let { problemText(it) }
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
@@ -188,6 +190,7 @@ internal fun EntryField(label: String, hint: String, text: String, onEdit: (Stri
             onValueChange = onEdit,
             label = { Text(label) },
             singleLine = true,
+            readOnly = readOnly,
             isError = problem != null,
             keyboardOptions = KeyboardOptions(keyboardType = kind.keyboard, imeAction = imeAction),
             keyboardActions = if (onAction == null) KeyboardActions.Default

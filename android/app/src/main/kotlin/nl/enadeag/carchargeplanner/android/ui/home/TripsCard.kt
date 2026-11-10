@@ -39,6 +39,7 @@ import java.time.ZoneId
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.Dashboard
 import nl.enadeag.carchargeplanner.android.home.ListedTrip
+import nl.enadeag.carchargeplanner.android.home.TripChoice
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.ui.components.HeldButton
 import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
@@ -227,11 +228,11 @@ private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips:
     val spoken = words.spokenTrip(listed)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         RowLine(words.trip(listed), focus, trip, Modifier.semantics { contentDescription = spoken })
-        TripEntry.Choice.entries.forEach { choice ->
+        TripChoice.entries.forEach { choice ->
             val pending = trips.pending?.takeIf { it.trip == trip && it.choice == choice }
             ChoiceRow(stringResource(when (choice) {
-                TripEntry.Choice.NOT_WITH_THIS_CAR -> R.string.trip_not_with_this_car
-                TripEntry.Choice.CAN_CHARGE -> R.string.trip_can_charge
+                TripChoice.NOT_WITH_THIS_CAR -> R.string.trip_not_with_this_car
+                TripChoice.CAN_CHARGE -> R.string.trip_can_charge
             }), spoken, pending?.on ?: choice.of(trip), trips.busy) {
                 trips.keys.changing(key, choice.put(trip, it), rows)
                 trips.entry.choose(trip, choice, it)
