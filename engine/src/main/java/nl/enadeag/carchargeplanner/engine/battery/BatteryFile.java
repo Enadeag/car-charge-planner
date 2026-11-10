@@ -62,7 +62,6 @@ public final class BatteryFile {
         file.write(reading);
     }
 
-    /** The JSON shape of a reading. */
     private static final class Format implements FileFormat<BatteryReading> {
 
         @Override
