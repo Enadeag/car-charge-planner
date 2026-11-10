@@ -122,6 +122,8 @@ public final class Planner {
     }
 
     /**
+     * The charging for each trip in turn, each one after the trips before it are settled.
+     *
      * @param forNextTrips per trip, the part of the battery it also charges for the trips after it, as their own legs
      *     cannot
      */
@@ -143,6 +145,7 @@ public final class Planner {
      * @param requiredPct the level the trip needs at its departure; above 100 when even a full battery is not enough
      * @param forNextTripsPct the part of the battery charged on top for the trips after it, whose legs cannot
      * @param boostFrom the first day whose solar power may charge above the target level for the trip
+     * @param grid the grid charge, none or one
      */
     private record TripCharge(Trip trip, double tripPct, double requiredPct, double forNextTripsPct,
             LocalDate boostFrom, List<TripGridCharge> grid) {

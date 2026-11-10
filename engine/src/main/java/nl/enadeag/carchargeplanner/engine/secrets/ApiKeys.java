@@ -551,8 +551,8 @@ public final class ApiKeys implements SecretsSource {
     }
 
     /**
-     * They are remembered only when the keychain holds no entry it could not read: else the next load reads it again,
-     * and says that keys could not be read.
+     * Notes that the keys are in the keychain now. They are remembered only when the keychain holds no entry it could
+     * not read: else the next load reads it again, and says that keys could not be read.
      */
     private void savedInKeychain(Secrets secrets, Map<ProviderId, Set<String>> keptUnread) {
         logKept(keptUnread);

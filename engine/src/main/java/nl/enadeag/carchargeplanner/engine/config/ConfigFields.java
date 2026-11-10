@@ -25,6 +25,7 @@ final class ConfigFields {
 
     /**
      * @param place where it is in the file, such as {@code system.car}; empty for the whole file
+     * @throws FormatProblem when the value is not a JSON object
      */
     static ConfigFields of(JsonNode node, String place) throws FormatProblem {
         if (!(node instanceof ObjectNode found)) {
@@ -114,6 +115,9 @@ final class ConfigFields {
         return text(value(name), placeOf(name));
     }
 
+    /**
+     * @return the texts in their order, possibly none
+     */
     List<String> texts(String name) throws FormatProblem {
         var texts = new ArrayList<String>();
         var values = list(name);
@@ -123,6 +127,9 @@ final class ConfigFields {
         return texts;
     }
 
+    /**
+     * @return the lists in their order, possibly none
+     */
     List<List<String>> textLists(String name) throws FormatProblem {
         var lists = new ArrayList<List<String>>();
         var values = list(name);
@@ -145,6 +152,9 @@ final class ConfigFields {
         return of(value(name), placeOf(name));
     }
 
+    /**
+     * @return each object's fields, in their order, possibly none
+     */
     List<ConfigFields> objects(String name) throws FormatProblem {
         var objects = new ArrayList<ConfigFields>();
         var values = list(name);

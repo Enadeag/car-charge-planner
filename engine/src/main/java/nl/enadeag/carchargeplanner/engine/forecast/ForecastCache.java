@@ -79,6 +79,7 @@ public final class ForecastCache {
      *
      * @param system the system forecast for; the arrays' names are left out
      * @param plainSettings the provider's declared settings that are not secret; a changed key does not count
+     * @return a JSON object that equals the one stored with a forecast for the same system and settings
      */
     JsonNode key(SolarSite system, Map<String, String> plainSettings) {
         var key = StoredJson.object();

@@ -4,6 +4,10 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.util.List;
 
+/**
+ * {@link FilePrivacy#NONE}: adds no attributes and changes nothing, for a platform that keeps the app's files private
+ * already.
+ */
 final class NoFilePrivacy implements FilePrivacy {
 
     NoFilePrivacy() {
