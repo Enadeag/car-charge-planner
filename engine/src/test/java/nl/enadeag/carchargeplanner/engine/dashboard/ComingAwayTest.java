@@ -40,15 +40,30 @@ class ComingAwayTest {
     }
 
     @Test
-    void theComingPeriodsAreListedByKindInTheStoredOrderAndThoseThatEndedAreLeftOut() {
+    void thePeriodsThatEndedAreLeftOut() {
         var ended = part(TODAY, 7, 10);
+        var running = part(TODAY, 9, 11);
+
+        assertThat(listed(ended, running)).extracting(ComingAway::period).containsExactly(running);
+    }
+
+    @Test
+    void theComingPeriodsAreListedInTheStoredOrder() {
+        var later = part(TODAY.plusDays(7), 9, 17);
+        var running = part(TODAY, 9, 11);
+        var allDay = OneOffAwayPeriod.allDay(TODAY.plusDays(1), AMSTERDAM);
+
+        assertThat(listed(later, running, allDay)).extracting(ComingAway::period)
+                .containsExactly(later, running, allDay);
+    }
+
+    @Test
+    void eachComingPeriodIsListedByKindWithItsDays() {
         var running = part(TODAY, 9, 11);
         var allDay = OneOffAwayPeriod.allDay(TODAY.plusDays(1), AMSTERDAM);
         var days = new OneOffAwayPeriod(at(TODAY.plusDays(2), 18, 0), at(TODAY.plusDays(4), 9, 0));
-        var later = part(TODAY.plusDays(7), 9, 17);
 
-        assertThat(listed(later, ended, running, allDay, days)).containsExactly(
-                new ComingAway.PartOfDay(new DayName.Other(TODAY.plusDays(7)), later),
+        assertThat(listed(running, allDay, days)).containsExactly(
                 new ComingAway.PartOfDay(new DayName.Today(TODAY), running),
                 new ComingAway.AllDay(new DayName.Tomorrow(TODAY.plusDays(1)), allDay),
                 new ComingAway.Days(new DayName.Other(TODAY.plusDays(2)), new DayName.Other(TODAY.plusDays(4)), days));
@@ -193,22 +208,28 @@ class ComingAwayTest {
     }
 
     @Test
-    void theDashboardAndItsPartsKeepTheirOwnListOfPeriods() {
+    void thePlanPartsKeepTheirOwnListOfPeriods() {
         var periods = new ArrayList<>(List.of(part(TODAY, 11, 12)));
         var parts = Parts.of(MADE_AT, AMSTERDAM, List.of(), 0.3);
         var withPeriods = new PlanParts(MADE_AT, AMSTERDAM, List.of(), 0.3, parts.batteryLevelPct(), false,
                 parts.gridAdvice(), List.of(), parts.minimumPct(), parts.targetPct(), periods, List.of(),
                 parts.forecastSource());
+
+        periods.clear();
+
+        assertThat(withPeriods.away()).hasSize(1);
+    }
+
+    @Test
+    void theDashboardKeepsItsOwnListOfPeriods() {
         var listed = new ArrayList<>(List.<ComingAway>of(new ComingAway.PartOfDay(new DayName.Today(TODAY),
-                periods.get(0))));
-        var shown = DashboardView.of(parts);
+                part(TODAY, 11, 12))));
+        var shown = DashboardView.of(Parts.of(MADE_AT, AMSTERDAM, List.of(), 0.3));
         var view = new DashboardView(MADE_AT, AMSTERDAM, List.of(), shown.levels(), shown.startLevel(),
                 shown.gridAdvice(), List.of(), shown.footer(), listed, List.of());
 
-        periods.clear();
         listed.clear();
 
-        assertThat(withPeriods.away()).hasSize(1);
         assertThat(view.away()).hasSize(1);
     }
 }
