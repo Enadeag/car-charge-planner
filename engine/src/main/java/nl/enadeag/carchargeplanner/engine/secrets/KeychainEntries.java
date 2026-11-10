@@ -21,9 +21,7 @@ import tools.jackson.core.JacksonException;
  */
 final class KeychainEntries {
 
-    /** Whether the keychain can be used now. */
     enum State {
-        /** It answered: the entries can be read and written. */
         USABLE,
         /** It is there but locked: nothing can be read or written until the owner unlocks it. */
         LOCKED,
@@ -35,15 +33,11 @@ final class KeychainEntries {
     }
 
     /**
-     * What the keychain holds, as far as it could be read.
-     *
-     * @param readable the values of the entries that could be read
      * @param unreadable per provider, the setting names whose entries the keychain refused to give
      * @param listed the names of the entries the index lists, such as "forecast/open-meteo/api_key"
      */
     record Contents(Secrets readable, Map<ProviderId, Set<String>> unreadable, Set<String> listed) {
 
-        /** Nothing read, nothing refused, nothing listed. */
         static final Contents NONE = new Contents(Secrets.NONE, Map.of(), Set.of());
 
         /**
@@ -73,7 +67,6 @@ final class KeychainEntries {
          *
          * @param toStore the keys the save writes; one of them replaces the entry that could not be read
          * @param removed per provider, the setting names the save removes, also ones that could not be read
-         * @return per provider, the setting names to keep unread
          */
         Map<ProviderId, Set<String>> keptBy(Secrets toStore, Map<ProviderId, Set<String>> removed) {
             var kept = new HashMap<ProviderId, Set<String>>();
@@ -89,7 +82,6 @@ final class KeychainEntries {
         /**
          * Whether one of these settings is stored, readable or not.
          *
-         * @param settings per provider, the setting names asked about
          * @return true when the index lists an entry for one of them that holds a value or could not be read
          */
         boolean holdsAnyOf(Map<ProviderId, Set<String>> settings) {
@@ -136,7 +128,6 @@ final class KeychainEntries {
         }
     }
 
-    /** The name of the entry that lists the others. */
     static final String INDEX = "index";
     private static final String PREFIX = "forecast/";
 
@@ -144,9 +135,6 @@ final class KeychainEntries {
     private final KeyFallback fallback;
 
     /**
-     * Makes the entries' reader and writer; nothing is read yet.
-     *
-     * @param keychain the keychain the entries are kept in
      * @param fallback where the keys go when the keychain cannot be used; without a file, an index the keychain
      *     refuses to give counts as a damaged one, so a save can start a new index
      */
@@ -175,8 +163,6 @@ final class KeychainEntries {
     }
 
     /**
-     * Reads every entry the index lists.
-     *
      * @return the secrets; none when there is no index
      * @throws KeychainException when the keychain fails, also for one entry, or the index is damaged (also when it
      *     refuses to give the index without a file to fall back to)
@@ -275,9 +261,6 @@ final class KeychainEntries {
     }
 
     /**
-     * The names of these settings' entries.
-     *
-     * @param settings per provider, setting names
      * @return the entries' names, such as "forecast/open-meteo/api_key", in order
      */
     static SortedSet<String> names(Map<ProviderId, Set<String>> settings) {
