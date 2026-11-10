@@ -124,7 +124,7 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
     val refusals by entry.refusals.collectAsStateWithLifecycle()
     val saving by entry.saving.collectAsStateWithLifecycle()
     val asked by entry.discardAsked.collectAsStateWithLifecycle()
-    val busy by entry.busy.collectAsStateWithLifecycle()
+    val held by entry.busy.collectAsStateWithLifecycle()
     val savingNow = saving == SaveState.Saving
     val failed = saving as? SaveState.Failed
     val words = dashboardWords(draft.zone)
@@ -153,7 +153,7 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
         val noted = { at: Spot -> Modifier.onFocusChanged { if (it.isFocused) spot = at } }
         BarPage(stringResource(if (draft.mode == TripDraft.Mode.ADD) R.string.trip_add_title
             else R.string.trip_change_title), focus.getValue(Spot.TOP), onUp = null,
-            actions = { SaveAction(savingNow, busy) { entry.save() } },
+            actions = { SaveAction(saving = savingNow, held = held) { entry.save() } },
             lead = {
                 Column(Modifier.padding(bottom = if (failed != null) 16.dp else 0.dp)) {
                     SaveFailure(stringResource(R.string.trip_not_saved), failed?.detail)

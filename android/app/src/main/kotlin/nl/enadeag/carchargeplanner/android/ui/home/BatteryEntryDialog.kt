@@ -50,7 +50,7 @@ internal fun BatteryEntryDialog(entry: BatteryEntry) {
     val refusals by entry.refusals.collectAsStateWithLifecycle()
     val asked by entry.discardAsked.collectAsStateWithLifecycle()
     val held by entry.busy.collectAsStateWithLifecycle()
-    val busy = saving == SaveState.Saving
+    val savingNow = saving == SaveState.Saving
     val field = remember { FocusRequester() }
     AlertDialog(
         onDismissRequest = { entry.back() },
@@ -65,13 +65,13 @@ internal fun BatteryEntryDialog(entry: BatteryEntry) {
                 EntryField(stringResource(R.string.battery_entry_field), stringResource(R.string.battery_entry_hint),
                     text, { entry.edit(it) }, FieldKind.WHOLE, problems[BatteryEntry.Field.LEVEL], typical = false,
                     focus = field, imeAction = ImeAction.Done, onAction = { entry.save() }, announceProblem = true,
-                    readOnly = busy)
+                    readOnly = savingNow)
                 SaveFailure(stringResource(R.string.battery_not_saved), (saving as? SaveState.Failed)?.detail)
             }
         },
-        confirmButton = { SaveAction(busy, held) { entry.save() } },
+        confirmButton = { SaveAction(saving = savingNow, held = held) { entry.save() } },
         dismissButton = {
-            AppTextButton(onClick = { entry.cancel() }, enabled = !busy) {
+            AppTextButton(onClick = { entry.cancel() }, enabled = !savingNow) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
