@@ -480,4 +480,22 @@ class BatteryEntryTest {
         assertThat(entry.saving.value).isEqualTo(SaveState.Failed("No space left on device"))
         assertThat(entry.notice.value).isNull()
     }
+
+    /** The field's text is put in the handle directly, as typing is ignored while the save runs. */
+    @Test
+    fun whileASaveRunsSaveCountsNoRefusalAlsoForATextItWouldRefuse() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+        handle["battery.text.LEVEL"] = "no number"
+
+        entry.save()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(entry.refusals.value).isZero()
+        assertThat(entry.problems.value).isEmpty()
+    }
 }
