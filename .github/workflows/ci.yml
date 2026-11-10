@@ -114,29 +114,3 @@ jobs:
             engine/target/surefire-reports/
             desktop/target/surefire-reports/
           retention-days: 7
-
-  macos:
-    # Switched off until the maintainer turns it on again: the JavaFX tests cannot start on the macOS runner yet (#134).
-    if: false
-    runs-on: macos-latest
-    continue-on-error: true  # informational until a person has checked a release on a Mac (#29)
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: "25"
-          cache: maven
-      - name: Build and test
-        run: ./mvnw -B clean verify
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: failure()
-        with:
-          name: surefire-reports-macos
-          path: |
-            engine/target/surefire-reports/
-            desktop/target/surefire-reports/
-          retention-days: 14
