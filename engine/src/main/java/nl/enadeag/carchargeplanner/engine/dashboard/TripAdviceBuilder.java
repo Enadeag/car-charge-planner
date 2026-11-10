@@ -26,11 +26,6 @@ final class TripAdviceBuilder {
     private final LocalDate today;
     private final double targetPct;
 
-    /**
-     * Makes the advice of one plan.
-     *
-     * @param parts the plan's parts, never null
-     */
     TripAdviceBuilder(PlanParts parts) {
         this.zone = parts.zone();
         this.madeAt = parts.madeAt();
@@ -39,9 +34,6 @@ final class TripAdviceBuilder {
     }
 
     /**
-     * The advice for one trip.
-     *
-     * @param advice the plan's advice for the trip, never null
      * @return the advice, its days named from today
      */
     TripAdviceView advice(TripAdvice advice) {
