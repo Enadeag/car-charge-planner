@@ -1,6 +1,6 @@
 # Design documents
 
-Each folder here is one feature and holds a **`decisions.md`**: a short list of the decisions about that feature's behaviour (its defaults, edge cases and errors) that the code alone does not explain, newest last, each with its date and the issue or pull request that settled it. `docs/agents/review-process.md` (step 9) is where such a decision is recorded. Where a document and the code disagree, the code is right.
+Each folder here is one feature and holds a **`decisions.md`**: a short list of the decisions about that feature's behaviour (its defaults, edge cases and errors) that the code alone does not explain, newest last, each with its date and the issue or pull request that settled it. It is where the maintainer's review process records such a decision. Where a document and the code disagree, the code is right.
 
 | Folder | What it covers |
 | --- | --- |
@@ -19,4 +19,3 @@ Found in the Python version; the Java version meets the same problems with other
 
 - **D-Bus integer types:** a desktop notification over D-Bus needs its id as an unsigned integer, and a library that sends it as a signed one makes the call fail.
 - **Single instance race:** listening on a socket path that another live server holds can succeed and take over its socket, so two simultaneous starts can both believe they are the first.
-- **Dark themes:** colours for hints, links and pressed buttons were unreadable until they were derived from the palette instead of fixed.
