@@ -2,7 +2,7 @@
 
 Decisions about the engine that both apps share, the desktop app and the Android app, that the code alone does not explain. Each says what holds now and ends with the issue that settled it. Where the whole decision is in `docs/design/android/`, the rule here gives the part that holds for the desktop too and points there.
 
-### Files of a newer version
+### Files of a newer version, and damaged files
 
 - A settings file written by a newer version of the app is the problem kind `ConfigProblem.Kind.NEWER_VERSION`, any other such file `Stored.Reason.NEWER_VERSION`, not a text in the problem's detail. The desktop shows it as any unusable config; the Android app opens its "update the app" screen (#313).
 - A file of a newer version is never written over, removed or set aside. The engine refuses it itself, in `StoredFile`, for both apps: the write, removal or set-aside fails with an `IOException` and the file stays byte for byte as it was. This holds for every file the engine keeps with a version (`engine.json`, `battery.json`, `trips.json`, `away.json`, `secrets.json`, `trip-notices.json`) and for the desktop's `app.json` (#313).
@@ -45,6 +45,8 @@ Decisions about the engine that both apps share, the desktop app and the Android
 - `Providers.standard` is the one class in `engine.forecast` that knows the providers' classes (`EngineArchitectureTest`); the desktop's `ArchitectureTest` keeps the providers out of every class outside `engine.forecast` (#389).
 
 ### The dashboard model
+
+The decisions of the assumption checks behind this model are comments on #341 and #404.
 
 - The dashboard's rules are the engine's alone, in `engine.dashboard`; each app keeps only the words and the drawing (#400).
 - `Outlook.Planned.dashboard(away, trips)` hands the plan's parts to `engine.dashboard` in one input record, `PlanParts`, because `engineSubPackagesDoNotReachUpIntoTheEngine` keeps `engine.dashboard` from the root package, and gives a `DashboardView` with one `DashboardDay` per plan day (#400).
