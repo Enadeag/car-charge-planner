@@ -10,10 +10,8 @@ import org.freedesktop.dbus.DBusPath;
 import org.freedesktop.dbus.interfaces.Properties;
 import org.freedesktop.dbus.types.Variant;
 
-/** Our StatusNotifierItem as the panel sees it: its properties and what a click does. */
 final class TrayItem implements StatusNotifierItem, Properties {
 
-    /** Where on our bus connection the item is served. */
     static final String OBJECT_PATH = "/StatusNotifierItem";
 
     private final String id;
@@ -23,17 +21,12 @@ final class TrayItem implements StatusNotifierItem, Properties {
     /** Replaced as a whole, so the panel never reads the icon of one status with the tooltip of another. */
     private volatile Look look;
 
-    /** What the item shows now: the icon by name and as pixels, and the tooltip's text. */
     private record Look(String iconName, List<Pixmap> pixmaps, String text) {
     }
 
     /**
-     * Makes the item.
-     *
-     * @param id the app's name for the panel, the same in every run, such as "car-charge-planner"
-     * @param title the name the panel shows, such as in the tooltip
-     * @param iconThemePath the folder the panel looks up {@code IconName} in; empty for the panel's own icon theme
-     * @param onActivate called with the click position the panel reports, on the D-Bus connection's thread
+     * The id is the same in every run; an empty iconThemePath means the panel's own icon theme; onActivate is called
+     * with the click position the panel reports, on the D-Bus connection's thread.
      */
     TrayItem(String id, String title, String iconThemePath, Consumer<Point2D> onActivate) {
         this.id = id;
@@ -50,7 +43,6 @@ final class TrayItem implements StatusNotifierItem, Properties {
      * @param iconName the icon's name in the icon theme folder, which panels that can prefer to the pixels; empty
      *     for none
      * @param icons the icon in every size the panel may pick from, used when the name is empty or not found
-     * @param text the tooltip's text below the title, such as "Charge on sun now, until 14:30, at 10 A."
      */
     void setLook(String iconName, List<BufferedImage> icons, String text) {
         look = new Look(iconName, icons.stream().map(TrayItem::pixmap).toList(), text);

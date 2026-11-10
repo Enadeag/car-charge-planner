@@ -64,8 +64,6 @@ public final class LinuxStartAtLogin implements StartAtLogin {
      * {@code " ` $ \} escaped by a backslash and each backslash then doubled once more for the string value, and
      * {@code %} doubled so it is no field code.
      *
-     * @param argument the path, which may hold spaces
-     * @return the path in quotes, ready to follow {@code Exec=}
      * @throws IllegalArgumentException when the path holds a control character, such as a line break
      */
     static String quoted(String argument) {

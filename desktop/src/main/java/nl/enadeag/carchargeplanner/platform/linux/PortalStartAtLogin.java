@@ -88,7 +88,6 @@ public final class PortalStartAtLogin implements StartAtLogin {
         Files.deleteIfExists(choice);
     }
 
-    /** Asks the portal to start the app at login or not, and waits for the answer. */
     private void request(boolean autostart) throws IOException {
         var token = "ccp" + UUID.randomUUID().toString().replace("-", "");
         try (var bus = connector.connect()) {

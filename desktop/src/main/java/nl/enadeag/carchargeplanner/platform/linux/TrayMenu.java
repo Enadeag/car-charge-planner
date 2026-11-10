@@ -20,7 +20,6 @@ import org.freedesktop.dbus.types.Variant;
  */
 final class TrayMenu implements DbusMenu, Properties {
 
-    /** The object path the menu is served on. */
     static final String OBJECT_PATH = "/MenuBar";
 
     private static final String NODE_SIGNATURE = "(ia{sv}av)";
@@ -38,12 +37,7 @@ final class TrayMenu implements DbusMenu, Properties {
     private record Layout(MenuLabels labels, UInt32 revision) {
     }
 
-    /**
-     * Makes the menu of every {@link TrayMenuEntry}, with a separator before each one that is set apart.
-     *
-     * @param labels what the entries say
-     * @param actions what a click on an entry does; asked once per entry, now
-     */
+    /** Each entry's action is asked for once, now. */
     TrayMenu(MenuLabels labels, Function<TrayMenuEntry, Runnable> actions) {
         var separator = ENTRIES.size();
         for (var entry : ENTRIES) {
@@ -60,7 +54,6 @@ final class TrayMenu implements DbusMenu, Properties {
      * Gives the entries new texts, such as in another language; the panel reads them once it is sent
      * {@link DbusMenu.LayoutUpdated} with the revision returned.
      *
-     * @param labels what the entries say from now on
      * @return the layout's new revision, one more than before
      */
     synchronized UInt32 relabel(MenuLabels labels) {
