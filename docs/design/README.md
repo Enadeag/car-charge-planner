@@ -1,11 +1,11 @@
 # Design documents
 
-Each folder here is one feature and holds a **`decisions.md`**: a short list of the decisions about that feature's behaviour (its defaults, edge cases and errors) that the code alone does not explain, newest last, each with its date and the issue or pull request that settled it. It is where the maintainer's review process records such a decision. Where a document and the code disagree, the code is right.
+Each folder here is one feature and holds a **`decisions.md`**: a short list of the decisions about that feature's behaviour (its defaults, edge cases and errors) that the code alone does not explain, newest last, each with its date and the issue or pull request that settled it. `android/` holds a file per part of the app instead, each saying only what holds now, every decision with the one issue or pull request that settled it. It is where the maintainer's review process records such a decision. Where a document and the code disagree, the code is right.
 
 | Folder | What it covers |
 | --- | --- |
 | `secrets/` | Decisions about keeping and removing API keys and links |
-| `android-setup/` | Decisions about the Android app: set-up, the home and dashboard, Settings, notifications and the work in the background |
+| `android/` | Decisions about the Android app: [set-up](android/setup.md), [the home and dashboard](android/dashboard.md), [Settings](android/settings.md), [notifications and the work in the background](android/notifications.md), [every screen](android/screens.md), and [build, tests and CI](android/build.md) |
 | `engine/` | Decisions about the engine that both apps share: files of a newer version, the round, the stored forecast, a refused key, the next notice |
 | `trips/` | Decisions about trips entered by hand that ADR 0009 does not carry: the charging hours' edge cases and the trip notices |
 
