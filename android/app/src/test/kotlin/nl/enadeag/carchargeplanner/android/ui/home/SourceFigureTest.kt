@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.android.ui.home
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Optional
+import nl.enadeag.carchargeplanner.android.home.Plans
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
