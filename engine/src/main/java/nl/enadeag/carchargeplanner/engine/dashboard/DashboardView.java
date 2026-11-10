@@ -12,12 +12,13 @@ import java.util.Optional;
  * @param zone the home's time zone, never null, in which the days and times are meant
  * @param days the plan's days, today first, in the plan's order; may be empty
  * @param levels the minimum and target charge levels, which every day's battery bar marks
+ * @param startLevel the battery level the plan starts from, never null, which the trip advice tells
  * @param gridAdvice the plan's grid advice; never null, empty when the plan gives none; its end level is below the
  *     levels' minimum
  * @param tripAdvice the plan's advice per trip, in order of departure, never null; may be empty
  */
 public record DashboardView(Instant madeAt, ZoneId zone, List<DashboardDay> days, ChargeLevels levels,
-        Optional<GridAdviceView> gridAdvice, List<TripAdviceView> tripAdvice) {
+        StartLevel startLevel, Optional<GridAdviceView> gridAdvice, List<TripAdviceView> tripAdvice) {
 
     /**
      * Keeps copies of the days and the trip advice, and checks the grid advice against the minimum.
@@ -44,7 +45,8 @@ public record DashboardView(Instant madeAt, ZoneId zone, List<DashboardDay> days
     }
 
     /**
-     * The trip advice shown with a day, as {@link TripAdviceView#shownOn(DayName)} says.
+     * The trip advice shown with a day: the entry the apps read per day, which applies each advice's own rule,
+     * {@link TripAdviceView#shownOn(DayName)}.
      *
      * @param day one of {@link #days()}, never null
      * @return the advice of the trips that leave that day, and with the day named today also of those that ask the
@@ -59,7 +61,8 @@ public record DashboardView(Instant madeAt, ZoneId zone, List<DashboardDay> days
      * seam. Nothing reads the clock: "now" is the moment the plan was made.
      *
      * @param parts the plan's parts, never null
-     * @return one dashboard day per plan day, in the same order, the plan's grid advice and its advice per trip
+     * @return one dashboard day per plan day, in the same order, the battery level the plan starts from, the plan's
+     *     grid advice and its advice per trip
      */
     public static DashboardView of(PlanParts parts) {
         var charts = new ChartBuilder(parts);
@@ -67,7 +70,8 @@ public record DashboardView(Instant madeAt, ZoneId zone, List<DashboardDay> days
         var trips = new TripAdviceBuilder(parts);
         return new DashboardView(parts.madeAt(), parts.zone(),
                 parts.days().stream().map(day -> cards.day(day, charts.chart(day))).toList(),
-                new ChargeLevels(parts.minimumPct(), parts.targetPct()), GridAdviceBuilder.advice(parts),
+                new ChargeLevels(parts.minimumPct(), parts.targetPct()),
+                new StartLevel(parts.batteryLevelPct(), parts.batteryAssumed()), GridAdviceBuilder.advice(parts),
                 parts.tripAdvice().stream().map(trips::advice).toList());
     }
 }

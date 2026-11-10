@@ -94,8 +94,8 @@ class DashboardTripAdviceTest {
         assertThat(view).isEqualTo(new TripAdviceView(TRIP, new DayName.Tomorrow(TOMORROW),
                 new TripPlan.SolarThenGrid(new Percent(85), List.of(new SolarDay(new DayName.Today(TODAY),
                         List.of(SOLAR))), new TripGridStart(grid.window(), Start.PLANNED, new DayName.Today(TODAY),
-                        false, true)),
-                OptionalDouble.empty(), new Percent(45), true));
+                        TripGridStart.When.TONIGHT)),
+                OptionalDouble.empty()));
         assertThat(view.source()).isEqualTo(EnergySource.GRID);
         assertThat(view.asksAction()).isTrue();
     }
@@ -107,7 +107,7 @@ class DashboardTripAdviceTest {
         var view = view(advice(90, List.of(), Optional.of(grid), 90, 0));
 
         assertThat(view.plan()).isEqualTo(new TripPlan.Grid(new Percent(90), new TripGridStart(grid.window(),
-                Start.PLANNED, new DayName.Tomorrow(TOMORROW), false, false)));
+                Start.PLANNED, new DayName.Tomorrow(TOMORROW), TripGridStart.When.LATER)));
         assertThat(view.source()).isEqualTo(EnergySource.GRID);
     }
 
@@ -121,11 +121,10 @@ class DashboardTripAdviceTest {
 
     @ParameterizedTest
     @EnumSource(Start.class)
-    void theViewKeepsTheStartTheGridChargeWasPlannedWithAndDecidesStartsNowByTheTime(Start when) {
-        var view = view(advice(90, List.of(), Optional.of(grid(at(TODAY, 21, 0), when)), 90, 0));
+    void theViewKeepsWhyTheGridChargeStartsWhenItDoes(Start why) {
+        var view = view(advice(90, List.of(), Optional.of(grid(at(TODAY, 21, 0), why)), 90, 0));
 
-        assertThat(start(view).start()).isEqualTo(when);
-        assertThat(start(view).startsNow()).isFalse();
+        assertThat(start(view).start()).isEqualTo(why);
     }
 
     @ParameterizedTest
@@ -143,8 +142,7 @@ class DashboardTripAdviceTest {
 
         var start = start(view(evening, gridAt(evening.plusSeconds(secondsAfter))));
 
-        assertThat(start.startsNow()).isTrue();
-        assertThat(start.tonight()).isFalse();
+        assertThat(start.when()).isEqualTo(TripGridStart.When.NOW);
     }
 
     @ParameterizedTest
@@ -276,12 +274,10 @@ class DashboardTripAdviceTest {
 
     @ParameterizedTest
     @CsvSource({"true", "false"})
-    void theAdviceStartsFromThePlansBatteryLevelAndSaysWhetherItIsAssumed(boolean assumed) {
-        var view = dashboard(MADE_AT, assumed, Optional.empty(), List.of(gridAt(at(TODAY, 21, 0)))).tripAdvice()
-                .get(0);
+    void theDashboardHasThePlansBatteryLevelAndWhetherItIsAssumed(boolean assumed) {
+        var dashboard = dashboard(MADE_AT, assumed, Optional.empty(), List.of(gridAt(at(TODAY, 21, 0))));
 
-        assertThat(view.levelPct()).isEqualTo(new Percent(45));
-        assertThat(view.levelAssumed()).isEqualTo(assumed);
+        assertThat(dashboard.startLevel()).isEqualTo(new StartLevel(new Percent(45), assumed));
     }
 
     @Test
@@ -349,27 +345,31 @@ class DashboardTripAdviceTest {
     void aPlanWhoseFirstDayIsNotTodayShowsTheGridAdviceWithNoDay() {
         var advice = new GridAdvice(TODAY.plusDays(2), 12, 18, 7.4, Optional.empty(), Optional.empty());
         var shown = dashboard(MADE_AT, true, Optional.of(advice), List.of());
-        var later = new DashboardView(shown.madeAt(), shown.zone(), shown.days().subList(1, 3), shown.levels(),
-                shown.gridAdvice(), shown.tripAdvice());
+        var later = withoutToday(shown);
 
         assertThat(later.days()).extracting(later::gridAdviceOn).containsOnly(Optional.empty());
     }
 
     @Test
-    void aPlanWhoseFirstDayIsNotTodayShowsTripAdviceThatAsksAnActionOnTheTabOfItsDepartureOnly() {
+    void withoutTodayAdviceThatAsksShowsOnlyWithItsDeparture() {
         var leavingToday = new Trip(at(TODAY, 15, 0), at(TODAY, 18, 0), 40, false);
         var dayAfter = new Trip(at(TODAY.plusDays(2), 9, 0), at(TODAY.plusDays(2), 12, 0), 40, false);
         var grid = Optional.of(grid(at(TODAY, 12, 0), Start.PLANNED));
         var shown = dashboard(MADE_AT, true, Optional.empty(), List.of(advice(leavingToday, 90, List.of(), grid, 90, 0),
                 advice(dayAfter, 90, List.of(), grid, 90, 0)));
-        var later = new DashboardView(shown.madeAt(), shown.zone(), shown.days().subList(1, 3), shown.levels(),
-                shown.gridAdvice(), shown.tripAdvice());
+        var later = withoutToday(shown);
 
         var tabs = later.days().stream()
                 .map(day -> later.tripAdviceOn(day).stream().map(TripAdviceView::trip).toList())
                 .toList();
 
         assertThat(tabs).containsExactly(List.of(), List.of(dayAfter));
+    }
+
+    /** The same dashboard from its second day on, as for a plan whose first day is no longer today. */
+    private static DashboardView withoutToday(DashboardView shown) {
+        return new DashboardView(shown.madeAt(), shown.zone(), shown.days().subList(1, 3), shown.levels(),
+                shown.startLevel(), shown.gridAdvice(), shown.tripAdvice());
     }
 
     @Test

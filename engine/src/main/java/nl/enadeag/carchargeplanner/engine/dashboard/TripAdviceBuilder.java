@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.engine.dashboard;
 
-import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
@@ -26,8 +25,6 @@ final class TripAdviceBuilder {
     private final Instant madeAt;
     private final LocalDate today;
     private final double targetPct;
-    private final Percent levelPct;
-    private final boolean levelAssumed;
 
     /**
      * Makes the advice of one plan.
@@ -39,8 +36,6 @@ final class TripAdviceBuilder {
         this.madeAt = parts.madeAt();
         this.today = madeAt.atZone(zone).toLocalDate();
         this.targetPct = parts.targetPct().value();
-        this.levelPct = parts.batteryLevelPct();
-        this.levelAssumed = parts.batteryAssumed();
     }
 
     /**
@@ -55,7 +50,7 @@ final class TripAdviceBuilder {
                 && (advice.solarWindows().isEmpty() || advice.neededPct().value() <= targetPct);
         return new TripAdviceView(advice.trip(), name(advice.trip().firstDay(zone)),
                 enough ? new TripPlan.Enough(advice.departureLevelPct()) : plan(advice),
-                kmShort > 0 ? OptionalDouble.of(kmShort) : OptionalDouble.empty(), levelPct, levelAssumed);
+                kmShort > 0 ? OptionalDouble.of(kmShort) : OptionalDouble.empty());
     }
 
     /** Grid before solar alone; without either, the trip only leaves. */
@@ -73,9 +68,15 @@ final class TripAdviceBuilder {
     private TripGridStart start(TripGridCharge grid) {
         var at = grid.window().start();
         var local = at.atZone(zone);
-        boolean startsNow = !at.isAfter(madeAt);
-        boolean tonight = !startsNow && local.toLocalDate().equals(today) && !local.toLocalTime().isBefore(EVENING);
-        return new TripGridStart(grid.window(), grid.start(), name(local.toLocalDate()), startsNow, tonight);
+        TripGridStart.When when;
+        if (!at.isAfter(madeAt)) {
+            when = TripGridStart.When.NOW;
+        } else if (local.toLocalDate().equals(today) && !local.toLocalTime().isBefore(EVENING)) {
+            when = TripGridStart.When.TONIGHT;
+        } else {
+            when = TripGridStart.When.LATER;
+        }
+        return new TripGridStart(grid.window(), grid.start(), name(local.toLocalDate()), when);
     }
 
     /** The windows grouped by the day of their start in the home's time zone, in time order. */

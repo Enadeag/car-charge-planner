@@ -23,6 +23,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 class DashboardRecordsTest {
 
+    private static final StartLevel LEVEL = new StartLevel(new Percent(45), true);
+
     private static final Instant NOON = Instant.parse("2026-06-01T10:00:00Z");
     private static final LocalDate DAY = LocalDate.of(2026, 6, 1);
 
@@ -127,7 +129,7 @@ class DashboardRecordsTest {
     void aDashboardKeepsItsOwnDays() {
         var days = new ArrayList<>(List.of(day(MAIN, List.of(), Optional.empty())));
         var dashboard = new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), days,
-                new ChargeLevels(new Percent(20), new Percent(80)), Optional.empty(), List.of());
+                new ChargeLevels(new Percent(20), new Percent(80)), LEVEL, Optional.empty(), List.of());
 
         days.clear();
 
@@ -247,7 +249,7 @@ class DashboardRecordsTest {
 
     private static DashboardView dashboardWith(GridAdviceView advice) {
         return new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), List.of(),
-                new ChargeLevels(new Percent(30), new Percent(80)), Optional.of(advice), List.of());
+                new ChargeLevels(new Percent(30), new Percent(80)), LEVEL, Optional.of(advice), List.of());
     }
 
     @ParameterizedTest
@@ -298,10 +300,10 @@ class DashboardRecordsTest {
 
     private static final Trip TRIP = new Trip(NOON.plusSeconds(86_400), NOON.plusSeconds(90_000), 150, false);
     private static final TripPlan GRID_PLAN = new TripPlan.Grid(new Percent(90),
-            new TripGridStart(WINDOW, TripGridCharge.Start.PLANNED, new DayName.Today(DAY), false, false));
+            new TripGridStart(WINDOW, TripGridCharge.Start.PLANNED, new DayName.Today(DAY), TripGridStart.When.LATER));
 
     private static TripAdviceView tripAdvice(TripPlan plan, OptionalDouble shortKm) {
-        return new TripAdviceView(TRIP, new DayName.Tomorrow(DAY.plusDays(1)), plan, shortKm, new Percent(45), true);
+        return new TripAdviceView(TRIP, new DayName.Tomorrow(DAY.plusDays(1)), plan, shortKm);
     }
 
     @ParameterizedTest
@@ -363,26 +365,27 @@ class DashboardRecordsTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    @Test
-    void aGridStartDueNowIsNotTonight() {
-        assertThatThrownBy(() -> new TripGridStart(WINDOW, TripGridCharge.Start.NOW, new DayName.Today(DAY), true,
-                true)).isInstanceOf(IllegalArgumentException.class);
+    @ParameterizedTest
+    @CsvSource({"NOW, true, false", "TONIGHT, false, true", "LATER, false, false"})
+    void aGridStartIsDueNowOrTonightExactlyAsItsWhenSays(TripGridStart.When when, boolean startsNow, boolean tonight) {
+        var start = new TripGridStart(WINDOW, TripGridCharge.Start.PLANNED, new DayName.Today(DAY), when);
+
+        assertThat(start.startsNow()).isEqualTo(startsNow);
+        assertThat(start.tonight()).isEqualTo(tonight);
     }
 
     @Test
     void onlyAGridStartOnTheDayThePlanWasMadeIsTonight() {
-        var today = new TripGridStart(WINDOW, TripGridCharge.Start.PLANNED, new DayName.Today(DAY), false, true);
-
-        assertThat(today.tonight()).isTrue();
         assertThatThrownBy(() -> new TripGridStart(WINDOW, TripGridCharge.Start.PLANNED,
-                new DayName.Tomorrow(DAY.plusDays(1)), false, true)).isInstanceOf(IllegalArgumentException.class);
+                new DayName.Tomorrow(DAY.plusDays(1)), TripGridStart.When.TONIGHT))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void aDashboardKeepsItsOwnTripAdvice() {
         var advice = new ArrayList<>(List.of(tripAdvice(GRID_PLAN, OptionalDouble.empty())));
         var dashboard = new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), List.of(),
-                new ChargeLevels(new Percent(20), new Percent(80)), Optional.empty(), advice);
+                new ChargeLevels(new Percent(20), new Percent(80)), LEVEL, Optional.empty(), advice);
 
         advice.clear();
 

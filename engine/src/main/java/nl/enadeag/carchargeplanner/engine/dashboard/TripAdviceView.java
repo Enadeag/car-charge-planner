@@ -1,23 +1,19 @@
 package nl.enadeag.carchargeplanner.engine.dashboard;
 
-import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.util.OptionalDouble;
 
 /**
- * The plan's advice for one trip: what the plan does for it, how far the battery falls short, and the battery level the
- * advice starts from, with its days named from the day the plan was made.
+ * The plan's advice for one trip: what the plan does for it and how far the battery falls short, with its days named
+ * from the day the plan was made.
  *
  * @param trip the trip, never null
  * @param departureDay the day of the trip's departure in the home's time zone, never null
  * @param plan what the plan does for the trip, never null
  * @param shortKm how many km of the trip the battery cannot hold at the departure, finite and more than 0; never null,
  *     empty when the car can make it
- * @param levelPct the battery level the plan starts from, never null
- * @param levelAssumed true while that level is assumed, false when the owner entered it
  */
-public record TripAdviceView(Trip trip, DayName departureDay, TripPlan plan, OptionalDouble shortKm, Percent levelPct,
-        boolean levelAssumed) {
+public record TripAdviceView(Trip trip, DayName departureDay, TripPlan plan, OptionalDouble shortKm) {
 
     /**
      * Checks the distance short against the plan.
@@ -64,8 +60,9 @@ public record TripAdviceView(Trip trip, DayName departureDay, TripPlan plan, Opt
     }
 
     /**
-     * Whether the advice is shown with a day: always with the day of the departure, and with the day the plan was made
-     * when the owner has to do something.
+     * Whether the advice is shown with a day: the rule for one advice, which {@link DashboardView#tripAdviceOn} applies
+     * per day. Always with the day of the departure, and with the day the plan was made when the owner has to do
+     * something.
      *
      * @param day the day's name, never null
      * @return true when the advice is shown with that day
