@@ -128,7 +128,6 @@ public final class ChargerPage implements ConfigPage {
         return charger(problems::show).isEmpty();
     }
 
-    /** The charger as entered, after its record checked it; a refused value goes to {@code refused}. */
     private Optional<Charger> charger(Consumer<InvalidSetting> refused) {
         try {
             return Optional.of(new ChargerEntry(phases.value(), minAmps.value(), maxAmps.value(), volts.value(),

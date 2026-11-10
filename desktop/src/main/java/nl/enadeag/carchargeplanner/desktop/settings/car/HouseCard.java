@@ -90,7 +90,6 @@ public final class HouseCard implements ConfigPart {
         return typical.isChanged() || baseload.isChanged();
     }
 
-    /** The house as entered, after its record checked it; a refused value goes to {@code refused}. */
     private Optional<House> house(Consumer<InvalidSetting> refused) {
         try {
             return Optional.of(new House(baseload.value()));
