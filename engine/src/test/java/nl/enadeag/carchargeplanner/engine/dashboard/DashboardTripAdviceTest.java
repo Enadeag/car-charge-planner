@@ -356,6 +356,23 @@ class DashboardTripAdviceTest {
     }
 
     @Test
+    void aPlanWhoseFirstDayIsNotTodayShowsTripAdviceThatAsksAnActionOnTheTabOfItsDepartureOnly() {
+        var leavingToday = new Trip(at(TODAY, 15, 0), at(TODAY, 18, 0), 40, false);
+        var dayAfter = new Trip(at(TODAY.plusDays(2), 9, 0), at(TODAY.plusDays(2), 12, 0), 40, false);
+        var grid = Optional.of(grid(at(TODAY, 12, 0), Start.PLANNED));
+        var shown = dashboard(MADE_AT, true, Optional.empty(), List.of(advice(leavingToday, 90, List.of(), grid, 90, 0),
+                advice(dayAfter, 90, List.of(), grid, 90, 0)));
+        var later = new DashboardView(shown.madeAt(), shown.zone(), shown.days().subList(1, 3), shown.levels(),
+                shown.gridAdvice(), shown.tripAdvice());
+
+        var tabs = later.days().stream()
+                .map(day -> later.tripAdviceOn(day).stream().map(TripAdviceView::trip).toList())
+                .toList();
+
+        assertThat(tabs).containsExactly(List.of(), List.of(dayAfter));
+    }
+
+    @Test
     void withoutGridAdviceNoDayShowsOne() {
         var dashboard = dashboard(MADE_AT, true, Optional.empty(), List.of());
 
