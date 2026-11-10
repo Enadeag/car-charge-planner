@@ -23,8 +23,8 @@ import org.slf4j.LoggerFactory;
  *
  * <ul>
  *     <li>The start of a trip's grid charge, as a grid charge of the grid advice is announced: within the notification
- *     lead time before it starts; at once when it should start now, also outside the charging hours when the plan
- *     says so.</li>
+ *     lead time before it starts (with a lead time of 0, from its start for 10 minutes at most); at once when it should
+ *     start now, also outside the charging hours when the plan says so.</li>
  *     <li>The battery check, when a trip needs a grid charge or is {@linkplain #isTight tight} and the plan starts from
  *     a level the owner did not enter in the last {@link #RECENT_LEVEL}: within the charging hours, from their start
  *     on the day before the departure, or on the day of the grid charge when that is earlier. It is asked again when
@@ -149,13 +149,14 @@ final class TripNotices {
     }
 
     /**
-     * When the start of a grid charge is due: one that starts as planned within the lead time before its start, one
-     * that starts now from the lead time before its start until its end.
+     * When the start of a grid charge is due: one that starts as planned within the lead time before its start (with
+     * a lead time of 0, at its start), one that starts now from the lead time before its start until its end.
      */
     private static NoticeSpan chargeStartSpan(TripGridCharge grid, Duration lead) {
         var window = grid.window();
-        return NoticeSpan.before(window.start(), lead,
-                grid.start() == TripGridCharge.Start.PLANNED ? window.start() : window.end());
+        return grid.start() == TripGridCharge.Start.PLANNED
+                ? NoticeSpan.beforeStart(window.start(), lead, window.end())
+                : NoticeSpan.before(window.start(), lead, window.end());
     }
 
     private static LocalDate dayBefore(Instant departure, ZoneId zone) {

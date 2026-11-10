@@ -399,7 +399,7 @@
   <string name="planning_min_window">Minimale duur laadvenster</string>
   <string name="planning_min_window_hint">Minuten; kortere laadvensters vallen weg.</string>
   <string name="planning_lead">Melding vooraf</string>
-  <string name="planning_lead_hint">Minuten voordat een laadvenster begint.</string>
+  <string name="planning_lead_hint">Minuten voordat een laadvenster begint; bij 0 krijg je de melding bij het begin.</string>
   <string name="planning_hours_heading">Laaduren</string>
   <string name="planning_hours_intro">Laden uit het net begint binnen deze tijden, en mag daarna doorlopen.</string>
   <string name="planning_hours_from">Laden starten vanaf</string>

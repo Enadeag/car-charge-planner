@@ -9,6 +9,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - A file written by a newer version of the app (`engine.json`, `app.json`, `trips.json`, `away.json`, `battery.json`, `trip-notices.json` or `secrets.json`) is no longer moved aside and replaced when you save: it is left as it is, and saving fails until you update the app.
 
 ### Fixed
+- A notification lead time of 0 minutes no longer means you are never told: a charge window is told at its start, or as soon as the app sees it running, and a trip's planned grid charge within 10 minutes of its start; leads above 0 are unchanged.
 - Saving API keys no longer deletes the keys of the other providers when the keychain cannot read one of the entries: that entry is left as it is, the other changes are saved, and entering a new value for it replaces it.
 
 ### Android

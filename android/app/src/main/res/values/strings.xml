@@ -598,7 +598,7 @@
   <string name="planning_min_window">Minimum charge window</string>
   <string name="planning_min_window_hint">Minutes; shorter charge windows are dropped.</string>
   <string name="planning_lead">Notification lead time</string>
-  <string name="planning_lead_hint">Minutes before a charge window starts.</string>
+  <string name="planning_lead_hint">Minutes before a charge window starts; 0 tells you at the start.</string>
   <string name="planning_hours_heading">Charging hours</string>
   <string name="planning_hours_intro">A grid charge starts within these hours, and may run on after them.</string>
   <string name="planning_hours_from">Start charging from</string>
