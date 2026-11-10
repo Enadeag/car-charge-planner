@@ -52,9 +52,9 @@ public record TripAdviceView(Trip trip, DayName departureDay, TripPlan plan, Opt
     /**
      * Where the trip's charge comes from.
      *
-     * @return {@link EnergySource#CAR} when the plan charges enough already, {@link EnergySource#SOLAR} when solar power
-     *     above the target charge level is enough, {@link EnergySource#GRID} when it needs a grid charge or the battery
-     *     falls short
+     * @return {@link EnergySource#CAR} when the plan charges enough already, {@link EnergySource#SOLAR} when solar
+     *     power above the target charge level is enough, {@link EnergySource#GRID} when it needs a grid charge or the
+     *     battery falls short
      */
     public EnergySource source() {
         if (plan instanceof TripPlan.Enough) {
