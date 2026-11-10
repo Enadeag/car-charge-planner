@@ -97,7 +97,6 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
             return
         }
         clear()
-        flow.opened()
         handle[OPEN] = true
         openNow.value = true
     }
@@ -118,7 +117,6 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
     fun save() = flow.save(::level) { level ->
         when (val outcome = access.saveBatteryLevel(level)) {
             BatteryLevelSave.Saved -> {
-                flow.close()
                 changes.say(Notice.Saved)
                 saved()
                 null

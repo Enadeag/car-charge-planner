@@ -2,7 +2,11 @@ package nl.enadeag.carchargeplanner.android.home
 
 import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.job
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -20,21 +24,20 @@ class EntryFlowTest {
     private val stored = mutableListOf<String>()
     private lateinit var changes: ChangeQueue<String>
 
-    private fun TestScope.flow(kept: SavedStateHandle = handle): EntryFlow<String> {
-        changes = ChangeQueue(backgroundScope)
+    private fun TestScope.flow(kept: SavedStateHandle = handle, scope: CoroutineScope = backgroundScope): EntryFlow {
+        changes = ChangeQueue(scope)
         return EntryFlow(kept, KEY, changes, { open }, { edited }) {
             open = false
             shut++
         }
     }
 
-    /** A save of "level" that waits for [gate], then stores it and closes, or fails with [fails]. */
-    private fun EntryFlow<String>.saveLevel(gate: CompletableDeferred<Unit>? = null, fails: String? = null,
+    /** A save of "level" that waits for [gate], then stores it, or fails with [fails]; it never closes itself. */
+    private fun EntryFlow.saveLevel(gate: CompletableDeferred<Unit>? = null, fails: String? = null,
         entered: () -> String? = { "level" }) = save(entered) { value ->
         gate?.await()
         if (fails == null) {
             stored += value
-            close()
         }
         fails
     }
@@ -137,6 +140,19 @@ class EntryFlowTest {
         val flow = flow()
 
         assertThat(flow.discardAsked.value).isFalse()
+        assertThat(handle.contains(KEY)).isFalse()
+    }
+
+    @Test
+    fun aKeptQuestionWithoutAnOpenEntryDoesNotComeBackWithTheNextEntry() = runTest {
+        handle[KEY] = true
+        open = false
+        flow()
+        open = true
+
+        val again = flow(handle.afterTheSystemEndedTheApp())
+
+        assertThat(again.discardAsked.value).isFalse()
     }
 
     @Test
@@ -164,6 +180,37 @@ class EntryFlowTest {
         assertThat(shut).isEqualTo(1)
         assertThat(flow.saving.value).isEqualTo(SaveState.Idle)
         assertThat(changes.busy.value).isFalse()
+    }
+
+    @Test
+    fun aSaveThatWorkedClosesTheEntryAfterWhatTheStoreDoes() = runTest {
+        val flow = flow()
+        var shutWhileStoring = -1
+
+        flow.save({ "level" }) {
+            shutWhileStoring = shut
+            null
+        }
+        runCurrent()
+
+        assertThat(shutWhileStoring).isZero()
+        assertThat(shut).isEqualTo(1)
+    }
+
+    @Test
+    fun aStoreThatThrowsLeavesTheEntryOpenAndItsSaveIdle() = runTest {
+        val thrown = mutableListOf<Throwable>()
+        val flow = flow(scope = CoroutineScope(backgroundScope.coroutineContext +
+            SupervisorJob(backgroundScope.coroutineContext.job) + CoroutineExceptionHandler { _, e -> thrown += e }))
+
+        flow.save({ "level" }) { throw IllegalStateException("disk gone") }
+        runCurrent()
+
+        assertThat(thrown).hasSize(1)
+        assertThat(flow.saving.value).isEqualTo(SaveState.Idle)
+        assertThat(flow.takesEdits).isTrue()
+        assertThat(changes.busy.value).isFalse()
+        assertThat(shut).isZero()
     }
 
     @Test
@@ -246,17 +293,6 @@ class EntryFlowTest {
     }
 
     @Test
-    fun openingResetsAFailedSave() = runTest {
-        val flow = flow()
-        flow.saveLevel(fails = "No space left on device")
-        runCurrent()
-
-        flow.opened()
-
-        assertThat(flow.saving.value).isEqualTo(SaveState.Idle)
-    }
-
-    @Test
     fun closingForgetsAFailedSaveAndTheQuestion() = runTest {
         val flow = flow()
         edited = true
@@ -268,6 +304,7 @@ class EntryFlowTest {
 
         assertThat(flow.saving.value).isEqualTo(SaveState.Idle)
         assertThat(flow.discardAsked.value).isFalse()
+        assertThat(handle.contains(KEY)).isFalse()
         assertThat(shut).isEqualTo(1)
     }
 

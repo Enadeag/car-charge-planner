@@ -149,6 +149,9 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
     var closedOn: Trip? = null
         private set
 
+    /** The trip a save that worked stored, until the entry closes on it. */
+    private var savedTrip: Trip? = null
+
     /** True while a change runs: a choice, a Remove, an Undo or the entry's save; the card's controls are off then. */
     val busy: StateFlow<Boolean> = changes.busy
 
@@ -249,8 +252,7 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
         flow.save({ checked(draft) }) { trip ->
             when (val outcome = if (opened == null) access.addTrip(trip) else access.changeTrip(opened, trip)) {
                 is TripSave.Saved -> {
-                    flow.close()
-                    closedOn = trip.takeIf { opened != null }
+                    savedTrip = trip
                     changes.say(Notice.Saved(trip, Entered(draft.zone, ListedTrip.of(trip, draft.zone,
                         clock.instant()))))
                     changed(outcome.trips)
@@ -340,7 +342,6 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
         val draft = TripDraft(mode, zone, clock.instant().atZone(zone).toLocalDate(), first, trip, first)
         kept.opened(draft)
         closedOn = null
-        flow.opened()
         draftNow.value = draft
     }
 
@@ -364,10 +365,14 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
         draftNow.value = draft.copy(fields = fields)
     }
 
-    /** Closes the entry; without a save, the focus goes back to the Change of the trip it opened on, if any. */
+    /**
+     * Closes the entry; the focus goes back to the Change of the trip it opened on, if any: the trip as saved after a
+     * save, as it opened without one.
+     */
     private fun shut() {
         forget(handle)
-        closedOn = draftNow.value?.opened
+        closedOn = draftNow.value?.opened?.let { savedTrip ?: it }
+        savedTrip = null
         problemNow.value = null
         draftNow.value = null
     }

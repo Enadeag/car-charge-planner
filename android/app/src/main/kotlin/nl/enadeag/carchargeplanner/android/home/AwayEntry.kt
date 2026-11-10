@@ -216,7 +216,6 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         }
         handle[DAY] = day.toString()
         handle[ZONE] = zone.id
-        flow.opened()
         put(Draft(day, zone, Kind.ALL_DAY, FIRST_START, FIRST_END))
     }
 
@@ -247,7 +246,6 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         flow.save({ checked(draft) }) { period ->
             when (val outcome = access.addAwayPeriod(period)) {
                 is AwaySave.Saved -> {
-                    flow.close()
                     changes.say(Notice.Saved(period, Entered(draft.zone,
                         ComingAway.describe(period, draft.zone, clock.instant()))))
                     changed(outcome.periods)

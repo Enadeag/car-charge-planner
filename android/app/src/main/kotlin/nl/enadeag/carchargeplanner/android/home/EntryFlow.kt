@@ -14,21 +14,28 @@ import kotlinx.coroutines.flow.asStateFlow
  * app in the [SavedStateHandle], and comes back only with an entry that came back open. A save cut off as the home
  * ends may still have stored its value. Called from the main thread.
  *
- * @param N what the entry's changes come to, for the screen to say once
  * @param handle the screen's saved state
- * @param discardKey the key under which the question is kept, one of the entry's own
+ * @param discardKey the key under which the question is kept, one of the entry's own; the flow forgets it as the
+ *     entry closes, and as the flow is made without an open entry
  * @param changes the entry's changes, on which a save runs as one of them
- * @param isOpen tells whether the entry is open now
+ * @param isOpen tells whether the entry is open now; asked once as the flow is made, so the entry's open state is
+ *     declared before the flow
  * @param edited tells whether something was changed since the entry opened, so Back asks before throwing it away
- * @param shut closes the entry: forgets what it kept in the handle and what it holds
+ * @param onClosed closes the entry: forgets what it kept in the handle and what it holds
  */
-class EntryFlow<N : Any>(private val handle: SavedStateHandle, private val discardKey: String,
-    private val changes: ChangeQueue<N>, private val isOpen: () -> Boolean, private val edited: () -> Boolean,
-    private val shut: () -> Unit) {
+class EntryFlow(private val handle: SavedStateHandle, private val discardKey: String,
+    private val changes: ChangeQueue<*>, private val isOpen: () -> Boolean, private val edited: () -> Boolean,
+    private val onClosed: () -> Unit) {
 
     private val savingNow = MutableStateFlow<SaveState>(SaveState.Idle)
     private val discardNow = MutableStateFlow(isOpen() && handle.get<Any?>(discardKey) == true)
     private val refusalsNow = MutableStateFlow(0)
+
+    init {
+        if (!isOpen()) {
+            handle.remove<Any?>(discardKey)
+        }
+    }
 
     /** Where the entry's Save is. */
     val saving: StateFlow<SaveState> = savingNow.asStateFlow()
@@ -42,19 +49,15 @@ class EntryFlow<N : Any>(private val handle: SavedStateHandle, private val disca
     /** False while a save runs, when what is entered stays as it is. */
     val takesEdits: Boolean get() = savingNow.value != SaveState.Saving
 
-    /** The entry opened: no save runs or failed in it yet. */
-    fun opened() {
-        savingNow.value = SaveState.Idle
-    }
-
     /**
      * Saves what was entered, or counts a refusal. While the entry is closed, or one of its changes runs, it does
      * nothing.
      *
      * @param T what is stored
      * @param entered what was entered, checked; null when Save refuses it, the entry then showing why
-     * @param store stores it and, when that worked, closes the entry with [close] and does what follows; gives the
-     *     system's or the engine's words, in English, when it failed, or null when it worked
+     * @param store stores it and, when that worked, does what follows, after which the flow closes the entry; gives
+     *     the system's or the engine's words, in English, when it failed, or null when it worked. A store that
+     *     throws, or is cut off, leaves the entry open and its Save Idle
      */
     fun <T : Any> save(entered: () -> T?, store: suspend (T) -> String?) {
         if (!isOpen() || changes.busy.value) {
@@ -66,7 +69,16 @@ class EntryFlow<N : Any>(private val handle: SavedStateHandle, private val disca
             return
         }
         savingNow.value = SaveState.Saving
-        changes.run({ store(value)?.let { savingNow.value = SaveState.Failed(it) } })
+        changes.run({
+            when (val failed = store(value)) {
+                null -> close()
+                else -> savingNow.value = SaveState.Failed(failed)
+            }
+        }, done = {
+            if (savingNow.value == SaveState.Saving) {
+                savingNow.value = SaveState.Idle
+            }
+        })
     }
 
     /**
@@ -94,11 +106,15 @@ class EntryFlow<N : Any>(private val handle: SavedStateHandle, private val disca
     /** Stays in the entry with what was entered, as the owner chose Keep editing. */
     fun keepEditing() = ask(false)
 
-    /** Closes the entry, its question and its Save with it. */
+    /**
+     * Closes the entry, its question and its Save with it, also in the handle; the entry is left Idle for its next
+     * opening.
+     */
     fun close() {
         savingNow.value = SaveState.Idle
+        handle.remove<Any?>(discardKey)
         discardNow.value = false
-        shut()
+        onClosed()
     }
 
     private fun ask(asking: Boolean) {
