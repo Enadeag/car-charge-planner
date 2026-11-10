@@ -49,20 +49,9 @@ internal class Edits {
 
     private var count by mutableIntStateOf(0)
 
-    /**
-     * Reads what the forms hold, so the part of the screen that shows it is shown anew after each edit.
-     *
-     * @param T what is read
-     * @param read reads the forms
-     * @return what they hold now
-     */
+    /** Reads what the forms hold, so the part of the screen that shows it is shown anew after each edit. */
     fun <T> shown(read: () -> T): T = count.let { read() }
 
-    /**
-     * Makes an edit and counts it.
-     *
-     * @param edit changes the forms
-     */
     fun make(edit: () -> Unit) {
         edit()
         count++
@@ -73,8 +62,6 @@ internal class Edits {
  * Set-up's screen: the step's heading with "step 3 of 7", the step itself, and Back and Next, or Finish on the last
  * step. Back on the welcome leaves at once; on a later step it goes one step back. A new step moves the focus to its
  * heading; a Next or Finish that shows problems moves it to the first field that has one.
- *
- * @param session set-up's steps, forms and Finish
  */
 @Composable
 internal fun SetUpScreen(session: SetUpSession) {
@@ -161,8 +148,6 @@ private fun StepButtons(session: SetUpSession, step: SetUpStep) {
 }
 
 /**
- * The step's title.
- *
  * @return the text's resource
  */
 private fun SetUpStep.title(): Int = when (this) {

@@ -52,11 +52,6 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
- * A page's values now, in one line for its row in the list.
- *
- * @param page the page
- * @param config the stored settings
- * @param session the providers' names
  * @return such as "2 arrays, 6.5 kWp"
  */
 @Composable
@@ -92,9 +87,6 @@ internal fun summary(page: SettingsPage, config: EngineConfig, session: Settings
 }
 
 /**
- * The phases' name.
- *
- * @param phases the charger's phases
  * @return the text's resource
  */
 internal fun phasesName(phases: Phases): Int = if (phases == Phases.ONE) R.string.phases_one else R.string.phases_three
@@ -103,10 +95,6 @@ internal fun phasesName(phases: Phases): Int = if (phases == Phases.ONE) R.strin
  * Every panel array, each named by its place and its name ("Array 2, east roof"), with its own "I don't know" and
  * Remove, which acts at once; the last array's Remove is off, with the reason, which a screen reader reads with it.
  * There is no reordering. After Add the focus goes to the new array's heading, after Remove to the one before.
- *
- * @param panels the panels' form
- * @param edits counts each edit, so the fields show it
- * @param problems the page's fields in order, for the focus after Save
  */
 @Composable
 internal fun SolarPage(panels: PanelsForm, edits: Edits, problems: ProblemFocus) {
@@ -178,10 +166,6 @@ private fun RemoveArray(number: Int, removable: Boolean, onRemove: () -> Unit) {
  * Where the home is: the place search of the stored primary provider, or a line that it has none; the coordinates,
  * always shown; and the time zone under "Advanced", which typed coordinates leave alone, as a stored zone counts as
  * chosen (#315).
- *
- * @param session the location's form and its place search
- * @param edits counts each edit, so the fields show it
- * @param problems the page's fields in order, for the focus after Save
  */
 @Composable
 internal fun LocationPage(session: SettingsSession, edits: Edits, problems: ProblemFocus) {
@@ -199,14 +183,7 @@ internal fun LocationPage(session: SettingsSession, edits: Edits, problems: Prob
         })
 }
 
-/**
- * The car with "I don't know", then the house's baseload with its own.
- *
- * @param car the car's form
- * @param house the house's form
- * @param edits counts each edit, so the fields show it
- * @param problems the page's fields in order, for the focus after Save
- */
+/** The car with "I don't know", then the house's baseload with its own. */
 @Composable
 internal fun CarAndHousePage(car: CarForm, house: HouseForm, edits: Edits, problems: ProblemFocus) {
     SectionHeading(stringResource(R.string.settings_car_heading))
@@ -215,25 +192,13 @@ internal fun CarAndHousePage(car: CarForm, house: HouseForm, edits: Edits, probl
     HouseFields(house, edits, problems, 10, ImeAction.Done)
 }
 
-/**
- * The wall charger, as in set-up.
- *
- * @param charger the charger's form
- * @param edits counts each edit, so the fields show it
- * @param problems the page's fields in order, for the focus after Save
- */
+/** The wall charger, as in set-up. */
 @Composable
 internal fun ChargerPage(charger: ChargerForm, edits: Edits, problems: ProblemFocus) {
     ChargerStep(charger, edits, problems)
 }
 
-/**
- * The weekly away periods, as in set-up; one-off away periods and trips have screens of their own (#276, #278).
- *
- * @param away the weekly away periods' form
- * @param edits counts each edit, so the fields show it
- * @param problems the page's fields in order, for the focus after Save
- */
+/** The weekly away periods, as in set-up; one-off away periods and trips have screens of their own (#276, #278). */
 @Composable
 internal fun AwayPage(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {
     Text(stringResource(R.string.settings_away_intro))
@@ -243,10 +208,6 @@ internal fun AwayPage(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus
 /**
  * The planning preferences: the charge levels and the margin in %, the import tolerance in kWh, the shortest charge
  * window and the notification's lead in minutes, and the charging hours as times typed, not on a dial.
- *
- * @param planning the planning preferences' form
- * @param edits counts each edit, so the fields show it
- * @param problems the page's fields in order, for the focus after Save
  */
 @Composable
 internal fun PlanningPage(planning: PlanningForm, edits: Edits, problems: ProblemFocus) {

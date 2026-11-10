@@ -28,8 +28,6 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 /**
  * The last step: one forecast for what was entered, which does not block Finish when it fails, and what Finish's save
  * came to when it failed. Both are live regions, so a screen reader reads them as they come in.
- *
- * @param session set-up, with its check and Finish
  */
 @Composable
 internal fun CheckStep(session: SetUpSession) {

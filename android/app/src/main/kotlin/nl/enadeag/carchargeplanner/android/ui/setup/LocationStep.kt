@@ -58,10 +58,6 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
  * Where the home is: the place search, on its button or the keyboard's search key, and its results; the coordinates
  * behind "Enter coordinates instead", which is open when coordinates were typed rather than found; and the time zone
  * under "Advanced".
- *
- * @param session set-up, with its place search and location form
- * @param edits counts each edit, so the fields show it
- * @param problems the step's fields in order, for the focus after Next
  */
 @Composable
 internal fun LocationStep(session: SetUpSession, edits: Edits, problems: ProblemFocus) {
@@ -85,15 +81,8 @@ internal enum class Coordinates {
  * The place search with its results, or a line that the provider has none; once a place is chosen, a card with what
  * it filled in, which takes the focus; the coordinates; and the time zone under "Advanced".
  *
- * @param location the location's form
- * @param places the place search
- * @param provider the forecast provider's name, which the search's hint names
  * @param hasSearch whether that provider has a place search; without one only the coordinates are offered
- * @param edits counts each edit, so the fields show it
- * @param problems the page's fields in order, for the focus after Next or Save
  * @param coordinates whether the coordinates are shown, or behind their toggle and how it starts
- * @param onChoose takes a place chosen from the results
- * @param onType takes a coordinate the owner typed
  */
 @Composable
 internal fun LocationFields(location: LocationForm, places: PlaceSearch, provider: String, hasSearch: Boolean,
@@ -196,11 +185,7 @@ private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) ->
  * fields hold them, and its time zone. Read as one part by a screen reader; takes the focus after a choice (see
  * [LocationFields]).
  *
- * @param label the place chosen, as the results showed it
- * @param location the location's form, whose coordinates and time zone the card shows
- * @param edits counts each edit, so the card shows it
  * @param withCoordinates whether the card shows the coordinates; not where the fields are always shown
- * @param focus moves the focus to the card
  */
 @Composable
 private fun ChosenPlace(label: String, location: LocationForm, edits: Edits, withCoordinates: Boolean,

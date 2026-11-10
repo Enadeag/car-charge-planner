@@ -41,8 +41,6 @@ internal fun ReadingScreen() {
 /**
  * A settings file that cannot be used: what is wrong in the engine's English words, and "Set up again", which asks
  * first and keeps the file under another name. A move that fails says why and may be tried again.
- *
- * @param again the details and the move of the file
  */
 @Composable
 internal fun UnusableScreen(again: SetUpAgain) {
