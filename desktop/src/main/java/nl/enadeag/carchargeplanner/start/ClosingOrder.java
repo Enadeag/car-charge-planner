@@ -18,15 +18,13 @@ final class ClosingOrder implements AutoCloseable {
     private final Deque<Part> parts = new ArrayDeque<>();
     private boolean closed;
 
-    /** Starts with nothing to close. */
     ClosingOrder() {
     }
 
     /**
      * Adds a part to close; after {@link #close()} it is closed at once, as the app is going away.
      *
-     * @param name what the part is, for the log, such as "the tray"
-     * @param part closes the part; it is called once
+     * @param part called once
      */
     void add(String name, AutoCloseable part) {
         synchronized (this) {

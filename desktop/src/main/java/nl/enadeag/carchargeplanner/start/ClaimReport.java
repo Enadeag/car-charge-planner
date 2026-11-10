@@ -24,14 +24,7 @@ final class ClaimReport {
     private final System.Logger log;
     private ClaimOutcome outcome;
 
-    /**
-     * Makes the handling; nothing is claimed yet.
-     *
-     * @param instance the single-instance guard, not claimed yet
-     * @param messages the texts in the owner's language
-     * @param err where the owner is told why this copy ends or cannot be reached, normally standard error
-     * @param log where a guard that does not fully work is logged, once {@link #logProblem()} is called
-     */
+    /** The log is written to only once {@link #logProblem()} is called. */
     ClaimReport(SingleInstance instance, Messages messages, PrintStream err, System.Logger log) {
         this.instance = instance;
         this.messages = messages;
@@ -40,11 +33,8 @@ final class ClaimReport {
     }
 
     /**
-     * Claims, and tells the owner what came of it when that is worth saying.
-     *
-     * @param handler what a command of a later start does, when this copy runs
-     * @return empty when this copy runs; otherwise the exit code it ends with: {@link ExitCode#SUCCESS} after
-     *     handing over to the running copy
+     * Gives empty when this copy runs; otherwise the exit code it ends with: {@link ExitCode#SUCCESS} after handing
+     * over to the running copy.
      */
     Optional<ExitCode> claim(Consumer<InstanceCommand> handler) {
         outcome = instance.claim(handler);
