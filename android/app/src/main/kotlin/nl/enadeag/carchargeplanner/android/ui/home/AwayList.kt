@@ -81,7 +81,7 @@ internal class AwayAction(val entry: AwayEntry, val focus: FocusRequester, val b
 internal fun AwayList(dashboard: Dashboard, day: DashboardDay, words: DashboardWords, away: AwayAction,
     inView: Boolean) {
     val focus = remember { RowFocus<OneOffAwayPeriod>() }
-    val periods = dashboard.away.map { it.period }
+    val periods = dashboard.away.map { it.period() }
     LaunchedEffect(periods) {
         // only the page in view: the change was made on it, and a page beside it has its own rows
         if (!inView) {
@@ -116,16 +116,16 @@ internal fun AwayList(dashboard: Dashboard, day: DashboardDay, words: DashboardW
             NoneLine(stringResource(R.string.one_off_none), focus)
         }
         dashboard.away.forEach { coming ->
-            key(coming.period) {
+            key(coming.period()) {
                 val text = words.away(coming)
                 val spoken = stringResource(R.string.one_off_remove_spoken, text)
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RowLine(text, focus, coming.period, Modifier.weight(1f))
+                    RowLine(text, focus, coming.period(), Modifier.weight(1f))
                     HeldButton(busy = away.busy, onClick = {
-                        away.going.row = coming.period
+                        away.going.row = coming.period()
                         away.going.rows = periods
-                        away.entry.remove(coming.period)
+                        away.entry.remove(coming.period())
                     }, modifier = Modifier.semantics { contentDescription = spoken }) {
                         Text(stringResource(R.string.one_off_remove))
                     }

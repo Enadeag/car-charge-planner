@@ -17,17 +17,17 @@ import java.util.Locale
 import kotlin.math.ceil
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.NumberText
-import nl.enadeag.carchargeplanner.android.home.ComingAway
-import nl.enadeag.carchargeplanner.android.home.Footer
-import nl.enadeag.carchargeplanner.android.home.ListedTrip
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
+import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
 import nl.enadeag.carchargeplanner.engine.dashboard.DayKind
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
+import nl.enadeag.carchargeplanner.engine.dashboard.Footer
 import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
+import nl.enadeag.carchargeplanner.engine.dashboard.ListedTrip
 import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason
 import nl.enadeag.carchargeplanner.engine.dashboard.SolarDay
 import nl.enadeag.carchargeplanner.engine.dashboard.StartLevel
@@ -269,11 +269,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @return such as "Tomorrow, all day" or "Sat, Oct 17, 10:00 – 16:30"
      */
     fun away(away: ComingAway): String = when (away) {
-        is ComingAway.AllDay -> text(R.string.one_off_all_day, date(away.day))
-        is ComingAway.PartOfDay -> text(R.string.one_off_part, date(away.day),
-            text(R.string.time_span, time(away.start), time(away.end)))
-        is ComingAway.Days -> text(R.string.one_off_days, date(away.startDay), time(away.start), date(away.endDay),
-            time(away.end))
+        is ComingAway.AllDay -> text(R.string.one_off_all_day, date(away.day()))
+        is ComingAway.PartOfDay -> text(R.string.one_off_part, date(away.day()),
+            text(R.string.time_span, time(away.start()), time(away.end())))
+        is ComingAway.Days -> text(R.string.one_off_days, date(away.startDay()), time(away.start()),
+            date(away.endDay()), time(away.end()))
     }
 
     /**
@@ -283,11 +283,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @param trip the trip
      * @return such as "Away 07:30 – 18:00 · 300 km there and back" or "Away Tomorrow 07:30 – Wed, Jun 3 18:00 · …"
      */
-    fun trip(trip: ListedTrip): String = text(R.string.trip_line, if (trip.sameDay) {
-        text(R.string.time_span, time(trip.departure), time(trip.returnTime))
+    fun trip(trip: ListedTrip): String = text(R.string.trip_line, if (trip.sameDay()) {
+        text(R.string.time_span, time(trip.trip().departure()), time(trip.trip().returnTime()))
     } else {
-        text(R.string.trip_days, date(trip.departureDay), time(trip.departure), date(trip.returnDay),
-            time(trip.returnTime))
+        text(R.string.trip_days, date(trip.departureDay()), time(trip.trip().departure()), date(trip.returnDay()),
+            time(trip.trip().returnTime()))
     }, tripDistance(trip))
 
     /**
@@ -296,14 +296,14 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @param trip the trip
      * @return such as "Away from 07:30 to 18:00, 300 km there and back"
      */
-    fun spokenTrip(trip: ListedTrip): String = text(R.string.trip_line_spoken, if (trip.sameDay) {
-        text(R.string.time_span_spoken, time(trip.departure), time(trip.returnTime))
+    fun spokenTrip(trip: ListedTrip): String = text(R.string.trip_line_spoken, if (trip.sameDay()) {
+        text(R.string.time_span_spoken, time(trip.trip().departure()), time(trip.trip().returnTime()))
     } else {
-        text(R.string.trip_days_spoken, date(trip.departureDay), time(trip.departure), date(trip.returnDay),
-            time(trip.returnTime))
+        text(R.string.trip_days_spoken, date(trip.departureDay()), time(trip.trip().departure()),
+            date(trip.returnDay()), time(trip.trip().returnTime()))
     }, tripDistance(trip))
 
-    private fun tripDistance(trip: ListedTrip) = text(R.string.trip_distance, whole(trip.trip.distanceKm()))
+    private fun tripDistance(trip: ListedTrip) = text(R.string.trip_distance, whole(trip.trip().distanceKm()))
 
     /**
      * The footer's line, as the desktop's: the provider's credit, the fallback, updated or stale, busy.
@@ -312,14 +312,15 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * @return such as "Weather data: Open-Meteo.com (CC BY 4.0) · updated 10:51"
      */
     fun footer(footer: Footer): String {
-        val fallback = when (val standIn = footer.fallback) {
-            Footer.Fallback.No -> null
-            Footer.Fallback.ForUnknown -> text(R.string.footer_fallback_unknown)
-            is Footer.Fallback.For -> text(R.string.footer_fallback, standIn.primary)
+        val fallback = when (val standIn = footer.fallback()) {
+            is Footer.Fallback.None -> null
+            is Footer.Fallback.ForUnknown -> text(R.string.footer_fallback_unknown)
+            is Footer.Fallback.For -> text(R.string.footer_fallback, standIn.primaryName())
         }
-        val fresh = text(if (footer.stale) R.string.footer_stale else R.string.footer_updated, time(footer.fetchedAt))
-        val busy = footer.busyUntil?.let { text(R.string.footer_busy, time(it)) }
-        return listOfNotNull(footer.credit, fallback, fresh, busy).joinToString(" · ")
+        val fresh = text(if (footer.stale()) R.string.footer_stale else R.string.footer_updated,
+            time(footer.fetchedAt()))
+        val busy = footer.busyUntil().orElse(null)?.let { text(R.string.footer_busy, time(it)) }
+        return listOfNotNull(footer.credit(), fallback, fresh, busy).joinToString(" · ")
     }
 
     /**

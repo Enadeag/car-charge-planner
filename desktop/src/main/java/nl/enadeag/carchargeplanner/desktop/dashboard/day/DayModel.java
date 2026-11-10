@@ -5,13 +5,14 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayKind;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * One day of the plan, in words, with the advice its tab shows.
+ * One day of the plan, in words, with the advice and the trips its tab shows.
  *
  * @param date the day, in the owner's home
  * @param tab the day's short name: "Today", "Fri"
@@ -27,6 +28,7 @@ import java.util.Optional;
  * @param battery the day's battery levels, as the battery bar draws them
  * @param tripAdvice the advice of the trips the day's tab shows, in its words, in order of departure; may be empty
  * @param gridAdvice the grid advice the day's tab shows; empty on a day that shows none
+ * @param trips the trips the car is away for on the day, in its words, in their stored order; may be empty
  */
 public record DayModel(
         LocalDate date,
@@ -42,7 +44,8 @@ public record DayModel(
         SolarChartModel curve,
         BatteryModel battery,
         List<TripAdviceModel> tripAdvice,
-        Optional<GridAdviceModel> gridAdvice) {
+        Optional<GridAdviceModel> gridAdvice,
+        List<TripsModel.Listed> trips) {
 
     /**
      * Keeps copies of the lists, so the day cannot change afterwards.
@@ -51,6 +54,7 @@ public record DayModel(
         facts = List.copyOf(facts);
         chips = List.copyOf(chips);
         tripAdvice = List.copyOf(tripAdvice);
+        trips = List.copyOf(trips);
     }
 
     /**
@@ -61,6 +65,17 @@ public record DayModel(
      */
     public DayModel withGridAdvice(GridAdviceModel advice) {
         return new DayModel(date, tab, title, kind, heading, hero, facts, chips, note, spoken, curve, battery,
-                tripAdvice, Optional.of(advice));
+                tripAdvice, Optional.of(advice), trips);
+    }
+
+    /**
+     * The same day with the trips its tab lists.
+     *
+     * @param dayTrips the trips the car is away for on the day, in their stored order; never null, may be empty
+     * @return a copy of the day that lists them, in place of any it listed
+     */
+    public DayModel withTrips(List<TripsModel.Listed> dayTrips) {
+        return new DayModel(date, tab, title, kind, heading, hero, facts, chips, note, spoken, curve, battery,
+                tripAdvice, gridAdvice, dayTrips);
     }
 }

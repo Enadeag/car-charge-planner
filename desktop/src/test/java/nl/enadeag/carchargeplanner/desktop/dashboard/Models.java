@@ -34,6 +34,22 @@ public final class Models {
     /** A Friday. */
     public static final LocalDate TODAY = LocalDate.of(2026, 7, 3);
 
+    public static final Trip TRIP_SATURDAY = new Trip(TODAY.plusDays(1).atTime(7, 30).atZone(BRUSSELS).toInstant(),
+            TODAY.plusDays(1).atTime(18, 0).atZone(BRUSSELS).toInstant(), 300, false);
+    public static final Trip TRIP_SUNDAY_NIGHT = new Trip(TODAY.plusDays(2).atTime(17, 0).atZone(BRUSSELS).toInstant(),
+            TODAY.plusDays(3).atTime(9, 30).atZone(BRUSSELS).toInstant(), 120, true);
+
+    /** The trip on Saturday, which Saturday lists. */
+    public static final TripsModel.Listed LISTED_SATURDAY = new TripsModel.Listed(TRIP_SATURDAY, TripOrigin.BY_HAND,
+            "Away 07:30 – 18:00 · 300 km there and back", "Entered by hand",
+            "Change the trip Away 07:30 – 18:00 · 300 km there and back",
+            "Remove the trip Away 07:30 – 18:00 · 300 km there and back");
+    /** The trip from Sunday to Monday, which Sunday and Monday list. */
+    public static final TripsModel.Listed LISTED_SUNDAY_NIGHT = new TripsModel.Listed(TRIP_SUNDAY_NIGHT,
+            TripOrigin.BY_HAND, "Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back", "Entered by hand",
+            "Change the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back",
+            "Remove the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back");
+
     public static final DayModel SUNNY_TODAY = new DayModel(TODAY, "Today", "Today", DayKind.SOLAR, "Charge window", "11:15 – 14:30",
             List.of("Set 10 A (2.3 kW)", "about 7.9 kWh"),
             List.of(new ChipModel(EnergySource.SOLAR, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
@@ -42,7 +58,7 @@ public final class Models {
             curve(3.6, List.of(new WindowSpan(11.25, 14.5)), OptionalDouble.of(8.2)),
             new BatteryModel(50, 74, 30, 80, "50 → 74 %", "min 30", "target 80", true,
                     "Car battery 50 % now, 74 % after charging; minimum 30 %, target 80 %."),
-            List.of(), Optional.empty());
+            List.of(), Optional.empty(), List.of());
 
     public static final DayModel CLOUDY_TOMORROW = new DayModel(TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.NONE, "No charge window", "",
             List.of(), List.of(new ChipModel(EnergySource.CAR, "Battery 62 → 62 %")),
@@ -51,7 +67,7 @@ public final class Models {
             curve(0.9, List.of(), OptionalDouble.empty()),
             new BatteryModel(62, 62, 30, 80, "62 → 62 %", "min 30", "target 80", false,
                     "Car battery 62 % at the start of tomorrow, 62 % after charging; minimum 30 %, target 80 %."),
-            List.of(), Optional.empty());
+            List.of(), Optional.empty(), List.of(LISTED_SATURDAY));
 
     public static final DayModel GRID_SUNDAY = new DayModel(TODAY.plusDays(2), "Sun", "Sunday", DayKind.GRID, "No good window", "01:00 – 04:00",
             List.of("Set 16 A (3.7 kW)"), List.of(new ChipModel(EnergySource.GRID, "11.0 kWh from the grid")),
@@ -59,7 +75,7 @@ public final class Models {
             curve(2.0, List.of(), OptionalDouble.empty()),
             new BatteryModel(20, 20, 30, 80, "20 → 20 %", "min 30", "target 80", false,
                     "Car battery 20 % at the start of Sunday, 20 % after charging; minimum 30 %, target 80 %."),
-            List.of(), Optional.empty());
+            List.of(), Optional.empty(), List.of(LISTED_SUNDAY_NIGHT));
 
     public static final GridAdviceModel ADVICE = new GridAdviceModel("Grid advice", "Charge from the grid on Saturday night.",
             "Sunday is cloudy: charge 01:00 – 04:00 at 16 A to stay above 30 %.");
@@ -70,28 +86,13 @@ public final class Models {
     public static final OneOffAwayPeriod AWAY_SUNDAY = OneOffAwayPeriod.on(TODAY.plusDays(2), LocalTime.of(10, 0), LocalTime.of(16, 30),
             BRUSSELS);
 
-    /** Made at 08:12 today, with an away period tomorrow and one on Sunday. */
-    public static final OneOffAwayModel AWAY = new OneOffAwayModel(BRUSSELS,
-            TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant(), List.of(
+    /** An away period tomorrow and one on Sunday. */
+    public static final OneOffAwayModel AWAY = new OneOffAwayModel(BRUSSELS, List.of(
             new OneOffAwayModel.Listed(AWAY_TOMORROW, "Tomorrow, all day", "Remove Tomorrow, all day"),
             new OneOffAwayModel.Listed(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30", "Remove Sun 5 Jul, 10:00 – 16:30")));
 
-    public static final Trip TRIP_SATURDAY = new Trip(TODAY.plusDays(1).atTime(7, 30).atZone(BRUSSELS).toInstant(),
-            TODAY.plusDays(1).atTime(18, 0).atZone(BRUSSELS).toInstant(), 300, false);
-    public static final Trip TRIP_SUNDAY_NIGHT = new Trip(TODAY.plusDays(2).atTime(17, 0).atZone(BRUSSELS).toInstant(),
-            TODAY.plusDays(3).atTime(9, 30).atZone(BRUSSELS).toInstant(), 120, true);
-
-    /** Made at 08:12 today, with a trip on Saturday and one from Sunday to Monday. */
-    public static final TripsModel TRIPS = new TripsModel(BRUSSELS, TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant(),
-            Units.METRIC, List.of(
-            new TripsModel.Listed(TRIP_SATURDAY, TODAY.plusDays(1), TODAY.plusDays(1), TripOrigin.BY_HAND,
-                    "Away 07:30 – 18:00 · 300 km there and back", "Entered by hand",
-                    "Change the trip Away 07:30 – 18:00 · 300 km there and back",
-                    "Remove the trip Away 07:30 – 18:00 · 300 km there and back"),
-            new TripsModel.Listed(TRIP_SUNDAY_NIGHT, TODAY.plusDays(2), TODAY.plusDays(3), TripOrigin.BY_HAND,
-                    "Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back", "Entered by hand",
-                    "Change the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back",
-                    "Remove the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back")));
+    /** In km. */
+    public static final TripsModel TRIPS = new TripsModel(BRUSSELS, Units.METRIC);
 
     /** Saturday's trip, which needs a grid charge tonight, as today's tab tells it. */
     public static final TripAdviceModel ADVICE_SATURDAY_TODAY = new TripAdviceModel(EnergySource.GRID, "Trip advice",
@@ -113,8 +114,8 @@ public final class Models {
             "The plan charges enough for it: the battery is at 62% when you leave.",
             "Assuming a battery level of 50%.");
 
-    /** A clock that stays at the moment {@link #AWAY}'s plan was made. */
-    public static final InstantSource CLOCK = InstantSource.fixed(AWAY.madeAt());
+    /** A clock that stays at 08:12 today, when the plan of these models was made. */
+    public static final InstantSource CLOCK = InstantSource.fixed(TODAY.atTime(8, 12).atZone(BRUSSELS).toInstant());
 
     private Models() {
     }
@@ -136,7 +137,7 @@ public final class Models {
     public static DayModel with(DayModel day, List<TripAdviceModel> tripAdvice, Optional<GridAdviceModel> gridAdvice) {
         var withTrips = new DayModel(day.date(), day.tab(), day.title(), day.kind(), day.heading(), day.hero(),
                 day.facts(), day.chips(), day.note(), day.spoken(), day.curve(), day.battery(), tripAdvice,
-                Optional.empty());
+                Optional.empty(), day.trips());
         return gridAdvice.map(withTrips::withGridAdvice).orElse(withTrips);
     }
 

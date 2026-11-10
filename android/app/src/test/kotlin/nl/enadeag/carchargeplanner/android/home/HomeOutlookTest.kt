@@ -22,6 +22,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason
 import nl.enadeag.carchargeplanner.engine.trip.Trip
@@ -77,7 +78,7 @@ class HomeOutlookTest {
 
         answer(0, Plans.planned(today.atTime(8, 0).atZone(zone), listOf()))
 
-        assertThat(home.state.value).isEqualTo(HomeOutlook.State.NoDays(Footer.of(planned), zone))
+        assertThat(home.state.value).isEqualTo(HomeOutlook.State.NoDays(planned.footer(), zone))
     }
 
     @Test

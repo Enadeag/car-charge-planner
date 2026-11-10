@@ -6,33 +6,34 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
+import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView
+import nl.enadeag.carchargeplanner.engine.dashboard.Footer
 import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
+import nl.enadeag.carchargeplanner.engine.dashboard.ListedTrip
 import nl.enadeag.carchargeplanner.engine.dashboard.StartLevel
 import nl.enadeag.carchargeplanner.engine.dashboard.TripAdviceView
-import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
-import nl.enadeag.carchargeplanner.engine.forecast.Freshness
-import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
- * What the dashboard shows of a plan with days: the engine's dashboard with its days, today first, and charge levels;
- * today's grid advice, the coming one-off away periods, the trips and the footer.
+ * What the dashboard shows of a plan with days: the engine's dashboard, made once from the plan with the stored
+ * one-off away periods and trips, with its days, today first, and charge levels; today's grid advice, the coming
+ * one-off away periods, the trips and the footer.
  *
  * @property planned the plan the dashboard is made from, kept so a change of the trips or the away periods can make
  *     the engine's dashboard again at once
- * @property view the engine's dashboard of the plan, from the stored trips as they were when it was made
- * @property away the one-off away periods that had not ended when the plan was made, in order of their start
- * @property footer the forecast's credit, source and freshness
+ * @property storedAway the stored one-off away periods, in order of their start, also those that ended
+ * @property storedTrips the stored trips, in order of their departure
  * @property keyRefusedBy the names of the providers that refused their API key, in the order they were asked, also
  *     while another forecast is used; empty when none did
- * @property trips the stored trips, in the engine's order, by their departure; each day's page lists those whose days
- *     include it
- * @throws IllegalArgumentException when [view] has no days, which shows as no forecast instead
+ * @throws IllegalArgumentException when [planned] has no days, which shows as no forecast instead
  */
-data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val away: List<ComingAway>,
-    val footer: Footer, val keyRefusedBy: List<String> = listOf(), val trips: List<ListedTrip> = listOf()) {
+data class Dashboard(val planned: Outlook.Planned, val storedAway: List<OneOffAwayPeriod>,
+    val storedTrips: List<Trip>, val keyRefusedBy: List<String>) {
+
+    /** The engine's dashboard of [planned] with [storedAway] and [storedTrips]. */
+    val view: DashboardView = planned.dashboard(storedAway, storedTrips)
 
     init {
         if (view.days().isEmpty()) {
@@ -58,6 +59,15 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
     /** The plan's grid advice; null when there is none. */
     val gridAdvice: GridAdviceView? get() = view.gridAdvice().orElse(null)
 
+    /** The one-off away periods that had not ended when the plan was made, in their stored order. */
+    val away: List<ComingAway> get() = view.away()
+
+    /** The stored trips, in their stored order. */
+    val trips: List<ListedTrip> get() = view.trips()
+
+    /** The forecast's credit, source and freshness. */
+    val footer: Footer get() = view.footer()
+
     /**
      * The grid advice a day's tab shows, as the engine's dashboard says.
      *
@@ -77,13 +87,12 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
 
     /**
      * The same dashboard with the one-off away periods as they are stored now, such as after the owner added or
-     * removed one: the engine's dashboard is made again from the kept plan; the rest stays as the plan made it.
+     * removed one: the engine's dashboard is made again from the kept plan and the stored trips.
      *
-     * @param periods the stored one-off away periods, in order of their start; those that ended are left out
+     * @param periods the stored one-off away periods, in order of their start, also those that ended
      * @return the dashboard with those periods
      */
-    fun withAway(periods: List<OneOffAwayPeriod>): Dashboard =
-        copy(view = planned.dashboard(periods, trips.map { it.trip }), away = ComingAway.of(periods, zone, madeAt))
+    fun withAway(periods: List<OneOffAwayPeriod>): Dashboard = copy(storedAway = periods)
 
     /**
      * A one-off away period as this dashboard tells it, such as one just added or removed.
@@ -91,26 +100,25 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
      * @param period the period
      * @return it by kind, its days named from the day the plan was made
      */
-    fun describe(period: OneOffAwayPeriod): ComingAway = ComingAway.describe(period, zone, madeAt)
+    fun describe(period: OneOffAwayPeriod): ComingAway = view.describe(period)
 
     /**
-     * The trips a day's page lists, as the desktop's: those the car is away for on that day.
+     * The trips a day's page lists, as the engine's dashboard says: those the car is away for on that day.
      *
      * @param day one of [days]
-     * @return the trips from whose day of departure to whose last day the day is, in the engine's order
+     * @return the trips from whose day of departure to whose last day the day is, in their stored order
      */
-    fun tripsOn(day: DashboardDay): List<ListedTrip> = trips.filter { it.covers(day.name().date()) }
+    fun tripsOn(day: DashboardDay): List<ListedTrip> = view.tripsOn(day)
 
     /**
      * The same dashboard with the trips as they are stored now, such as after the owner changed or removed one: the
-     * engine's dashboard is made again from the kept plan, so a day the car is no longer away on a trip says so at
-     * once; the rest stays as the plan made it.
+     * engine's dashboard is made again from the kept plan and the stored away periods, so a day the car is no longer
+     * away on a trip says so at once.
      *
      * @param stored the stored trips, in order of their departure
      * @return the dashboard with those trips
      */
-    fun withTrips(stored: List<Trip>): Dashboard =
-        copy(view = planned.dashboard(away.map { it.period }, stored), trips = ListedTrip.of(stored, zone, madeAt))
+    fun withTrips(stored: List<Trip>): Dashboard = copy(storedTrips = stored)
 
     /**
      * A trip as this dashboard tells it, such as one just removed.
@@ -118,7 +126,7 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
      * @param trip the trip
      * @return it with its days, named from the day the plan was made
      */
-    fun describe(trip: Trip): ListedTrip = ListedTrip.of(trip, zone, madeAt)
+    fun describe(trip: Trip): ListedTrip = view.describe(trip)
 
     companion object {
 
@@ -126,69 +134,14 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
          * The dashboard of a plan.
          *
          * @param planned the engine's plan, with at least one day
-         * @param away the stored one-off away periods, in order of their start; those that ended are left out
+         * @param away the stored one-off away periods, in order of their start, also those that ended
          * @param trips the stored trips, in order of their departure
          * @param names a provider's name by its id, for those that refused their API key; its id by default
          * @return the dashboard
          * @throws IllegalArgumentException when the plan has no days
          */
         fun of(planned: Outlook.Planned, away: List<OneOffAwayPeriod>, trips: List<Trip> = listOf(),
-            names: (ProviderId) -> String = ProviderId::value): Dashboard {
-            return Dashboard(planned, planned.dashboard(away, trips),
-                ComingAway.of(away, planned.zone(), planned.madeAt()), Footer.of(planned),
-                planned.forecastSource().keyRefusedBy().map(names),
-                ListedTrip.of(trips, planned.zone(), planned.madeAt()))
-        }
-    }
-}
-
-/**
- * The forecast behind a plan, as the desktop's footer tells it: the provider's credit, which provider stood in for
- * which, when the forecast was fetched and whether that is stale, and until when the provider is busy.
- *
- * @property credit the credit the provider's terms ask for, in its own words, which stay English
- * @property fallback whether the fallback provider stood in, and for which
- * @property fetchedAt when the forecast was fetched
- * @property stale true when a refresh was due but failed, so the plan uses this older forecast
- * @property busyUntil until when the provider asks not to be asked again; null when it is not busy
- */
-data class Footer(val credit: String, val fallback: Fallback, val fetchedAt: Instant, val stale: Boolean,
-    val busyUntil: Instant?) {
-
-    /** Whether the fallback provider gave the forecast. */
-    sealed interface Fallback {
-
-        /** The primary provider gave it. */
-        data object No : Fallback
-
-        /**
-         * The fallback gave it, as this primary provider had none.
-         *
-         * @property primary the primary provider's name
-         */
-        data class For(val primary: String) : Fallback
-
-        /** The fallback gave it, for a primary provider whose name is not known. */
-        data object ForUnknown : Fallback
-    }
-
-    companion object {
-
-        /**
-         * The footer of a plan.
-         *
-         * @param planned the plan, with its forecast's source and the moment it was made
-         * @return the footer; busy only while the cool-down lasts past the moment the plan was made
-         */
-        fun of(planned: Outlook.Planned): Footer {
-            val source: ForecastSource = planned.forecastSource()
-            val fallback = when {
-                source.providerRole() != ProviderRole.FALLBACK -> Fallback.No
-                source.primaryName().isEmpty() -> Fallback.ForUnknown
-                else -> Fallback.For(source.primaryName())
-            }
-            return Footer(source.attribution(), fallback, source.fetchedAt(), source.freshness() == Freshness.STALE,
-                source.cooldownUntil().filter { it.isAfter(planned.madeAt()) }.orElse(null))
-        }
+            names: (ProviderId) -> String = ProviderId::value): Dashboard =
+            Dashboard(planned, away, trips, planned.footer().keyRefusedBy().map(names))
     }
 }

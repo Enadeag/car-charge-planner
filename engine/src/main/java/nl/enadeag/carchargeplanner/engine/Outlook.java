@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView;
+import nl.enadeag.carchargeplanner.engine.dashboard.Footer;
 import nl.enadeag.carchargeplanner.engine.dashboard.PlanParts;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
@@ -90,18 +91,28 @@ public sealed interface Outlook {
          * What the dashboard shows of this plan, as numbers, hours and flags; each client writes the words and draws
          * it. "Now" is {@code madeAt}.
          *
-         * @param away the stored one-off away periods, in order of their start; may be empty, never null; not used
-         *     yet, the later parts of #341 add them to the dashboard
+         * @param away the stored one-off away periods, in order of their start, also those that ended; may be empty,
+         *     never null; those that end after {@code madeAt} are listed
          * @param trips the stored trips, in order of their departure, also those under way and those made without this
-         *     car; may be empty, never null; a day the car is away on one says so
-         * @return the dashboard, with a day for each of the plan's days
+         *     car; may be empty, never null; all are listed, and a day the car is away on one says so
+         * @return the dashboard, with a day for each of the plan's days and the footer
          * @throws NullPointerException when {@code away} or {@code trips} is null
          */
         public DashboardView dashboard(List<OneOffAwayPeriod> away, List<Trip> trips) {
             Objects.requireNonNull(away, "away");
             Objects.requireNonNull(trips, "trips");
             return DashboardView.of(new PlanParts(madeAt, zone, days, baseloadKw, batteryLevelPct, batteryAssumed,
-                    gridAdvice, tripAdvice, minimumPct, targetPct, trips));
+                    gridAdvice, tripAdvice, minimumPct, targetPct, away, trips, forecastSource));
+        }
+
+        /**
+         * The forecast behind this plan, as the dashboard's footer shows it; also for a plan without days, which has
+         * no dashboard to show.
+         *
+         * @return the footer, the same as the dashboard's
+         */
+        public Footer footer() {
+            return Footer.of(forecastSource, madeAt);
         }
     }
 

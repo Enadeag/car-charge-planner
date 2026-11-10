@@ -129,7 +129,8 @@ class DashboardRecordsTest {
     void aDashboardKeepsItsOwnDays() {
         var days = new ArrayList<>(List.of(day(MAIN, List.of(), Optional.empty())));
         var dashboard = new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), days,
-                new ChargeLevels(new Percent(20), new Percent(80)), LEVEL, Optional.empty(), List.of());
+                new ChargeLevels(new Percent(20), new Percent(80)), LEVEL, Optional.empty(), List.of(),
+                Parts.footer(NOON), List.of(), List.of());
 
         days.clear();
 
@@ -222,7 +223,8 @@ class DashboardRecordsTest {
         var advice = new ArrayList<>(List.of(new TripAdvice(trip, new Percent(60), List.of(), new Percent(60),
                 Optional.empty(), new Percent(60), 0, new Percent(20))));
         var parts = new PlanParts(NOON, ZoneId.of("Europe/Amsterdam"), List.<DayPlan>of(), 0.3, new Percent(40),
-                false, Optional.empty(), advice, new Percent(20), new Percent(80), trips);
+                false, Optional.empty(), advice, new Percent(20), new Percent(80), List.of(), trips,
+                Parts.source(NOON));
 
         trips.clear();
         advice.clear();
@@ -249,7 +251,8 @@ class DashboardRecordsTest {
 
     private static DashboardView dashboardWith(GridAdviceView advice) {
         return new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), List.of(),
-                new ChargeLevels(new Percent(30), new Percent(80)), LEVEL, Optional.of(advice), List.of());
+                new ChargeLevels(new Percent(30), new Percent(80)), LEVEL, Optional.of(advice), List.of(),
+                Parts.footer(NOON), List.of(), List.of());
     }
 
     @ParameterizedTest
@@ -385,7 +388,8 @@ class DashboardRecordsTest {
     void aDashboardKeepsItsOwnTripAdvice() {
         var advice = new ArrayList<>(List.of(tripAdvice(GRID_PLAN, OptionalDouble.empty())));
         var dashboard = new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), List.of(),
-                new ChargeLevels(new Percent(20), new Percent(80)), LEVEL, Optional.empty(), advice);
+                new ChargeLevels(new Percent(20), new Percent(80)), LEVEL, Optional.empty(), advice,
+                Parts.footer(NOON), List.of(), List.of());
 
         advice.clear();
 

@@ -16,7 +16,6 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
-import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,8 +55,8 @@ class TripCardTest {
         Fx.run(() -> {
             card = new TripCard(() -> { }, ENGLISH);
             card.onChange(added::add, (trip, changedTrip) -> changed.add(List.of(trip, changedTrip)), removed::add,
-                    InstantSource.fixed(trips.madeAt()));
-            card.show(day.date(), day.title(), trips);
+                    Models.CLOCK);
+            card.show(day.date(), day.title(), day.trips(), trips);
             stage = Scenes.show(card, ColorScheme.LIGHT);
         });
     }
@@ -110,11 +109,11 @@ class TripCardTest {
         var withoutTheCar = new Trip(trip.departure(), trip.returnTime(), 300, false, true);
         assertThat(changed).containsExactly(List.of(trip, withoutTheCar));
 
-        var listed = Models.TRIPS.trips().getFirst();
-        var shownAgain = new TripsModel(Models.BRUSSELS, Models.TRIPS.madeAt(), Units.METRIC,
-                List.of(new TripsModel.Listed(withoutTheCar, SATURDAY, SATURDAY, TripOrigin.BY_HAND, listed.text(),
-                        listed.originText(), listed.changeSpoken(), listed.removeSpoken())));
-        Fx.run(() -> card.show(Models.CLOUDY_TOMORROW.date(), Models.CLOUDY_TOMORROW.title(), shownAgain));
+        var listed = Models.LISTED_SATURDAY;
+        var shownAgain = List.of(new TripsModel.Listed(withoutTheCar, TripOrigin.BY_HAND, listed.text(),
+                listed.originText(), listed.changeSpoken(), listed.removeSpoken()));
+        Fx.run(() -> card.show(Models.CLOUDY_TOMORROW.date(), Models.CLOUDY_TOMORROW.title(), shownAgain,
+                Models.TRIPS));
         Fx.settle();
         var focused = Fx.call(() -> stage.getScene().getFocusOwner());
         assertThat(focused).isInstanceOf(CheckBox.class);
@@ -172,10 +171,9 @@ class TripCardTest {
     @Test
     void changeOpensTheEntryWithTheTripAndSavesTheChangedOneInItsPlace() throws Exception {
         var trip = new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 18, 0), 300.4, true, true);
-        var listed = Models.TRIPS.trips().getFirst();
-        show(Models.CLOUDY_TOMORROW, new TripsModel(Models.BRUSSELS, Models.TRIPS.madeAt(), Units.METRIC,
-                List.of(new TripsModel.Listed(trip, SATURDAY, SATURDAY, TripOrigin.BY_HAND, listed.text(),
-                        listed.originText(), listed.changeSpoken(), listed.removeSpoken()))));
+        var listed = Models.LISTED_SATURDAY;
+        show(Models.CLOUDY_TOMORROW.withTrips(List.of(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
+                listed.text(), listed.originText(), listed.changeSpoken(), listed.removeSpoken()))), Models.TRIPS);
 
         Fx.run(control(Button.class, listed.changeSpoken())::fire);
         // only the return changes: the distance shown rounded stays as it was, and so do the choices
@@ -191,8 +189,8 @@ class TripCardTest {
 
     @Test
     void aTripInMilesIsShownAndSavedInMiles() throws Exception {
-        var miles = new TripsModel(Models.BRUSSELS, Models.TRIPS.madeAt(), Units.IMPERIAL, List.of());
-        show(Models.CLOUDY_TOMORROW, miles);
+        var miles = new TripsModel(Models.BRUSSELS, Units.IMPERIAL);
+        show(Models.CLOUDY_TOMORROW.withTrips(List.of()), miles);
 
         openEntry();
         assertThat(Fx.call(() -> Scenes.visibleTexts(card))).contains("mi");
@@ -246,7 +244,8 @@ class TripCardTest {
     void escapeClosesTheEntryWithoutSavingAndAnotherDayClosesItToo() throws Exception {
         show(Models.CLOUDY_TOMORROW, Models.TRIPS);
         openEntry();
-        Fx.run(() -> card.show(Models.CLOUDY_TOMORROW.date(), Models.CLOUDY_TOMORROW.title(), Models.TRIPS));
+        Fx.run(() -> card.show(Models.CLOUDY_TOMORROW.date(), Models.CLOUDY_TOMORROW.title(),
+                Models.CLOUDY_TOMORROW.trips(), Models.TRIPS));
         assertThat(entering()).isTrue();
 
         Fx.run(() -> card.editor().fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false,
@@ -254,7 +253,8 @@ class TripCardTest {
         assertThat(entering()).isFalse();
 
         openEntry();
-        Fx.run(() -> card.show(Models.GRID_SUNDAY.date(), Models.GRID_SUNDAY.title(), Models.TRIPS));
+        Fx.run(() -> card.show(Models.GRID_SUNDAY.date(), Models.GRID_SUNDAY.title(), Models.GRID_SUNDAY.trips(),
+                Models.TRIPS));
         assertThat(entering()).isFalse();
         assertThat(added).isEmpty();
     }

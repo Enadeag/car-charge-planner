@@ -2,8 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
-import java.time.Instant;
+import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -12,50 +11,43 @@ public final class OneOffAwayMapper {
 
     private final Messages messages;
     private final ZoneId zone;
-    private final Instant madeAt;
 
     /**
      * Makes the mapper for one plan.
      *
-     * @param zone the time zone of the owner's home, in which the days and times are told
-     * @param madeAt the moment the plan was made; periods that ended by then are left out
+     * @param zone the time zone of the owner's home, in which the times are told
      * @param messages the texts, in the owner's language
      */
-    public OneOffAwayMapper(ZoneId zone, Instant madeAt, Messages messages) {
+    public OneOffAwayMapper(ZoneId zone, Messages messages) {
         this.messages = messages;
         this.zone = zone;
-        this.madeAt = madeAt;
     }
 
     /**
-     * The periods that have not ended, in words.
+     * The coming periods in words.
      *
-     * @param periods the stored periods, in order of their start; may be empty
-     * @return the model with those that end after the plan was made, in the same order
+     * @param coming the periods that had not ended when the plan was made, as the engine's dashboard lists them, in
+     *     their stored order; may be empty, never null
+     * @return the model with those periods, in their stored order
      */
-    public OneOffAwayModel map(List<OneOffAwayPeriod> periods) {
-        var coming = periods.stream()
-                .filter(period -> period.end().isAfter(madeAt))
-                .map(period -> {
-                    var text = describe(period);
-                    return new OneOffAwayModel.Listed(period, text, messages.text(TextKey.ONE_OFF_REMOVE_SPOKEN, text));
+    public OneOffAwayModel map(List<ComingAway> coming) {
+        var listed = coming.stream()
+                .map(away -> {
+                    var text = describe(away);
+                    return new OneOffAwayModel.Listed(away.period(), text,
+                            messages.text(TextKey.ONE_OFF_REMOVE_SPOKEN, text));
                 })
                 .toList();
-        return new OneOffAwayModel(zone, madeAt, coming);
+        return new OneOffAwayModel(zone, listed);
     }
 
-    private String describe(OneOffAwayPeriod period) {
-        var today = madeAt.atZone(zone).toLocalDate();
-        var start = period.start().atZone(zone);
-        var end = period.end().atZone(zone);
-        var day = messages.date(start.toLocalDate(), today);
-        if (period.equals(OneOffAwayPeriod.allDay(start.toLocalDate(), zone))) {
-            return messages.text(TextKey.ONE_OFF_ALL_DAY, day);
-        }
-        if (start.toLocalDate().equals(end.toLocalDate())) {
-            return messages.text(TextKey.ONE_OFF_PART, day, messages.span(period.start(), period.end(), zone));
-        }
-        return messages.text(TextKey.ONE_OFF_DAYS, day, messages.time(period.start(), zone),
-                messages.date(end.toLocalDate(), today), messages.time(period.end(), zone));
+    private String describe(ComingAway away) {
+        return switch (away) {
+            case ComingAway.AllDay allDay -> messages.text(TextKey.ONE_OFF_ALL_DAY, messages.date(allDay.day()));
+            case ComingAway.PartOfDay part -> messages.text(TextKey.ONE_OFF_PART, messages.date(part.day()),
+                    messages.span(part.start(), part.end(), zone));
+            case ComingAway.Days days -> messages.text(TextKey.ONE_OFF_DAYS, messages.date(days.startDay()),
+                    messages.time(days.start(), zone), messages.date(days.endDay()), messages.time(days.end(), zone));
+        };
     }
 }

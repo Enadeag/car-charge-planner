@@ -56,7 +56,7 @@ public final class TripCard extends VBox {
     private Changed refocus;
 
     /**
-     * Makes the card, empty until {@link #show(LocalDate, String, TripsModel)}.
+     * Makes the card, empty until {@link #show(LocalDate, String, List, TripsModel)}.
      *
      * @param resized called when the entry opens, closes or changes its height, so the popup or window can fit the
      *     card
@@ -87,11 +87,12 @@ public final class TripCard extends VBox {
      * Shows the trips of a day, with Add for that day. An open entry stays open while the same day shows, and closes
      * on another day.
      *
-     * @param selected the selected day, whose trips show and on which Add enters a trip; never null
+     * @param selected the selected day, on which Add enters a trip; never null
      * @param title the selected day's name, which Add's hint tells: "Today", "Tomorrow" or the weekday
-     * @param trips the stored trips and the time of the plan
+     * @param onTheDay the trips the car is away for on the selected day, in their order; never null, may be empty
+     * @param trips the time zone and the units the trips are entered in, and the time of the plan
      */
-    public void show(LocalDate selected, String title, TripsModel trips) {
+    public void show(LocalDate selected, String title, List<TripsModel.Listed> onTheDay, TripsModel trips) {
         boolean sameDay = selected.equals(day);
         day = selected;
         model = trips;
@@ -99,7 +100,6 @@ public final class TripCard extends VBox {
         add.setTooltip(new Tooltip(hint));
         add.setAccessibleHelp(hint);
         list.getChildren().clear();
-        var onTheDay = trips.on(selected);
         if (onTheDay.isEmpty()) {
             list.getChildren().add(paragraph(messages.text(TextKey.TRIP_NONE), "note"));
         }

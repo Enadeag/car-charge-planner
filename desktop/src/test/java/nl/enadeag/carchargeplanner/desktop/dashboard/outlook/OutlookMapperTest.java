@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
+import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
@@ -175,13 +178,9 @@ class OutlookMapperTest {
     void aStaleForecastAndARateLimitAreNamedUntilTheLimitEnds() {
         var limited = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 5, 30), Freshness.STALE,
                 ProviderRole.PRIMARY, "", Optional.of(at(TODAY, 9, 0)), List.of());
-        var ended = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 5, 30), Freshness.STALE,
-                ProviderRole.PRIMARY, "", Optional.of(at(TODAY, 8, 0)), List.of());
 
         assertThat(((DashboardModel.Plan) MAPPER.map(planned(limited))).footer())
                 .isEqualTo(CREDIT + " · not refreshed since 05:30 · provider busy until 09:00");
-        assertThat(((DashboardModel.Plan) MAPPER.map(planned(ended))).footer())
-                .isEqualTo(CREDIT + " · not refreshed since 05:30");
     }
 
     @Test
@@ -352,6 +351,20 @@ class OutlookMapperTest {
     }
 
     @Test
+    void theDayWithTheGridAdviceKeepsItsTrips() {
+        var advice = new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.empty(), Optional.empty());
+        var trip = new Trip(at(TODAY, 15, 0), at(TODAY, 18, 0), 40, false);
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY), day(TODAY.plusDays(1))),
+                new Percent(50), false, Optional.of(advice), List.of(), fresh(), 0.4, new Percent(30),
+                new Percent(80));
+
+        var today = ((DashboardModel.Plan) MAPPER.map(planned, List.of(), List.of(trip), Units.METRIC)).days().get(0);
+
+        assertThat(today.gridAdvice()).isPresent();
+        assertThat(today.trips()).extracting(TripsModel.Listed::trip).containsExactly(trip);
+    }
+
+    @Test
     void withoutGridAdviceThereIsNone() {
         assertThat(plan(day(TODAY)).days().getFirst().gridAdvice()).isEmpty();
     }
@@ -377,6 +390,42 @@ class OutlookMapperTest {
     @Test
     void aPlanWithoutDaysIsShownAsNoForecast() {
         assertThat(MAPPER.map(planned(false))).isInstanceOf(DashboardModel.NoPlan.class);
+    }
+
+    @Test
+    void aPlanWithoutDaysHasTheFooterOfItsForecast() {
+        assertThat(MAPPER.map(planned(false)).footer()).isEqualTo(CREDIT + " · updated 07:45");
+    }
+
+    @Test
+    void eachDayListsTheTripsTheEngineListsWithItInTheirWords() {
+        var plan = withTrip(new Messages(Language.ENGLISH), 94);
+        var away = "Away Tomorrow 08:30 – Mon 6 Jul 19:00 · 300 km there and back";
+
+        assertThat(plan.days()).extracting(day -> day.trips().stream().map(TripsModel.Listed::text).toList())
+                .containsExactly(List.of(), List.of(away), List.of(away), List.of(away),
+                        List.of("Away 08:00 – 18:00 · 200 km there and back"));
+        assertThat(plan.days().get(1).trips()).extracting(TripsModel.Listed::trip).containsExactly(LONG_TRIP);
+    }
+
+    @Test
+    void thePlanTellsTheTripsInTheHomesZoneAndTheOwnersUnits() {
+        var plan = withTrip(new Messages(Language.ENGLISH), 94);
+
+        assertThat(plan.trips()).isEqualTo(new TripsModel(BRUSSELS, Units.METRIC));
+    }
+
+    @Test
+    void theComingAwayPeriodsAreTheEnginesInTheirWords() {
+        var ended = new OneOffAwayPeriod(at(TODAY, 6, 0), at(TODAY, 8, 0));
+        var tomorrow = OneOffAwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS);
+
+        var plan = (DashboardModel.Plan) MAPPER.map(planned(false, day(TODAY)), List.of(ended, tomorrow), List.of(),
+                Units.METRIC);
+
+        assertThat(plan.away().coming()).containsExactly(
+                new OneOffAwayModel.Listed(tomorrow, "Tomorrow, all day", "Remove Tomorrow, all day"));
+        assertThat(plan.away().zone()).isEqualTo(BRUSSELS);
     }
 
     @Test

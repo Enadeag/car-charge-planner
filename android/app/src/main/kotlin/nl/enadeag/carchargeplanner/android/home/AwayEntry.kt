@@ -15,6 +15,7 @@ import nl.enadeag.carchargeplanner.android.form.forget
 import nl.enadeag.carchargeplanner.android.store.AwaySave
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway
 
 /**
  * The dashboard's changes to the one-off away periods: the entry of one on a day of the plan, all day or part
@@ -118,7 +119,8 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
      * A period as the entry that saved it reads it, in the entry's zone and by the clock at Save.
      *
      * @property zone the home's time zone, in which the period is told
-     * @property away the period by kind, its day named from the day of Save
+     * @property away the period by kind, as the engine describes it, its days named from the day of Save; before any
+     *     plan was shown there is no day the plan was made to name them from
      */
     data class Entered(val zone: ZoneId, val away: ComingAway)
 
@@ -247,7 +249,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
             when (val outcome = access.addAwayPeriod(period)) {
                 is AwaySave.Saved -> {
                     changes.say(Notice.Saved(period, Entered(draft.zone,
-                        ComingAway.describe(period, draft.zone, clock.instant()))))
+                        ComingAway.describe(period, draft.zone, clock.instant().atZone(draft.zone).toLocalDate()))))
                     changed(outcome.periods)
                     null
                 }

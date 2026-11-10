@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.android.store.LatestAnswer
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.dashboard.Footer
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.slf4j.LoggerFactory
 
@@ -218,7 +219,7 @@ class HomeOutlook(private val access: EngineAccess, private val scope: Coroutine
     private suspend fun answer(): Answer = try {
         when (val outlook = access.outlook()) {
             is Outlook.Planned -> Answer(if (outlook.days().isEmpty()) {
-                State.NoDays(Footer.of(outlook), outlook.zone(), names(outlook.forecastSource().keyRefusedBy()))
+                State.NoDays(outlook.footer(), outlook.zone(), names(outlook.footer().keyRefusedBy()))
             } else {
                 State.Planned(Dashboard.of(outlook, access.awayPeriods(), access.trips(), ::providerName))
             }, outlook)
