@@ -172,12 +172,8 @@ public abstract class LicenceAssets extends DefaultTask {
     }
 
     /**
-     * Reads one of the app's own texts.
-     *
      * @param file the file of {@code NOTICE}, {@code LICENSE} or {@code ADDITIONAL-TERMS.md}; never null
-     * @return its text
      * @throws GradleException when the file is no UTF-8 text
-     * @throws IOException when the file cannot be read
      */
     static String read(Path file) throws IOException {
         try {
