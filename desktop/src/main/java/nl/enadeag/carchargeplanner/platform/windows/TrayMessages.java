@@ -33,24 +33,15 @@ final class TrayMessages {
     private NotificationTarget waiting;
     private boolean warned;
 
-    /** Makes the messages; none can be shown until {@link #attach(Display)}. */
     TrayMessages() {
     }
 
-    /**
-     * Sets what a click on a message does.
-     *
-     * @param clicked the action, given what the message opens; run on the thread that reports the click
-     */
+    /** The action is given what the message opens, and runs on the thread that reports the click. */
     synchronized void onClick(Consumer<NotificationTarget> clicked) {
         this.clicked = clicked;
     }
 
-    /**
-     * The icon is in the tray: messages can be shown from now on.
-     *
-     * @param display shows a message on the icon
-     */
+    /** The icon is in the tray: messages can be shown from now on. */
     synchronized void attach(Display display) {
         this.display = display;
     }
@@ -68,8 +59,6 @@ final class TrayMessages {
 
     /**
      * Shows a message, or logs once that there is no tray icon to show it on.
-     *
-     * @param text what the message says
      */
     synchronized void show(NotificationText text) {
         if (display == null) {

@@ -37,7 +37,6 @@ final class Kernel32 {
      * Makes an event without a name that resets itself once a wait has seen it; {@link #close} closes it again.
      *
      * @return the event's handle, not signalled yet
-     * @throws IOException when Windows refuses
      */
     static MemorySegment newEvent() throws IOException {
         var event = Advapi32.call(() -> (MemorySegment) CREATE_EVENT.invokeExact(MemorySegment.NULL, 0, 0,
@@ -51,7 +50,6 @@ final class Kernel32 {
     /**
      * Waits, as long as it takes, until an event is signalled.
      *
-     * @param event the event's handle, from {@link #newEvent()}
      * @throws IOException when the wait fails, such as for a handle that was closed
      */
     static void await(MemorySegment event) throws IOException {
@@ -62,12 +60,6 @@ final class Kernel32 {
         }
     }
 
-    /**
-     * Closes a handle, such as an event's.
-     *
-     * @param handle the handle to close
-     * @throws IOException when Windows refuses
-     */
     static void close(MemorySegment handle) throws IOException {
         int closed = Advapi32.call(() -> (int) CLOSE_HANDLE.invokeExact(handle),
                 e -> new IOException("could not close a handle", e));
