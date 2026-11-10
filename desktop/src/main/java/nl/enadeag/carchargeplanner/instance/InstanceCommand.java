@@ -28,9 +28,8 @@ public enum InstanceCommand {
     }
 
     /**
-     * The command a line holds.
+     * The line is as received, without its end, and may be anything another program sent.
      *
-     * @param line the line as received, without its end; may be anything another program sent
      * @return the command, or empty when the line is not exactly one of the commands' words
      */
     static Optional<InstanceCommand> of(String line) {

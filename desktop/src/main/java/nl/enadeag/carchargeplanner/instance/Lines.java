@@ -19,13 +19,7 @@ final class Lines {
     private Lines() {
     }
 
-    /**
-     * Sends one line.
-     *
-     * @param channel the connected channel, in blocking mode
-     * @param text the line without its end; ASCII
-     * @throws IOException when the line could not be sent
-     */
+    /** The channel is in blocking mode; the text is one line without its end, ASCII. */
     static void write(SocketChannel channel, String text) throws IOException {
         var buffer = ByteBuffer.wrap((text + "\n").getBytes(StandardCharsets.US_ASCII));
         while (buffer.hasRemaining()) {
@@ -34,13 +28,10 @@ final class Lines {
     }
 
     /**
-     * Reads one line, waiting no longer than the timeout. The channel is in blocking mode again afterwards.
+     * The channel is in blocking mode again afterwards; the timeout is for the whole line and more than zero.
      *
-     * @param channel the connected channel, in blocking mode
-     * @param timeout how long to wait for the whole line; more than zero
      * @return the line without its end, or empty when none came in time, the other side closed first, or it was longer
      *     than {@link #MAX_LENGTH}
-     * @throws IOException when reading fails
      */
     static Optional<String> read(SocketChannel channel, Duration timeout) throws IOException {
         var buffer = ByteBuffer.allocate(MAX_LENGTH);
