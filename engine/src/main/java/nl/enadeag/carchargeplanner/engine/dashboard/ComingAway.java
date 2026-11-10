@@ -43,7 +43,8 @@ public sealed interface ComingAway {
     }
 
     /**
-     * The car is away the whole day.
+     * The car is away the whole day. The record does not check that its period is that day, as it has no time zone;
+     * only {@link ComingAway#describe} builds it.
      *
      * @param day the day, never null
      * @param period the period as the engine stores it, from the day's midnight to the next, never null
@@ -52,7 +53,8 @@ public sealed interface ComingAway {
     }
 
     /**
-     * The car is away part of one day.
+     * The car is away part of one day. The record does not check that its period falls within one day, as it has no
+     * time zone; only {@link ComingAway#describe} builds it.
      *
      * @param day the day, never null
      * @param period the period as the engine stores it, within the day, never null
