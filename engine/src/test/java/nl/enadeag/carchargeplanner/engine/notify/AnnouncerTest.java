@@ -325,6 +325,36 @@ class AnnouncerTest {
     }
 
     @Test
+    void aLeadTimeOfZeroAnnouncesAWindowWithAFixedStartUpToTheSecondBeforeTenMinutesAfterIt() {
+        var days = dayWith(window(10, 15));
+
+        assertThat(check(announcer(), days, at(DAY, 10, 0).plusSeconds(599), 0)).hasSize(1);
+        assertThat(check(announcer(), days, at(DAY, 10, 0).plusSeconds(600), 0)).isEmpty();
+    }
+
+    @Test
+    void aSolarWindowRunningForAWhileAndNotAnnouncedIsAnnouncedOnceWithALeadOfZeroAndNotWithFiveMinutes() {
+        // the planner cuts a running window to begin at the moment of the round
+        var now = at(DAY, 10, 40);
+        var running = new Window(now, at(DAY, 15, 0), 7, 1.6, 6.0, 0.1);
+        var announcer = announcer();
+
+        assertThat(check(announcer(), dayWith(running), now, 5)).isEmpty();
+        assertThat(check(announcer, dayWith(running), now, 0)).containsExactly(running);
+        var later = new Window(at(DAY, 10, 41), at(DAY, 15, 0), 7, 1.6, 6.0, 0.1);
+        assertThat(check(announcer, dayWith(later), at(DAY, 10, 41), 0)).isEmpty();
+    }
+
+    @Test
+    void aWindowShorterThanTenMinutesIsDueUntilItsEndWithALeadOfZero() {
+        var days = dayWith(new Window(at(DAY, 10, 0), at(DAY, 10, 6), 7, 1.6, 0.2, 0.1));
+
+        assertThat(nextDue(announcer(), days, at(DAY, 9, 0), 0)).contains(at(DAY, 10, 0));
+        assertThat(nextDue(announcer(), days, at(DAY, 10, 5), 0)).contains(at(DAY, 10, 5));
+        assertThat(nextDue(announcer(), days, at(DAY, 10, 6), 0)).isEmpty();
+    }
+
+    @Test
     void aLeadTimeOfZeroAnnouncesAWindowOnce() {
         var announcer = announcer();
         var days = dayWith(window(10, 15));

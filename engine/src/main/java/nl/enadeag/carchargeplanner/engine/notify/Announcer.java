@@ -18,13 +18,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Decides when the owner is told about a charge window: once, within the notification lead time before it starts;
+ * Decides when the owner is told about a charge window: once, within the notification lead time before it starts (with
+ * a lead time of 0, when a round first sees it begun);
  * what the owner is told about the trips; and, by the same rules, when the next of those notices is due, for a client
  * that wakes the device for it. Each announcement is logged, with its kind and the window's start, and each notice
  * about a trip with the trip's departure.
  *
- * <p>Only windows that have not started are announced. A window that overlaps one announced before counts as
- * announced, for a newer forecast can move a start by a few minutes. Nothing is announced while the forecast could
+ * <p>Only windows that have not started are announced, or, with a lead time of 0, that a round
+ * sees running. A window that overlaps one announced before counts as announced, for a newer forecast can move a start by a few minutes. Nothing is announced while the forecast could
  * not be refreshed or is older than {@link #MAX_FORECAST_AGE}: the owner would act on a plan that may be wrong.
  */
 public final class Announcer {
@@ -187,10 +188,7 @@ public final class Announcer {
         }
     }
 
-    /**
-     * A window is announced within the lead time before its start, and not once it has started; with a lead time of 0,
-     * at its start.
-     */
+    /** Before its start, or with a lead time of 0 from its start. */
     private static NoticeSpan span(Window window, Duration lead) {
         return NoticeSpan.beforeStart(window.start(), lead, window.end());
     }

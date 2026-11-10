@@ -8,7 +8,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 - A round with `STORED_ONLY`, used only by the alarm's and the boot receiver's rounds, never asks a provider and reads no API key: it plans from the primary's stored forecast while that is still useful, else the fallback's, and does not wait for a provider being asked (#359).
 - Each provider's cache file keeps `refreshFailed`, cleared by its next answer, not by a settings save; every failed ask counts, a cool-down and a missing required setting included. A stored-only round tells such a forecast as stale, so nothing is announced while the forecast could not be refreshed (#359).
-- `Engine.nextNoticeDue` gives the earliest moment a window not yet announced (its start minus the lead time) or a trip's charge start is due; moments at which the forecast would be stale or more than 6 hours old are left out, and so are the battery check and a short trip (#359).
+- `Engine.nextNoticeDue` gives the earliest moment a window not yet announced (its start minus the lead time, or with a lead of 0 its start) or a trip's charge start is due; moments at which the forecast would be stale or more than 6 hours old are left out, and so are the battery check and a short trip (#359).
 - `keyRefusedBy` (a 401 or 403) names the providers that refused their key, also while a fallback answered or an older forecast is used, until the provider answers or the keys or settings are saved; a stored-only round never says so (#359).
 - Only classes in the package `nl.enadeag.carchargeplanner.android.background` may make a round or ask for the next notice, through `EngineAccess`; `AppArchitectureTest` holds this (#359).
 - `ForecastService.refresh` must not be wired to a caller before a key refused to a forced request within the minimum refresh interval reaches the next ordinary request (#359).
@@ -50,7 +50,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - A failure is logged by its kind only and ends the round as a success. A round without an outlook sets the alarm 9 minutes from now, so the alarm never stops coming; each further one in a row doubles the gap, 18, 36, then at most 60 minutes, and a round with an outlook resets it. The count is `missed_rounds` in the `state` store (#362).
 - The alarm is `setAndAllowWhileIdle(RTC_WAKEUP)` with the fixed request code 362, so each alarm replaces the last. Its receiver, not exported, runs the round under `goAsync()` for at most 8 seconds, below the 10 Android gives a broadcast (#362).
 - `BootReceiver`, exported for `BOOT_COMPLETED` and `MY_PACKAGE_REPLACED` only, runs the stored-only round within 8 seconds, then asks for a round now while the app is set up and notifications are allowed (#362).
-- A lead under about 10 minutes is best effort: Android 12 and later may delay the alarm up to an hour while saving battery (#362).
+- A lead under about 10 minutes is best effort: Android 12 and later may delay the alarm up to an hour while saving battery; with a lead of 0 the alarm is set for the start (#362, #360).
 
 ### WorkManager
 

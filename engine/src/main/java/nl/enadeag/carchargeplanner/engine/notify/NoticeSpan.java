@@ -11,24 +11,22 @@ import java.util.Optional;
 record NoticeSpan(Instant from, Instant until) {
 
     /**
-     * How long after its start something is still told when the notification lead time is 0. The desktop's rounds
-     * come every minute, but Android's alarm is inexact and may be late.
+     * How long after its start something whose start is fixed, such as a trip's planned grid charge, is still told when
+     * the notification lead time is 0: a round or the phone's alarm may come late. A running solar window begins at
+     * each round's moment, so it is told when a round first sees it.
      */
     static final Duration AT_START_GRACE = Duration.ofMinutes(10);
 
     /**
-     * @param until the moment from which the notice may no longer be told, such as the start itself
+     * @param until the moment from which the notice may no longer be told, such as the window's end
      */
     static NoticeSpan before(Instant start, Duration lead, Instant until) {
         return new NoticeSpan(start.minus(lead), until);
     }
 
     /**
-     * The time in which something that starts is told when it is not already running: from the lead time before its
-     * start until the start. With a lead time of 0 that is no time at all, so then from the start until
-     * {@link #AT_START_GRACE} later, but never past {@code end}.
-     *
-     * @param end when what starts is over
+     * As {@link #before}, until the start; but with a lead of 0 that is empty, so then from the start for
+     * {@link #AT_START_GRACE}, not past {@code end}.
      */
     static NoticeSpan beforeStart(Instant start, Duration lead, Instant end) {
         if (lead.isZero()) {

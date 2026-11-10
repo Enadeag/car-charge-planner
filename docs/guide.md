@@ -27,7 +27,7 @@ When the app is started hidden at login, set-up does not open by itself; one not
 - **Add** on the Car away card marks the car away on the day you are looking at, all day or from a time to a time; the card lists the coming ones, each with **Remove**. The plan changes at once. Weekly away periods are in Settings, which the footer's **Away** button opens.
 - **Add trip** on the Trips card enters a drive from home and back; each day's tab lists the trips the car is away for that day. [Trips](#trips) says how.
 - Right-click the icon for **Open dashboard**, **Settings…** (**Set up…** until the app is set up), **About…** and **Quit**.
-- A desktop notification comes a few minutes before each charge window (the lead time is a setting, and a lead of 0 tells you at the start), once per window; trips have their own [notifications](#notifications-for-trips). Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
+- A desktop notification comes a few minutes before each charge window (the lead time is a setting, and a lead of 0 tells you at the start, or when the app first sees the window running), once per window; trips have their own [notifications](#notifications-for-trips). Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/dashboard-trip-dark.png"><img alt="Two dashboards on a day with a trip: the advice for the trip, with its solar and grid parts, the start and the charge limit, and the trip with its choices; and a new trip being entered." src="screenshots/java/dashboard-trip-light.png" width="600"></picture>
 
@@ -83,7 +83,7 @@ Two settings on the Car page of Settings (Car and house) belong to trips:
 
 Only when a trip asks for it, and never for a trip that is not with this car:
 
-- **Start charging**: shortly before a trip's grid charge begins, with the time, and the charge limit to set. When little time is left it says to start now.
+- **Start charging**: shortly before a trip's grid charge begins (at its start with a lead of 0), with the time, and the charge limit to set. When little time is left it says to start now.
 - **Check the battery level**: the plan assumes a level until you enter one, and for a trip that needs a grid charge, or has little to spare, it asks whether it is right, when you have not entered one in the last 12 hours. It comes within the charging hours, from the day before the departure, and again only if the trip comes to need much more from the grid. The button (**Enter battery level**) opens the entry of the level; a click on the notification does the same.
 - **Plan a charging stop**: from 19:00 the day before a trip the battery cannot make, with the number of kilometres short.
 

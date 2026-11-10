@@ -62,14 +62,14 @@ class TripNoticesTest {
         return day.atTime(hour, minute).atZone(BRUSSELS).toInstant();
     }
 
-    /** The example system, which charges on one phase to a target of 80 %, with a lead time of 15 minutes unless the test sets another. */
+    /** The example system, charging on one phase to a target of 80 %, with {@code leadMinutes} of lead time. */
     private EngineConfig config() {
         try {
             var example = new ConfigFile(Path.of("docs", "example-engine.json"), FILES).read();
             var planning = example.planning();
             return example.withPlanning(new PlanningPreferences(planning.minimumPct(), planning.targetPct(),
-                    planning.margin(), planning.importToleranceKwh(), planning.minWindow(), Duration.ofMinutes(leadMinutes),
-                    hours));
+                    planning.margin(), planning.importToleranceKwh(), planning.minWindow(),
+                    Duration.ofMinutes(leadMinutes), hours));
         } catch (ConfigProblem e) {
             throw new AssertionError(e);
         }
@@ -271,6 +271,37 @@ class TripNoticesTest {
         assertThat(nextDue(announcer(), advice, at(SATURDAY, 21, 0))).contains(at(SATURDAY, 21, 0));
         assertThat(nextDue(announcer(), advice, at(SATURDAY, 21, 9))).contains(at(SATURDAY, 21, 9));
         assertThat(nextDue(announcer(), advice, at(SATURDAY, 21, 10))).isEmpty();
+    }
+
+    @Test
+    void aPlannedGridChargeIsAnnouncedUpToTheSecondBeforeTenMinutesAfterItsStartWithALeadOfZero() {
+        leadMinutes = 0;
+        var advice = withGrid(SATURDAY_EVENING, TripGridCharge.Start.PLANNED);
+        var start = at(SATURDAY, 21, 0);
+
+        assertThat(only(TripChargeStart.class, check(announcer(), advice, start.plusSeconds(599)))).hasSize(1);
+        assertThat(only(TripChargeStart.class, check(announcer(), advice, start.plusSeconds(600)))).isEmpty();
+    }
+
+    @Test
+    void aToldPlannedGridChargeIsNotDueAgainWithALeadOfZero() {
+        leadMinutes = 0;
+        var announcer = announcer();
+        var advice = withGrid(SATURDAY_EVENING, TripGridCharge.Start.PLANNED);
+        check(announcer, advice, at(SATURDAY, 21, 0));
+
+        assertThat(nextDue(announcer, advice, at(SATURDAY, 21, 1))).isEmpty();
+        assertThat(nextDue(announcer(), advice, at(SATURDAY, 21, 1))).as("after a restart").isEmpty();
+    }
+
+    @Test
+    void aLeadTimeOfOneMinuteAnnouncesAPlannedGridChargeBeforeItsStartAndNotAtIt() {
+        leadMinutes = 1;
+        var advice = withGrid(SATURDAY_EVENING, TripGridCharge.Start.PLANNED);
+
+        assertThat(only(TripChargeStart.class, check(announcer(), advice, at(SATURDAY, 20, 58)))).isEmpty();
+        assertThat(only(TripChargeStart.class, check(announcer(), advice, at(SATURDAY, 20, 59)))).hasSize(1);
+        assertThat(only(TripChargeStart.class, check(announcer(), advice, at(SATURDAY, 21, 0)))).isEmpty();
     }
 
     @Test

@@ -17,7 +17,7 @@ Decisions about trips entered by hand ([ADR 0009](../../adr/0009-trips-and-calen
 
 ### Trip notices
 
-- The start of a trip's grid charge is told once per trip, like an announcement of a grid charge: within the notification lead time before a planned start, and, for a charge that has to start now, from the lead time before its start until its end, also outside the charging hours when the plan says so (#231).
+- The start of a trip's grid charge is told once per trip, like an announcement of a grid charge: within the notification lead time before a planned start (with a lead of 0, from its start for 10 minutes at most, never past its end), and, for a charge that has to start now, from the lead time before its start until its end, also outside the charging hours when the plan says so (#231, #360).
 - A trip's grid charge stays out of the windows the planner keeps as announced (`announced.json`), so telling it never makes the planner plan a second grid charge (#231).
 - A trip that even a full battery cannot make is told once per trip, within the charging hours, from 19:00 on the day before the departure; it names how many km are missing and says to plan a charging stop (#231).
 - The three trip notices are kept per trip in `trip-notices.json`, so a restart tells nothing again, and a trip's entry goes a day after its departure (#231).
