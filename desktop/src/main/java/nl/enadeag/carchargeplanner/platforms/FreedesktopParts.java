@@ -42,11 +42,6 @@ final class FreedesktopParts implements PlatformParts {
     private final Host host;
     private final BusConnector sessionBus = BusConnector.sessionBus();
 
-    /**
-     * Makes the parts; nothing is connected yet.
-     *
-     * @param host the system and its user, for the folders and the private icon folders
-     */
     FreedesktopParts(Host host) {
         this.host = host;
     }

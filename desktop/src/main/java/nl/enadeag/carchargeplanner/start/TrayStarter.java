@@ -8,12 +8,10 @@ import java.time.InstantSource;
 /** Puts the icon in the tray, trying again for a while when the tray is not there yet, as at login. */
 final class TrayStarter {
 
-    /** How long to wait between two tries. */
     static final Duration RETRY = Duration.ofMillis(500);
 
     private static final System.Logger LOG = System.getLogger(TrayStarter.class.getName());
 
-    /** Waits between two tries. */
     @FunctionalInterface
     interface Sleeper {
 
@@ -29,26 +27,14 @@ final class TrayStarter {
     private final InstantSource clock;
     private final Sleeper sleeper;
 
-    /**
-     * Makes the starter.
-     *
-     * @param clock tells when the wait is over
-     * @param sleeper waits between two tries, such as {@link Thread#sleep(Duration)}
-     */
     TrayStarter(InstantSource clock, Sleeper sleeper) {
         this.clock = clock;
         this.sleeper = sleeper;
     }
 
     /**
-     * Adds the icon to the tray, trying until it works or the wait is over.
-     *
-     * @param tray the system's tray
-     * @param actions what the icon and its menu do
-     * @param wait how long to keep trying; zero for one try
-     * @return true when the icon is in the tray; false when no tray came, which is logged: the dashboard is then a
-     *     window
-     * @throws InterruptedException when the thread was interrupted while it waited
+     * The wait is how long to keep trying, zero for one try. Gives false when no tray came, which is logged: the
+     * dashboard is then a window.
      */
     boolean tryAdd(Tray tray, Tray.Actions actions, Duration wait) throws InterruptedException {
         var deadline = clock.instant().plus(wait);

@@ -26,7 +26,6 @@ import java.util.logging.StreamHandler;
  */
 final class LogFile extends StreamHandler {
 
-    /** The start of each file's name. */
     static final String NAME = AppName.ID;
 
     private final Path folder;
@@ -38,13 +37,10 @@ final class LogFile extends StreamHandler {
     /**
      * Opens the newest file, adding to what it holds.
      *
-     * @param folder the folder the files are in; made, private, when it is missing
+     * @param folder made, private, when it is missing
      * @param limit the size in bytes after which a file is rotated; a record is never split, so a file may grow a
      *     little past it; at least 1
      * @param count how many files are kept, the newest included; at least 1
-     * @param formatter how each record is written
-     * @param files how the folder and the files are made, private, on this system
-     * @throws IOException when the folder or the file could not be made or opened
      * @throws IllegalArgumentException when the limit or the count is less than 1
      */
     LogFile(Path folder, long limit, int count, Formatter formatter, PrivateFiles files) throws IOException {
@@ -64,7 +60,6 @@ final class LogFile extends StreamHandler {
     /**
      * The file that records are written to now, to tell the owner where to look.
      *
-     * @param folder the folder the files are in
      * @return the newest file; it need not exist yet
      */
     static Path newest(Path folder) {
@@ -116,11 +111,7 @@ final class LogFile extends StreamHandler {
     /** Counts what is written to the newest file, so its size is known without asking the disk at every record. */
     private final class Counting extends FilterOutputStream {
 
-        /**
-         * Counts what goes to a stream.
-         *
-         * @param out the newest file's stream, closed when this is closed
-         */
+        /** The newest file's stream, closed when this is closed. */
         Counting(OutputStream out) {
             super(out);
         }

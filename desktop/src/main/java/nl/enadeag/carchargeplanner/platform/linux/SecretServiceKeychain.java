@@ -58,7 +58,6 @@ public final class SecretServiceKeychain implements Keychain {
     private static final String LABEL_PROPERTY = "org.freedesktop.Secret.Item.Label";
     private static final String ATTRIBUTES_PROPERTY = "org.freedesktop.Secret.Item.Attributes";
 
-    /** One step done over the open connection. */
     private interface Step<T> {
         T run(DBusConnection bus) throws DBusException, KeychainException;
     }
@@ -67,8 +66,6 @@ public final class SecretServiceKeychain implements Keychain {
      * A prompt that shows, and the handler that waits for its end.
      *
      * @param bus the connection it was asked for on, which the service ties it to
-     * @param path the prompt's object path
-     * @param listening removes the handler again
      */
     private record Shown(DBusConnection bus, String path, AutoCloseable listening) {
     }

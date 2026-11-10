@@ -36,13 +36,10 @@ final class SetUpCheck implements SetUpStepPage {
     private int asked;
 
     /**
-     * Makes the step; nothing is asked until {@link #check(EngineConfig, Secrets)}.
+     * Nothing is asked until {@link #check(EngineConfig, Secrets)}.
      *
      * @param askProvider asks the config's primary provider for one forecast with these keys, nothing saved; blocks,
      *     so it is called away from the JavaFX thread
-     * @param providers what the known providers tell about themselves, to name the one asked
-     * @param background asks the provider away from the JavaFX thread
-     * @param messages the texts, in the language set-up speaks
      */
     SetUpCheck(BiFunction<EngineConfig, Secrets, ConnectionResult> askProvider, List<ProviderInfo> providers,
             Background background, Messages messages) {

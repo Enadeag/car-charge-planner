@@ -15,7 +15,6 @@ import java.io.UncheckedIOException;
  */
 final class DashboardChanges {
 
-    /** One change saved through the engine. */
     @FunctionalInterface
     private interface Change {
         void save() throws IOException;
@@ -24,31 +23,15 @@ final class DashboardChanges {
     private final Engine engine;
     private final Background saving;
 
-    /**
-     * Makes the changes' way to the engine.
-     *
-     * @param engine saves each change, and plans again after it
-     * @param saving runs the saves one at a time, in order, away from the JavaFX thread, and logs one that fails
-     */
     DashboardChanges(Engine engine, Background saving) {
         this.engine = engine;
         this.saving = saving;
     }
 
-    /**
-     * Saves the battery level the owner entered.
-     *
-     * @param level the level the car shows
-     */
     void setBatteryLevel(Percent level) {
         save("the battery level", () -> engine.setBatteryLevel(level));
     }
 
-    /**
-     * Saves an away period the owner entered.
-     *
-     * @param period the time the car is away
-     */
     void addAwayPeriod(OneOffAwayPeriod period) {
         save("the away period", () -> engine.addAwayPeriod(period));
     }
@@ -62,21 +45,11 @@ final class DashboardChanges {
         save("the removal of the away period", () -> engine.removeAwayPeriod(period));
     }
 
-    /**
-     * Saves a trip the owner entered.
-     *
-     * @param trip the trip
-     */
     void addTrip(Trip trip) {
         save("the trip", () -> engine.addTrip(trip));
     }
 
-    /**
-     * Saves the owner's change to a trip.
-     *
-     * @param trip the trip as the dashboard showed it
-     * @param changed the trip as the owner changed it
-     */
+    /** The trip is as the dashboard showed it, changed is as the owner changed it. */
     void changeTrip(Trip trip, Trip changed) {
         save("the change to the trip", () -> engine.changeTrip(trip, changed));
     }

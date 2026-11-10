@@ -22,7 +22,6 @@ import jdk.net.ExtendedSocketOptions;
 final class InstanceServer implements AutoCloseable {
 
     private static final System.Logger LOG = System.getLogger(InstanceServer.class.getName());
-    /** The answer that confirms a command. */
     static final String OK = "ok";
 
     private final ServerSocketChannel channel;
@@ -39,16 +38,13 @@ final class InstanceServer implements AutoCloseable {
     }
 
     /**
-     * Makes the socket and listens on it; commands are taken once {@link #serve(Consumer)} is called. Where files have
-     * a mode the socket gets mode 0600.
+     * Commands are taken once {@link #serve(Consumer)} is called. Where files have a mode the socket gets mode 0600.
      *
-     * @param socket where the socket is made, in a private folder; nothing may be there yet
-     * @param owner the user this app runs as, the only one whose connections are taken where the system names a
-     *     socket's peer (Linux); unchecked where it cannot (Windows), where the private folder alone keeps others out
-     * @param timeout how long a connection may take to send its line; more than zero
-     * @return the server, listening
+     * @param socket nothing may be there yet
+     * @param owner the only user whose connections are taken where the system names a socket's peer (Linux);
+     *     unchecked where it cannot (Windows), where the private folder alone keeps others out
+     * @param timeout more than zero
      * @throws java.net.BindException when something is at {@code socket} already, a live server or one left behind
-     * @throws IOException when the socket cannot be made
      */
     static InstanceServer bind(Path socket, Owner owner, Duration timeout) throws IOException {
         var channel = ServerSocketChannel.open(StandardProtocolFamily.UNIX);

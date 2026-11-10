@@ -101,14 +101,6 @@ public final class Commands {
         record OnlyFromLauncher() implements MenuEntry { }
     }
 
-    /**
-     * Makes the commands; nothing is done yet.
-     *
-     * @param messages the texts in the owner's language
-     * @param instance the single-instance guard, to reach the running app
-     * @param startAtLogin the system's start at login, or why it cannot be switched
-     * @param menuEntry the Linux menu entry, or why it cannot be installed
-     */
     Commands(Messages messages, SingleInstance instance, LoginSwitch startAtLogin, MenuEntry menuEntry) {
         this.messages = messages;
         this.instance = instance;

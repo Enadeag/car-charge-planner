@@ -34,10 +34,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
-/**
- * The dashboard itself: the header, the day tabs with the selected day below them (or why there is no plan), and the
- * footer. The popup and the window both show this one component.
- */
 final class DashboardView extends VBox {
 
     private final Messages messages;
@@ -60,14 +56,9 @@ final class DashboardView extends VBox {
     private boolean canOpenSetUp;
 
     /**
-     * Makes the dashboard, empty until {@link #show(DashboardModel)}.
-     *
-     * @param detachAction what the header's button does: open the popup as a window
      * @param contentChanged called when another day or a new plan shows, so the popup or window can fit it
      * @param reducedMotion true while the system asks for reduced motion
      *     ({@code Platform.getPreferences().reducedMotionProperty()}); the charts then change without moving
-     * @param appName the app's name, for the header; the same in every language
-     * @param messages the texts, in the owner's language
      */
     DashboardView(Runnable detachAction, Runnable contentChanged, ObservableValue<Boolean> reducedMotion,
             String appName, Messages messages) {
@@ -127,8 +118,6 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Which day tab is selected.
-     *
      * @return the selected day's index, from 0 for today; 0 while no plan shows
      */
     int selectedDay() {
@@ -136,8 +125,6 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Selects a day tab and shows that day, as a click on its tab does.
-     *
      * @param index the day's index, from 0 for today; an index past the last day selects the last day and one below
      *     0 selects today, and without a plan nothing happens
      */
@@ -158,8 +145,6 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Lets the owner enter today's battery level on the battery card.
-     *
      * @param handler gets the level the owner saved, in percent from 0 to 100, on the JavaFX thread
      */
     void onBatteryEntered(IntConsumer handler) {
@@ -198,18 +183,14 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Lets the footer's Away button open the weekly away periods.
-     *
-     * @param action what the button does; called on the JavaFX thread
+     * @param action called on the JavaFX thread
      */
     void onWeeklyAway(Runnable action) {
         footer.onWeeklyAway(action);
     }
 
     /**
-     * Lets the footer's Settings button open Settings.
-     *
-     * @param action what the button does; called on the JavaFX thread
+     * @param action called on the JavaFX thread
      */
     void onSettings(Runnable action) {
         footer.onSettings(action);

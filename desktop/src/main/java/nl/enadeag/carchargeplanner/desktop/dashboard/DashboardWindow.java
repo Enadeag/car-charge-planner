@@ -10,8 +10,8 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 /**
- * The dashboard in a window of its own: in window mode, or the popup detached. Closing it hides it, and so does Escape
- * while the tray can bring it back; Escape in an open entry, such as the battery level's, closes only the entry.
+ * Closing it hides it, and so does Escape while the tray can bring it back; Escape in an open entry, such as the
+ * battery level's, closes only the entry.
  */
 final class DashboardWindow {
 
@@ -20,13 +20,6 @@ final class DashboardWindow {
     /** False once closing quits the app: Escape is too easy a key for that. */
     private boolean escapeHides = true;
 
-    /**
-     * Makes the window, hidden.
-     *
-     * @param theme makes the window light or dark as the system is
-     * @param icon the app icon, for the title bar and the taskbar
-     * @param appName the app's name, for the title bar and the taskbar
-     */
     DashboardWindow(WindowTheme theme, AppIcon icon, String appName) {
         var scene = new Scene(content);
         theme.style(scene);
@@ -45,11 +38,6 @@ final class DashboardWindow {
         });
     }
 
-    /**
-     * Shows the dashboard in the window, in front, sized to its content.
-     *
-     * @param view the dashboard to show; taken out of the popup if it is there
-     */
     void show(DashboardView view) {
         view.setDetachable(false);
         content.getChildren().setAll(view);
@@ -61,10 +49,8 @@ final class DashboardWindow {
     }
 
     /**
-     * Puts another view where one is shown, such as the same dashboard in another language. The window stays open or
-     * closed, and fits the new view.
+     * The window stays open or closed, and fits the new view.
      *
-     * @param before the view that may be in the window now
      * @param after the view to show in its place; nothing changes when the window does not hold {@code before}
      */
     void replace(DashboardView before, DashboardView after) {
@@ -75,11 +61,6 @@ final class DashboardWindow {
         }
     }
 
-    /**
-     * Whether the window is open.
-     *
-     * @return true while it shows
-     */
     boolean isShowing() {
         return stage.isShowing();
     }

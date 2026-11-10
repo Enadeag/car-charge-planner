@@ -79,7 +79,6 @@ public final class AppSettingsFile {
         file.write(settings);
     }
 
-    /** The JSON shape of the settings. */
     private final class Format implements FileFormat<AppSettings> {
 
         @Override
@@ -102,7 +101,6 @@ public final class AppSettingsFile {
                     .put("appearance", settings.appearance().code()));
         }
 
-        /** A value of the file the app knows, or empty (and logged when it was there but unknown). */
         private <T> Optional<T> value(JsonNode values, String key, Function<String, Optional<T>> known) {
             if (!values.has(key)) {
                 return Optional.empty();

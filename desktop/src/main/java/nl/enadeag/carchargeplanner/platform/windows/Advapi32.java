@@ -76,11 +76,6 @@ final class Advapi32 {
     private Advapi32() {
     }
 
-    /**
-     * One call through a method handle of this class.
-     *
-     * @param <T> what the call gives
-     */
     @FunctionalInterface
     interface NativeCall<T> {
 
@@ -97,13 +92,6 @@ final class Advapi32 {
      * Makes a call, turning the {@code Throwable} that {@code invokeExact} declares into the caller's exception. A
      * {@code RuntimeException} or {@code Error} is passed on as it is: it is a mistake in the call, not Windows
      * refusing.
-     *
-     * @param <T> what the call gives
-     * @param <E> the caller's exception
-     * @param call the call, such as {@code () -> (int) CRED_DELETE.invokeExact(...)}
-     * @param failure makes the caller's exception from the checked one the call threw
-     * @return what the call gave
-     * @throws E when the call threw a checked exception
      */
     static <T, E extends Exception> T call(NativeCall<T> call, Function<Throwable, E> failure) throws E {
         try {
@@ -118,8 +106,6 @@ final class Advapi32 {
     /**
      * A text as Windows' wide strings are, with the terminating null character the registry counts in a value's size.
      *
-     * @param arena holds the memory as long as the call needs it
-     * @param text the text to hand to Windows, such as a key's path, a value's name or a text value
      * @return the text in UTF-16LE with a null character at the end
      */
     static MemorySegment wide(Arena arena, String text) {
@@ -129,8 +115,6 @@ final class Advapi32 {
     /**
      * Reads a text value (REG_SZ) below HKEY_CURRENT_USER.
      *
-     * @param key the key's path below HKEY_CURRENT_USER
-     * @param name the value's name
      * @return the text; empty when the key or the value does not exist
      * @throws IOException when Windows refuses, or the value is not a text
      */
@@ -155,8 +139,6 @@ final class Advapi32 {
     /**
      * Reads a number value (REG_DWORD) below HKEY_CURRENT_USER.
      *
-     * @param key the key's path below HKEY_CURRENT_USER
-     * @param name the value's name
      * @return the number; empty when the key or the value does not exist
      * @throws IOException when Windows refuses, or the value is not a number
      */
@@ -178,11 +160,6 @@ final class Advapi32 {
 
     /**
      * Writes a text value (REG_SZ) below HKEY_CURRENT_USER, making the key when it does not exist.
-     *
-     * @param key the key's path below HKEY_CURRENT_USER
-     * @param name the value's name
-     * @param text the text to write
-     * @throws IOException when Windows refuses
      */
     static void writeText(String key, String name, String text) throws IOException {
         try (var arena = Arena.ofConfined()) {
@@ -196,10 +173,6 @@ final class Advapi32 {
 
     /**
      * Removes a value below HKEY_CURRENT_USER; nothing happens when it does not exist.
-     *
-     * @param key the key's path below HKEY_CURRENT_USER
-     * @param name the value's name
-     * @throws IOException when Windows refuses
      */
     static void deleteValue(String key, String name) throws IOException {
         try (var arena = Arena.ofConfined()) {
@@ -217,9 +190,7 @@ final class Advapi32 {
      * Opens a key below HKEY_CURRENT_USER to read its values and to be told when they change; {@link #closeKey}
      * closes it again.
      *
-     * @param key the key's path below HKEY_CURRENT_USER
      * @return the key's handle; empty when the key does not exist
-     * @throws IOException when Windows refuses
      */
     static Optional<MemorySegment> openKey(String key) throws IOException {
         try (var arena = Arena.ofConfined()) {
@@ -239,11 +210,8 @@ final class Advapi32 {
      * Asks Windows to signal an event at the next change to a value of an open key, or of the key itself. Each
      * request is for one change only; the thread that asks may end before it.
      *
-     * @param handle a key's handle from {@link #openKey}
-     * @param event the event to signal, from {@link Kernel32#newEvent()}
      * @param key the key's path, for the message of a failure
      * @return false when the key has been deleted, so nothing will change any more
-     * @throws IOException when Windows refuses
      */
     static boolean signalOnChange(MemorySegment handle, MemorySegment event, String key) throws IOException {
         int status = call(() -> (int) REG_NOTIFY_CHANGE_KEY_VALUE.invokeExact(handle, 0,
@@ -258,9 +226,7 @@ final class Advapi32 {
     /**
      * Closes a key that {@link #openKey} opened.
      *
-     * @param handle the key's handle
      * @param key the key's path, for the message of a failure
-     * @throws IOException when Windows refuses
      */
     static void closeKey(MemorySegment handle, String key) throws IOException {
         check(call(() -> (int) REG_CLOSE_KEY.invokeExact(handle), e -> failed("close", key, e)), "close", key);

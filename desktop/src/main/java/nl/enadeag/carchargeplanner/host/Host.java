@@ -63,13 +63,6 @@ public record Host(Os os, Map<String, String> environment, Path home, Path tempo
                 console != null && console.isTerminal(), flatpak);
     }
 
-    /**
-     * Whether the app runs in a Flatpak sandbox, told the way Flatpak documents.
-     *
-     * @param environment the environment variables, where Flatpak sets {@code FLATPAK_ID}
-     * @param flatpakInfo the file Flatpak puts in every sandbox, {@code /.flatpak-info}
-     * @return true when either is there
-     */
     static boolean inFlatpak(Map<String, String> environment, Path flatpakInfo) {
         return environment.containsKey("FLATPAK_ID") || Files.exists(flatpakInfo);
     }
@@ -80,7 +73,6 @@ public record Host(Os os, Map<String, String> environment, Path home, Path tempo
      * and the notification server outside could not read the icons. Its folder {@code app/<Flatpak ID>} is the one
      * that every run of the app and the desktop share, at the same path.
      *
-     * @param environment the environment variables in the sandbox
      * @return the environment with {@code XDG_RUNTIME_DIR} in that folder; unchanged when it is not an absolute path,
      *     so the app falls back as without one
      */

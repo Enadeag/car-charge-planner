@@ -19,10 +19,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
-/**
- * Finds the home's place from a name or postcode: the text goes to the primary forecast provider's place search, and
- * a chosen result fills in the coordinates and the time zone.
- */
 final class PlaceSearchCard {
 
     private final PlaceSearcher searcher;
@@ -37,12 +33,8 @@ final class PlaceSearchCard {
     private ProviderId provider = new ProviderId("open-meteo");
 
     /**
-     * Makes the card.
-     *
      * @param searcher asks the provider's place search; called away from the JavaFX thread
      * @param chosen gets the place the owner picked from the results, on the JavaFX thread
-     * @param background asks the place search away from the JavaFX thread
-     * @param messages the texts, in the owner's language
      */
     PlaceSearchCard(PlaceSearcher searcher, Consumer<Place> chosen, Background background, Messages messages) {
         this.searcher = searcher;
@@ -70,8 +62,6 @@ final class PlaceSearchCard {
 
     /**
      * Uses this provider's place search from now on, and forgets earlier results.
-     *
-     * @param primary the primary forecast provider as stored
      */
     void searchWith(ProviderId primary) {
         provider = primary;

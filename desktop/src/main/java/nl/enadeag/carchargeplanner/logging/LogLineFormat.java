@@ -20,12 +20,7 @@ final class LogLineFormat extends Formatter {
 
     private final ZoneId zone;
 
-    /**
-     * Makes the formatter.
-     *
-     * @param zone the time zone the times are written in, normally the system's own, so they match the owner's
-     *     clock; never null
-     */
+    /** The zone the times are written in, normally the system's own, so they match the owner's clock; never null. */
     LogLineFormat(ZoneId zone) {
         if (zone == null) {
             throw new IllegalArgumentException("the zone must not be null");

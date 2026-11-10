@@ -28,7 +28,6 @@ public final class AppLog implements AutoCloseable {
      */
     public static final String APP_LOGGER_NAME = "nl.enadeag.carchargeplanner";
 
-    /** The environment variable that sets the level of the app's own loggers, such as {@code DEBUG}. */
     static final String LEVEL_VARIABLE = "CAR_CHARGE_PLANNER_LOG_LEVEL";
     /** The size in bytes after which the log file is rotated. */
     static final long FILE_LIMIT = 1_000_000;

@@ -40,8 +40,6 @@ final class IconThemeFolder {
     /**
      * Writes an SVG for every dot. When that fails, the tray goes on with pixels: {@link #iconName(StatusDot)} then
      * names no icon.
-     *
-     * @param icon draws the icons
      */
     void write(StatusIcon icon) {
         var apps = icons.resolve("hicolor/scalable/apps");
@@ -60,9 +58,7 @@ final class IconThemeFolder {
     }
 
     /**
-     * Where the panel finds the icons, for the item's {@code IconThemePath}.
-     *
-     * @return the absolute path of the folder "icons" in the theme's own folder
+     * The absolute path of the folder "icons" in the theme's own folder, for the item's {@code IconThemePath}.
      */
     String path() {
         return icons.toAbsolutePath().toString();
@@ -72,7 +68,6 @@ final class IconThemeFolder {
      * The icon's name in this theme, for the item's {@code IconName}. Each dot has a name of its own, so a panel
      * that keeps icons by name never shows an old dot.
      *
-     * @param dot the dot the icon shows
      * @return a name such as "car_charge_planner_tray_sun", or an empty name when the icons could not be written
      */
     String iconName(StatusDot dot) {

@@ -30,8 +30,6 @@ record StartupDecision(DisplayMode mode, boolean atLogin, boolean notificationsN
     /**
      * Whether the app puts its icon in the tray: unless the owner wants a window, and then still when the
      * notifications need it.
-     *
-     * @return true to try the tray
      */
     boolean triesTheTray() {
         return mode != DisplayMode.WINDOW || notificationsNeedTheTray;
@@ -46,12 +44,7 @@ record StartupDecision(DisplayMode mode, boolean atLogin, boolean notificationsN
         return atLogin || mode == DisplayMode.TRAY ? TRAY_WAIT : Duration.ZERO;
     }
 
-    /**
-     * How the dashboard starts.
-     *
-     * @param trayShown whether the tray icon is there
-     * @return the popup behind the tray icon, or the window, opened unless the app started at login
-     */
+    /** The popup behind the tray icon, or the window, opened unless the app started at login. */
     DashboardStart dashboard(boolean trayShown) {
         if (trayShown && mode != DisplayMode.WINDOW) {
             return DashboardStart.POPUP;

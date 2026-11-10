@@ -77,10 +77,6 @@ public final class JdkHttpGet implements HttpGet, AutoCloseable {
      * cause chain, as the client may wrap it; else an {@link IOException} as it is, and anything else but an
      * {@link Error} wrapped in one. Package-private so its tests can reach the failures no server can provoke, as the
      * real client hands back an {@link IOException} for everything a server does.
-     *
-     * @param cause what the answer failed with, not null
-     * @return the exception to throw
-     * @throws Error when the cause is one, as it is
      */
     static IOException failure(Throwable cause) {
         for (var reason = cause; reason != null; reason = reason.getCause()) {

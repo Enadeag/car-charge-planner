@@ -22,16 +22,10 @@ import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.beans.value.ObservableValue;
 
-/** Windows' parts: AWT's tray icon and its messages, the Credential Manager, the Run key and the text size. */
 final class WindowsParts implements PlatformParts {
 
     private final Host host;
 
-    /**
-     * Makes the parts; nothing is shown yet.
-     *
-     * @param host the system and its user, for the launcher that start at login starts
-     */
     WindowsParts(Host host) {
         this.host = host;
     }

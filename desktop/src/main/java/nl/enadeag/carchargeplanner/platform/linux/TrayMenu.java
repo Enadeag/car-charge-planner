@@ -20,7 +20,6 @@ import org.freedesktop.dbus.types.Variant;
  */
 final class TrayMenu implements DbusMenu, Properties {
 
-    /** The object path the menu is served on. */
     static final String OBJECT_PATH = "/MenuBar";
 
     private static final String NODE_SIGNATURE = "(ia{sv}av)";
@@ -60,7 +59,6 @@ final class TrayMenu implements DbusMenu, Properties {
      * Gives the entries new texts, such as in another language; the panel reads them once it is sent
      * {@link DbusMenu.LayoutUpdated} with the revision returned.
      *
-     * @param labels what the entries say from now on
      * @return the layout's new revision, one more than before
      */
     synchronized UInt32 relabel(MenuLabels labels) {

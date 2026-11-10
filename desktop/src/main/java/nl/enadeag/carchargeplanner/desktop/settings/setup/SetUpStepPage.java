@@ -3,7 +3,6 @@ package nl.enadeag.carchargeplanner.desktop.settings.setup;
 import java.util.function.Consumer;
 import javafx.scene.layout.Region;
 
-/** What one step of set-up shows, and what it does each time the owner reaches it. */
 interface SetUpStepPage {
 
     /**

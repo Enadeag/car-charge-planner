@@ -82,8 +82,6 @@ public final class PrivateFolder {
      *
      * @param path the folder; the folders above it that are missing are made too
      * @param owner the user this app runs as, who must own the folder; unchecked where files have no owner and mode
-     * @param modeChange how a folder's mode is changed
-     * @param entryOwner how the owner of a file in the folder is told
      */
     PrivateFolder(Path path, Owner owner, ModeChange modeChange, EntryOwner entryOwner) {
         this.path = path;

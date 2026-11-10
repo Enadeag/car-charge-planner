@@ -60,13 +60,9 @@ import javafx.scene.layout.VBox;
  */
 final class SetUpView extends BorderPane {
 
-    /** What set-up is doing. */
     private enum State {
-        /** Reading what is stored; no step shows it yet. */
         READING,
-        /** The steps can be edited. */
         READY,
-        /** Finish is saving. */
         SAVING,
         /** What is stored could not be read; closing and opening set-up tries again. */
         UNREADABLE
@@ -91,16 +87,10 @@ final class SetUpView extends BorderPane {
     private State state = State.READING;
 
     /**
-     * Makes the view; nothing shows until {@link #start(SettingsStorage.Stored, SetUpDraft, SetUpStep)}.
+     * Nothing shows until {@link #start(SettingsStorage.Stored, SetUpDraft, SetUpStep)}.
      *
-     * @param form what the steps show against what is stored
-     * @param pages every step's page
-     * @param app the page of the app's own settings, one of the pages
-     * @param close closes set-up; called after Cancel, and after Finish saved
      * @param finished gets the app settings Finish saved, after {@code close}, so the app can follow them, plan with
      *     what was saved and show the dashboard
-     * @param background saves at Finish away from the JavaFX thread
-     * @param messages the texts, in the language set-up speaks
      */
     SetUpView(SetUpForm form, Map<SetUpStep, SetUpStepPage> pages, AppPage app, Runnable close,
             Consumer<AppSettings> finished, Background background, Messages messages) {
@@ -155,15 +145,8 @@ final class SetUpView extends BorderPane {
     /**
      * Makes the view with every step's page, sharing Settings' pages and cards.
      *
-     * @param stores where the settings are kept, and the engine that checks, plans and searches
      * @param keysFile the file the API keys are kept in when there is no usable keychain
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
-     * @param reducedMotion true while the system asks for reduced motion, for the dashboard's preview
-     * @param appName the app's name, for the dashboard's preview
-     * @param close closes set-up; called after Cancel, and after Finish saved
-     * @param finished gets the app settings Finish saved, after {@code close}
-     * @param background does the slow work, such as asking a provider or saving, away from the JavaFX thread
-     * @param messages the texts, in the language set-up speaks
      * @return the view, saying that what is stored is being read, until
      *     {@link #start(SettingsStorage.Stored, SetUpDraft, SetUpStep)}
      */
@@ -233,8 +216,6 @@ final class SetUpView extends BorderPane {
 
     /**
      * Says that what is stored could not be read; set-up cannot go on until it is opened again.
-     *
-     * @param detail what went wrong, as the system said it
      */
     void showUnreadable(String detail) {
         goTo(State.UNREADABLE);
@@ -245,10 +226,6 @@ final class SetUpView extends BorderPane {
     /**
      * Shows a draft on a step. What the step does as the owner reaches it runs at once, as when it is reached with
      * Next: the check and the preview ask for a forecast.
-     *
-     * @param start what is stored, which Finish compares with
-     * @param draft what the steps show
-     * @param first the step to show
      */
     void start(SettingsStorage.Stored start, SetUpDraft draft, SetUpStep first) {
         goTo(State.READY);
@@ -259,19 +236,12 @@ final class SetUpView extends BorderPane {
         show(first);
     }
 
-    /**
-     * Whether set-up is still reading what is stored.
-     *
-     * @return true until {@link #start(SettingsStorage.Stored, SetUpDraft, SetUpStep)}
-     */
     boolean isReading() {
         return state == State.READING;
     }
 
     /**
      * Shows a step's page and asks what it asks for, such as a forecast; the focus goes to its first field.
-     *
-     * @param shown the step to show
      */
     void show(SetUpStep shown) {
         step = shown;
@@ -288,11 +258,6 @@ final class SetUpView extends BorderPane {
         firstField(page.view()).orElse(next).requestFocus();
     }
 
-    /**
-     * The step shown now.
-     *
-     * @return the step
-     */
     SetUpStep step() {
         return step;
     }
@@ -317,8 +282,6 @@ final class SetUpView extends BorderPane {
 
     /**
      * Calls an action whenever the owner chooses another appearance on the App step, and as it loads.
-     *
-     * @param action gets the appearance chosen, on the JavaFX thread
      */
     void onAppearanceChosen(Consumer<Appearance> action) {
         app.onAppearanceChanged(action);
@@ -362,11 +325,6 @@ final class SetUpView extends BorderPane {
         confirm.getChildren().get(1).requestFocus();
     }
 
-    /**
-     * Whether the question before leaving shows.
-     *
-     * @return true while set-up asks whether to leave
-     */
     boolean isAskingToLeave() {
         return confirm.isVisible();
     }
@@ -409,7 +367,6 @@ final class SetUpView extends BorderPane {
         }
     }
 
-    /** What Finish came to: closed when saved, otherwise the reason, with the focus on it. */
     private void afterFinish(SaveOutcome outcome, AppSettings chosen) {
         switch (outcome) {
             case SaveOutcome.Saved _ -> {

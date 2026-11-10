@@ -254,7 +254,6 @@ public final class DesktopApp {
         return new Windows(dashboard, settings, setUpOffer);
     }
 
-    /** What a command of a later start, or of the command line, does in this running app. */
     private Consumer<InstanceCommand> commandHandler(Dashboard dashboard, Notifications notifications,
             AnnouncementTexts texts) {
         return command -> {
@@ -279,7 +278,6 @@ public final class DesktopApp {
         LOG.log(Level.INFO, AppName.TITLE + " " + version() + " starts");
     }
 
-    /** Closes every part, in order, then ends the app. */
     private void quit() {
         closing.close();
         Platform.exit();

@@ -13,9 +13,8 @@ final class TrayActionSource {
     private long pressedAt = Long.MIN_VALUE;
 
     /**
-     * Makes the decider, with no press seen yet.
+     * How long after a press a second one still makes a double click, as the system is set.
      *
-     * @param doubleClick how long after a press a second one still makes a double click, as the system is set
      * @throws IllegalArgumentException when the time is negative
      */
     TrayActionSource(Duration doubleClick) {
@@ -25,11 +24,7 @@ final class TrayActionSource {
         this.doubleClickMillis = doubleClick.toMillis();
     }
 
-    /**
-     * The mouse went down on the icon.
-     *
-     * @param when the press's time in milliseconds, as AWT's events give it
-     */
+    /** The press's time is in milliseconds, as AWT's events give it. */
     synchronized void recordPress(long when) {
         pressedAt = when;
     }

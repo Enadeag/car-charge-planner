@@ -116,8 +116,6 @@ public final class SettingsStorage {
 
     /**
      * Where the API keys are kept; may ask the keychain whether it can be used, and then blocks.
-     *
-     * @return the keychain, or the private file
      */
     KeyStorage keyStorage() {
         return stores.engine().keyStorage();

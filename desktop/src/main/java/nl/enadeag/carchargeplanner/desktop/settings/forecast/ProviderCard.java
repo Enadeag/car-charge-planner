@@ -26,10 +26,6 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 
-/**
- * One forecast provider: what it is, what it is sent, its limits and terms, the settings it asks for (secret ones
- * hidden), and a test that asks it for a forecast with what is entered.
- */
 final class ProviderCard {
 
     private final ProviderInfo info;
@@ -44,11 +40,7 @@ final class ProviderCard {
     /**
      * Makes the card, with empty settings until {@link #load(Map, Map, boolean)}.
      *
-     * @param info what the provider tells about itself
      * @param tester asks the provider for a forecast; called away from the JavaFX thread
-     * @param openLink opens a web page in the owner's browser
-     * @param background asks the provider away from the JavaFX thread
-     * @param messages the texts, in the owner's language
      */
     ProviderCard(ProviderInfo info, ProviderTester tester, Consumer<URI> openLink, Background background,
             Messages messages) {
@@ -86,10 +78,6 @@ final class ProviderCard {
     }
 
     /**
-     * Shows the stored settings, as the ones not edited.
-     *
-     * @param plain the provider's settings from the config file
-     * @param secret the provider's secret settings from the keychain
      * @param keysLocked true when the stored secret settings could not be read as the keychain is locked: a secret
      *     field without a value then shows as locked, so it never empties a stored one
      */
@@ -108,8 +96,6 @@ final class ProviderCard {
     }
 
     /**
-     * The settings that are not secret, as entered.
-     *
      * @return per setting key its value; empty ones left out
      */
     Map<String, String> plain() {
@@ -117,8 +103,6 @@ final class ProviderCard {
     }
 
     /**
-     * The secret settings, as entered.
-     *
      * @return per setting key its value; empty ones left out
      */
     Map<String, String> secret() {
@@ -142,25 +126,16 @@ final class ProviderCard {
     /**
      * Whether a required setting is empty or a value has the wrong form, as {@link #markRefused()} finds; shows
      * nothing.
-     *
-     * @return true when a setting is refused
      */
     boolean isRefused() {
         return !problems().isEmpty();
     }
 
-    /**
-     * Whether the owner changed a setting since they were loaded.
-     *
-     * @return true when a setting differs from the stored one
-     */
     boolean isChanged() {
         return inputs.values().stream().anyMatch(Input::isChanged);
     }
 
     /**
-     * Calls an action whenever a setting changes.
-     *
      * @param action what to run, on the JavaFX thread
      */
     void onChange(Runnable action) {

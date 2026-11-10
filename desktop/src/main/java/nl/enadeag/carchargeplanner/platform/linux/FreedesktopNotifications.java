@@ -36,7 +36,6 @@ public final class FreedesktopNotifications implements Notifications {
     private static final System.Logger LOG = System.getLogger(FreedesktopNotifications.class.getName());
     /** The key of a click on the notification itself. */
     static final String DEFAULT_ACTION = "default";
-    /** The key of the button that opens what the notification is for, such as "Open dashboard". */
     static final String OPEN_ACTION = "open";
     /** How long a notification stays on screen, in milliseconds, before it goes to the desktop's history. */
     static final int EXPIRE_MS = 20_000;
@@ -86,10 +85,7 @@ public final class FreedesktopNotifications implements Notifications {
     /**
      * Makes the notifications with a runner of their own for the action of a click.
      *
-     * @param connector opens the session bus connection the notifications are sent and heard on
-     * @param appName the app's name, which the desktop shows above each notification
      * @param desktopEntry the name of the app's launcher entry without ".desktop", which also names the icon's file
-     * @param icon the app icon, shown on each notification
      * @param iconFolder an existing folder of the notifications' own, where the icon is written for the server
      * @param openLabel what a notification's button says for what it opens, asked anew for each notification
      * @param clickRunner runs the action of each click that is passed on, given on the connection's thread in the

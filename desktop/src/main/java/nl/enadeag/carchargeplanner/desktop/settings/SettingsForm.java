@@ -16,19 +16,12 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * What Settings shows against what is stored: it shows the stores' contents on the pages, tells whether something
- * changed, and on Save has the pages check what they show, then the engine check and keep its part, the system its
- * start at login, and the app settings file the rest.
- *
- * <p>{@link #read()} and {@link #write} block and run away from the JavaFX thread; the rest belongs to the JavaFX
+ * {@link #read()} and {@link #write} block and run away from the JavaFX thread; the rest belongs to the JavaFX
  * thread, as it reads and changes the pages.
  */
 final class SettingsForm {
 
     /**
-     * What a write came to.
-     *
-     * @param outcome saved, refused by the system, or failed
      * @param stored what the stores hold after a save, read again; empty when it was not saved
      */
     record Written(SaveOutcome outcome, Optional<SettingsStorage.Stored> stored) {
@@ -43,12 +36,10 @@ final class SettingsForm {
     private AllSettings stored;
 
     /**
-     * Makes the form; nothing is read until {@link #read()}.
+     * Nothing is read until {@link #read()}.
      *
-     * @param stores where the settings are kept
      * @param configPages the pages whose settings the engine keeps, in the sidebar's order
      * @param forecast the forecast page, one of the config pages, which also holds the API keys
-     * @param app the page of the app's own settings
      * @param about the About page, which shows where the API keys are kept
      */
     SettingsForm(SettingsStores stores, List<ConfigPage> configPages, ForecastPage forecast, AppPage app,
@@ -69,11 +60,6 @@ final class SettingsForm {
         return storage.read();
     }
 
-    /**
-     * Shows what the stores hold on the pages, as the values not edited.
-     *
-     * @param stored what {@link #read()} or {@link #write} read
-     */
     void show(SettingsStorage.Stored stored) {
         var keys = stored.keys().keys();
         stored.keys().problem().ifPresentOrElse(problem -> forecast.loadKeys(keys, stored.keyStorage(), problem),
@@ -89,11 +75,6 @@ final class SettingsForm {
         about.show(stored.keyStorage());
     }
 
-    /**
-     * Whether the owner changed something since the last load or save.
-     *
-     * @return true when closing would throw edits away
-     */
     boolean isChanged() {
         return app.isChanged() || configPages.stream().anyMatch(Page::isChanged);
     }
@@ -124,7 +105,6 @@ final class SettingsForm {
      * What differs from what is stored, with every value as the pages show it; only reads. Call it when
      * {@link #markRefused()} found nothing.
      *
-     * @return the changes to write
      * @throws IllegalStateException when nothing was shown yet, or a page refuses a value
      */
     SettingsChanges changes() {
@@ -144,9 +124,7 @@ final class SettingsForm {
      * Stores the changes, and reads the stores again after a save; see {@link SettingsStorage#save} for the order.
      * Blocks while the system, the keychain and the files answer; may be called from any thread.
      *
-     * @param changes what {@link #changes()} gave
      * @param prompting runs, on the saving thread, once the system asks the owner to unlock the keychain
-     * @return the outcome, and what is stored after a save
      */
     Written write(SettingsChanges changes, Runnable prompting) {
         var outcome = storage.save(changes, prompting);
@@ -164,11 +142,6 @@ final class SettingsForm {
         storage.stopUnlocking();
     }
 
-    /**
-     * Shows at start at login why the system refused it.
-     *
-     * @param detail the system's reason
-     */
     void showStartAtLoginFailure(String detail) {
         app.showStartAtLoginFailure(detail);
     }

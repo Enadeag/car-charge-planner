@@ -18,20 +18,12 @@ public final class SecretsLocation {
 
     private static final System.Logger LOG = System.getLogger(SecretsLocation.class.getName());
 
-    /** The file's name. */
     static final String FILE_NAME = "secrets.json";
 
     private SecretsLocation() {
     }
 
-    /**
-     * Where the file is on this system.
-     *
-     * @param os the system the app runs on
-     * @param configPath the engine's config file
-     * @param dataFolder the app's data folder, such as {@code %LOCALAPPDATA%\car-charge-planner}
-     * @return the file in the data folder on Windows, and beside the config elsewhere; it need not exist
-     */
+    /** The file in the data folder on Windows, and beside the config elsewhere; it need not exist. */
     static Path file(Os os, Path configPath, Path dataFolder) {
         return os == Os.WINDOWS ? dataFolder.resolve(FILE_NAME) : configPath.resolveSibling(FILE_NAME);
     }
