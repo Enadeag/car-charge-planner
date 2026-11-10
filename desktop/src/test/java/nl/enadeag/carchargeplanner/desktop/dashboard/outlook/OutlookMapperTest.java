@@ -6,7 +6,6 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
@@ -14,6 +13,7 @@ import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayKind;
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
@@ -213,7 +213,7 @@ class OutlookMapperTest {
         var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY), day(sunday)), new Percent(50),
                 false, Optional.of(advice), List.of(), fresh(), 0.4, new Percent(30), new Percent(80));
 
-        var model = ((DashboardModel.Plan) DUTCH.map(planned)).advice().orElseThrow();
+        var model = ((DashboardModel.Plan) DUTCH.map(planned)).advice().orElseThrow().advice();
 
         assertThat(model.title()).isEqualTo("Laad 11,0 kWh uit het net vóór zondag.");
     }
@@ -224,7 +224,8 @@ class OutlookMapperTest {
         var evening = new Window(at(TODAY.plusDays(1), 21, 0), at(TODAY.plusDays(2), 0, 0), 16, 3.7, 0, 11.0);
         var advice = new GridAdvice(sunday, 22, 8, 11.0, Optional.of(evening), Optional.of(new Percent(57)));
 
-        var model = advised(advice, day(TODAY), day(TODAY.plusDays(1)), day(sunday)).advice().orElseThrow();
+        var model = advised(advice, day(TODAY), day(TODAY.plusDays(1)), day(sunday)).advice().orElseThrow()
+                .advice();
 
         assertThat(model.title()).isEqualTo("Charge 11.0 kWh from the grid: tomorrow 21:00 – 00:00.");
         assertThat(model.detail()).isEqualTo("Without it the battery ends Sunday at 22%, below the minimum of 30%. "
@@ -235,7 +236,7 @@ class OutlookMapperTest {
     void gridAdviceWithoutRoomForAChargeSaysSo() {
         var advice = new GridAdvice(TODAY.plusDays(1), -5, 35, 23.3, Optional.empty(), Optional.empty());
 
-        var model = advised(advice, day(TODAY), day(TODAY.plusDays(1))).advice().orElseThrow();
+        var model = advised(advice, day(TODAY), day(TODAY.plusDays(1))).advice().orElseThrow().advice();
 
         assertThat(model.title()).isEqualTo("Charge 23.3 kWh from the grid before tomorrow.");
         assertThat(model.detail()).contains("runs empty tomorrow", "No day before it has room");
@@ -327,6 +328,25 @@ class OutlookMapperTest {
                 + "for it.");
         assertThat(english.get(4).chips()).extracting(ChipModel::text).containsExactly("Battery 32 → 32%");
         assertThat(english.get(0).chips()).extracting(ChipModel::text).contains("Battery 50 → 74%");
+    }
+
+    @Test
+    void gridAdviceShowsOnTodaysTab() {
+        var advice = new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.empty(), Optional.empty());
+
+        var shown = advised(advice, day(TODAY), day(TODAY.plusDays(1))).advice().orElseThrow();
+
+        assertThat(shown.day()).isEqualTo(TODAY);
+    }
+
+    @Test
+    void aPlanWhoseFirstDayIsNotTodayShowsTheGridAdviceOnNoTab() {
+        // the engine shows grid advice with the day the plan was made only; it no longer goes on the first tab
+        var advice = new GridAdvice(TODAY.plusDays(2), 22, 8, 11.0, Optional.empty(), Optional.empty());
+
+        var plan = advised(advice, day(TODAY.plusDays(1)), day(TODAY.plusDays(2)));
+
+        assertThat(plan.advice()).isEmpty();
     }
 
     @Test

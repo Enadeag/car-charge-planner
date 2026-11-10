@@ -2,13 +2,13 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryMapper;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels;
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
 import nl.enadeag.carchargeplanner.engine.dashboard.MainCharge;
 import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason;
 import nl.enadeag.carchargeplanner.engine.plan.Window;

@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,12 +25,12 @@ public sealed interface DashboardModel {
      *
      * @param days the days of the plan, today first; may be empty
      * @param tripAdvice the advice for each trip the plan charges for, in order of departure; may be empty
-     * @param advice the grid advice, or empty when there is none
+     * @param advice the grid advice with the day whose tab shows it; empty when there is none, or no tab shows it
      * @param away the away periods entered for specific days that have not ended
      * @param trips the trips the owner entered
      * @param footer the forecast's source and freshness
      */
-    record Plan(List<DayModel> days, List<TripAdviceModel> tripAdvice, Optional<GridAdviceModel> advice,
+    record Plan(List<DayModel> days, List<TripAdviceModel> tripAdvice, Optional<GridAdviceOn> advice,
             OneOffAwayModel away, TripsModel trips, String footer)
             implements DashboardModel {
 
@@ -40,6 +41,15 @@ public sealed interface DashboardModel {
             days = List.copyOf(days);
             tripAdvice = List.copyOf(tripAdvice);
         }
+    }
+
+    /**
+     * The grid advice and the day whose tab shows it, as the engine's dashboard says: today's.
+     *
+     * @param day the day of the tab, in the owner's home
+     * @param advice the grid advice in words
+     */
+    record GridAdviceOn(LocalDate day, GridAdviceModel advice) {
     }
 
     /**

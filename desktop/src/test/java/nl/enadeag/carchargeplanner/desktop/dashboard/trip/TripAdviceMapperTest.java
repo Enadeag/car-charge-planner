@@ -3,15 +3,17 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.trip;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.desktop.app.Units;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge.Start;
@@ -54,17 +56,25 @@ class TripAdviceMapperTest {
                 new Percent(departurePct), kmShort, new Percent(Math.max(0, departurePct - 52)));
     }
 
-    /** Made at 10:20 today from a battery level of 45%, with a target of 80%. */
+    /** Made at 10:20 today from a battery level of 45%, with a target of 80%, for today and the next two days. */
     private static Outlook.Planned planned(boolean assumed, TripAdvice... advice) {
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data", MADE_AT,
                 Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty(), List.of());
-        return new Outlook.Planned(MADE_AT, BRUSSELS, List.of(), new Percent(45), assumed, Optional.empty(),
+        var days = List.of(TODAY, TOMORROW, TODAY.plusDays(2)).stream()
+                .map(date -> new DayPlan(date, new Percent(45), List.of(), new Percent(45), new Percent(45), 0,
+                        List.of()))
+                .toList();
+        return new Outlook.Planned(MADE_AT, BRUSSELS, days, new Percent(45), assumed, Optional.empty(),
                 List.of(advice), source, 0.4, new Percent(30), new Percent(80));
     }
 
+    private static List<TripAdviceModel> map(Outlook.Planned planned, Language language, Units units) {
+        return new TripAdviceMapper(BRUSSELS, units, new Messages(language))
+                .map(planned.dashboard(List.of(), List.of()));
+    }
+
     private static TripAdviceModel map(Language language, Units units, TripAdvice advice) {
-        var planned = planned(true, advice);
-        return new TripAdviceMapper(planned, units, new Messages(language)).map(planned.tripAdvice()).getFirst();
+        return map(planned(true, advice), language, units).getFirst();
     }
 
     private static TripAdviceModel map(TripAdvice advice) {
@@ -75,7 +85,7 @@ class TripAdviceMapperTest {
     void aTripChargedOnSolarPowerAndThenFromTheGridNamesBothPartsTheStartAndTheChargeLimit() {
         var model = map(advice(84.2, List.of(SOLAR), 60, Optional.of(grid(at(TODAY, 21, 0), Start.PLANNED)), 84.2, 0));
 
-        assertThat(model).isEqualTo(new TripAdviceModel(TOMORROW, true, EnergySource.GRID, "Trip advice",
+        assertThat(model).isEqualTo(new TripAdviceModel(EnergySource.GRID, "Trip advice",
                 new TripAdviceModel.Wording("Trip tomorrow at 08:15, 150 km there and back.",
                         "Charge to 85%: on solar power today 12:00\u00A0–\u00A015:00, then from the grid. "
                                 + "Start tonight at 21:00. Set 16 A (3.7 kW), and a charge limit of 85% in the car or "
@@ -84,7 +94,7 @@ class TripAdviceMapperTest {
                         "Charge to 85%: on solar power Friday 12:00\u00A0–\u00A015:00, then from the grid. "
                                 + "Start Friday at 21:00. Set 16 A (3.7 kW), and a charge limit of 85% in the car or "
                                 + "the charger."),
-                "Assuming a battery level of 45%."));
+                "Assuming a battery level of 45%.", List.of(new DayName.Today(TODAY), new DayName.Tomorrow(TOMORROW))));
     }
 
     @Test
@@ -93,8 +103,8 @@ class TripAdviceMapperTest {
         var model = map(Language.DUTCH, Units.METRIC, advice(90, List.of(SOLAR, tomorrowNight), 60,
                 Optional.of(grid(at(TODAY, 16, 0), Start.NOW)), 90, 0));
 
-        var saturday = model.on(TOMORROW, TODAY);
-        var today = model.on(TODAY, TODAY);
+        var saturday = model.onOtherDays();
+        var today = model.onToday();
 
         assertThat(saturday.title()).isEqualTo("Rit zaterdag om 08:15, 150 km heen en terug.");
         assertThat(saturday.plan()).startsWith("Laad tot 90%: op zonnestroom vrijdag 12:00\u00A0–\u00A015:00, "
@@ -123,7 +133,6 @@ class TripAdviceMapperTest {
 
         assertThat(model.onToday().plan()).isEqualTo("Charge to 90% from the grid. Start tomorrow at 07:00. "
                 + "Set 16 A (3.7 kW), and a charge limit of 90% in the car or the charger.");
-        assertThat(model.source()).isEqualTo(EnergySource.GRID);
     }
 
     static Stream<Arguments> startsThatCannotWait() {
@@ -160,8 +169,6 @@ class TripAdviceMapperTest {
                         + "The battery is 41 km short for the trip: plan a charging stop.");
         assertThat(imperial.onToday().plan()).endsWith("The battery is 25 mi short for the trip: plan a charging stop.");
         assertThat(imperial.onToday().title()).isEqualTo("Trip tomorrow at 08:15, 93 mi there and back.");
-        assertThat(metric.source()).isEqualTo(EnergySource.GRID);
-        assertThat(metric.asksAction()).isTrue();
     }
 
     @Test
@@ -170,8 +177,6 @@ class TripAdviceMapperTest {
 
         assertThat(model.onToday().plan()).isEqualTo("Bij vertrek staat de accu op 60%. "
                 + "De accu komt 120 km tekort voor de rit: plan een laadstop.");
-        assertThat(model.source()).isEqualTo(EnergySource.GRID);
-        assertThat(model.asksAction()).isTrue();
     }
 
     @Test
@@ -183,8 +188,6 @@ class TripAdviceMapperTest {
 
         assertThat(model.onToday().plan()).isEqualTo("Charge to 94% on solar power: today 12:00\u00A0–\u00A015:00, "
                 + "16:00\u00A0–\u00A017:30, tomorrow 06:30\u00A0–\u00A007:15.");
-        assertThat(model.source()).isEqualTo(EnergySource.SOLAR);
-        assertThat(model.asksAction()).isTrue();
     }
 
     static Stream<Arguments> tripsThatNeedNothingExtra() {
@@ -204,18 +207,14 @@ class TripAdviceMapperTest {
 
         assertThat(model.onToday().plan()).isEqualTo("The plan charges enough for it: the battery is at "
                 + Math.round(advice.departureLevelPct().value()) + "% when you leave.");
-        assertThat(model.source()).isEqualTo(EnergySource.CAR);
-        assertThat(model.asksAction()).isFalse();
     }
 
     @Test
     void aLevelTheOwnerEnteredIsNotCalledAssumed() {
         var planned = planned(false, advice(70, List.of(), 75, Optional.empty(), 75, 0));
 
-        var english = new TripAdviceMapper(planned, Units.METRIC, new Messages(Language.ENGLISH))
-                .map(planned.tripAdvice());
-        var dutch = new TripAdviceMapper(planned, Units.METRIC, new Messages(Language.DUTCH))
-                .map(planned.tripAdvice());
+        var english = map(planned, Language.ENGLISH, Units.METRIC);
+        var dutch = map(planned, Language.DUTCH, Units.METRIC);
 
         assertThat(english.getFirst().level()).isEqualTo("Based on the battery level of 45% you entered.");
         assertThat(dutch.getFirst().level()).isEqualTo("Uitgaande van het accuniveau van 45% dat je invulde.");
@@ -235,23 +234,31 @@ class TripAdviceMapperTest {
                 new Percent(70), 0, new Percent(66));
         var planned = planned(true, advice(70, List.of(), 75, Optional.empty(), 75, 0), second);
 
-        var models = new TripAdviceMapper(planned, Units.METRIC, new Messages(Language.ENGLISH))
-                .map(planned.tripAdvice());
+        var models = map(planned, Language.ENGLISH, Units.METRIC);
 
         assertThat(models).extracting(model -> model.onToday().title()).containsExactly(
                 "Trip tomorrow at 08:15, 150 km there and back.", "Trip Sunday at 09:00, 40 km there and back.");
     }
 
     @Test
-    void theAdviceShowsOnTheDayOfTheDepartureAndOnTodayOnlyWhenItAsksSomething() {
+    void theAdviceShowsOnTheTabsTheEnginesDashboardSaysAndWhereItCharges() {
         var asks = map(advice(90, List.of(), 45, Optional.of(grid(at(TODAY, 21, 0), Start.PLANNED)), 90, 0));
         var enough = map(advice(70, List.of(), 75, Optional.empty(), 75, 0));
 
-        assertThat(asks.shownOn(TOMORROW, TODAY)).isTrue();
-        assertThat(asks.shownOn(TODAY, TODAY)).isTrue();
-        assertThat(asks.shownOn(TODAY.plusDays(2), TODAY)).isFalse();
-        assertThat(enough.shownOn(TOMORROW, TODAY)).isTrue();
-        assertThat(enough.shownOn(TODAY, TODAY)).isFalse();
+        assertThat(asks.shownOn()).containsExactly(new DayName.Today(TODAY), new DayName.Tomorrow(TOMORROW));
+        assertThat(asks.source()).isEqualTo(EnergySource.GRID);
+        assertThat(enough.shownOn()).containsExactly(new DayName.Tomorrow(TOMORROW));
+        assertThat(enough.source()).isEqualTo(EnergySource.CAR);
+    }
+
+    @Test
+    void todaysTabHasTheRelativeWordsAndAnotherTabTheWeekdaysAndATabItIsNotOnNone() {
+        var model = map(advice(90, List.of(), 45, Optional.of(grid(at(TODAY, 21, 0), Start.PLANNED)), 90, 0));
+
+        assertThat(model.on(TODAY)).contains(model.onToday());
+        assertThat(model.on(TOMORROW)).contains(model.onOtherDays());
+        assertThat(model.on(TODAY.plusDays(2))).isEmpty();
+        assertThat(model.onToday()).isNotEqualTo(model.onOtherDays());
     }
 
     @Test

@@ -1,19 +1,17 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.trip;
 
 import nl.enadeag.carchargeplanner.desktop.app.Units;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
-import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
-import nl.enadeag.carchargeplanner.engine.plan.Window;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
+import nl.enadeag.carchargeplanner.engine.dashboard.SolarDay;
+import nl.enadeag.carchargeplanner.engine.dashboard.TripAdviceView;
+import nl.enadeag.carchargeplanner.engine.dashboard.TripGridStart;
+import nl.enadeag.carchargeplanner.engine.dashboard.TripPlan;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,65 +23,52 @@ import java.util.stream.Collectors;
  */
 public final class TripAdviceMapper {
 
-    /** From this hour a start later today is "tonight". */
-    private static final LocalTime EVENING = LocalTime.of(18, 0);
     /** Keeps a window's times together on one line when the advice wraps. */
-    private static final char NO_BREAK = '\u00A0';
+    private static final char NO_BREAK = ' ';
 
     private final Messages messages;
     private final ZoneId zone;
-    private final Instant madeAt;
-    private final LocalDate today;
     private final Units units;
-    private final double targetPct;
-    private final String level;
 
     /**
-     * Makes the mapper for one plan.
+     * Makes the mapper for one home.
      *
-     * @param planned the plan whose time zone, moment of making, target charge level and battery level the advice is
-     *     told in
+     * @param zone the home's time zone, in which the times are told
      * @param units the units the distances are told in
      * @param messages the texts, in the owner's language
      */
-    public TripAdviceMapper(Outlook.Planned planned, Units units, Messages messages) {
+    public TripAdviceMapper(ZoneId zone, Units units, Messages messages) {
         this.messages = messages;
-        this.zone = planned.zone();
-        this.madeAt = planned.madeAt();
-        this.today = planned.today();
+        this.zone = zone;
         this.units = units;
-        this.targetPct = planned.targetPct().value();
-        this.level = messages.text(planned.batteryAssumed() ? TextKey.TRIP_ADVICE_ASSUMED : TextKey.TRIP_ADVICE_ENTERED,
-                messages.whole(planned.batteryLevelPct().value()));
     }
 
     /**
      * The advice for each trip in words.
      *
-     * @param advice the engine's advice per trip, in order of departure; may be empty
+     * @param dashboard the engine's dashboard, with its advice per trip in order of departure and its days
      * @return one model per trip, in the same order
      */
-    public List<TripAdviceModel> map(List<TripAdvice> advice) {
-        return advice.stream().map(this::map).toList();
+    public List<TripAdviceModel> map(DashboardView dashboard) {
+        var days = dashboard.days().stream().map(DashboardDay::name).toList();
+        return dashboard.tripAdvice().stream()
+                .map(advice -> map(advice, days.stream().filter(advice::shownOn).toList()))
+                .toList();
     }
 
-    private TripAdviceModel map(TripAdvice advice) {
-        boolean enough = advice.grid().isEmpty() && advice.kmShort() <= 0
-                && (advice.solarWindows().isEmpty() || advice.neededPct().value() <= targetPct);
-        return new TripAdviceModel(day(advice.trip().departure()), !enough, source(advice, enough),
-                messages.text(TextKey.TRIP_ADVICE_LABEL), wording(advice, enough, DayNames.RELATIVE),
-                wording(advice, enough, DayNames.WEEKDAYS), level);
+    private TripAdviceModel map(TripAdviceView advice, List<DayName> shownOn) {
+        var level = messages.text(advice.levelAssumed() ? TextKey.TRIP_ADVICE_ASSUMED : TextKey.TRIP_ADVICE_ENTERED,
+                messages.whole(advice.levelPct().value()));
+        return new TripAdviceModel(advice.source(), messages.text(TextKey.TRIP_ADVICE_LABEL),
+                wording(advice, DayNames.RELATIVE), wording(advice, DayNames.WEEKDAYS), level, shownOn);
     }
 
-    private TripAdviceModel.Wording wording(TripAdvice advice, boolean enough, DayNames names) {
+    private TripAdviceModel.Wording wording(TripAdviceView advice, DayNames names) {
         var trip = advice.trip();
-        var title = messages.text(TextKey.TRIP_ADVICE_TITLE, dayName(day(trip.departure()), names),
+        var title = messages.text(TextKey.TRIP_ADVICE_TITLE, dayName(advice.departureDay(), names),
                 messages.time(trip.departure(), zone), messages.whole(units.distance(trip.distanceKm())),
                 units.distanceUnit());
-        var plan = enough
-                ? messages.text(TextKey.TRIP_ADVICE_ENOUGH, messages.whole(advice.departureLevelPct().value()))
-                : plan(advice, names);
-        return new TripAdviceModel.Wording(title, plan);
+        return new TripAdviceModel.Wording(title, plan(advice, names));
     }
 
     /** How the advice names a day in a sentence. */
@@ -94,80 +79,69 @@ public final class TripAdviceMapper {
         WEEKDAYS
     }
 
-    private String dayName(LocalDate date, DayNames names) {
-        return names == DayNames.RELATIVE ? messages.inSentence(date, today) : messages.weekday(date);
-    }
-
-    private LocalDate day(Instant moment) {
-        return moment.atZone(zone).toLocalDate();
-    }
-
-    private static EnergySource source(TripAdvice advice, boolean enough) {
-        if (enough) {
-            return EnergySource.CAR;
-        }
-        return advice.grid().isEmpty() && advice.kmShort() <= 0 ? EnergySource.SOLAR : EnergySource.GRID;
+    private String dayName(DayName day, DayNames names) {
+        return names == DayNames.RELATIVE ? messages.inSentence(day) : messages.weekday(day.date());
     }
 
     /** What to charge, when to start the grid charge and what to set for it, and how far the battery falls short. */
-    private String plan(TripAdvice advice, DayNames names) {
-        var limit = messages.whole(advice.chargeLimitPct().value());
+    private String plan(TripAdviceView advice, DayNames names) {
         var sentences = new ArrayList<String>();
-        var solar = advice.solarWindows();
-        if (advice.grid().isPresent()) {
-            var grid = advice.grid().get();
-            sentences.add(solar.isEmpty() ? messages.text(TextKey.TRIP_ADVICE_GRID, limit)
-                    : messages.text(TextKey.TRIP_ADVICE_SOLAR_GRID, limit, windows(solar, names)));
-            sentences.add(start(grid, names));
-            var window = grid.window();
-            sentences.add(messages.text(TextKey.ADVICE_SET, window.amps(), messages.decimal(window.powerKw()), limit));
-        } else if (!solar.isEmpty()) {
-            sentences.add(messages.text(TextKey.TRIP_ADVICE_SOLAR, limit, windows(solar, names)));
-        } else {
-            sentences.add(messages.text(TextKey.TRIP_ADVICE_LEAVES,
-                    messages.whole(advice.departureLevelPct().value())));
+        switch (advice.plan()) {
+            case TripPlan.Enough enough -> sentences.add(messages.text(TextKey.TRIP_ADVICE_ENOUGH,
+                    messages.whole(enough.departureLevelPct().value())));
+            case TripPlan.Solar solar -> sentences.add(messages.text(TextKey.TRIP_ADVICE_SOLAR,
+                    messages.whole(solar.chargeLimitPct().value()), windows(solar.days(), names)));
+            case TripPlan.SolarThenGrid solarThenGrid -> {
+                var limit = messages.whole(solarThenGrid.chargeLimitPct().value());
+                sentences.add(messages.text(TextKey.TRIP_ADVICE_SOLAR_GRID, limit,
+                        windows(solarThenGrid.days(), names)));
+                grid(solarThenGrid.grid(), limit, names, sentences);
+            }
+            case TripPlan.Grid grid -> {
+                var limit = messages.whole(grid.chargeLimitPct().value());
+                sentences.add(messages.text(TextKey.TRIP_ADVICE_GRID, limit));
+                grid(grid.grid(), limit, names, sentences);
+            }
+            case TripPlan.Leaves leaves -> sentences.add(messages.text(TextKey.TRIP_ADVICE_LEAVES,
+                    messages.whole(leaves.departureLevelPct().value())));
         }
-        if (advice.kmShort() > 0) {
-            sentences.add(messages.text(TextKey.TRIP_ADVICE_SHORT,
-                    messages.whole(Math.ceil(units.distance(advice.kmShort()))), units.distanceUnit()));
-        }
+        advice.shortKm().ifPresent(km -> sentences.add(messages.text(TextKey.TRIP_ADVICE_SHORT,
+                messages.whole(Math.ceil(units.distance(km))), units.distanceUnit())));
         return String.join(" ", sentences);
     }
 
-    private String start(TripGridCharge grid, DayNames names) {
-        var when = when(grid.window().start(), names);
-        return switch (grid.start()) {
+    /** When to start the grid charge, and what to set for it. */
+    private void grid(TripGridStart grid, String limit, DayNames names, List<String> sentences) {
+        var when = when(grid, names);
+        sentences.add(switch (grid.start()) {
             case PLANNED -> messages.text(TextKey.TRIP_ADVICE_START_PLANNED, when);
             case NOW -> messages.text(TextKey.TRIP_ADVICE_START_NOW, when);
             case NOW_OUTSIDE_CHARGING_HOURS -> messages.text(TextKey.TRIP_ADVICE_START_OUTSIDE, when);
-        };
+        });
+        var window = grid.window();
+        sentences.add(messages.text(TextKey.ADVICE_SET, window.amps(), messages.decimal(window.powerKw()), limit));
     }
 
-    /** "now" up to the moment of the plan; otherwise the day, or tonight, with the time. */
-    private String when(Instant start, DayNames names) {
-        if (!start.isAfter(madeAt)) {
+    /** "now" when the start is due; otherwise the day, or tonight on today's tab, with the time. */
+    private String when(TripGridStart grid, DayNames names) {
+        if (grid.startsNow()) {
             return messages.text(TextKey.TRIP_ADVICE_NOW);
         }
-        var local = start.atZone(zone);
-        var day = names == DayNames.RELATIVE && local.toLocalDate().equals(today)
-                && !local.toLocalTime().isBefore(EVENING)
+        var day = names == DayNames.RELATIVE && grid.tonight()
                 ? messages.text(TextKey.TRIP_ADVICE_TONIGHT)
-                : dayName(local.toLocalDate(), names);
-        return messages.text(TextKey.TRIP_ADVICE_AT, day, messages.time(start, zone));
+                : dayName(grid.day(), names);
+        return messages.text(TextKey.TRIP_ADVICE_AT, day, messages.time(grid.window().start(), zone));
     }
 
     /**
-     * The windows grouped by their day, each day named once: "today 12:00 – 13:30, 14:00 – 15:00, tomorrow …" or
+     * The windows by their day, each day named once: "today 12:00 – 13:30, 14:00 – 15:00, tomorrow …" or
      * "Friday 12:00 – 13:30, …", each window's times without a break.
      */
-    private String windows(List<Window> windows, DayNames names) {
-        var byDay = new LinkedHashMap<LocalDate, List<String>>();
-        for (var window : windows) {
-            byDay.computeIfAbsent(day(window.start()), _ -> new ArrayList<>())
-                    .add(messages.span(window.start(), window.end(), zone).replace(' ', NO_BREAK));
-        }
-        return byDay.entrySet().stream()
-                .map(day -> dayName(day.getKey(), names) + " " + String.join(", ", day.getValue()))
+    private String windows(List<SolarDay> days, DayNames names) {
+        return days.stream()
+                .map(day -> dayName(day.day(), names) + " " + day.windows().stream()
+                        .map(window -> messages.span(window.start(), window.end(), zone).replace(' ', NO_BREAK))
+                        .collect(Collectors.joining(", ")))
                 .collect(Collectors.joining(", "));
     }
 }

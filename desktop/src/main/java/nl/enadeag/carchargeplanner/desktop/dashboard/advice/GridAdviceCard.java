@@ -4,7 +4,7 @@ import static nl.enadeag.carchargeplanner.desktop.theme.Labels.paragraph;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
 import javafx.scene.AccessibleRole;
 import javafx.scene.layout.VBox;
 

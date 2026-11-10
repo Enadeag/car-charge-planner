@@ -1,24 +1,29 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.trip;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.parts.EnergySource;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * What the plan does so the car can make one trip, in words: once for today's tab, with "today", "tonight" and
- * "tomorrow", and once for the other tabs, with the weekdays.
+ * "tomorrow", and once for the other tabs, with the weekdays; and the tabs it shows on.
  *
- * @param departureDay the day of the trip's departure, in the owner's home
- * @param asksAction true when the owner has to do something for the trip: charge above the target charge level, charge
- *     from the grid, or plan a charging stop
- * @param source where the trip's charge comes from: the grid when it needs a grid charge or the battery is short, solar
- *     when solar power above the target is enough, the car when the plan charges enough already
+ * @param source where the trip's charge comes from, whose colours its chip has
  * @param label the advice's name, on its chip: "Trip advice"
  * @param onToday the trip and its plan as today's tab tells them: "Trip tomorrow at 08:15, …"
  * @param onOtherDays the trip and its plan as another day's tab tells them: "Trip Saturday at 08:15, …"
  * @param level the battery level the advice starts from: "Assuming a battery level of 45%."
+ * @param shownOn the days of the plan whose tabs show the advice, as the engine's dashboard says, in the plan's order
  */
-public record TripAdviceModel(LocalDate departureDay, boolean asksAction, EnergySource source, String label,
-        Wording onToday, Wording onOtherDays, String level) {
+public record TripAdviceModel(EnergySource source, String label, Wording onToday, Wording onOtherDays, String level,
+        List<DayName> shownOn) {
+
+    /** Keeps a copy of the days it shows on. */
+    public TripAdviceModel {
+        shownOn = List.copyOf(shownOn);
+    }
 
     /**
      * The trip and its plan, with the days named one way.
@@ -31,26 +36,15 @@ public record TripAdviceModel(LocalDate departureDay, boolean asksAction, Energy
     }
 
     /**
-     * Whether the advice belongs on a day's tab: always on the day of the departure, and on today's when the owner has
-     * to do something.
+     * The words a day's tab shows.
      *
      * @param day the day of the tab
-     * @param today the day the plan was made, in the owner's home
-     * @return true when the tab of the day shows the advice
+     * @return {@link #onToday()} on today's tab, {@link #onOtherDays()} on any other that shows the advice; empty on a
+     *     tab that does not show it
      */
-    public boolean shownOn(LocalDate day, LocalDate today) {
-        return day.equals(departureDay) || asksAction && day.equals(today);
-    }
-
-    /**
-     * The words for a day's tab.
-     *
-     * @param day the day of the tab
-     * @param today the day the plan was made, in the owner's home
-     * @return {@link #onToday()} on today's tab, {@link #onOtherDays()} on any other
-     */
-    public Wording on(LocalDate day, LocalDate today) {
-        return day.equals(today) ? onToday : onOtherDays;
+    public Optional<Wording> on(LocalDate day) {
+        return shownOn.stream().filter(name -> name.date().equals(day)).findFirst()
+                .map(name -> name instanceof DayName.Today ? onToday : onOtherDays);
     }
 
     /**

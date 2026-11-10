@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceCard;
-import nl.enadeag.carchargeplanner.desktop.dashboard.advice.GridAdviceModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayCard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryCard;
@@ -53,8 +52,8 @@ final class DashboardView extends VBox {
     private final TripCard trips;
     private List<DayModel> days = List.of();
     private List<TripAdviceModel> tripAdvice = List.of();
-    /** Today's grid advice; null when the plan shown has none, or before one shows. */
-    private GridAdviceModel advice;
+    /** The grid advice with the day whose tab shows it; null when the plan shown has none, or before one shows. */
+    private DashboardModel.GridAdviceOn advice;
     /** The away periods for specific days; null until a plan shows. */
     private OneOffAwayModel awayPeriods;
     /** The trips; null until a plan shows. */
@@ -241,8 +240,8 @@ final class DashboardView extends VBox {
 
     /**
      * Below the day card comes the advice for the trips that depart that day, and on today's tab also for those that
-     * ask the owner to do something now; grid advice goes on today's tab, below them. The charts follow, then the
-     * day's trips, and the away periods last.
+     * ask the owner to do something now; grid advice goes on the tab the engine's dashboard puts it on (today's), below
+     * them. The charts follow, then the day's trips, and the away periods last.
      */
     private void showDay(int index) {
         if (days.isEmpty()) {
@@ -252,16 +251,11 @@ final class DashboardView extends VBox {
         }
         var day = days.get(Math.clamp(index, 0, days.size() - 1));
         var page = page(new DayCard(day));
-        var today = days.getFirst().date();
         for (var trip : tripAdvice) {
-            if (trip.shownOn(day.date(), today)) {
-                page.getChildren().add(tripAdviceCard(trip, trip.on(day.date(), today)));
-            }
+            trip.on(day.date()).ifPresent(wording -> page.getChildren().add(tripAdviceCard(trip, wording)));
         }
-        if (day == days.getFirst()) {
-            if (advice != null) {
-                page.getChildren().add(new GridAdviceCard(advice));
-            }
+        if (advice != null && advice.day().equals(day.date())) {
+            page.getChildren().add(new GridAdviceCard(advice.advice()));
         }
         solar.show(day.curve());
         battery.show(day.battery());
