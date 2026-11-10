@@ -24,12 +24,7 @@ final class ConfigFields {
     }
 
     /**
-     * The fields of a JSON object.
-     *
-     * @param node the value that must be an object
      * @param place where it is in the file, such as {@code system.car}; empty for the whole file
-     * @return its fields
-     * @throws FormatProblem when the value is not a JSON object
      */
     static ConfigFields of(JsonNode node, String place) throws FormatProblem {
         if (!(node instanceof ObjectNode found)) {
@@ -43,7 +38,6 @@ final class ConfigFields {
      * Refuses a name the object may not have, such as a misspelt one, so a value is never silently ignored.
      *
      * @param names every name the object may have, in the order they are listed in the message
-     * @return these fields
      * @throws FormatProblem when the object has another name; the message lists the allowed ones
      */
     ConfigFields only(String... names) throws FormatProblem {
@@ -58,9 +52,6 @@ final class ConfigFields {
     }
 
     /**
-     * Whether the object has a value of this name, for an optional one.
-     *
-     * @param name the name to look for
      * @return true when it is there, even as {@code null}
      */
     boolean has(String name) {
@@ -77,12 +68,8 @@ final class ConfigFields {
     }
 
     /**
-     * A number.
-     *
-     * @param name the value's name
      * @return the number, which may be NaN or infinite when the file says so in quotes or in a huge number; the
      *     records refuse those
-     * @throws FormatProblem when the value is missing or is not a number
      */
     double number(String name) throws FormatProblem {
         var value = value(name);
@@ -102,8 +89,6 @@ final class ConfigFields {
     /**
      * A whole number, never one with a fraction such as {@code 1.5}.
      *
-     * @param name the value's name
-     * @return the number
      * @throws FormatProblem when the value is missing or is not a whole number that fits an {@code int}
      */
     int wholeNumber(String name) throws FormatProblem {
@@ -122,9 +107,6 @@ final class ConfigFields {
     }
 
     /**
-     * A text.
-     *
-     * @param name the value's name
      * @return the text, possibly empty
      * @throws FormatProblem when the value is missing or is not a text in quotes
      */
@@ -132,13 +114,6 @@ final class ConfigFields {
         return text(value(name), placeOf(name));
     }
 
-    /**
-     * A list of texts.
-     *
-     * @param name the value's name
-     * @return the texts in their order, possibly none
-     * @throws FormatProblem when the value is missing or is not a list of texts
-     */
     List<String> texts(String name) throws FormatProblem {
         var texts = new ArrayList<String>();
         var values = list(name);
@@ -148,13 +123,6 @@ final class ConfigFields {
         return texts;
     }
 
-    /**
-     * A list of lists of texts.
-     *
-     * @param name the value's name
-     * @return the lists in their order, possibly none
-     * @throws FormatProblem when the value is missing or is not a list of lists of texts
-     */
     List<List<String>> textLists(String name) throws FormatProblem {
         var lists = new ArrayList<List<String>>();
         var values = list(name);
@@ -173,24 +141,10 @@ final class ConfigFields {
         return lists;
     }
 
-    /**
-     * An object inside this one.
-     *
-     * @param name the value's name
-     * @return its fields
-     * @throws FormatProblem when the value is missing or is not a JSON object
-     */
     ConfigFields object(String name) throws FormatProblem {
         return of(value(name), placeOf(name));
     }
 
-    /**
-     * A list of objects.
-     *
-     * @param name the value's name
-     * @return each object's fields, in their order, possibly none
-     * @throws FormatProblem when the value is missing, is not a list, or holds something else than objects
-     */
     List<ConfigFields> objects(String name) throws FormatProblem {
         var objects = new ArrayList<ConfigFields>();
         var values = list(name);
@@ -204,10 +158,7 @@ final class ConfigFields {
      * Makes a value from what was read, giving a check that refuses it the place of this object, as in
      * {@code system.car: usableBatteryKwh must be more than 0}.
      *
-     * @param <T> the kind of value
      * @param make makes the value; its {@link IllegalArgumentException} says what is wrong
-     * @return the value
-     * @throws FormatProblem when the value is refused
      */
     <T> T make(Supplier<T> make) throws FormatProblem {
         try {
@@ -221,11 +172,7 @@ final class ConfigFields {
      * Makes a value from one of the values read, giving a check that refuses it the place of that value, as in
      * {@code planning.minimumPct: a percentage must be from 0 to 100, not -1.0}.
      *
-     * @param <T> the kind of value
-     * @param name the name of the value it is made from
      * @param make makes the value; its {@link IllegalArgumentException} says what is wrong
-     * @return the value
-     * @throws FormatProblem when the value is refused
      */
     <T> T make(String name, Supplier<T> make) throws FormatProblem {
         try {

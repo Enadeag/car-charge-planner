@@ -632,7 +632,6 @@ public final class Engine {
         }
     }
 
-    /** A change of the stored data that may fail with a checked exception. */
     @FunctionalInterface
     private interface Change<T, X extends Exception> {
         T run() throws X;
