@@ -54,9 +54,6 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
     /** The plan's grid advice; null when there is none. */
     val gridAdvice: GridAdviceView? get() = view.gridAdvice().orElse(null)
 
-    /** The plan's advice per trip, in the engine's order, by departure; each shows on the tabs [tripAdviceOn] says. */
-    val tripAdvice: List<TripAdviceView> get() = view.tripAdvice()
-
     /**
      * The grid advice a day's tab shows, as the engine's dashboard says.
      *
