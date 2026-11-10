@@ -16,12 +16,12 @@ public sealed interface DashboardModel {
     String footer();
 
     /**
-     * A plan: one day after the other, today first, each with the advice its tab shows, the away periods entered for
-     * the coming days, and the trips.
+     * A plan: one day after the other, today first, each with the advice and the trips its tab shows, and the away
+     * periods entered for the coming days.
      *
-     * @param days the days of the plan, today first, each with its trip advice and grid advice; may be empty
+     * @param days the days of the plan, today first, each with its trip advice, grid advice and trips; may be empty
      * @param away the away periods entered for specific days that have not ended
-     * @param trips the trips the owner entered
+     * @param trips what the trips are told and entered in
      * @param footer the forecast's source and freshness
      */
     record Plan(List<DayModel> days, OneOffAwayModel away, TripsModel trips, String footer)

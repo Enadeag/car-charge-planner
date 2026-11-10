@@ -284,7 +284,8 @@ class DashboardViewTest {
     void aDayTallerThanTheSpaceScrollsBelowHeaderAndTabsThatStayInView() throws Exception {
         var busy = new DayModel(Models.TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.SOLAR, "Charge window", "06:00 – 06:10",
                 Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80), "",
-                Models.SUNNY_TODAY.curve(), Models.CLOUDY_TOMORROW.battery(), List.of(), Optional.empty());
+                Models.SUNNY_TODAY.curve(), Models.CLOUDY_TOMORROW.battery(), List.of(), Optional.empty(),
+                List.of(Models.LISTED_SATURDAY));
         var plan = Models.plan(Models.CLOUDY_TOMORROW, busy);
         var view = Fx.call(() -> {
             var it = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION,

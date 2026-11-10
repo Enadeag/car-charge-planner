@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -28,20 +29,20 @@ class OneOffAwayMapperTest {
         "ENGLISH | Today, 10:00 – 12:30 | Tomorrow, all day | Wed 8 Jul, 09:00 – 17:30 | Thu 9 Jul 18:00 – Sat 11 Jul 12:00",
         "DUTCH | Vandaag, 10:00 – 12:30 | Morgen, hele dag | Wo 8 jul, 09:00 – 17:30 | Do 9 jul 18:00 – Za 11 jul 12:00",
     })
-    void theComingPeriodsAreToldByDayAndTimeAndThoseThatEndedAreLeftOut(Language language, String today,
-            String tomorrow, String nextWeek, String overDays) {
+    void theComingPeriodsAreToldByDayAndTime(Language language, String today, String tomorrow, String nextWeek,
+            String overDays) {
         var now = TODAY.atTime(11, 0).atZone(BRUSSELS).toInstant();
-        var ended = part(TODAY, 6, 8);
         var overSeveralDays = new OneOffAwayPeriod(TODAY.plusDays(6).atTime(18, 0).atZone(BRUSSELS).toInstant(),
                 TODAY.plusDays(8).atTime(12, 0).atZone(BRUSSELS).toInstant());
-        var periods = List.of(ended, part(TODAY, 10, 12), OneOffAwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS),
+        var periods = List.of(part(TODAY, 10, 12), OneOffAwayPeriod.allDay(TODAY.plusDays(1), BRUSSELS),
                 part(TODAY.plusDays(5), 9, 17), overSeveralDays);
+        var coming = periods.stream().map(period -> ComingAway.describe(period, BRUSSELS, TODAY)).toList();
 
-        var model = new OneOffAwayMapper(BRUSSELS, now, new Messages(language)).map(periods);
+        var model = new OneOffAwayMapper(BRUSSELS, now, new Messages(language)).map(coming);
 
         assertThat(model.coming()).extracting(OneOffAwayModel.Listed::text)
                 .containsExactly(today, tomorrow, nextWeek, overDays);
-        assertThat(model.coming()).extracting(OneOffAwayModel.Listed::period).doesNotContain(ended);
+        assertThat(model.coming()).extracting(OneOffAwayModel.Listed::period).containsExactlyElementsOf(periods);
         assertThat(model.coming().get(1).removeSpoken())
                 .isEqualTo(new Messages(language).text(TextKey.ONE_OFF_REMOVE_SPOKEN, tomorrow));
     }

@@ -53,7 +53,7 @@ final class DashboardView extends VBox {
     private List<DayModel> days = List.of();
     /** The away periods for specific days; null until a plan shows. */
     private OneOffAwayModel awayPeriods;
-    /** The trips; null until a plan shows. */
+    /** What the trips are entered in; null until a plan shows. Each day carries its own trips. */
     private TripsModel enteredTrips;
     private Runnable setUp = () -> { };
     /** True once {@link #onSetUp(Runnable)} was called: only then does a card without a plan offer set-up. */
@@ -253,7 +253,7 @@ final class DashboardView extends VBox {
         battery.show(day.battery());
         page.getChildren().addAll(solar, battery);
         if (trips.acceptsChanges() && enteredTrips != null) {
-            trips.show(day.date(), day.title(), enteredTrips);
+            trips.show(day.date(), day.title(), day.trips(), enteredTrips);
             page.getChildren().add(trips);
         }
         if (away.acceptsChanges() && awayPeriods != null) {

@@ -6,17 +6,16 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayMapper;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayMapper;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceMapper;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripMapper;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
-import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
-import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
-import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
+import nl.enadeag.carchargeplanner.engine.dashboard.Footer;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /** Turns the engine's outlook into what the dashboard shows, with the mappers of each part of it. */
 public final class OutlookMapper {
@@ -66,7 +65,8 @@ public final class OutlookMapper {
     public DashboardModel map(Outlook outlook, List<OneOffAwayPeriod> away, List<Trip> trips, Units units) {
         return switch (outlook) {
             case Outlook.Planned planned when planned.days().isEmpty() -> new DashboardModel.NoPlan(
-                    messages.text(TextKey.NO_FORECAST), messages.text(TextKey.NO_FORECAST_NO_DAYS), footer(planned));
+                    messages.text(TextKey.NO_FORECAST), messages.text(TextKey.NO_FORECAST_NO_DAYS),
+                    footer(planned.footer(), planned.zone()));
             case Outlook.Planned planned -> plan(planned, away, trips, units);
             case Outlook.NoForecast none -> new DashboardModel.NoPlan(messages.text(TextKey.NO_FORECAST),
                     noForecast(none, messages), "");
@@ -118,38 +118,36 @@ public final class OutlookMapper {
         var dayMapper = new DayMapper(messages, dashboard.zone(), dashboard.levels());
         var tripAdvice = new TripAdviceMapper(dashboard.zone(), units, messages);
         var grid = new GridAdviceMapper(dashboard.zone(), dashboard.levels(), messages);
+        var listed = new TripMapper(dashboard.zone(), units, messages);
         var days = dashboard.days().stream()
                 .map(day -> {
-                    var model = dayMapper.map(day, tripAdvice.map(dashboard, day));
+                    var model = dayMapper.map(day, tripAdvice.map(dashboard, day))
+                            .withTrips(dashboard.tripsOn(day).stream().map(listed::map).toList());
                     return dashboard.gridAdviceOn(day).map(advice -> model.withGridAdvice(grid.map(advice)))
                             .orElse(model);
                 })
                 .toList();
-        var coming = new OneOffAwayMapper(planned.zone(), planned.madeAt(), messages).map(away);
-        var entered = new TripMapper(planned.zone(), planned.madeAt(), units, messages).map(trips);
-        return new DashboardModel.Plan(days, coming, entered, footer(planned));
+        var coming = new OneOffAwayMapper(dashboard.zone(), dashboard.madeAt(), messages).map(dashboard.away());
+        return new DashboardModel.Plan(days, coming, new TripsModel(dashboard.zone(), dashboard.madeAt(), units),
+                footer(dashboard.footer(), dashboard.zone()));
     }
 
     /**
      * The credit the provider's terms ask for, which provider stood in for which, and how fresh the forecast is, such
      * as "Weather data: Open-Meteo.com (CC BY 4.0) · updated 10:51". The credit is the provider's own, in English.
      */
-    private String footer(Outlook.Planned planned) {
-        var source = planned.forecastSource();
-        var parts = new ArrayList<>(List.of(source.attribution()));
-        if (source.providerRole() == ProviderRole.FALLBACK) {
-            parts.add(source.primaryName().isEmpty() ? messages.text(TextKey.FOOTER_FALLBACK_UNKNOWN)
-                    : messages.text(TextKey.FOOTER_FALLBACK, source.primaryName()));
+    private String footer(Footer footer, ZoneId zone) {
+        var parts = new ArrayList<>(List.of(footer.credit()));
+        switch (footer.fallback()) {
+            case Footer.Fallback.None _ -> { }
+            case Footer.Fallback.ForUnknown _ -> parts.add(messages.text(TextKey.FOOTER_FALLBACK_UNKNOWN));
+            case Footer.Fallback.For standIn ->
+                    parts.add(messages.text(TextKey.FOOTER_FALLBACK, standIn.primaryName()));
         }
-        var fetched = messages.time(source.fetchedAt(), planned.zone());
-        parts.add(messages.text(source.freshness() == Freshness.STALE ? TextKey.FOOTER_STALE : TextKey.FOOTER_UPDATED,
-                fetched));
-        busyText(source, planned).ifPresent(parts::add);
+        parts.add(messages.text(footer.stale() ? TextKey.FOOTER_STALE : TextKey.FOOTER_UPDATED,
+                messages.time(footer.fetchedAt(), zone)));
+        footer.busyUntil()
+                .ifPresent(until -> parts.add(messages.text(TextKey.FOOTER_BUSY, messages.time(until, zone))));
         return String.join(" · ", parts);
-    }
-
-    private Optional<String> busyText(ForecastSource source, Outlook.Planned planned) {
-        return source.cooldownUntil().filter(until -> until.isAfter(planned.madeAt()))
-                .map(until -> messages.text(TextKey.FOOTER_BUSY, messages.time(until, planned.zone())));
     }
 }
