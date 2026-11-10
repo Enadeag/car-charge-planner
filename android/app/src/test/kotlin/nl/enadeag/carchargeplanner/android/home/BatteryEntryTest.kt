@@ -424,6 +424,27 @@ class BatteryEntryTest {
     }
 
     @Test
+    fun aClosedEntryHoldsNoTypedLevelOrProblem() = runTest {
+        val entry = typed("101")
+        entry.save()
+
+        entry.cancel()
+
+        assertThat(entry.text.value).isEmpty()
+        assertThat(entry.problems.value).isEmpty()
+    }
+
+    @Test
+    fun anEntryOpensEmptyAlsoWhenTheSavedStateHeldATypedLevelWithoutTheEntryOpen() = runTest {
+        handle["battery.text.LEVEL"] = "64"
+        val entry = entry()
+
+        entry.open()
+
+        assertThat(entry.text.value).isEmpty()
+    }
+
+    @Test
     fun aKeptQuestionWithoutAnOpenEntryDoesNotShow() = runTest {
         handle["battery.discard"] = true
 

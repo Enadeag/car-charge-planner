@@ -662,4 +662,22 @@ class TripEntryAddAndChangeTest {
 
         assertThat(handle.keys()).isEmpty()
     }
+
+    @Test
+    fun anEntryOpenedAndNotChangedComesBackAfterTheSystemEndedTheApp() = runTest {
+        val entry = added()
+
+        val again = entry(handle.afterTheSystemEndedTheApp())
+
+        assertThat(again.draft.value).isEqualTo(entry.draft.value)
+    }
+
+    @Test
+    fun aKeptQuestionWithoutAKeptEntryDoesNotShow() = runTest {
+        handle["tripEntry.discard"] = true
+
+        val entry = entry()
+
+        assertThat(entry.discardAsked.value).isFalse()
+    }
 }
