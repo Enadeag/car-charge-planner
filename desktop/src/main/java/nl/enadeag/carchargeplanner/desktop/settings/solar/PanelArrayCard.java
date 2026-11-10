@@ -24,7 +24,6 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 
-/** One panel array: its name, size, tilt, direction and losses, with typical values on request. */
 final class PanelArrayCard {
 
     private final Messages messages;
@@ -42,9 +41,6 @@ final class PanelArrayCard {
 
     /**
      * Makes the card, empty until {@link #load(PanelArray, Set)}.
-     *
-     * @param remove what the card's Remove button does: take this card's array away; given this card
-     * @param messages the texts, in the owner's language
      */
     PanelArrayCard(Consumer<PanelArrayCard> remove, Messages messages) {
         this.messages = messages;
@@ -73,12 +69,6 @@ final class PanelArrayCard {
                 buttons);
     }
 
-    /**
-     * Shows a stored array, as the values not edited.
-     *
-     * @param array the stored array whose name, size, tilt, direction and losses the fields show
-     * @param typicalValues which of its values are typical values
-     */
     void load(PanelArray array, Set<ConfigSetting> typicalValues) {
         var shown = PanelArrayEntry.of(array);
         typical.load(typicalValues, () -> {
@@ -124,8 +114,6 @@ final class PanelArrayCard {
     /**
      * Shows the problem of a refused value at its field, after confirming what the owner typed; a problem shown before
      * is taken away first.
-     *
-     * @return true when a value is refused
      */
     boolean showProblems() {
         problems.clear();
@@ -133,38 +121,21 @@ final class PanelArrayCard {
         return panelArray(problems::show).isEmpty();
     }
 
-    /**
-     * The values that are typical values now.
-     *
-     * @return the tagged settings
-     */
     Set<ConfigSetting> typical() {
         return typical.tagged();
     }
 
-    /**
-     * Whether the owner changed something since the array was loaded.
-     *
-     * @return true when saving would change the array or its typical values
-     */
     boolean isChanged() {
         return typical.isChanged() || inputs().stream().anyMatch(Input::isChanged);
     }
 
     /**
-     * Calls an action whenever a value changes.
-     *
      * @param action what to run, on the JavaFX thread
      */
     void onChange(Runnable action) {
         inputs().forEach(input -> input.onChange(action));
     }
 
-    /**
-     * The card itself.
-     *
-     * @return the same card every time
-     */
     CardView view() {
         return card;
     }

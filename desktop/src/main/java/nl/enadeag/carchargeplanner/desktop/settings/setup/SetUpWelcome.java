@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.function.Predicate;
 import javafx.scene.control.Label;
 
-/** Set-up's first step: what the app does, what leaves the computer, and what to do with a value one does not know. */
 final class SetUpWelcome implements SetUpStepPage {
 
     private final Messages messages;
@@ -23,11 +22,9 @@ final class SetUpWelcome implements SetUpStepPage {
     private final PageView view;
 
     /**
-     * Makes the step, saying nothing about a provider until {@link #nameProviderOf(EngineConfig)}.
+     * Says nothing about a provider until {@link #nameProviderOf(EngineConfig)}.
      *
-     * @param providers what the known providers tell about themselves, to name the chosen one
      * @param searchesPlaces whether a provider has a place search, which is then sent what the owner types
-     * @param messages the texts, in the language set-up speaks
      */
     SetUpWelcome(List<ProviderInfo> providers, Predicate<ProviderId> searchesPlaces, Messages messages) {
         this.messages = messages;
@@ -40,11 +37,6 @@ final class SetUpWelcome implements SetUpStepPage {
                 new CardView(messages.text(TextKey.SET_UP_TYPICAL_TITLE), messages.text(TextKey.SET_UP_TYPICAL)));
     }
 
-    /**
-     * Names the primary provider of a draft, and what it is sent.
-     *
-     * @param config the draft set-up starts from
-     */
     void nameProviderOf(EngineConfig config) {
         var texts = new ProviderTexts(messages);
         var primary = providers.stream().filter(info -> info.id().equals(config.forecast().primary())).findFirst();
