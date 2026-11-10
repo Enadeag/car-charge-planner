@@ -82,7 +82,7 @@ The app's own tests, in `app/src/test/`, run on the JVM in one task. Its logic, 
 
 **The logic of set-up, Settings, the home and which screen shows** (the packages `form`, `setup`, `settings`, `home`, `start` and `store`) is tested with `kotlinx-coroutines-test`, against an `EngineAccess` in memory, and with a `SavedStateHandle` carried over as Android does after it ended the app, which shows what survives: the texts, the step and the typical marks, never an API key. `SunnyDayPlan`, the made-up sunny day the engine plans in `SunnyDayPlanTest`, is in `src/sharedTest/kotlin/`, which the JVM tests and the instrumented tests share.
 
-`StringsResourcesTest` holds the Dutch texts to the English ones as the desktop's `MessagesBundleTest` does its languages (the same names, plural quantities and placeholders, all positional, nothing wrongly escaped), and checks that the languages the app offers are English and the `values-*` folders; Lint fails the build on the same kinds of mistakes (see [docs/translating.md](../translating.md)).
+`StringsResourcesTest` holds the Dutch texts to the English ones as the desktop's `MessagesBundleTest` does its languages (the same names, plural quantities and placeholders, all positional, nothing wrongly escaped), and checks that the languages the app offers are English and the `values-*` folders; Lint fails the build on the same kinds of mistakes (see [docs/translating-android.md](../translating-android.md)).
 
 ## The instrumented tests
 
