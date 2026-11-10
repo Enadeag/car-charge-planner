@@ -23,7 +23,7 @@ The pictures are of an example home; a real desktop theme looks a little differe
 - Shows the plan in a tray icon and on the **dashboard**, and notifies you a few minutes before each window.
 - Reads nothing from the car: you enter the battery level by hand. Reading it from the car is not planned for now; [ADR 0006](docs/adr/0006-integrations-built-in.md) records which car makers offer their owners an official route.
 
-**Current state:** all of this works, rewritten from Python and Qt in Java with JavaFX ([ADR 0005](docs/adr/0005-java-with-javafx.md); original design in [docs/design](docs/design/README.md)). Mind the [limits](docs/guide.md#limits-to-know-about).
+**Current state:** all of this works, rewritten from Python and Qt in Java with JavaFX ([ADR 0005](docs/adr/0005-java-with-javafx.md)). Mind the [limits](docs/guide.md#limits-to-know-about).
 
 ## Supported systems
 
