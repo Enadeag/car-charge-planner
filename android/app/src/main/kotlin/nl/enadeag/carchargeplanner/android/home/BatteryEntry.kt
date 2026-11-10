@@ -65,7 +65,7 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
     private val openNow = MutableStateFlow(handle.get<Boolean>(OPEN) == true)
     private val textNow = MutableStateFlow(form.text(Field.LEVEL))
     private val changes = ChangeQueue<Notice>(scope)
-    private val flow = EntryFlow(handle, DISCARD, changes, { openNow.value }, { textNow.value.isNotEmpty() }, ::shut)
+    private val flow = EntryFlow(handle, DISCARD, changes, { openNow.value }, { textNow.value.isNotEmpty() }, ::closed)
 
     /** True while the entry is open. */
     val open: StateFlow<Boolean> = openNow.asStateFlow()
@@ -156,7 +156,7 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
         return null
     }
 
-    private fun shut() {
+    private fun closed() {
         forget(handle)
         clear()
         openNow.value = false

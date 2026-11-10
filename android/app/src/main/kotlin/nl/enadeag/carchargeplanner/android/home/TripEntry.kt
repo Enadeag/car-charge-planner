@@ -113,9 +113,6 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
     }
 
     companion object {
-        /** How many days, from today, the entry offers, as the desktop does. */
-        const val DAYS_OFFERED = 21
-
         /**
          * Forgets everything the entry kept in the handle, as the home it belongs to ends.
          *
@@ -130,7 +127,7 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
     private val draftNow = MutableStateFlow(kept.kept())
     private val problemNow = MutableStateFlow<TripDraft.Problem?>(null)
     private val flow = EntryFlow(handle, TripDraftKept.DISCARD, changes, { draftNow.value != null },
-        { draftNow.value?.edited == true }, ::shut)
+        { draftNow.value?.edited == true }, ::closed)
 
     /**
      * The trip whose Change the focus goes back to once the entry closed: the trip as saved after a change, the trip
@@ -358,7 +355,7 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
      * Closes the entry; the focus goes back to the Change of the trip it opened on, if any: the trip as saved after a
      * save, as it opened without one.
      */
-    private fun shut() {
+    private fun closed() {
         forget(handle)
         closedOn = draftNow.value?.opened?.let { savedTrip ?: it }
         savedTrip = null

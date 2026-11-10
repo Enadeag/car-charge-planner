@@ -118,12 +118,17 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         data class Refused(val problem: Problem) : Checked
     }
 
+    companion object {
+        /** How many days, from today, the entry offers, as the desktop does. */
+        const val DAYS_OFFERED = 21
+    }
+
     /**
      * The days offered for the departure and the return, as the desktop's: from today to 20 days after it, widened
      * to the days the entry opened on, so a changed trip's own days stay offered.
      */
     val days: ClosedRange<LocalDate>
-        get() = minOf(today, first.departureDay)..maxOf(today.plusDays(TripEntry.DAYS_OFFERED - 1L), first.returnDay)
+        get() = minOf(today, first.departureDay)..maxOf(today.plusDays(DAYS_OFFERED - 1L), first.returnDay)
 
     /**
      * True when something differs from how the entry opened, so Back asks before throwing it away; spaces around

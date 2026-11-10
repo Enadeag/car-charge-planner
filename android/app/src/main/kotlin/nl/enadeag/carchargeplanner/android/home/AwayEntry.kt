@@ -183,7 +183,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     private val problemNow = MutableStateFlow<Problem?>(null)
     private val changes = ChangeQueue<Notice>(scope)
     private val flow = EntryFlow(handle, DISCARD, changes, { draftNow.value != null },
-        { draftNow.value?.edited == true }, ::shut)
+        { draftNow.value?.edited == true }, ::closed)
 
     /** What the open entry holds; null while it is closed. */
     val draft: StateFlow<Draft?> = draftNow.asStateFlow()
@@ -359,7 +359,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         }
     }
 
-    private fun shut() {
+    private fun closed() {
         forget(handle)
         problemNow.value = null
         draftNow.value = null
