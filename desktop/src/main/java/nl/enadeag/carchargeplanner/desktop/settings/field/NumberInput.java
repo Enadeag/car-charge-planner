@@ -84,8 +84,6 @@ public final class NumberInput implements Input {
     /**
      * Changes what the field allows and shows, such as for other units. The value shown is not changed, except to
      * bring it into the new range.
-     *
-     * @param range the new range, step and decimals
      */
     void setRange(NumberRange range) {
         this.range = range;
@@ -121,8 +119,6 @@ public final class NumberInput implements Input {
     }
 
     /**
-     * Changes the unit shown after the field.
-     *
      * @param text the unit, such as "mi"; empty for none
      */
     void setUnit(String text) {

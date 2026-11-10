@@ -122,11 +122,6 @@ public final class FieldRow extends VBox {
         return name;
     }
 
-    /**
-     * Whether a problem shows.
-     *
-     * @return true while the row shows a problem
-     */
     boolean hasProblem() {
         return problem.isVisible();
     }
