@@ -13,13 +13,10 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * The trip entry's draft in the saved state, so it survives turning the phone and the system ending the app: how the
  * entry opened, put once as it opens, and the fields, put at each change. A draft that can no longer be read is
  * forgotten. Called from the main thread.
- *
- * @param handle the screen's saved state
  */
 internal class TripDraftKept(private val handle: SavedStateHandle) {
 
     companion object {
-        /** What every key of the trip entry starts with. */
         const val PREFIX = "tripEntry"
 
         /** The key of "Discard changes?". */
@@ -42,19 +39,9 @@ internal class TripDraftKept(private val handle: SavedStateHandle) {
         private const val DISTANCE = "$PREFIX.distance"
         private const val CAN_CHARGE = "$PREFIX.canCharge"
 
-        /**
-         * Forgets everything the trip entry kept in the handle.
-         *
-         * @param handle the screen's saved state
-         */
         fun forget(handle: SavedStateHandle) = handle.forget(listOf(PREFIX))
     }
 
-    /**
-     * Puts how the entry opened, and its fields as they are.
-     *
-     * @param draft the draft as the entry opens
-     */
     fun opened(draft: TripDraft) {
         handle[MODE] = draft.mode.name
         handle[ZONE] = draft.zone.id
@@ -73,11 +60,6 @@ internal class TripDraftKept(private val handle: SavedStateHandle) {
         put(draft.fields)
     }
 
-    /**
-     * Puts the fields as they are now.
-     *
-     * @param fields the fields
-     */
     fun put(fields: TripDraft.Fields) {
         handle[DEPARTURE_DAY] = fields.departureDay.toString()
         handle[DEPARTURE_TIME] = fields.departureTime.toSecondOfDay()
@@ -87,11 +69,7 @@ internal class TripDraftKept(private val handle: SavedStateHandle) {
         handle[CAN_CHARGE] = fields.canCharge
     }
 
-    /**
-     * The draft the handle keeps; one that can no longer be read is forgotten.
-     *
-     * @return the draft; null when none is kept, or it was forgotten
-     */
+    /** The draft the handle keeps; one that can no longer be read is forgotten. */
     fun kept(): TripDraft? {
         if (handle.get<Any?>(MODE) == null) {
             return null

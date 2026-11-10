@@ -64,8 +64,6 @@ private enum class Picked {
  * periods runs, Save is held, keeping the focus, and while its own save runs it shows its progress. The content
  * scrolls, so it stays reachable at a large font size. Back, or a tap beside the dialog, asks "Discard changes?" when
  * the choice or a time changed.
- *
- * @param entry what is entered, the save and what it came to
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -167,7 +165,6 @@ private fun Kinds(chosen: AwayEntry.Kind, focus: FocusRequester, enabled: Boolea
     }
 }
 
-/** The text of why Save refused the period. */
 private fun problemId(problem: AwayEntry.Problem): Int = when (problem) {
     AwayEntry.Problem.END_NOT_AFTER_START -> R.string.one_off_end_before_start
     AwayEntry.Problem.PASSED -> R.string.one_off_passed

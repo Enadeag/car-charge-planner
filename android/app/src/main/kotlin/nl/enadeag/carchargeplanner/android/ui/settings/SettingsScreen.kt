@@ -72,9 +72,6 @@ import nl.enadeag.carchargeplanner.android.ui.setup.Edits
  * has no Save and nothing to discard; Back and Up there return to the list, and it stays open after turning the phone
  * or the system ending the app, until Settings closes.
  *
- * @param session the pages, their forms and their Save
- * @param page the page open; null for the list
- * @param wifiOnly the Forecast page's "Wi-Fi only" switch, which applies at once
  * @param licences where the licence texts are read from: the app's assets, or a test's fixture
  */
 @Composable
@@ -287,8 +284,6 @@ private tailrec fun Context.activity(): Activity? = when (this) {
 }
 
 /**
- * The page's title, in the list and in its top app bar.
- *
  * @return the text's resource
  */
 internal fun SettingsPage.title(): Int = when (this) {

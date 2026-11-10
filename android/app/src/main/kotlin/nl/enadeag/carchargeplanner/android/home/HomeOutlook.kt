@@ -208,14 +208,11 @@ class HomeOutlook(private val access: EngineAccess, private val scope: Coroutine
     }
 
     /**
-     * What the home shows next, and the outlook still to be passed on once it shows.
-     *
      * @property state the home's next state; null when the app is not set up or its settings file cannot be used
      * @property told the outlook to pass on; null when there is none, or it was passed on already
      */
     private class Answer(val state: State?, val told: Outlook?)
 
-    /** Asks the engine for the outlook and makes the home's next state of it. */
     private suspend fun answer(): Answer = try {
         when (val outlook = access.outlook()) {
             is Outlook.Planned -> Answer(if (outlook.days().isEmpty()) {

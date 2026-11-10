@@ -56,10 +56,6 @@ abstract class FieldsForm<F : Enum<F>>(protected val state: FormState<F>, protec
     }
 
     /**
-     * Lays the fields over a config.
-     *
-     * @param config the config to change
-     * @param reader reads the fields and notes their problems
      * @return the changed config; null when a value is refused, whose problem the reader noted
      */
     protected abstract fun readInto(config: EngineConfig, reader: FieldReader<F>): EngineConfig?

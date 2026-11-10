@@ -31,24 +31,11 @@ public final class LogcatServiceProvider implements SLF4JServiceProvider {
         loggers = forBuild(BuildConfig.DEBUG, new LogcatSink());
     }
 
-    /**
-     * The loggers of a build: from DEBUG in the debug build, from INFO in the release build.
-     *
-     * @param debugBuild whether this is the debug build
-     * @param sink where the records go
-     * @return the factory
-     */
+    /** The loggers of a build: from DEBUG in the debug build, from INFO in the release build. */
     static ILoggerFactory forBuild(boolean debugBuild, LogSink sink) {
         return loggers(sink, debugBuild ? Level.DEBUG : Level.INFO);
     }
 
-    /**
-     * The loggers, one per name, made when first asked for.
-     *
-     * @param sink where the records go
-     * @param threshold the lowest level that is written
-     * @return the factory
-     */
     static ILoggerFactory loggers(LogSink sink, Level threshold) {
         var made = new ConcurrentHashMap<String, Logger>();
         return name -> made.computeIfAbsent(name, ignored -> new LogcatLogger(name, threshold, sink));

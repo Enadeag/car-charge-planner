@@ -25,28 +25,14 @@ import nl.enadeag.carchargeplanner.android.R
  */
 private val LEAST_HEIGHT = 48.dp
 
-/**
- * Material's filled button, for a screen's main action, drawn at least 48 dp high.
- *
- * @param onClick what it does
- * @param modifier its place in the layout
- * @param enabled false while it cannot be used, as while a save runs
- * @param content its text, and a progress indicator while it waits
- */
+/** Material's filled button, for a screen's main action, drawn at least 48 dp high. */
 @Composable
 internal fun AppButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit) {
     Button(onClick = onClick, modifier = modifier.heightIn(min = LEAST_HEIGHT), enabled = enabled, content = content)
 }
 
-/**
- * Material's outlined button, for an action beside the main one, drawn at least 48 dp high.
- *
- * @param onClick what it does
- * @param modifier its place in the layout
- * @param enabled false while it cannot be used
- * @param content its text
- */
+/** Material's outlined button, for an action beside the main one, drawn at least 48 dp high. */
 @Composable
 internal fun AppOutlinedButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit) {
@@ -58,11 +44,7 @@ internal fun AppOutlinedButton(onClick: () -> Unit, modifier: Modifier = Modifie
  * Material's text button, for a dialog's actions, the top app bar's and the lesser ones on a page, drawn at least
  * 48 dp high.
  *
- * @param onClick what it does
- * @param modifier its place in the layout
- * @param enabled false while it cannot be used
  * @param colors its colours; Material's text button's by default, a snackbar's action has its own
- * @param content its text
  */
 @Composable
 internal fun AppTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
@@ -74,8 +56,6 @@ internal fun AppTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, e
 /**
  * Save, as a text button: while it saves, it is off and says so with its progress.
  *
- * @param busy true while the save runs
- * @param onClick saves
  * @param enabled false while it cannot be used for another reason, as while what it saves is read
  */
 @Composable
@@ -90,10 +70,7 @@ internal fun SaveButton(busy: Boolean, onClick: () -> Unit, enabled: Boolean = t
  * so a keyboard or switch user who pressed it would start again at the top of the page. It looks off, a screen reader
  * says it is, and a press does nothing until the change is done.
  *
- * @param busy true while a change runs
  * @param onClick what a press does while no change runs
- * @param modifier its place, focus and name
- * @param content its words
  */
 @Composable
 internal fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
@@ -109,10 +86,6 @@ internal fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier =
 /**
  * An entry's Save, as a [HeldButton]: held while any of the entry's changes runs, so it keeps the focus, and showing
  * its progress while the entry's own save runs.
- *
- * @param saving true while the entry's own save runs
- * @param held true while any of the entry's changes runs, its own save among them
- * @param onSave saves
  */
 @Composable
 internal fun SaveAction(saving: Boolean, held: Boolean, onSave: () -> Unit) {
@@ -121,11 +94,6 @@ internal fun SaveAction(saving: Boolean, held: Boolean, onSave: () -> Unit) {
     }
 }
 
-/**
- * Save's words, or its progress while it saves.
- *
- * @param saving true while the save runs
- */
 @Composable
 private fun SaveLabel(saving: Boolean) {
     if (saving) {

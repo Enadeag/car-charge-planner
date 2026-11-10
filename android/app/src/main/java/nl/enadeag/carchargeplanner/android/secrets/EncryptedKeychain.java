@@ -101,8 +101,6 @@ public final class EncryptedKeychain implements Keychain {
     interface Pause {
 
         /**
-         * Waits.
-         *
          * @param millis how long, in milliseconds
          * @throws InterruptedException when the thread is interrupted while waiting
          */
@@ -117,8 +115,6 @@ public final class EncryptedKeychain implements Keychain {
     private final Object lock;
 
     /**
-     * The entries as the file holds them, the alias of the key for new values, or why the file is not this format.
-     *
      * @param entries per name, the alias and the encrypted value
      * @param alias the alias of the key that new values are encrypted with
      * @param damage why the file is not this format; null when it is
@@ -127,8 +123,6 @@ public final class EncryptedKeychain implements Keychain {
     }
 
     /**
-     * The outcome of looking for a key.
-     *
      * @param key the key; null when there is none
      * @param lost whether the key is lost for good, rather than not there
      */
@@ -149,15 +143,6 @@ public final class EncryptedKeychain implements Keychain {
         this(file, files, keys, firstAlias, Thread::sleep);
     }
 
-    /**
-     * Makes the store with a pause of its own between two looks for a missing key.
-     *
-     * @param file the file that keeps the entries
-     * @param files how the file is written atomically
-     * @param keys the keys the values are encrypted with
-     * @param firstAlias the alias of the first key
-     * @param pause waits between two looks for a missing key
-     */
     EncryptedKeychain(Path file, PrivateFiles files, KeychainKeys keys, String firstAlias, Pause pause) {
         this.file = file;
         this.files = files;

@@ -83,8 +83,6 @@ public abstract class AndroidApiClassesCheck extends DefaultTask {
     }
 
     /**
-     * The classes in some jars.
-     *
      * @param jars the jars; never null
      * @return the names of their classes in internal form, such as {@code java/lang/String}
      * @throws IOException when a jar cannot be read
@@ -101,8 +99,6 @@ public abstract class AndroidApiClassesCheck extends DefaultTask {
     }
 
     /**
-     * The referenced classes that Android lacks.
-     *
      * @param references per compiled class's name, the JDK classes it refers to; never null
      * @param android the classes in Android's API, in internal form; never null
      * @return one line per missing class and class that uses it, in the order of {@code references}

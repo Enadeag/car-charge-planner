@@ -71,10 +71,6 @@ public abstract class MavenDriftCheck extends DefaultTask {
     }
 
     /**
-     * The libraries that only one of the two builds declares.
-     *
-     * @param maven the libraries of the engine's pom
-     * @param gradle the libraries of the Android build
      * @return one line per library, in name order; empty when they agree
      */
     static List<String> differences(List<Declared> maven, List<Declared> gradle) {

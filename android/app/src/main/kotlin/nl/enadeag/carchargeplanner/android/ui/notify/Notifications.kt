@@ -130,9 +130,6 @@ internal class Notifications(private val context: Context, private val clock: Cl
      * could fill in. The notification's tag goes along as the intent's data, so the activity takes the notification
      * away also when its action is tapped, which Android's auto-cancel does not do, and two notifications never share
      * one intent.
-     *
-     * @param tap what the activity opens
-     * @param tag the tag of the notification the intent belongs to
      */
     private fun open(tap: Tap, tag: String): PendingIntent {
         val intent = Intent().setComponent(MainActivity.noticeTap(context)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -149,8 +146,6 @@ internal class Notifications(private val context: Context, private val clock: Cl
  * Makes the app's notification channels, or brings their names and descriptions up to the app's language, which
  * Android shows in its settings; the owner's choices for a channel stay. Called at every start, so the Settings row
  * finds them before the first notification.
- *
- * @param context the application's context
  */
 internal fun createNoticeChannels(context: Context) {
     val channels = NoticeChannel.entries.map { channel ->

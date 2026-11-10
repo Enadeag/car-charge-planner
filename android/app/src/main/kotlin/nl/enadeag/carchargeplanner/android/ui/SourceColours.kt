@@ -10,18 +10,10 @@ import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource
  * They stay fixed whatever the wallpaper's colours, as their meaning must not change; each source's text is drawn on
  * its own container, so its contrast is the same on every phone, at least 4.5:1 in light and in dark. The colour is
  * never the only sign: the text always names the source.
- *
- * @property solar solar energy
- * @property grid energy from the grid
- * @property car the car and its battery
- * @property chart the solar chart's and the battery bar's colours
  */
 internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair, val chart: Chart) {
 
     /**
-     * One source's colours.
-     *
-     * @property text its text
      * @property container what its text is drawn on
      */
     data class Pair(val text: Color, val container: Color)
@@ -45,12 +37,6 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
     data class Chart(val ground: Color, val text: Color, val muted: Color, val gridLine: Color, val solar: Color,
         val solarArea: Color, val car: Color, val carArea: Color, val carAfter: Color, val carText: Color) {
 
-        /**
-         * The colour a shape of the drawings is drawn in.
-         *
-         * @param ink the shape's colour by its role
-         * @return that colour
-         */
         fun of(ink: ChartInk): Color = when (ink) {
             ChartInk.GROUND -> ground
             ChartInk.TEXT -> text
@@ -64,24 +50,12 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
         }
     }
 
-    /**
-     * One source's colours.
-     *
-     * @param source the source
-     * @return its text and container colours
-     */
     fun of(source: EnergySource): Pair = when (source) {
         EnergySource.SOLAR -> solar
         EnergySource.GRID -> grid
         EnergySource.CAR -> car
     }
 
-    /**
-     * The colours a figure is drawn in: those of the source it is about.
-     *
-     * @param figure the figure
-     * @return its source's text and container colours
-     */
     fun of(figure: SourceFigure): Pair = of(figure.source)
 
     companion object {
@@ -108,12 +82,6 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
                 carText = Color(0xFF4CC78C)),
         )
 
-        /**
-         * The colours for the system's light or dark.
-         *
-         * @param dark whether the system is dark
-         * @return [DARK] or [LIGHT]
-         */
         fun of(dark: Boolean): SourceColours = if (dark) DARK else LIGHT
     }
 }
@@ -149,5 +117,4 @@ internal enum class ChartInk {
     CAR_AFTER,
 }
 
-/** The source colours of the theme around, light or dark; [AppTheme] provides them. */
 internal val LocalSourceColours = staticCompositionLocalOf { SourceColours.LIGHT }

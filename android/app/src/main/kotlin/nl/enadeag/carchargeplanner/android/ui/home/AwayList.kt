@@ -54,9 +54,6 @@ internal fun awayWords(shown: Shown): (OneOffAwayPeriod, AwayEntry.Entered?) -> 
 }
 
 /**
- * What a day's "Car away" list changes the periods with.
- *
- * @property entry the entry and Remove
  * @property focus moves the focus to the Add of the page in view
  * @property busy true while a change runs, so Add and Remove are off
  * @property going the period whose Remove was pressed, whose neighbour takes the focus once it is out of the list
@@ -71,10 +68,6 @@ internal class AwayAction(val entry: AwayEntry, val focus: FocusRequester, val b
  * Remove the focus goes, once the period is gone, to the period before it, or the one after, or the line that says
  * there is none, so it does not fall off the page with the button that went.
  *
- * @param dashboard the dashboard, with the periods and the home's time zone
- * @param day the page's day, on which Add enters a period
- * @param words the dashboard's words
- * @param away the entry, Remove and whether a change runs
  * @param inView true on the page in view, whose Add the focus comes back to when the entry closes
  */
 @Composable

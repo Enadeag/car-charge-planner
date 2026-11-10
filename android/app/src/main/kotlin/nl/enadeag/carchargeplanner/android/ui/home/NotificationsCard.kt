@@ -46,7 +46,6 @@ import nl.enadeag.carchargeplanner.android.ui.notify.openNotificationSettings
  * text, its button and last its ×, which closes it for good, after which the focus goes on, as the card is gone. When
  * a refusal swaps the button for the other one, the focus goes to the card's title, as the button it was on is gone.
  *
- * @param card what the card shows, and its answers
  * @param closed moves the focus once the card is closed
  */
 @Composable
@@ -99,9 +98,5 @@ internal fun NotificationsCard(card: NotificationCard, closed: () -> Unit) {
     }
 }
 
-/**
- * What the notification card showed when last looked at, which drawing never reads.
- *
- * @property shown what it showed
- */
+/** What the notification card showed when last looked at, which drawing never reads. */
 private class ShownBefore(var shown: NotificationCard.Shown)

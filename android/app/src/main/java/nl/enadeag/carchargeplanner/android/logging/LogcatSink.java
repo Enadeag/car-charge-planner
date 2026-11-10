@@ -49,12 +49,6 @@ final class LogcatSink implements LogSink {
         return parts;
     }
 
-    /**
-     * Logcat's priority for an slf4j level.
-     *
-     * @param level the record's level
-     * @return the matching {@link Log} priority
-     */
     static int priority(Level level) {
         switch (level) {
             case ERROR:

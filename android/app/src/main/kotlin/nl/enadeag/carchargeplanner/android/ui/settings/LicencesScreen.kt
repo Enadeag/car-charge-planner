@@ -49,16 +49,9 @@ private const val SOURCE_CODE = "github.com/Enadeag/car-charge-planner"
 /** An empty line, also one with spaces, which ends a paragraph of a licence text. */
 private val PARAGRAPH_END = Regex("\n\\s*\n")
 
-/** What the screen has of a text or of the index: still reading, what was read, or that it could not be read. */
 private sealed interface Reading<out T> {
-    /** Still reading. */
     data object Busy : Reading<Nothing>
 
-    /**
-     * Read.
-     *
-     * @property value what was read
-     */
     data class Read<T>(val value: T) : Reading<T>
 
     /** Missing, or not readable. */
@@ -71,9 +64,6 @@ private sealed interface Reading<out T> {
  * by its title. A row is one button that shows its text under it or hides it again, and says which it does; only a
  * text shown is read and drawn. The texts are read off the main thread; one that cannot be read says so. Back and Up
  * return to Settings' list.
- *
- * @param files where the texts are read from
- * @param onClose goes back to Settings' list
  */
 @Composable
 internal fun LicencesScreen(files: LicenceFiles, onClose: () -> Unit) {
@@ -145,9 +135,6 @@ private fun PartText(files: LicenceFiles, asset: String) {
 /**
  * That a text, or the list of texts, is still being read, or that it could not be read, in the error colour; nothing
  * once it is read. A polite live region, which stays while empty, so a screen reader reads what comes in.
- *
- * @param reading how far the reading is
- * @param notRead what it says when the reading failed: of one text, or of the list
  */
 @Composable
 private fun Status(reading: Reading<*>, @StringRes notRead: Int) {

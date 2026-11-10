@@ -21,9 +21,6 @@ import nl.enadeag.carchargeplanner.engine.plan.Window
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
- * A notification's words.
- *
- * @property title its title
  * @property body its text, which may be long
  * @property publicTitle what a locked screen shows instead of both
  */
@@ -35,18 +32,11 @@ internal data class NoticeText(val title: String, val body: String, val publicTi
  * notification may be read later than it came. Times are in the home's time zone on the phone's 12- or 24-hour clock,
  * a window's times as a screen reader reads them ("11:15 to 14:30"), as the dashboard says them; numbers with the
  * language's decimal mark; a distance in whole km, rounded up.
- *
- * @param resources the app's texts, in its language
- * @param locale the app's language
- * @param twentyFour whether the phone uses a 24-hour clock
  */
 internal class NoticeWords(private val resources: Resources, private val locale: Locale,
     private val twentyFour: Boolean) {
 
     /**
-     * The words of a notice.
-     *
-     * @param notice what the engine tells the owner
      * @param lockScreen what a locked screen shows of it, as its [NoticePlan] says
      * @return its title, its text, and what a locked screen shows: "Charge window soon", or the title
      */
@@ -70,8 +60,6 @@ internal class NoticeWords(private val resources: Resources, private val locale:
     }
 
     /**
-     * The Problems notification's words.
-     *
      * @return "Forecast not updated" and that the app has the details; the title on a locked screen
      */
     fun problems(): NoticeText {
@@ -80,8 +68,6 @@ internal class NoticeWords(private val resources: Resources, private val locale:
     }
 
     /**
-     * The battery check's action.
-     *
      * @return "Enter battery level"
      */
     fun enterLevel(): String = text(R.string.notice_level_action)

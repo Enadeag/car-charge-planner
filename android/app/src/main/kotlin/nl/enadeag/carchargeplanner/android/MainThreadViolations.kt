@@ -22,7 +22,6 @@ internal object OwnCode {
      * counts as own too.
      *
      * @param stack the frames to look through, innermost first; may be empty, which is not own
-     * @return true when at least one frame's class is the app's own
      */
     fun isIn(stack: Array<out StackTraceElement>): Boolean = stack.any { it.className.startsWith(PACKAGE_PREFIX) }
 }
@@ -48,19 +47,13 @@ internal class MainThreadViolations(
     /** The violations already warned of, each by its [Signature]; at most [MOST_WARNED]. */
     private val warned = HashSet<Signature>()
 
-    /**
-     * StrictMode's call for each violation, on the main thread.
-     *
-     * @param v what StrictMode found, with the stack of the call that broke the policy
-     */
+    /** StrictMode's call for each violation, on the main thread. */
     override fun onThreadViolation(v: Violation) = decide(v)
 
     /**
      * Ends the app for a violation of the app's own code; warns once of one from the system's or a vendor's code
      * alone, until [MOST_WARNED] different ones were warned of, then says so once and is silent after that. It takes a
      * Throwable and not StrictMode's Violation, which cannot be made on the JVM, so that it can be tested there.
-     *
-     * @param violation what StrictMode found, with the stack of the call that broke the policy
      */
     fun decide(violation: Throwable) {
         if (OwnCode.isIn(violation.stackTrace)) {
@@ -83,14 +76,11 @@ internal class MainThreadViolations(
         /** How many different violations are warned of at most, so the set of those warned of stays small. */
         const val MOST_WARNED = 32
 
-        /** The one line that says no further violation of the system's or a vendor's code is warned of. */
         const val NO_MORE_WARNINGS = "further violations of the system's or a vendor's code are not logged"
 
         /**
          * Ends the app on the main looper's next message, with the violation as the cause, so the crash shows the
          * violation's whole stack and is not thrown inside StrictMode or the code that broke the policy.
-         *
-         * @param violation what StrictMode found
          */
         fun crashOnTheMainLooper(violation: Throwable) {
             Handler(Looper.getMainLooper()).post {

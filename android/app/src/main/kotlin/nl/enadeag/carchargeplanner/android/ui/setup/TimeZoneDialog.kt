@@ -31,10 +31,6 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 /**
  * Chooses the home's time zone from Java's list of zone ids, which a typed text narrows; only an id from the list can
  * be chosen.
- *
- * @param current the zone's id now, marked in the list
- * @param onChoose gets the zone the owner chose
- * @param onDismiss closes the dialog without a choice
  */
 @Composable
 internal fun TimeZoneDialog(current: String, onChoose: (ZoneId) -> Unit, onDismiss: () -> Unit) {

@@ -56,7 +56,6 @@ public final class LegalFilesPlugin implements Plugin<Project> {
         return List.copyOf(modules);
     }
 
-    /** Per library, the paths of its jars. */
     private static TreeMap<String, List<String>> jars(Set<ResolvedArtifactResult> artifacts) {
         var jars = new TreeMap<String, List<String>>();
         for (var artifact : artifacts) {

@@ -49,12 +49,11 @@ public final class AndroidPlatform {
     }
 
     /**
-     * Makes the parts for these folders and these keys; nothing is read, written or made yet. The app makes its set
-     * through {@link #of(Context, Clock)}; tests make their own.
+     * Nothing is read, written or made yet. The app makes its set through {@link #of(Context, Clock)}; tests make
+     * their own.
      *
      * @param filesFolder the folder for the engine's files ({@code Context.getFilesDir()})
      * @param noBackupFolder the folder for the keychain's file ({@code Context.getNoBackupFilesDir()})
-     * @param keys the keys the keychain encrypts with
      * @param clock the app's one clock, which tells the API keys when a keychain that failed may be asked again
      */
     AndroidPlatform(File filesFolder, File noBackupFolder, KeychainKeys keys, Clock clock) {

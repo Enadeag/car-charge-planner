@@ -9,9 +9,6 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 /**
  * What a field says about its problem, in the app's language: one sentence per rule, without the allowed range, which
  * the field's hint gives.
- *
- * @param problem the field's problem
- * @return the sentence
  */
 @Composable
 internal fun problemText(problem: FieldProblem): String = stringResource(when (problem) {

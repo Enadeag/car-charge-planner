@@ -26,8 +26,6 @@ import nl.enadeag.carchargeplanner.android.home.HomeOutlook
  * A warning above the plan, with a warning sign and the words, in a container that stands out and a polite live
  * region, so a refresh that brings it is heard; the plan below stays in view. That the forecast could not be
  * refreshed, or that a provider refused its API key.
- *
- * @param lines the warning's sentences, each on a line of its own
  */
 @Composable
 internal fun Warning(lines: List<String>) {

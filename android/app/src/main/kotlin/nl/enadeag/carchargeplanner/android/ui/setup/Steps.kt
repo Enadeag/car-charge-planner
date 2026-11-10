@@ -35,11 +35,7 @@ import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
-/**
- * What the app does, what leaves the phone and to whom, and what to do when a value is not known; read only.
- *
- * @param provider the forecast provider's name, such as Open-Meteo
- */
+/** What the app does, what leaves the phone and to whom, and what to do when a value is not known; read only. */
 @Composable
 internal fun WelcomeStep(provider: String) {
     Text(stringResource(R.string.setup_welcome_intro))
@@ -55,8 +51,6 @@ internal fun WelcomeStep(provider: String) {
 /**
  * The one panel array of set-up: its size, tilt, direction and losses, and "I don't know".
  *
- * @param panels the panels' form, which holds one array in set-up
- * @param edits counts each edit, so the fields show it
  * @param problems the step's fields in order, for the focus after Next
  */
 @Composable
@@ -83,8 +77,6 @@ internal fun PanelsStep(panels: PanelsForm, edits: Edits, problems: ProblemFocus
 /**
  * The car: its usable battery, consumption, other driving and trip surcharge, and "I don't know".
  *
- * @param car the car's form
- * @param edits counts each edit, so the fields show it
  * @param problems the step's fields in order, for the focus after Next
  * @param lastAction the keyboard's action key on the trip surcharge: Done when it is the page's last field
  */
@@ -109,8 +101,6 @@ internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, lastAct
 /**
  * The wall charger: its phases, lowest and highest current, voltage and efficiency, and "I don't know".
  *
- * @param charger the charger's form
- * @param edits counts each edit, so the fields show it
  * @param problems the step's fields in order, for the focus after Next
  */
 @Composable
@@ -142,9 +132,6 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
  * What makes the plan better and may be skipped: the house's baseload with "I don't know", and the weekly away
  * periods, which start empty.
  *
- * @param house the house's form
- * @param away the weekly away periods' form
- * @param edits counts each edit, so the fields show it
  * @param problems the step's fields in order, for the focus after Next
  */
 @Composable
@@ -160,10 +147,7 @@ internal fun MoreStep(house: HouseForm, away: WeeklyAwayForm, edits: Edits, prob
 /**
  * The house's baseload with "I don't know".
  *
- * @param house the house's form
- * @param edits counts each edit, so the field shows it
  * @param problems the page's fields in order, for the focus after Next or Save
- * @param order the field's place among them
  * @param imeAction the keyboard's action key: Done when it is the page's last field
  */
 @Composable
@@ -183,8 +167,6 @@ internal fun HouseFields(house: HouseForm, edits: Edits, problems: ProblemFocus,
  * heading, after Remove to the one before, to the next when the first went, or to the line that says there are none
  * when none is left.
  *
- * @param away the weekly away periods' form
- * @param edits counts each edit, so the fields show it
  * @param problems the page's fields in order, for the focus after Next or Save
  */
 @Composable
@@ -244,7 +226,6 @@ private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, rows: List<In
  * "I don't know": fills in the typical values and marks them.
  *
  * @param name the button's text; the plain "I don't know" unless several on a page need telling apart
- * @param onClick fills them in
  */
 @Composable
 internal fun UseTypical(name: String = stringResource(R.string.use_typical), onClick: () -> Unit) {

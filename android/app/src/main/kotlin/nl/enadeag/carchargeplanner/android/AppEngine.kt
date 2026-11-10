@@ -18,9 +18,6 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
 internal object AppEngine {
 
     /**
-     * The app's engine on the platform's parts.
-     *
-     * @param platform the process's one set of parts, which the app's Application makes
      * @param notifier tells the owner about an announcement; the engine calls it only in a round
      * @param clock what the engine plans and announces from; the same as the notifications'
      * @return the engine, with nothing read or fetched yet
@@ -29,12 +26,8 @@ internal object AppEngine {
         build(platform.dataFolder(), platform.http(), platform.files(), platform.apiKeys(), notifier, clock)
 
     /**
-     * The app's engine on these parts, for a test that keeps its files elsewhere.
+     * For a test that keeps its files elsewhere.
      *
-     * @param dataFolder where the settings file, the trips, the away periods and the forecast cache are kept
-     * @param http the way to the network, for the forecast providers
-     * @param files how the engine writes its files
-     * @param apiKeys the store of the providers' secret settings
      * @param notifier tells the owner about an announcement; the engine calls it only in a round
      * @param clock what the engine plans and announces from; the same as the notifications'
      * @return the engine, with nothing read or fetched yet

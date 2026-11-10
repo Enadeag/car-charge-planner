@@ -42,8 +42,6 @@ internal data class PlotArea(val left: Float, val top: Float, val width: Float, 
     val right: Float get() = left + width
 
     /**
-     * Where an hour is.
-     *
      * @param hour the hour from the start of the day; one outside the plot's hours goes on its nearest edge
      * @return pixels from the chart's left
      */
@@ -51,8 +49,6 @@ internal data class PlotArea(val left: Float, val top: Float, val width: Float, 
         .toFloat()
 
     /**
-     * Where a power is.
-     *
      * @param kw the power in kW; below 0 goes on the bottom edge and above the scale on the top edge
      * @return pixels from the chart's top
      */
@@ -60,8 +56,6 @@ internal data class PlotArea(val left: Float, val top: Float, val width: Float, 
 }
 
 /**
- * A point of the solar curve.
- *
  * @property hour the hour from the start of the day
  * @property kw the power in kW
  */
@@ -90,9 +84,6 @@ internal fun curveOf(steps: List<DayChart.Step>, fromHour: Double, toHour: Doubl
 private val DayChart.Step.midHour: Double get() = (startHour() + endHour()) / 2
 
 /**
- * A tick's label, placed.
- *
- * @property tick the tick
  * @property left the label's left edge in pixels from the chart's left
  * @property width the label's width in pixels
  */
@@ -133,8 +124,6 @@ internal object TimeAxis {
     }
 
     /**
-     * The ticks of every so many clock hours, such as 00, 03, 06.
-     *
      * @param chart the day's chart, with every whole hour as a tick
      * @param hours the clock hours between two ticks, more than 0
      * @return the ticks whose clock hour is a multiple of [hours], in time order
@@ -149,8 +138,6 @@ internal object TimeAxis {
 }
 
 /**
- * A point of a drawing.
- *
  * @property x pixels from the drawing's left
  * @property y pixels from the drawing's top
  */
@@ -159,30 +146,17 @@ internal data class Point(val x: Float, val y: Float)
 /** A shape of a chart's drawing, in pixels, in one of the charts' colours. */
 internal sealed interface Shape {
 
-    /** The colour it is drawn in. */
     val ink: ChartInk
 
     /**
-     * A straight line.
-     *
-     * @property from where it starts
-     * @property to where it ends
-     * @property ink the colour it is drawn in
      * @property width its width in pixels
-     * @property dashed whether it is dashed rather than whole
-     * @property round whether its ends are round rather than cut off
      */
     data class Line(val from: Point, val to: Point, override val ink: ChartInk, val width: Float,
         val dashed: Boolean = false, val round: Boolean = false) : Shape
 
     /**
-     * A rectangle, filled or outlined.
-     *
-     * @property left its left edge
-     * @property top its top edge
      * @property width its width in pixels
      * @property height its height in pixels
-     * @property ink the colour it is drawn in
      * @property corner the radius of its round corners in pixels; 0 for square ones
      * @property outline the width of its outline in pixels; null when it is filled
      */
@@ -190,10 +164,7 @@ internal sealed interface Shape {
         override val ink: ChartInk, val corner: Float = 0f, val outline: Float? = null) : Shape
 
     /**
-     * An area within lines from point to point, closed back to the first.
-     *
      * @property points its corners in order
-     * @property ink the colour it is drawn in
      * @property outline the width of its outline in pixels; null when it is filled
      */
     data class Area(val points: List<Point>, override val ink: ChartInk, val outline: Float? = null) : Shape
@@ -203,12 +174,7 @@ internal sealed interface Shape {
  * The solar chart's drawing, as the desktop's: the grid, the charge windows, the solar curve, the house's line and
  * "now", in the order they are drawn, and where its words go.
  *
- * @property plot where the plot lies
  * @property shapes what is drawn, in order, under the words
- * @property ticks the time axis's labels, placed
- * @property tickTop the top of the time axis's labels
- * @property scaleAt the top left of the scale's words
- * @property zeroAt the top left of the 0 at the foot of the scale
  * @property nowAt the top left of "now"; null when the chart has no now
  */
 internal data class SolarDrawing(val plot: PlotArea, val shapes: List<Shape>, val ticks: List<PlacedTick>,
@@ -219,10 +185,8 @@ internal data class SolarDrawing(val plot: PlotArea, val shapes: List<Shape>, va
         /** The room between the words and the plot, and half the least room between two labels of the axis. */
         private const val GAP_DP = 4f
 
-        /** The width of the solar curve's line. */
         private const val CURVE_DP = 2f
 
-        /** The width of a charge window's mark on the axis. */
         private const val WINDOW_MARK_DP = 4f
 
         /** The width of the dashed lines: the house's use and now. */
@@ -232,9 +196,6 @@ internal data class SolarDrawing(val plot: PlotArea, val shapes: List<Shape>, va
         private const val GRID_PX = 1f
 
         /**
-         * The drawing of a day's chart at a size.
-         *
-         * @param chart the day's chart
          * @param width the chart's width in pixels, 0 or more
          * @param height the chart's height in pixels, 0 or more
          * @param dp the pixels in a dp, more than 0
@@ -281,15 +242,11 @@ internal data class SolarDrawing(val plot: PlotArea, val shapes: List<Shape>, va
 }
 
 /**
- * Where the battery bar draws its levels and its marks, and their words under it.
- *
  * @property width the bar's width in pixels, 0 or more
  * @property dp the pixels in a dp, more than 0
  * @property line the height of a line of the marks' words in pixels
  * @property levelEnd where the level at the start ends, in pixels from the bar's left
  * @property afterEnd where the level after charging ends, in pixels from the bar's left
- * @property minimum the minimum charge level's mark
- * @property target the target charge level's mark
  */
 internal data class BatteryBarLayout(val width: Float, val dp: Float, val line: Float, val levelEnd: Float,
     val afterEnd: Float, val minimum: Mark, val target: Mark) {
@@ -305,11 +262,8 @@ internal data class BatteryBarLayout(val width: Float, val dp: Float, val line: 
     }
 
     /**
-     * A mark across the bar, with its words centred under it.
-     *
      * @property x where the mark is, in pixels from the bar's left
      * @property labelLeft the left edge of its words, in pixels from the bar's left
-     * @property row the line its words are on
      */
     data class Mark(val x: Float, val labelLeft: Float, val row: Row)
 
@@ -326,9 +280,6 @@ internal data class BatteryBarLayout(val width: Float, val dp: Float, val line: 
     val height: Float get() = labelsTop + line * rows
 
     /**
-     * The top of a mark's words.
-     *
-     * @param mark one of the two marks
      * @return pixels from the bar's top
      */
     fun labelTop(mark: Mark): Float = labelsTop + line * mark.row.ordinal
@@ -364,10 +315,6 @@ internal data class BatteryBarLayout(val width: Float, val dp: Float, val line: 
         private const val TRACK_OUTLINE_DP = 1f
 
         /**
-         * The layout of one day's bar.
-         *
-         * @param battery the day's levels at its start and after its charging
-         * @param levels the minimum and target charge levels
          * @param width the bar's width in pixels, 0 or more
          * @param minimumLabel the width of the minimum's words in pixels
          * @param targetLabel the width of the target's words in pixels
@@ -388,9 +335,6 @@ internal data class BatteryBarLayout(val width: Float, val dp: Float, val line: 
         }
 
         /**
-         * Where a level is on a bar.
-         *
-         * @param level the level
          * @param width the bar's width in pixels
          * @return pixels from the bar's left
          */

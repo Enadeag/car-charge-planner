@@ -63,10 +63,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
  * the stored keys could not be read, a note says so and a key left empty stays as stored. Last, the "Wi-Fi only"
  * switch of the hourly update while the app is closed, which applies at once, outside the page's Save.
  *
- * @param session the forecast's form, the API keys as read, and the checks
- * @param edits counts each edit, so the fields show it
  * @param problems the page's fields in order, for the focus after Save
- * @param wifiOnly the switch
  */
 @Composable
 internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: ProblemFocus, wifiOnly: WifiOnly) {

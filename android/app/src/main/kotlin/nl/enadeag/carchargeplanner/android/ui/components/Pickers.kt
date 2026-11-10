@@ -57,11 +57,8 @@ import nl.enadeag.carchargeplanner.android.R
  *
  * @param name what it is, such as "Away from", read first
  * @param time the time or day, as the phone writes it
- * @param focus moves the focus to it
  * @param problem the problem it carries for a screen reader; null for none
- * @param enabled false while it cannot be used, as while a save runs
  * @param modifier its place in the layout; it fills the width it gets
- * @param onClick opens the picker
  */
 @Composable
 internal fun TimeButton(name: String, time: String, focus: FocusRequester, problem: String?, enabled: Boolean,
@@ -84,8 +81,6 @@ internal fun TimeButton(name: String, time: String, focus: FocusRequester, probl
  * it, cancels. A text button switches between the dial and typing the time, which stays as it was when the phone
  * turns. Its content scrolls, so OK stays reachable at a large font size.
  *
- * @param title which time it is, the dialog's heading
- * @param time the time it opens on
  * @param chosen gets the time on OK
  * @param closed called as it closes, after OK or not
  */
@@ -135,9 +130,6 @@ internal fun TimeDialog(title: String, time: LocalTime, chosen: (LocalTime) -> U
  * screen, which cuts its sides and OK off on a phone narrower than that. Here the picker keeps its 360 dp and scrolls
  * sideways under it, and up and down with the toggle at a large font size, while Cancel and OK stay in view below.
  *
- * @param title which day it is, the dialog's heading
- * @param day the day it opens on
- * @param days the days that can be chosen
  * @param chosen gets the day on OK
  * @param closed called as it closes, after OK or not
  */

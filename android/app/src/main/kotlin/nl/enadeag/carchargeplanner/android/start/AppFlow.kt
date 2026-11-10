@@ -156,8 +156,6 @@ class AppFlow(private val access: EngineAccess, private val saves: Saves, privat
      * Shows the screen for the settings file as read. Settings' mark in the handle means set-up has no draft there,
      * as Settings opens only from the home, which forgets set-up's: so Settings' keys, which share the prefixes of
      * set-up's forms, are forgotten only under that mark, and a restart during set-up keeps what was typed.
-     *
-     * @param state the settings file as read
      */
     private fun show(state: StartState) {
         // Settings ends here; without its mark no key of Settings is left, and set-up's must stay

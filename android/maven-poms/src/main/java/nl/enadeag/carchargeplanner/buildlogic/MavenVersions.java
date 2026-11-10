@@ -78,30 +78,18 @@ public abstract class MavenVersions {
     public MavenVersions() {
     }
 
-    /**
-     * The names of the versions {@link #addTo} puts in a catalog.
-     *
-     * @return the names, such as {@code jackson}
-     */
+    /** The names of the versions {@link #addTo} puts in a catalog. */
     static Set<String> versionNames() {
         var names = new TreeSet<>(FROM_PARENT_POM.keySet());
         names.addAll(FROM_PROPERTIES.keySet());
         return names;
     }
 
-    /**
-     * Where Gradle's inputs of the configuration come from.
-     *
-     * @return Gradle's factory
-     */
+    /** Where Gradle's inputs of the configuration come from. */
     @Inject
     protected abstract ProviderFactory getProviders();
 
-    /**
-     * Turns a file into one of Gradle's.
-     *
-     * @return Gradle's factory
-     */
+    /** Turns a file into one of Gradle's. */
     @Inject
     protected abstract ObjectFactory getObjects();
 

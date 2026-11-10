@@ -39,8 +39,6 @@ private val MOST_WIDTH = 600.dp
 /**
  * A screen's page: one column of at most [MOST_WIDTH], centred, that scrolls, so every screen fits at any font size,
  * clear of the system bars and the keyboard.
- *
- * @param content the page's parts, from top to bottom
  */
 @Composable
 internal fun Page(content: @Composable ColumnScope.() -> Unit) {
@@ -60,7 +58,6 @@ internal fun Page(content: @Composable ColumnScope.() -> Unit) {
 /**
  * A page's heading, which takes the focus when asked, so a screen reader starts there on a new step.
  *
- * @param text the heading
  * @param focus moves the focus to it; null for a heading that never takes it
  */
 @Composable
@@ -69,11 +66,6 @@ internal fun Heading(text: String, focus: FocusRequester? = null) {
     Text(text, style = MaterialTheme.typography.headlineSmall, modifier = focused.semantics { heading() })
 }
 
-/**
- * A section's heading within a page.
- *
- * @param text the heading
- */
 @Composable
 internal fun SectionHeading(text: String) {
     Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
@@ -83,8 +75,6 @@ internal fun SectionHeading(text: String) {
  * Which row's heading takes the focus next, after Add or Remove changed the rows, such as the panel arrays: the new
  * row's after Add, the one before after Remove, so the focus does not fall off the page with a button that went. When
  * the last row goes, the focus is for the line that says there is none instead.
- *
- * @param K what names a row, such as its number
  */
 @Stable
 internal class RowFocus<K> {
@@ -98,9 +88,6 @@ internal class RowFocus<K> {
     /**
      * Readies the focus for a row that goes: to the row before it, or the one after when it is the first, or the line
      * that says there is none when it is the only one.
-     *
-     * @param rows the rows as they are before it goes
-     * @param row the row that goes
      */
     fun removing(rows: List<K>, row: K) {
         val index = rows.indexOf(row)
@@ -112,9 +99,6 @@ internal class RowFocus<K> {
 /**
  * The line that says a page has no rows, which takes the focus when [RowFocus] asks, as the last row went. It is
  * shown exactly when no row is left.
- *
- * @param text the line
- * @param focus which row's heading or this line takes the focus next
  */
 @Composable
 internal fun NoneLine(text: String, focus: RowFocus<*>) {
@@ -128,15 +112,7 @@ internal fun NoneLine(text: String, focus: RowFocus<*>) {
     Text(text, modifier = Modifier.focusRequester(requester).focusable())
 }
 
-/**
- * A row's heading, such as "Array 2, east roof", which takes the focus when [RowFocus] names its row.
- *
- * @param K what names a row
- * @param text the heading
- * @param style its size, as the rows of its page have it
- * @param focus which row's heading takes the focus next
- * @param row the row it heads
- */
+/** A row's heading, such as "Array 2, east roof", which takes the focus when [RowFocus] names its row. */
 @Composable
 internal fun <K> RowHeading(text: String, style: TextStyle, focus: RowFocus<K>, row: K) {
     Text(text, style = style, modifier = Modifier.focusRequester(rowFocus(focus, row)).focusable()
@@ -146,12 +122,6 @@ internal fun <K> RowHeading(text: String, style: TextStyle, focus: RowFocus<K>, 
 /**
  * A row's line that is no heading, such as a one-off away period in a list, which takes the focus when [RowFocus]
  * names its row.
- *
- * @param K what names a row
- * @param text the line
- * @param focus which row's line takes the focus next
- * @param row the row it is
- * @param modifier its place in the row
  */
 @Composable
 internal fun <K> RowLine(text: String, focus: RowFocus<K>, row: K, modifier: Modifier = Modifier) {
