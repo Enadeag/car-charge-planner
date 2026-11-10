@@ -76,6 +76,13 @@
   </screenshots>
 
   <releases>
+    <release version="0.6.0" date="2026-11-10">
+      <url type="details">https://github.com/Enadeag/car-charge-planner/releases/tag/v0.6.0</url>
+      <description>
+        <p>Saving API keys no longer loses the keys of the other providers, and a notification lead time of 0 minutes
+          now tells you at the start of a charge window. Screen readers are no longer supported.</p>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-10-22">
       <url type="details">https://github.com/Enadeag/car-charge-planner/releases/tag/v0.5.0</url>
       <description>
