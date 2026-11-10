@@ -193,7 +193,7 @@ class DashboardTest {
         val shown = dashboard(gridAdvice = advice)
         val view = shown.view
         val later = shown.copy(view = DashboardView(view.madeAt(), view.zone(), view.days().drop(1), view.levels(),
-            view.startLevel(), view.gridAdvice(), view.tripAdvice()))
+            view.startLevel(), view.gridAdvice(), view.tripAdvice(), view.footer(), view.away(), view.trips()))
 
         assertThat(later.days.map { later.adviceOn(it) }).containsOnlyNulls()
     }

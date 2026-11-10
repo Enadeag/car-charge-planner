@@ -69,7 +69,7 @@ class DashboardTripAdviceTest {
                         List.of()))
                 .toList();
         return DashboardView.of(new PlanParts(madeAt, BRUSSELS, days, 0.3, new Percent(45), assumed, gridAdvice,
-                advice, new Percent(30), new Percent(80), List.of()));
+                advice, new Percent(30), new Percent(80), List.of(), List.of(), Parts.source(madeAt)));
     }
 
     private static TripAdviceView view(Instant madeAt, TripAdvice advice) {
@@ -369,7 +369,8 @@ class DashboardTripAdviceTest {
     /** The same dashboard from its second day on, as for a plan whose first day is no longer today. */
     private static DashboardView withoutToday(DashboardView shown) {
         return new DashboardView(shown.madeAt(), shown.zone(), shown.days().subList(1, 3), shown.levels(),
-                shown.startLevel(), shown.gridAdvice(), shown.tripAdvice());
+                shown.startLevel(), shown.gridAdvice(), shown.tripAdvice(), shown.footer(), shown.away(),
+                shown.trips());
     }
 
     @Test

@@ -63,7 +63,7 @@ class DayCardTest {
     private static DashboardView view(Instant madeAt, List<DayPlan> days, boolean assumed, Optional<GridAdvice> grid,
             List<TripAdvice> advice, List<Trip> trips) {
         return DashboardView.of(new PlanParts(madeAt, AMSTERDAM, days, 0.3, new Percent(40), assumed, grid, advice,
-                new Percent(20), new Percent(80), trips));
+                new Percent(20), new Percent(80), List.of(), trips, Parts.source(madeAt)));
     }
 
     private static List<DashboardDay> days(List<DayPlan> days, Optional<GridAdvice> grid, List<TripAdvice> advice,
