@@ -198,8 +198,10 @@ public final class SingleInstance implements AutoCloseable {
     }
 
     /**
-     * Gives {@link Reply#UNREACHABLE} when the socket is there but cannot be connected to for another reason than
-     * that nobody listens.
+     * Sends a command over the socket.
+     *
+     * @return {@link Reply#UNREACHABLE} when the socket is there but cannot be connected to for another reason than
+     *     that nobody listens
      */
     private Reply ask(Path socket, InstanceCommand command) {
         if (!Files.exists(socket, LinkOption.NOFOLLOW_LINKS)) {

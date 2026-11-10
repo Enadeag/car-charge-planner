@@ -69,6 +69,11 @@ final class PlaceSearchCard {
         status.setText("");
     }
 
+    /**
+     * The card itself.
+     *
+     * @return the same card every time
+     */
     CardView view() {
         return card;
     }

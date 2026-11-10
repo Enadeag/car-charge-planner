@@ -94,8 +94,10 @@ final class SettingsView extends BorderPane {
     /**
      * The pages are not loaded here: see {@link #reload()}.
      *
+     * @param close closes Settings; called after Cancel, or after Save and close
      * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
      *     is made again
+     * @param background reads and writes the stores away from the JavaFX thread
      */
     SettingsView(SettingsForm form, List<Page> pages, Runnable close, Consumer<AppSettings> saved,
             Background background, Messages messages) {
@@ -168,8 +170,11 @@ final class SettingsView extends BorderPane {
      *
      * @param stores where the settings are kept; nothing is read until {@link #reload()}
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
+     * @param close closes Settings; called after Cancel, or after Save and close
      * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
      *     is made again
+     * @param runSetUp opens set-up, after Settings closed
+     * @param background does the slow work, such as reading the stores, away from the JavaFX thread
      */
     static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
             Consumer<AppSettings> saved, Runnable runSetUp, Background background, Messages messages) {
@@ -185,8 +190,10 @@ final class SettingsView extends BorderPane {
      *
      * @param stores where the settings are kept; nothing is read until {@link #reload()}
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
+     * @param close closes Settings; called after Cancel, or after Save and close
      * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
      *     is made again
+     * @param background does the slow work, such as reading the stores, away from the JavaFX thread
      */
     static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
             Consumer<AppSettings> saved, Background background, Messages messages) {
@@ -468,6 +475,8 @@ final class SettingsView extends BorderPane {
 
     /**
      * Every category's page, also those not shown, for the tests.
+     *
+     * @return the pages in the sidebar's order
      */
     List<Page> pages() {
         return pages;

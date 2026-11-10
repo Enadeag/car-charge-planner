@@ -41,6 +41,8 @@ final class PanelArrayCard {
 
     /**
      * Makes the card, empty until {@link #load(PanelArray, Set)}.
+     *
+     * @param remove what the card's Remove button does: take this card's array away; given this card
      */
     PanelArrayCard(Consumer<PanelArrayCard> remove, Messages messages) {
         this.messages = messages;
@@ -114,6 +116,8 @@ final class PanelArrayCard {
     /**
      * Shows the problem of a refused value at its field, after confirming what the owner typed; a problem shown before
      * is taken away first.
+     *
+     * @return true when a value is refused
      */
     boolean showProblems() {
         problems.clear();
@@ -136,6 +140,11 @@ final class PanelArrayCard {
         inputs().forEach(input -> input.onChange(action));
     }
 
+    /**
+     * The card itself.
+     *
+     * @return the same card every time
+     */
     CardView view() {
         return card;
     }

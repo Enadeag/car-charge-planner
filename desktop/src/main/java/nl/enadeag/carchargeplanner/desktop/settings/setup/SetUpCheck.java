@@ -56,6 +56,12 @@ final class SetUpCheck implements SetUpStepPage {
                 buttons));
     }
 
+    /**
+     * Asks the primary provider of a config, in the background.
+     *
+     * @param entered the whole config as entered
+     * @param enteredKeys every provider's secret settings as entered
+     */
     void check(EngineConfig entered, Secrets enteredKeys) {
         config = entered;
         keys = enteredKeys;

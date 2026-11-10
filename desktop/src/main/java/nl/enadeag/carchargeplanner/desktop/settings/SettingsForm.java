@@ -52,7 +52,9 @@ final class SettingsForm {
     }
 
     /**
-     * Blocks while the keychain, the files and the system answer; may be called from any thread.
+     * Reads every store. Blocks while the keychain, the files and the system answer; may be called from any thread.
+     *
+     * @return what the stores hold
      */
     SettingsStorage.Stored read() {
         return storage.read();
@@ -78,8 +80,10 @@ final class SettingsForm {
     }
 
     /**
-     * Problems shown before are taken away first. Pages that could not be loaded check nothing.
+     * Has the pages check what they show, as Save does, and marks each refused value by showing its problem at its
+     * field; problems shown before are taken away first. Pages that could not be loaded check nothing.
      *
+     * @return the categories with a refused value, in the sidebar's order; empty when every value is accepted
      * @throws IllegalStateException when nothing was shown yet
      */
     List<Category> markRefused() {
@@ -117,7 +121,7 @@ final class SettingsForm {
     }
 
     /**
-     * Reads the stores again after a save; see {@link SettingsStorage#save} for the order.
+     * Stores the changes, and reads the stores again after a save; see {@link SettingsStorage#save} for the order.
      * Blocks while the system, the keychain and the files answer; may be called from any thread.
      *
      * @param prompting runs, on the saving thread, once the system asks the owner to unlock the keychain

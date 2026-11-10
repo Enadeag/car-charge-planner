@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 
+/** What set-up holds, none of it saved yet. */
 record SetUpDraft(EngineConfig config, Secrets keys, AppSettings app, boolean startAtLogin) {
 
     /**

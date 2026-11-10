@@ -36,6 +36,11 @@ final class DashboardChanges {
         save("the away period", () -> engine.addAwayPeriod(period));
     }
 
+    /**
+     * Forgets an away period the owner removed.
+     *
+     * @param period the period as the dashboard showed it
+     */
     void removeAwayPeriod(OneOffAwayPeriod period) {
         save("the removal of the away period", () -> engine.removeAwayPeriod(period));
     }
@@ -49,6 +54,11 @@ final class DashboardChanges {
         save("the change to the trip", () -> engine.changeTrip(trip, changed));
     }
 
+    /**
+     * Forgets a trip the owner removed.
+     *
+     * @param trip the trip as the dashboard showed it
+     */
     void removeTrip(Trip trip) {
         save("the removal of the trip", () -> engine.removeTrip(trip));
     }

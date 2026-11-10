@@ -141,6 +141,8 @@ public final class CarCard implements ConfigPart {
     }
 
     /**
+     * The car as entered, after its record checked it; a refused value goes to {@code refused}.
+     *
      * @param stored the trip surcharge to keep when the card does not show the field
      */
     private Optional<Car> car(Percent stored, Consumer<InvalidSetting> refused) {

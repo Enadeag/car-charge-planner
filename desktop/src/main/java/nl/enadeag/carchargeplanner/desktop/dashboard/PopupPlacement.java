@@ -50,7 +50,8 @@ final class PopupPlacement {
     }
 
     /**
-     * It stays clear of the icon too, in case the system counts the panel as available space.
+     * The top left corner of a popup of {@code size} for the icon at {@code icon}, inside {@code available}. It stays
+     * clear of the icon too, in case the system counts the panel as available space.
      *
      * @param size the popup's width and height, in pixels
      * @param available the screen's free area, without the panels that reserve space

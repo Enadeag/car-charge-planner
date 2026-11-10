@@ -138,6 +138,7 @@ public final class PlanningPage implements ConfigPage {
         return planning(refused -> rows.get(refused.setting()).showProblem(refused.problem())).isEmpty();
     }
 
+    /** The preferences as entered, after their records checked them; a refused value goes to {@code refused}. */
     private Optional<PlanningPreferences> planning(Consumer<PlanningEntry.Checked.Refused> refused) {
         var entry = new PlanningEntry(minimum.value(), target.value(), margin.value(), importTolerance.value(),
                 minWindow.value(), notifyLead.value(), chargingHours.startText(), chargingHours.endText());

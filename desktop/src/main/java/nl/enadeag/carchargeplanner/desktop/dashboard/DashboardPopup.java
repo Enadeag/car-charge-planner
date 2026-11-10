@@ -19,7 +19,8 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 /**
- * A click elsewhere or Escape closes it; Escape in an open entry, such as the battery level's, closes only the entry.
+ * The dashboard as a popup next to the tray icon. A click elsewhere or Escape closes it; Escape in an open entry, such
+ * as the battery level's, closes only the entry.
  */
 final class DashboardPopup {
 
@@ -83,7 +84,8 @@ final class DashboardPopup {
     }
 
     /**
-     * A request to open that comes within {@code SAME_CLICK} (400 ms) of the popup closing is the click that closed it, and does nothing.
+     * Opens the popup beside the tray icon; a click on the icon while it is open closes it. A request to open that
+     * comes within {@code SAME_CLICK} (400 ms) of the popup closing is the click that closed it, and does nothing.
      *
      * @param view the dashboard to show; taken out of the window if it is there
      * @param reported where the tray says the icon is, in JavaFX's screen coordinates; another process (the panel)
@@ -119,7 +121,8 @@ final class DashboardPopup {
     }
 
     /**
-     * The popup stays open or closed, and fits the new view.
+     * Puts another view where one is shown, such as the same dashboard in another language. The popup stays open or
+     * closed, and fits the new view.
      *
      * @param after the view to show in its place; nothing changes when the popup does not hold {@code before}
      */

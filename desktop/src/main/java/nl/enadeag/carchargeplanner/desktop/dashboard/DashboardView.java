@@ -95,6 +95,8 @@ final class DashboardView extends VBox {
 
     /**
      * Shows a plan, keeping the selected day, or why there is none.
+     *
+     * @param model what to show; never null
      */
     void show(DashboardModel model) {
         switch (model) {
@@ -134,6 +136,8 @@ final class DashboardView extends VBox {
 
     /**
      * Shows or hides the header's detach button, which only makes sense in the popup.
+     *
+     * @param detachable true in the popup, false in the window
      */
     void setDetachable(boolean detachable) {
         detach.setVisible(detachable);
@@ -148,7 +152,8 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Without this the card is not shown.
+     * Lets the owner add and remove away periods for specific days, on the away card below each day; without this
+     * the card is not shown.
      *
      * @param added gets a period the owner entered, on the JavaFX thread
      * @param removed gets a period the owner removed, as the plan listed it, on the JavaFX thread
@@ -162,7 +167,7 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Without this the card is not shown.
+     * Lets the owner add, change and remove trips, on the trip card of each day; without this the card is not shown.
      *
      * @param added gets a trip the owner entered, on the JavaFX thread
      * @param changed gets a trip as the plan listed it and the owner's changed version of it, on the JavaFX thread

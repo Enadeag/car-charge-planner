@@ -37,7 +37,12 @@ final class TrayMenu implements DbusMenu, Properties {
     private record Layout(MenuLabels labels, UInt32 revision) {
     }
 
-    /** Each entry's action is asked for once, now. */
+    /**
+     * Makes the menu of every {@link TrayMenuEntry}, with a separator before each one that is set apart.
+     *
+     * @param labels what the entries say
+     * @param actions what a click on an entry does; asked once per entry, now
+     */
     TrayMenu(MenuLabels labels, Function<TrayMenuEntry, Runnable> actions) {
         var separator = ENTRIES.size();
         for (var entry : ENTRIES) {

@@ -113,6 +113,8 @@ final class ProviderCard {
      * Marks the required settings that are empty and the settings whose value has the wrong form, such as a server
      * address a key may not be sent to; problems shown before are taken away first. A locked secret counts as there:
      * it is stored, only not readable now.
+     *
+     * @return true when a required setting is empty or a value has the wrong form
      */
     boolean markRefused() {
         rows.values().forEach(FieldRow::clearProblem);
@@ -140,6 +142,11 @@ final class ProviderCard {
         inputs.values().forEach(input -> input.onChange(action));
     }
 
+    /**
+     * The card itself.
+     *
+     * @return the same card every time
+     */
     CardView view() {
         return card;
     }
