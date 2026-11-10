@@ -5,6 +5,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Changed
+- Screen readers are no longer supported: Narrator, NVDA and TalkBack are no longer checked before a release, and the code built only for them is being removed (#435). What stays: large fonts and scaling (200%) without cut-off text, contrast in light and dark, no meaning by colour alone, a label on every control, and keyboard use on the desktop.
 - A file written by a newer version of the app (`engine.json`, `app.json`, `trips.json`, `away.json`, `battery.json`, `trip-notices.json` or `secrets.json`) is no longer moved aside and replaced when you save: it is left as it is, and saving fails until you update the app.
 
 ### Fixed
