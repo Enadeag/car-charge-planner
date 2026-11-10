@@ -123,9 +123,8 @@ class DashboardViewTest {
     }
 
     @Test
-    void tripAdviceThatAsksSomethingComesBelowTodaysDayCardAboveTheGridAdvice() throws Exception {
-        var view = shown(Models.plan(List.of(Models.ADVICE_SATURDAY, Models.ADVICE_SUNDAY),
-                Optional.of(Models.ADVICE)));
+    void tripAdviceComesBelowTheDayCardAboveTheGridAdvice() throws Exception {
+        var view = shown(Models.planWithTripAdvice(Optional.of(Models.ADVICE)));
 
         var today = Fx.call(() -> cardsAboveTheCharts(view));
 
@@ -135,9 +134,8 @@ class DashboardViewTest {
     }
 
     @Test
-    void eachTripsAdviceShowsOnTheDayOfItsDeparture() throws Exception {
-        var view = shown(Models.plan(List.of(Models.ADVICE_SATURDAY, Models.ADVICE_SUNDAY),
-                Optional.of(Models.ADVICE)));
+    void eachTabShowsTheTripAdviceItsDayCarries() throws Exception {
+        var view = shown(Models.planWithTripAdvice(Optional.of(Models.ADVICE)));
 
         var saturday = Fx.call(() -> {
             tabs(view).getSelectionModel().select(1);
@@ -149,8 +147,7 @@ class DashboardViewTest {
         });
 
         assertThat(saturday).hasSize(2);
-        assertThat(saturday.get(1)).as("named by its weekday off today's tab")
-                .startsWith("Trip advice: Trip Saturday at 07:30").contains("Start Friday at 21:00.");
+        assertThat(saturday.get(1)).startsWith("Trip advice: Trip Saturday at 07:30");
         assertThat(sunday).hasSize(2);
         assertThat(sunday.get(1)).isEqualTo("Trip advice: Trip Sunday at 17:00, 120 km there and back. The plan "
                 + "charges enough for it: the battery is at 62% when you leave. Assuming a battery level of 50%.");
@@ -158,7 +155,7 @@ class DashboardViewTest {
 
     @Test
     void adjustOnATripsAdviceOpensTodaysBatteryEntryAndItsLevelReachesTheHandler() throws Exception {
-        var view = shown(Models.plan(List.of(Models.ADVICE_SATURDAY), Optional.empty()));
+        var view = shown(Models.planWithTripAdvice(Optional.empty()));
         var levels = new ArrayList<Integer>();
         Fx.run(() -> {
             view.onBatteryEntered(levels::add);
@@ -183,7 +180,7 @@ class DashboardViewTest {
 
     @Test
     void withoutAPlaceToSendTheLevelATripsAdviceHasNoAdjust() throws Exception {
-        var view = shown(Models.plan(List.of(Models.ADVICE_SATURDAY), Optional.empty()));
+        var view = shown(Models.planWithTripAdvice(Optional.empty()));
 
         var texts = Fx.call(() -> Scenes.visibleTexts(selectedPage(view).lookup(".trip-advice")));
 
@@ -222,20 +219,9 @@ class DashboardViewTest {
     }
 
     @Test
-    void gridAdviceIsOnlyOnTodaysTab() throws Exception {
-        var view = shown(Models.plan(Optional.of(Models.ADVICE)));
-
-        var adviceOnTomorrow = Fx.call(() -> {
-            tabs(view).getSelectionModel().select(1);
-            return view.lookup(".advice-card");
-        });
-
-        assertThat(adviceOnTomorrow).isNull();
-    }
-
-    @Test
-    void gridAdviceShowsOnTheTabOfTheDayTheModelPlacesItOn() throws Exception {
-        var view = shown(Models.plan(List.of(), Models.TODAY.plusDays(1), Optional.of(Models.ADVICE)));
+    void gridAdviceShowsOnTheTabWhoseDayCarriesItAndNoOther() throws Exception {
+        var view = shown(Models.plan(Models.SUNNY_TODAY,
+                Models.with(Models.CLOUDY_TOMORROW, List.of(), Optional.of(Models.ADVICE)), Models.GRID_SUNDAY));
 
         var onTabs = Fx.call(() -> {
             var shown = new ArrayList<Boolean>();
@@ -287,8 +273,7 @@ class DashboardViewTest {
     void aPlanWithoutDaysShowsNoTabsAndDoesNotFail() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
 
-        Fx.run(() -> view.show(new DashboardModel.Plan(List.of(), List.of(), Optional.empty(), Models.AWAY,
-                Models.TRIPS, Models.FOOTER)));
+        Fx.run(() -> view.show(Models.plan()));
 
         assertThat(Fx.call(() -> tabs(view).getTabs())).isEmpty();
         assertThat(Fx.call(() -> view.lookup(".main-card"))).isNull();
@@ -299,9 +284,8 @@ class DashboardViewTest {
     void aDayTallerThanTheSpaceScrollsBelowHeaderAndTabsThatStayInView() throws Exception {
         var busy = new DayModel(Models.TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.SOLAR, "Charge window", "06:00 – 06:10",
                 Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80), "",
-                Models.SUNNY_TODAY.curve(), Models.CLOUDY_TOMORROW.battery());
-        var plan = new DashboardModel.Plan(List.of(Models.CLOUDY_TOMORROW, busy), List.of(), Optional.empty(),
-                Models.AWAY, Models.TRIPS, Models.FOOTER);
+                Models.SUNNY_TODAY.curve(), Models.CLOUDY_TOMORROW.battery(), List.of(), Optional.empty());
+        var plan = Models.plan(Models.CLOUDY_TOMORROW, busy);
         var view = Fx.call(() -> {
             var it = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION,
                     AppName.TITLE, new Messages(Language.ENGLISH));

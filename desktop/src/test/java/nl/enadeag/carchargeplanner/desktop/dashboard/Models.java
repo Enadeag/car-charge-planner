@@ -16,7 +16,6 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripOrigin;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayKind;
-import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
 import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.InstantSource;
@@ -42,7 +41,8 @@ public final class Models {
             "The plan assumes the battery is at 50 %.", "Today: charge window 11:15 to 14:30, 10 A, 92 % sun.",
             curve(3.6, List.of(new WindowSpan(11.25, 14.5)), OptionalDouble.of(8.2)),
             new BatteryModel(50, 74, 30, 80, "50 → 74 %", "min 30", "target 80", true,
-                    "Car battery 50 % now, 74 % after charging; minimum 30 %, target 80 %."));
+                    "Car battery 50 % now, 74 % after charging; minimum 30 %, target 80 %."),
+            List.of(), Optional.empty());
 
     public static final DayModel CLOUDY_TOMORROW = new DayModel(TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.NONE, "No charge window", "",
             List.of(), List.of(new ChipModel(EnergySource.CAR, "Battery 62 → 62 %")),
@@ -50,14 +50,16 @@ public final class Models {
             "Tomorrow: no charge window. The car needs no charging, or there is too little sun for it.",
             curve(0.9, List.of(), OptionalDouble.empty()),
             new BatteryModel(62, 62, 30, 80, "62 → 62 %", "min 30", "target 80", false,
-                    "Car battery 62 % at the start of tomorrow, 62 % after charging; minimum 30 %, target 80 %."));
+                    "Car battery 62 % at the start of tomorrow, 62 % after charging; minimum 30 %, target 80 %."),
+            List.of(), Optional.empty());
 
     public static final DayModel GRID_SUNDAY = new DayModel(TODAY.plusDays(2), "Sun", "Sunday", DayKind.GRID, "No good window", "01:00 – 04:00",
             List.of("Set 16 A (3.7 kW)"), List.of(new ChipModel(EnergySource.GRID, "11.0 kWh from the grid")),
             "Charge from the grid to stay above the minimum.", "Sunday: grid charge 01:00 to 04:00, 16 A.",
             curve(2.0, List.of(), OptionalDouble.empty()),
             new BatteryModel(20, 20, 30, 80, "20 → 20 %", "min 30", "target 80", false,
-                    "Car battery 20 % at the start of Sunday, 20 % after charging; minimum 30 %, target 80 %."));
+                    "Car battery 20 % at the start of Sunday, 20 % after charging; minimum 30 %, target 80 %."),
+            List.of(), Optional.empty());
 
     public static final GridAdviceModel ADVICE = new GridAdviceModel("Grid advice", "Charge from the grid on Saturday night.",
             "Sunday is cloudy: charge 01:00 – 04:00 at 16 A to stay above 30 %.");
@@ -91,24 +93,25 @@ public final class Models {
                     "Change the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back",
                     "Remove the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back")));
 
-    /** Saturday's trip, which needs a grid charge tonight. */
+    /** Saturday's trip, which needs a grid charge tonight, as today's tab tells it. */
+    public static final TripAdviceModel ADVICE_SATURDAY_TODAY = new TripAdviceModel(EnergySource.GRID, "Trip advice",
+            "Trip tomorrow at 07:30, 300 km there and back.",
+            "Charge to 95% from the grid. Start tonight at 21:00. Set 16 A (3.7 kW), and a charge limit of "
+                    + "95% in the car or the charger.",
+            "Assuming a battery level of 50%.");
+
+    /** Saturday's trip, as Saturday's tab tells it. */
     public static final TripAdviceModel ADVICE_SATURDAY = new TripAdviceModel(EnergySource.GRID, "Trip advice",
-            new TripAdviceModel.Wording("Trip tomorrow at 07:30, 300 km there and back.",
-                    "Charge to 95% from the grid. Start tonight at 21:00. Set 16 A (3.7 kW), and a charge limit of "
-                            + "95% in the car or the charger."),
-            new TripAdviceModel.Wording("Trip Saturday at 07:30, 300 km there and back.",
-                    "Charge to 95% from the grid. Start Friday at 21:00. Set 16 A (3.7 kW), and a charge limit of "
-                            + "95% in the car or the charger."),
-            "Assuming a battery level of 50%.",
-            List.of(new DayName.Today(TODAY), new DayName.Tomorrow(TODAY.plusDays(1))));
+            "Trip Saturday at 07:30, 300 km there and back.",
+            "Charge to 95% from the grid. Start Friday at 21:00. Set 16 A (3.7 kW), and a charge limit of "
+                    + "95% in the car or the charger.",
+            "Assuming a battery level of 50%.");
 
     /** Sunday's trip, for which the plan charges enough. */
     public static final TripAdviceModel ADVICE_SUNDAY = new TripAdviceModel(EnergySource.CAR, "Trip advice",
-            new TripAdviceModel.Wording("Trip Sunday at 17:00, 120 km there and back.",
-                    "The plan charges enough for it: the battery is at 62% when you leave."),
-            new TripAdviceModel.Wording("Trip Sunday at 17:00, 120 km there and back.",
-                    "The plan charges enough for it: the battery is at 62% when you leave."),
-            "Assuming a battery level of 50%.", List.of(new DayName.Other(TODAY.plusDays(2))));
+            "Trip Sunday at 17:00, 120 km there and back.",
+            "The plan charges enough for it: the battery is at 62% when you leave.",
+            "Assuming a battery level of 50%.");
 
     /** A clock that stays at the moment {@link #AWAY}'s plan was made. */
     public static final InstantSource CLOCK = InstantSource.fixed(AWAY.madeAt());
@@ -129,19 +132,31 @@ public final class Models {
                 "Expected sun: peak %.1f kW around 13:00.".formatted(peakKw));
     }
 
+    /** The day with this advice on its tab instead of its own. */
+    public static DayModel with(DayModel day, List<TripAdviceModel> tripAdvice, Optional<GridAdviceModel> gridAdvice) {
+        var withTrips = new DayModel(day.date(), day.tab(), day.title(), day.kind(), day.heading(), day.hero(),
+                day.facts(), day.chips(), day.note(), day.spoken(), day.curve(), day.battery(), tripAdvice,
+                Optional.empty());
+        return gridAdvice.map(withTrips::withGridAdvice).orElse(withTrips);
+    }
+
+    /** The plan of these days, with the away periods and trips. */
+    public static DashboardModel.Plan plan(DayModel... days) {
+        return new DashboardModel.Plan(List.of(days), AWAY, TRIPS, FOOTER);
+    }
+
+    /** The plan of today, tomorrow and Sunday, with this grid advice on today's tab and no trip advice. */
     public static DashboardModel.Plan plan(Optional<GridAdviceModel> advice) {
-        return plan(List.of(), advice);
+        return plan(with(SUNNY_TODAY, List.of(), advice), CLOUDY_TOMORROW, GRID_SUNDAY);
     }
 
-    /** The plan with this trip advice, and with this grid advice on today's tab. */
-    public static DashboardModel.Plan plan(List<TripAdviceModel> tripAdvice, Optional<GridAdviceModel> advice) {
-        return plan(tripAdvice, TODAY, advice);
-    }
-
-    /** The plan with this trip advice, and with this grid advice on the tab of this day. */
-    public static DashboardModel.Plan plan(List<TripAdviceModel> tripAdvice, LocalDate day,
-            Optional<GridAdviceModel> advice) {
-        return new DashboardModel.Plan(List.of(SUNNY_TODAY, CLOUDY_TOMORROW, GRID_SUNDAY), tripAdvice,
-                advice.map(shown -> new DashboardModel.GridAdviceOn(day, shown)), AWAY, TRIPS, FOOTER);
+    /**
+     * The plan of today, tomorrow and Sunday with the trip advice where the mapper puts it: Saturday's trip, which
+     * asks to charge, on today's tab and Saturday's, Sunday's on Sunday's; and this grid advice on today's tab.
+     */
+    public static DashboardModel.Plan planWithTripAdvice(Optional<GridAdviceModel> advice) {
+        return plan(with(SUNNY_TODAY, List.of(ADVICE_SATURDAY_TODAY), advice),
+                with(CLOUDY_TOMORROW, List.of(ADVICE_SATURDAY), Optional.empty()),
+                with(GRID_SUNDAY, List.of(ADVICE_SUNDAY), Optional.empty()));
     }
 }

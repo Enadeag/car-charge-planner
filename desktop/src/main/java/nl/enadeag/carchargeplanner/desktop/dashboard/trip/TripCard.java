@@ -3,11 +3,11 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.trip;
 import static nl.enadeag.carchargeplanner.desktop.theme.Labels.line;
 import static nl.enadeag.carchargeplanner.desktop.theme.Labels.paragraph;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.InstantSource;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -48,7 +48,7 @@ public final class TripCard extends VBox {
     /** True once {@link #onChange} gave somewhere to send the trips. */
     private boolean acceptsChanges;
     /** The selected day; null until one shows. */
-    private DayModel day;
+    private LocalDate day;
     private TripsModel model;
     /** The trip the entry changes; null while it enters a new one or is closed. */
     private Trip changing;
@@ -56,7 +56,7 @@ public final class TripCard extends VBox {
     private Changed refocus;
 
     /**
-     * Makes the card, empty until {@link #show(DayModel, TripsModel)}.
+     * Makes the card, empty until {@link #show(LocalDate, String, TripsModel)}.
      *
      * @param resized called when the entry opens, closes or changes its height, so the popup or window can fit the
      *     card
@@ -87,18 +87,19 @@ public final class TripCard extends VBox {
      * Shows the trips of a day, with Add for that day. An open entry stays open while the same day shows, and closes
      * on another day.
      *
-     * @param selected the selected day, whose trips show and on which Add enters a trip
+     * @param selected the selected day, whose trips show and on which Add enters a trip; never null
+     * @param title the selected day's name, which Add's hint tells: "Today", "Tomorrow" or the weekday
      * @param trips the stored trips and the time of the plan
      */
-    public void show(DayModel selected, TripsModel trips) {
-        boolean sameDay = day != null && day.date().equals(selected.date());
+    public void show(LocalDate selected, String title, TripsModel trips) {
+        boolean sameDay = selected.equals(day);
         day = selected;
         model = trips;
-        var hint = messages.text(TextKey.TRIP_ADD_HINT, selected.title());
+        var hint = messages.text(TextKey.TRIP_ADD_HINT, title);
         add.setTooltip(new Tooltip(hint));
         add.setAccessibleHelp(hint);
         list.getChildren().clear();
-        var onTheDay = trips.on(selected.date());
+        var onTheDay = trips.on(selected);
         if (onTheDay.isEmpty()) {
             list.getChildren().add(paragraph(messages.text(TextKey.TRIP_NONE), "note"));
         }
@@ -234,7 +235,7 @@ public final class TripCard extends VBox {
         changing = trip;
         showEditor(true);
         if (trip == null) {
-            editor.prepare(day.date(), model.zone(), clock, model.units());
+            editor.prepare(day, model.zone(), clock, model.units());
         } else {
             editor.prepare(trip, model.zone(), clock, model.units());
         }

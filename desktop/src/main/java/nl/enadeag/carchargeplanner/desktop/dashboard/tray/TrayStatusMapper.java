@@ -60,7 +60,8 @@ final class TrayStatusMapper {
     }
 
     private TrayStatus plan(Outlook.Planned planned) {
-        // the grid advice does not depend on the stored away periods and trips, which the tray does not have
+        // builds the whole view, the trip advice too, without the stored away periods and trips, which the tray does
+        // not have; it reads only the grid advice, which ignores them
         var dashboard = planned.dashboard(List.of(), List.of());
         var advice = dashboard.gridAdvice()
                 .map(new GridAdviceMapper(dashboard.zone(), dashboard.levels(), messages)::map);

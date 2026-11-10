@@ -51,9 +51,6 @@ final class DashboardView extends VBox {
     private final OneOffAwayCard away;
     private final TripCard trips;
     private List<DayModel> days = List.of();
-    private List<TripAdviceModel> tripAdvice = List.of();
-    /** The grid advice with the day whose tab shows it; null when the plan shown has none, or before one shows. */
-    private DashboardModel.GridAdviceOn advice;
     /** The away periods for specific days; null until a plan shows. */
     private OneOffAwayModel awayPeriods;
     /** The trips; null until a plan shows. */
@@ -114,8 +111,6 @@ final class DashboardView extends VBox {
         switch (model) {
             case DashboardModel.Plan plan -> {
                 days = plan.days();
-                tripAdvice = plan.tripAdvice();
-                advice = plan.advice().orElse(null);
                 awayPeriods = plan.away();
                 enteredTrips = plan.trips();
                 tabs.show(days);
@@ -239,9 +234,8 @@ final class DashboardView extends VBox {
     }
 
     /**
-     * Below the day card comes the advice for the trips that depart that day, and on today's tab also for those that
-     * ask the owner to do something now; grid advice goes on the tab the engine's dashboard puts it on (today's), below
-     * them. The charts follow, then the day's trips, and the away periods last.
+     * Below the day card comes the trip advice the day carries, then the grid advice it carries. The charts follow,
+     * then the day's trips, and the away periods last.
      */
     private void showDay(int index) {
         if (days.isEmpty()) {
@@ -251,17 +245,15 @@ final class DashboardView extends VBox {
         }
         var day = days.get(Math.clamp(index, 0, days.size() - 1));
         var page = page(new DayCard(day));
-        for (var trip : tripAdvice) {
-            trip.on(day.date()).ifPresent(wording -> page.getChildren().add(tripAdviceCard(trip, wording)));
+        for (var trip : day.tripAdvice()) {
+            page.getChildren().add(tripAdviceCard(trip));
         }
-        if (advice != null && advice.day().equals(day.date())) {
-            page.getChildren().add(new GridAdviceCard(advice.advice()));
-        }
+        day.gridAdvice().ifPresent(grid -> page.getChildren().add(new GridAdviceCard(grid)));
         solar.show(day.curve());
         battery.show(day.battery());
         page.getChildren().addAll(solar, battery);
         if (trips.acceptsChanges() && enteredTrips != null) {
-            trips.show(day, enteredTrips);
+            trips.show(day.date(), day.title(), enteredTrips);
             page.getChildren().add(trips);
         }
         if (away.acceptsChanges() && awayPeriods != null) {
@@ -276,8 +268,8 @@ final class DashboardView extends VBox {
      * A trip's advice in the words of the tab it shows on, whose Adjust opens the battery level's entry on today's tab,
      * where it can be entered.
      */
-    private TripAdviceCard tripAdviceCard(TripAdviceModel trip, TripAdviceModel.Wording wording) {
-        var card = new TripAdviceCard(trip, wording, messages);
+    private TripAdviceCard tripAdviceCard(TripAdviceModel trip) {
+        var card = new TripAdviceCard(trip, messages);
         if (battery.acceptsLevel()) {
             card.onAdjust(this::enterBatteryLevel);
         }

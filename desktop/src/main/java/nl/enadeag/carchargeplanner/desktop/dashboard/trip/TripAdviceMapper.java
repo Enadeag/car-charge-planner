@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
 import nl.enadeag.carchargeplanner.engine.dashboard.SolarDay;
+import nl.enadeag.carchargeplanner.engine.dashboard.StartLevel;
 import nl.enadeag.carchargeplanner.engine.dashboard.TripAdviceView;
 import nl.enadeag.carchargeplanner.engine.dashboard.TripGridStart;
 import nl.enadeag.carchargeplanner.engine.dashboard.TripPlan;
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
 public final class TripAdviceMapper {
 
     /** Keeps a window's times together on one line when the advice wraps. */
-    private static final char NO_BREAK = ' ';
+    private static final char NO_BREAK = '\u00A0';
 
     private final Messages messages;
     private final ZoneId zone;
@@ -44,31 +45,30 @@ public final class TripAdviceMapper {
     }
 
     /**
-     * The advice for each trip in words.
+     * The advice a day's tab shows, in words: with the words of today on today's tab, and the weekdays on another.
      *
-     * @param dashboard the engine's dashboard, with its advice per trip in order of departure and its days
-     * @return one model per trip, in the same order
+     * @param dashboard the engine's dashboard, with the battery level the plan starts from; never null
+     * @param day one of the dashboard's days, whose tab shows the advice; never null
+     * @return one model per trip whose advice the engine shows with the day, in order of departure; may be empty
      */
-    public List<TripAdviceModel> map(DashboardView dashboard) {
-        var days = dashboard.days().stream().map(DashboardDay::name).toList();
-        return dashboard.tripAdvice().stream()
-                .map(advice -> map(advice, days.stream().filter(advice::shownOn).toList()))
-                .toList();
+    public List<TripAdviceModel> map(DashboardView dashboard, DashboardDay day) {
+        var names = day.name() instanceof DayName.Today ? DayNames.RELATIVE : DayNames.WEEKDAYS;
+        var level = level(dashboard.startLevel());
+        return dashboard.tripAdviceOn(day).stream().map(advice -> map(advice, names, level)).toList();
     }
 
-    private TripAdviceModel map(TripAdviceView advice, List<DayName> shownOn) {
-        var level = messages.text(advice.levelAssumed() ? TextKey.TRIP_ADVICE_ASSUMED : TextKey.TRIP_ADVICE_ENTERED,
-                messages.whole(advice.levelPct().value()));
-        return new TripAdviceModel(advice.source(), messages.text(TextKey.TRIP_ADVICE_LABEL),
-                wording(advice, DayNames.RELATIVE), wording(advice, DayNames.WEEKDAYS), level, shownOn);
+    private String level(StartLevel level) {
+        return messages.text(level.assumed() ? TextKey.TRIP_ADVICE_ASSUMED : TextKey.TRIP_ADVICE_ENTERED,
+                messages.whole(level.levelPct().value()));
     }
 
-    private TripAdviceModel.Wording wording(TripAdviceView advice, DayNames names) {
+    private TripAdviceModel map(TripAdviceView advice, DayNames names, String level) {
         var trip = advice.trip();
         var title = messages.text(TextKey.TRIP_ADVICE_TITLE, dayName(advice.departureDay(), names),
                 messages.time(trip.departure(), zone), messages.whole(units.distance(trip.distanceKm())),
                 units.distanceUnit());
-        return new TripAdviceModel.Wording(title, plan(advice, names));
+        return new TripAdviceModel(advice.source(), messages.text(TextKey.TRIP_ADVICE_LABEL), title,
+                plan(advice, names), level);
     }
 
     /** How the advice names a day in a sentence. */

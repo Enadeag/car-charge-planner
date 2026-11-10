@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 import nl.enadeag.carchargeplanner.desktop.dashboard.battery.BatteryMapper;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartMapper;
+import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels;
@@ -15,6 +16,7 @@ import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -43,20 +45,19 @@ public final class DayMapper {
     }
 
     /**
-     * The days in words.
+     * A day in words, with the trip advice its tab shows and without grid advice, which
+     * {@link DayModel#withGridAdvice} adds.
      *
-     * @param days the engine's days of the plan, today first; may be empty, never null
-     * @return one day model per day, in the same order
+     * @param day one of the engine's days of the plan; never null
+     * @param tripAdvice the advice of the trips the day's tab shows, in its words; may be empty, never null
+     * @return the day model
      */
-    public List<DayModel> map(List<DashboardDay> days) {
-        return days.stream().map(this::map).toList();
+    public DayModel map(DashboardDay day, List<TripAdviceModel> tripAdvice) {
+        return day.main().map(main -> withWindow(day, main, tripAdvice))
+                .orElseGet(() -> withoutWindow(day, tripAdvice));
     }
 
-    private DayModel map(DashboardDay day) {
-        return day.main().map(main -> withWindow(day, main)).orElseGet(() -> withoutWindow(day));
-    }
-
-    private DayModel withWindow(DashboardDay day, MainCharge main) {
+    private DayModel withWindow(DashboardDay day, MainCharge main, List<TripAdviceModel> tripAdvice) {
         var window = main.window();
         var title = messages.title(day.name());
         var solarSharePct = messages.whole(window.solarSharePct().value());
@@ -73,11 +74,11 @@ public final class DayMapper {
         var note = sentences(laterWindows(day.later()), assumedNote(day));
         return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(),
                 messages.text(TextKey.DAY_WINDOW), span(window), facts, chips, note, spoken, charts.map(day),
-                batteries.map(day, levels));
+                batteries.map(day, levels), tripAdvice, Optional.empty());
     }
 
     /** The day a trip leaves says nothing, as the trip's advice on its tab tells what the battery needs. */
-    private DayModel withoutWindow(DashboardDay day) {
+    private DayModel withoutWindow(DashboardDay day, List<TripAdviceModel> tripAdvice) {
         var reason = day.noWindow().orElseThrow();
         var heading = messages.text(reason == NoWindowReason.GRID ? TextKey.DAY_GRID : TextKey.DAY_NONE);
         var why = switch (reason) {
@@ -90,7 +91,7 @@ public final class DayMapper {
         var spoken = sentences(title + ": " + heading.toLowerCase(messages.locale()) + ".", why);
         return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(), heading, "", List.of(),
                 List.of(batteryChip(day.battery())), sentences(why, assumedNote(day)), spoken, charts.map(day),
-                batteries.map(day, levels));
+                batteries.map(day, levels), tripAdvice, Optional.empty());
     }
 
     /**
