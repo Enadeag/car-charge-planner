@@ -16,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -38,9 +36,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.AwayEntry
+import nl.enadeag.carchargeplanner.android.home.SaveState
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 import nl.enadeag.carchargeplanner.android.ui.components.DiscardChangesDialog
-import nl.enadeag.carchargeplanner.android.ui.components.SaveButton
+import nl.enadeag.carchargeplanner.android.ui.components.FocusOnWindow
+import nl.enadeag.carchargeplanner.android.ui.components.SaveAction
 import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 import nl.enadeag.carchargeplanner.android.ui.components.TimeButton
 import nl.enadeag.carchargeplanner.android.ui.components.TimeDialog
@@ -60,7 +60,8 @@ private enum class Picked {
  * phone's 12- or 24-hour clock, as a dial or typed; then Save and Cancel. The choice takes the focus when the entry opens, a time's button
  * when its picker closes, and what had it before when the question over the entry closes. Why Save refused the period
  * shows under the end time, or under the choice for all day, in a polite live region; a save that failed says so in the
- * entry, with the English details, in a live region read at once. Save shows its progress while it runs. The content
+ * entry, with the English details, in a live region read at once. While a change of the away periods runs, Save is
+ * held, keeping the focus, and while its own save runs it shows its progress. The content
  * scrolls, so it stays reachable at a large font size. Back, or a tap beside the dialog, asks "Discard changes?" when
  * the choice or a time changed.
  *
@@ -74,7 +75,8 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
     val problem by entry.problem.collectAsStateWithLifecycle()
     val saving by entry.saving.collectAsStateWithLifecycle()
     val asked by entry.discardAsked.collectAsStateWithLifecycle()
-    val busy = saving == AwayEntry.SaveState.Saving
+    val held by entry.busy.collectAsStateWithLifecycle()
+    val busy = saving == SaveState.Saving
     val words = dashboardWords(draft.zone)
     var picking by rememberSaveable { mutableStateOf<Picked?>(null) }
     var returnTo by rememberSaveable { mutableStateOf<Picked?>(null) }
@@ -89,16 +91,12 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
                 modifier = Modifier.semantics { heading() })
         },
         text = {
-            // the dialog's own window: a control can take the focus only once that window has it, which comes after
-            // the dialog is drawn, and again when the picker or the question over it closes
-            val windowFocused = LocalWindowInfo.current.isWindowFocused
-            LaunchedEffect(windowFocused) {
-                if (windowFocused) {
-                    when (returnTo) {
-                        Picked.START -> from
-                        Picked.END -> until
-                        null -> choice
-                    }.requestFocus()
+            // in the dialog's own window, also when the picker or the question over it closes
+            FocusOnWindow {
+                when (returnTo) {
+                    Picked.START -> from
+                    Picked.END -> until
+                    null -> choice
                 }
             }
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -125,10 +123,10 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
                         Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                SaveFailure(stringResource(R.string.one_off_not_saved), (saving as? AwayEntry.SaveState.Failed)?.detail)
+                SaveFailure(stringResource(R.string.one_off_not_saved), (saving as? SaveState.Failed)?.detail)
             }
         },
-        confirmButton = { SaveButton(busy, { entry.save() }) },
+        confirmButton = { SaveAction(busy, held) { entry.save() } },
         dismissButton = {
             AppTextButton(onClick = { entry.cancel() }, enabled = !busy) {
                 Text(stringResource(R.string.action_cancel))

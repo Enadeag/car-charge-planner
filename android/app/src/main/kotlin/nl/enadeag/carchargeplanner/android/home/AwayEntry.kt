@@ -122,23 +122,6 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
      */
     data class Entered(val zone: ZoneId, val away: ComingAway)
 
-    /** Where the entry's Save is. */
-    sealed interface SaveState {
-
-        /** Not saving, and no save failed since the entry opened or the last save. */
-        data object Idle : SaveState
-
-        /** The period is being saved; Save, Cancel and Back wait. */
-        data object Saving : SaveState
-
-        /**
-         * The period could not be stored; the entry keeps what was entered.
-         *
-         * @property detail the system's or the engine's words, in English
-         */
-        data class Failed(val detail: String) : SaveState
-    }
-
     /** What a change came to, for the screen to say once. */
     sealed interface Notice {
 
@@ -198,9 +181,9 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
 
     private val draftNow = MutableStateFlow(kept())
     private val problemNow = MutableStateFlow<Problem?>(null)
-    private val discardNow = MutableStateFlow(handle.get<Boolean>(DISCARD) == true)
-    private val savingNow = MutableStateFlow<SaveState>(SaveState.Idle)
     private val changes = ChangeQueue<Notice>(scope)
+    private val flow = EntryFlow(handle, DISCARD, changes, { draftNow.value != null },
+        { draftNow.value?.edited == true }, ::shut)
 
     /** What the open entry holds; null while it is closed. */
     val draft: StateFlow<Draft?> = draftNow.asStateFlow()
@@ -209,10 +192,10 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     val problem: StateFlow<Problem?> = problemNow.asStateFlow()
 
     /** True while Back asks whether to throw what was entered away. */
-    val discardAsked: StateFlow<Boolean> = discardNow.asStateFlow()
+    val discardAsked: StateFlow<Boolean> = flow.discardAsked
 
     /** Where the entry's Save is. */
-    val saving: StateFlow<SaveState> = savingNow.asStateFlow()
+    val saving: StateFlow<SaveState> = flow.saving
 
     /** True while a change runs: a save, a Remove or an Undo; Add and Remove are off then. */
     val busy: StateFlow<Boolean> = changes.busy
@@ -233,6 +216,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         }
         handle[DAY] = day.toString()
         handle[ZONE] = zone.id
+        flow.opened()
         put(Draft(day, zone, Kind.ALL_DAY, FIRST_START, FIRST_END))
     }
 
@@ -260,28 +244,18 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     /** Saves the period entered, or shows why it cannot be saved. While a change runs it does nothing. */
     fun save() {
         val draft = draftNow.value ?: return
-        if (changes.busy.value) {
-            return
-        }
-        val period = when (val checked = draft.check(clock.instant())) {
-            is Checked.Refused -> {
-                problemNow.value = checked.problem
-                return
-            }
-            is Checked.Valid -> checked.period
-        }
-        savingNow.value = SaveState.Saving
-        changes.run({
+        flow.save({ checked(draft) }) { period ->
             when (val outcome = access.addAwayPeriod(period)) {
                 is AwaySave.Saved -> {
-                    close()
+                    flow.close()
                     changes.say(Notice.Saved(period, Entered(draft.zone,
                         ComingAway.describe(period, draft.zone, clock.instant()))))
                     changed(outcome.periods)
+                    null
                 }
-                is AwaySave.Failed -> savingNow.value = SaveState.Failed(outcome.detail)
+                is AwaySave.Failed -> outcome.detail
             }
-        })
+        }
     }
 
     /**
@@ -310,29 +284,19 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     }
 
     /** Cancel: closes the entry and throws away what was entered; while a save runs it does nothing. */
-    fun cancel() {
-        if (savingNow.value != SaveState.Saving) {
-            close()
-        }
-    }
+    fun cancel() = flow.discard()
 
     /**
      * Back, or a tap beside the entry: with something changed, asks whether to throw it away; without, closes. While
      * a save runs it does nothing.
      */
-    fun back() {
-        when {
-            savingNow.value == SaveState.Saving -> Unit
-            draftNow.value?.edited == true -> ask(true)
-            else -> close()
-        }
-    }
+    fun back() = flow.back()
 
-    /** Throws what was entered away and closes, as the owner chose Discard. */
-    fun discard() = close()
+    /** Throws what was entered away and closes, as the owner chose Discard; while a save runs it does nothing. */
+    fun discard() = flow.discard()
 
     /** Stays in the entry with what was entered, as the owner chose Keep editing. */
-    fun keepEditing() = ask(false)
+    fun keepEditing() = flow.keepEditing()
 
     /**
      * The screen said what the last change came to, so it is not said again after turning; an Undo that waited for
@@ -357,9 +321,18 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         })
     }
 
+    /** The period entered; null when Save refuses it, its problem then shown. */
+    private fun checked(draft: Draft): OneOffAwayPeriod? = when (val checked = draft.check(clock.instant())) {
+        is Checked.Refused -> {
+            problemNow.value = checked.problem
+            null
+        }
+        is Checked.Valid -> checked.period
+    }
+
     private fun change(edit: (Draft) -> Draft) {
         val draft = draftNow.value ?: return
-        if (savingNow.value == SaveState.Saving) {
+        if (!flow.takesEdits) {
             return
         }
         problemNow.value = null
@@ -388,20 +361,9 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         }
     }
 
-    private fun ask(asking: Boolean) {
-        if (asking) handle[DISCARD] = true else handle.remove<Boolean>(DISCARD)
-        discardNow.value = asking
-    }
-
-    private fun close() {
+    private fun shut() {
         forget(handle)
-        clear()
-        discardNow.value = false
-        draftNow.value = null
-    }
-
-    private fun clear() {
         problemNow.value = null
-        savingNow.value = SaveState.Idle
+        draftNow.value = null
     }
 }

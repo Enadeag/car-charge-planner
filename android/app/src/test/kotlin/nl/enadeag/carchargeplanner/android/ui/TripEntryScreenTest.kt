@@ -54,6 +54,7 @@ import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.Plans
+import nl.enadeag.carchargeplanner.android.home.TripChoice
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
@@ -613,7 +614,7 @@ class TripEntryScreenTest {
         openAdd()
         typeDistance("120")
         access.tripGate = gate
-        compose.runOnIdle { trips.choose(tomorrow, TripEntry.Choice.CAN_CHARGE, true) }
+        compose.runOnIdle { trips.choose(tomorrow, TripChoice.CAN_CHARGE, true) }
         compose.waitForIdle()
 
         save.assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Disabled))

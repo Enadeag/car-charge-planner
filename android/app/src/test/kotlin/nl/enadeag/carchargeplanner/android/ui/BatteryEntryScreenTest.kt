@@ -471,7 +471,7 @@ class BatteryEntryScreenTest {
         field.performTextInput("64")
         click(R.string.action_save)
         compose.onNodeWithText(text(R.string.battery_saved)).assertIsDisplayed()
-        assertThat(entry.savedToShow.value).isFalse()
+        assertThat(entry.notice.value).isNull()
 
         restoration.emulateSavedInstanceStateRestore()
         compose.waitForIdle()

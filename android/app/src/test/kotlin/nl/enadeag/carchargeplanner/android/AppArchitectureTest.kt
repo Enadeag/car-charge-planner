@@ -242,7 +242,8 @@ class AppArchitectureTest {
         val MODEL_FILES = setOf("Dashboard.kt", "ListedTrip.kt", "ComingAway.kt")
 
         /** The other files in the dashboard's package: entries, notices and the like, which may use Android. */
-        val NOT_MODEL_FILES = setOf("AwayEntry.kt", "BatteryEntry.kt", "TripEntry.kt", "ChangeQueue.kt",
+        val NOT_MODEL_FILES = setOf("AwayEntry.kt", "BatteryEntry.kt", "TripEntry.kt", "ChangeQueue.kt", "EntryFlow.kt",
+            "SaveState.kt", "TripChoice.kt", "TripDraft.kt", "TripDraftKept.kt",
             "HomeNotice.kt", "HomeOutlook.kt", "NotificationCard.kt")
 
         val DASHBOARD_MODELS = DescribedPredicate.describe<JavaClass>(

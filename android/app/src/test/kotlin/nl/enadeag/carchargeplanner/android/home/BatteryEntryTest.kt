@@ -46,7 +46,7 @@ class BatteryEntryTest {
         assertThat(entry.open.value).isTrue()
         assertThat(entry.text.value).isEmpty()
         assertThat(entry.problems.value).isEmpty()
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Idle)
+        assertThat(entry.saving.value).isEqualTo(SaveState.Idle)
     }
 
     @ParameterizedTest
@@ -71,7 +71,7 @@ class BatteryEntryTest {
 
         assertThat(entry.problems.value)
             .containsExactlyEntriesOf(mapOf(BatteryEntry.Field.LEVEL to FieldProblem.NotAWholeNumber))
-        assertThat(entry.problemsShown.value).isEqualTo(1)
+        assertThat(entry.refusals.value).isEqualTo(1)
         assertThat(access.batteryLevels).isEmpty()
         assertThat(entry.open.value).isTrue()
     }
@@ -86,10 +86,10 @@ class BatteryEntryTest {
 
         assertThat(entry.problems.value)
             .containsExactlyEntriesOf(mapOf(BatteryEntry.Field.LEVEL to FieldProblem.NotFrom0To100))
-        assertThat(entry.problemsShown.value).isEqualTo(1)
+        assertThat(entry.refusals.value).isEqualTo(1)
         assertThat(access.batteryLevels).isEmpty()
         assertThat(entry.open.value).isTrue()
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Idle)
+        assertThat(entry.saving.value).isEqualTo(SaveState.Idle)
         assertThat(plannedAgain).isZero()
     }
 
@@ -128,7 +128,7 @@ class BatteryEntryTest {
         entry.save()
         runCurrent()
 
-        assertThat(entry.problemsShown.value).isEqualTo(2)
+        assertThat(entry.refusals.value).isEqualTo(2)
     }
 
     @Test
@@ -163,10 +163,10 @@ class BatteryEntryTest {
         runCurrent()
 
         assertThat(entry.open.value).isFalse()
-        assertThat(entry.savedToShow.value).isTrue()
+        assertThat(entry.notice.value).isEqualTo(BatteryEntry.Notice.Saved)
         assertThat(plannedAgain).isEqualTo(1)
-        entry.savedShown()
-        assertThat(entry.savedToShow.value).isFalse()
+        entry.noticeShown()
+        assertThat(entry.notice.value).isNull()
     }
 
     @Test
@@ -192,9 +192,9 @@ class BatteryEntryTest {
 
         assertThat(entry.open.value).isTrue()
         assertThat(entry.text.value).isEqualTo("64")
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Failed(
+        assertThat(entry.saving.value).isEqualTo(SaveState.Failed(
             "battery.json is not written: written by a newer version of the app"))
-        assertThat(entry.savedToShow.value).isFalse()
+        assertThat(entry.notice.value).isNull()
         assertThat(plannedAgain).isZero()
     }
 
@@ -208,7 +208,7 @@ class BatteryEntryTest {
         entry.cancel()
         entry.open()
 
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Idle)
+        assertThat(entry.saving.value).isEqualTo(SaveState.Idle)
     }
 
     @Test
@@ -233,7 +233,7 @@ class BatteryEntryTest {
         val entry = typed("64")
         entry.save()
         runCurrent()
-        assertThat(entry.saving.value).isEqualTo(BatteryEntry.SaveState.Saving)
+        assertThat(entry.saving.value).isEqualTo(SaveState.Saving)
 
         entry.save()
         entry.cancel()
@@ -258,7 +258,7 @@ class BatteryEntryTest {
         assertThat(entry.discardAsked.value).isFalse()
         assertThat(batteryKeys()).isEmpty()
         assertThat(access.batteryLevels).isEmpty()
-        assertThat(entry.savedToShow.value).isFalse()
+        assertThat(entry.notice.value).isNull()
     }
 
     @Test

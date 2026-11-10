@@ -18,7 +18,6 @@ import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.home.AwayEntry.Kind
 import nl.enadeag.carchargeplanner.android.home.AwayEntry.Notice
 import nl.enadeag.carchargeplanner.android.home.AwayEntry.Problem
-import nl.enadeag.carchargeplanner.android.home.AwayEntry.SaveState
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import org.assertj.core.api.Assertions.assertThat

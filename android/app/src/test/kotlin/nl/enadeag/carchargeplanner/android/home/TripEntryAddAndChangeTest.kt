@@ -16,12 +16,11 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.home.TripDraft.Fields
+import nl.enadeag.carchargeplanner.android.home.TripDraft.Mode
+import nl.enadeag.carchargeplanner.android.home.TripDraft.Problem
 import nl.enadeag.carchargeplanner.android.home.TripEntry.Field
-import nl.enadeag.carchargeplanner.android.home.TripEntry.Fields
-import nl.enadeag.carchargeplanner.android.home.TripEntry.Mode
 import nl.enadeag.carchargeplanner.android.home.TripEntry.Notice
-import nl.enadeag.carchargeplanner.android.home.TripEntry.Problem
-import nl.enadeag.carchargeplanner.android.home.TripEntry.SaveState
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.ui.components.PickerDays
 import nl.enadeag.carchargeplanner.engine.trip.Trip
@@ -347,10 +346,10 @@ class TripEntryAddAndChangeTest {
     @Test
     fun aDistanceTooLargeToBeANumberIsNoNumber() {
         val fields = Fields(today, LocalTime.of(8, 0), today, LocalTime.of(18, 0), "1" + "0".repeat(400), false)
-        val draft = TripEntry.Draft(Mode.ADD, amsterdam, today, fields, null, fields)
+        val draft = TripDraft(Mode.ADD, amsterdam, today, fields, null, fields)
 
         assertThat(draft.check(clock.now, NumberText(Locale.ENGLISH)))
-            .isEqualTo(TripEntry.Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER))
+            .isEqualTo(TripDraft.Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER))
     }
 
     @ParameterizedTest

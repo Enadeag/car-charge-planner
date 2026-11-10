@@ -231,9 +231,9 @@ internal class Shown(var dashboard: Dashboard? = null)
 private fun BatteryOutcome(battery: BatteryEntry, snackbars: SnackbarHostState, closed: () -> Unit) {
     val saved = stringResource(R.string.battery_saved)
     LaunchedEffect(battery) {
-        battery.savedToShow.collect { now ->
-            if (now) {
-                battery.savedShown()
+        battery.notice.collect { now ->
+            if (now != null) {
+                battery.noticeShown()
                 snackbars.currentSnackbarData?.dismiss()
                 launch { snackbars.showSnackbar(saved) }
             }
