@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /** The trip advice as the dashboard shows it: what the plan does, its source, its flags, and where it shows. */
@@ -116,6 +117,15 @@ class DashboardTripAdviceTest {
         var view = view(gridAt(MADE_AT.plusSeconds(secondsAfter)));
 
         assertThat(start(view).startsNow()).isEqualTo(startsNow);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Start.class)
+    void theViewKeepsTheStartTheGridChargeWasPlannedWithAndDecidesStartsNowByTheTime(Start when) {
+        var view = view(advice(90, List.of(), Optional.of(grid(at(TODAY, 21, 0), when)), 90, 0));
+
+        assertThat(start(view).start()).isEqualTo(when);
+        assertThat(start(view).startsNow()).isFalse();
     }
 
     @ParameterizedTest
