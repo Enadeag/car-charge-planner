@@ -239,7 +239,7 @@ class AppArchitectureTest {
         val SCREENS_LAMBDA = ScreenThatPlansARound::class.java.name + "\$planInALambda\$1"
 
         /** The files of the dashboard's models, which hold its rules and know nothing of Android. */
-        val MODEL_FILES = setOf("Dashboard.kt", "SourceFigure.kt", "ListedTrip.kt", "ComingAway.kt")
+        val MODEL_FILES = setOf("Dashboard.kt", "ListedTrip.kt", "ComingAway.kt")
 
         /** The other files in the dashboard's package: entries, notices and the like, which may use Android. */
         val NOT_MODEL_FILES = setOf("AwayEntry.kt", "BatteryEntry.kt", "TripEntry.kt", "ChangeQueue.kt",

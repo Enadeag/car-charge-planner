@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.android.ui
 
 import java.util.Optional
-import nl.enadeag.carchargeplanner.android.home.SourceFigure
+import nl.enadeag.carchargeplanner.android.ui.home.SourceFigure
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource

@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView
 import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
+import nl.enadeag.carchargeplanner.engine.dashboard.StartLevel
 import nl.enadeag.carchargeplanner.engine.dashboard.TripAdviceView
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness
@@ -50,6 +51,9 @@ data class Dashboard(val planned: Outlook.Planned, val view: DashboardView, val 
 
     /** The minimum and target charge levels, which every day's battery bar marks. */
     val levels: ChargeLevels get() = view.levels()
+
+    /** The battery level the plan starts from, and whether it is assumed, which the trip advice tells. */
+    val startLevel: StartLevel get() = view.startLevel()
 
     /** The plan's grid advice; null when there is none. */
     val gridAdvice: GridAdviceView? get() = view.gridAdvice().orElse(null)

@@ -20,7 +20,6 @@ import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.home.ComingAway
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.ListedTrip
-import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
@@ -31,6 +30,7 @@ import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
 import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason
 import nl.enadeag.carchargeplanner.engine.dashboard.SolarDay
+import nl.enadeag.carchargeplanner.engine.dashboard.StartLevel
 import nl.enadeag.carchargeplanner.engine.dashboard.TripAdviceView
 import nl.enadeag.carchargeplanner.engine.dashboard.TripGridStart
 import nl.enadeag.carchargeplanner.engine.dashboard.TripPlan
@@ -434,9 +434,10 @@ internal class DashboardWords(private val resources: Resources, private val loca
      *
      * @param advice the engine's advice for the trip
      * @param tab the name of the day whose tab it shows on, which names its days as [adviceDay] does
+     * @param level the battery level the plan starts from, from the engine's dashboard
      * @return the words
      */
-    fun tripAdvice(advice: TripAdviceView, tab: DayName): TripAdviceText {
+    fun tripAdvice(advice: TripAdviceView, tab: DayName, level: StartLevel): TripAdviceText {
         val onToday = tab is DayName.Today
         val day = { name: DayName -> adviceDay(name, onToday) }
         val trip = advice.trip()
@@ -444,11 +445,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
             whole(trip.distanceKm()))
         val plan = planText(advice, day, onToday, ::unbrokenSpan)
         val spokenPlan = planText(advice, day, onToday, ::spokenSpan)
-        val level = text(if (advice.levelAssumed()) R.string.trip_advice_assumed else R.string.trip_advice_entered,
-            whole(advice.levelPct().value()))
+        val from = text(if (level.assumed()) R.string.trip_advice_assumed else R.string.trip_advice_entered,
+            whole(level.levelPct().value()))
         val label = text(R.string.trip_advice_label)
-        return TripAdviceText(label, title, plan, level,
-            text(R.string.trip_advice_spoken, label, title, spokenPlan, level))
+        return TripAdviceText(label, title, plan, from,
+            text(R.string.trip_advice_spoken, label, title, spokenPlan, from))
     }
 
     /** What to charge and when, each solar window's times told by [span]: as shown, or as a screen reader says them. */
@@ -467,9 +468,13 @@ internal class DashboardWords(private val resources: Resources, private val loca
             is TripPlan.Leaves ->
                 listOf(text(R.string.trip_advice_leaves, whole(plan.departureLevelPct().value())))
         }
-        // in whole km, rounded up
-        val short = advice.shortKm().takeIf { it.isPresent }
-            ?.let { text(R.string.trip_advice_short, ceil(it.asDouble).toInt().toString()) }
+        // rounded up here, in whole km: each platform rounds up in its own unit (decision 13), so the engine gives km as
+        // they are
+        val short = if (advice.shortKm().isPresent) {
+            text(R.string.trip_advice_short, ceil(advice.shortKm().asDouble).toInt().toString())
+        } else {
+            null
+        }
         return (sentences + listOfNotNull(short)).joinToString(" ")
     }
 

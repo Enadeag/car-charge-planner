@@ -61,7 +61,6 @@ import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.NotificationCard
-import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.ui.LocalSourceColours
@@ -324,7 +323,7 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                 // by the trip, so a card keeps its place in the composition when a trip before it goes
                 dashboard.tripAdviceOn(day).forEach {
                     key(it.trip().departure(), it.trip().distanceKm()) {
-                        TripAdviceCard(words.tripAdvice(it, day.name()), it.source(), adjust)
+                        TripAdviceCard(words.tripAdvice(it, day.name(), dashboard.startLevel), it.source(), adjust)
                     }
                 }
                 dashboard.adviceOn(day)?.let { GridAdviceCard(it, dashboard.levels, words) }

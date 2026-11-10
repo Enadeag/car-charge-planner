@@ -8,7 +8,6 @@ import java.util.Locale
 import java.util.Optional
 import java.util.TimeZone
 import nl.enadeag.carchargeplanner.android.home.Plans
-import nl.enadeag.carchargeplanner.android.home.SourceFigure
 import nl.enadeag.carchargeplanner.android.home.TripAdvices.BRUSSELS
 import nl.enadeag.carchargeplanner.android.home.TripAdvices.SOLAR
 import nl.enadeag.carchargeplanner.android.home.TripAdvices.TODAY
@@ -16,6 +15,7 @@ import nl.enadeag.carchargeplanner.android.home.TripAdvices.TOMORROW
 import nl.enadeag.carchargeplanner.android.home.TripAdvices.advice
 import nl.enadeag.carchargeplanner.android.home.TripAdvices.at
 import nl.enadeag.carchargeplanner.android.home.TripAdvices.grid
+import nl.enadeag.carchargeplanner.android.home.TripAdvices.level
 import nl.enadeag.carchargeplanner.android.home.TripAdvices.model
 import nl.enadeag.carchargeplanner.android.notify.LockScreen
 import nl.enadeag.carchargeplanner.android.ui.notify.NoticeWords
@@ -69,11 +69,11 @@ class TripAdviceWordsTest {
     private fun words(locale: Locale = Locale.ENGLISH, twentyFour: Boolean = true) =
         DashboardWords(resources, locale, twentyFour, BRUSSELS)
 
-    private fun onToday(model: TripAdviceView, locale: Locale = Locale.ENGLISH, twentyFour: Boolean = true) =
-        words(locale, twentyFour).tripAdvice(model, DayName.Today(TODAY))
+    private fun onToday(model: TripAdviceView, locale: Locale = Locale.ENGLISH, twentyFour: Boolean = true,
+        assumed: Boolean = true) = words(locale, twentyFour).tripAdvice(model, DayName.Today(TODAY), level(assumed))
 
     private fun onTomorrow(model: TripAdviceView, locale: Locale = Locale.ENGLISH) =
-        words(locale).tripAdvice(model, DayName.Tomorrow(TOMORROW))
+        words(locale).tripAdvice(model, DayName.Tomorrow(TOMORROW), level())
 
     private fun span(from: String, to: String) = "$from$NBSP–$NBSP$to"
 
@@ -313,17 +313,17 @@ class TripAdviceWordsTest {
 
     @Test
     fun aLevelTheOwnerEnteredIsNotCalledAssumed() {
-        val model = model(advice(70.0, listOf(), 75.0, null, 75.0, 0.0), assumed = false)
+        val model = model(advice(70.0, listOf(), 75.0, null, 75.0, 0.0))
 
-        assertThat(onToday(model).level).isEqualTo("Based on the battery level of 45% you entered.")
+        assertThat(onToday(model, assumed = false).level).isEqualTo("Based on the battery level of 45% you entered.")
     }
 
     @Test
     @Config(qualifiers = "nl")
     fun aLevelTheOwnerEnteredIsNotCalledAssumedInDutch() {
-        val model = model(advice(70.0, listOf(), 75.0, null, 75.0, 0.0), assumed = false)
+        val model = model(advice(70.0, listOf(), 75.0, null, 75.0, 0.0))
 
-        assertThat(onToday(model, Locale.forLanguageTag("nl")).level)
+        assertThat(onToday(model, Locale.forLanguageTag("nl"), assumed = false).level)
             .isEqualTo("Uitgaande van het accuniveau van 45% dat je invulde.")
     }
 

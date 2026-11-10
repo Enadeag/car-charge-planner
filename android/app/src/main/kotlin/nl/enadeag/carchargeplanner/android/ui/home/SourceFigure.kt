@@ -1,4 +1,4 @@
-package nl.enadeag.carchargeplanner.android.home
+package nl.enadeag.carchargeplanner.android.ui.home
 
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels

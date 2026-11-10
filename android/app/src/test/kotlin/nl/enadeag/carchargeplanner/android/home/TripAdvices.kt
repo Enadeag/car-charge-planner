@@ -7,6 +7,8 @@ import java.util.Optional
 import kotlin.math.max
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.config.Percent
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardView
+import nl.enadeag.carchargeplanner.engine.dashboard.StartLevel
 import nl.enadeag.carchargeplanner.engine.dashboard.TripAdviceView
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge
@@ -39,9 +41,15 @@ internal object TripAdvices {
         TripAdvice(trip, Percent(neededPct), solar, Percent(solarPct), Optional.ofNullable(grid),
             Percent(departurePct), kmShort, Percent(max(0.0, departurePct - 52)))
 
-    /** As the engine's dashboard gives it: made at 10:20 today from a battery level of 45%, with a target of 80%. */
-    fun model(advice: TripAdvice, assumed: Boolean = true): TripAdviceView =
-        Outlook.Planned(MADE_AT, BRUSSELS, listOf(), Percent(45.0), assumed, Optional.empty(), listOf(advice),
+    /** The engine's dashboard of a plan made at 10:20 today from a battery level of 45%, with a target of 80%. */
+    private fun dashboard(advice: List<TripAdvice>, assumed: Boolean): DashboardView =
+        Outlook.Planned(MADE_AT, BRUSSELS, listOf(), Percent(45.0), assumed, Optional.empty(), advice,
             Plans.source(MADE_AT), 0.3, Percent(30.0), Percent(80.0))
-            .dashboard(listOf(), listOf()).tripAdvice().single()
+            .dashboard(listOf(), listOf())
+
+    /** As the engine's dashboard gives it, for a plan made at 10:20 today. */
+    fun model(advice: TripAdvice): TripAdviceView = dashboard(listOf(advice), true).tripAdvice().single()
+
+    /** The battery level of 45% the engine's dashboard says that plan starts from, assumed or entered. */
+    fun level(assumed: Boolean = true): StartLevel = dashboard(listOf(), assumed).startLevel()
 }
