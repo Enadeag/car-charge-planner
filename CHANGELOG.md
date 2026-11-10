@@ -33,7 +33,7 @@ Two fixes: saving API keys no longer loses the keys of the other providers, and 
 - Saving API keys no longer deletes the keys of the other providers when the keychain cannot read one of the entries: that entry is left as it is, the other changes are saved, and entering a new value for it replaces it.
 
 ### Security
-- The Java runtime this release brings is Temurin 25.0.5+8, with Java's security fixes of October 2026 (0.5.0 brought 25.0.4.1+1). It does not have the removal of the eMudhra root certificates that OpenJDK announced after it (advisories of 2026-10-21 and 2026-10-24), as no Temurin 25 with it exists yet; neither did 0.5.0. The app makes HTTPS requests only to the forecast provider you chose. A release on a runtime with that removal follows once Temurin has one.
+- The Java runtime this release brings is Temurin 25.0.5+8, with Java's security fixes of October 2026 (0.5.0 brought 25.0.4.1+1). OpenJDK has since reported compromised eMudhra intermediate certificates (CVE-2026-114820, advisories of 2026-10-21 and 2026-10-24; <https://openjdk.org/emudhra>), rated 9.1. The fix is not in this Temurin build, and Temurin has not published a build with it so far; 0.5.0 has the same gap. The app makes HTTPS requests only to the forecast provider you chose. A release on a runtime with the fix follows once Temurin has one.
 
 ## [0.5.0] - 2026-10-22
 
