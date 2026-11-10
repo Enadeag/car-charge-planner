@@ -10,20 +10,12 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-/**
- * Why there is no plan to show: still fetching, not set up, a settings file that cannot be used, or no forecast; before
- * the first set-up, a way into it.
- */
 final class NoPlanCard extends VBox {
 
     /**
-     * Makes the card.
-     *
      * @param noPlan what to say; an empty detail is left out
      * @param canOpenSetUp true when the dashboard can open set-up; the card offers it only then, when it asks for
      *     set-up
-     * @param setUp opens set-up
-     * @param messages the texts, in the owner's language
      */
     NoPlanCard(DashboardModel.NoPlan noPlan, boolean canOpenSetUp, Runnable setUp, Messages messages) {
         var text = new VBox(paragraph(noPlan.headline(), "message-headline"));

@@ -147,10 +147,6 @@ public final class Dashboard {
         Platform.runLater(() -> window.onClose(actions.quit()));
     }
 
-    /**
-     * The same outlook in another language: a new view, made as the first one was, takes the place of the one shown,
-     * on the day that was selected.
-     */
     private void switchLanguage(Messages chosen) {
         messages = chosen;
         var before = view;
@@ -160,7 +156,6 @@ public final class Dashboard {
         window.replace(before, view);
     }
 
-    /** The latest outlook, in the language and units chosen now. */
     private void showAgain() {
         view.show(model(new OutlookMapper(messages)));
     }
@@ -169,7 +164,6 @@ public final class Dashboard {
         return outlook == null ? mapper.loading() : mapper.map(outlook, awayPeriods, trips, units.getValue());
     }
 
-    /** A view in the language spoken now, with the dashboard's actions, showing the latest outlook. */
     private DashboardView newView() {
         var made = new DashboardView(this::detach, this::fitToContent, reducedMotion, appName, messages);
         made.onBatteryEntered(pct -> actions.batteryEntered().accept(new Percent(pct)));

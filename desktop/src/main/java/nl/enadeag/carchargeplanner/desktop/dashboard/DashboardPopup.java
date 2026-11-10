@@ -19,8 +19,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 /**
- * The dashboard as a popup next to the tray icon. A click elsewhere or Escape closes it; Escape in an open entry, such
- * as the battery level's, closes only the entry.
+ * A click elsewhere or Escape closes it; Escape in an open entry, such as the battery level's, closes only the entry.
  */
 final class DashboardPopup {
 
@@ -39,13 +38,9 @@ final class DashboardPopup {
     private Point2D iconPosition = Point2D.ZERO;
 
     /**
-     * Makes the popup, hidden.
-     *
-     * @param theme makes the popup light or dark as the system is
      * @param icon the app icon, for a taskbar that lists the popup
      * @param appName the app's name, for a taskbar that lists the popup
      * @param clock tells when the popup closed, so the click on the tray icon that closed it does not open it again
-     * @param taskbarHiding how this system keeps the popup out of its taskbar
      */
     DashboardPopup(WindowTheme theme, AppIcon icon, String appName, InstantSource clock,
             TaskbarHiding taskbarHiding) {
@@ -88,8 +83,7 @@ final class DashboardPopup {
     }
 
     /**
-     * Opens the popup beside the tray icon; a click on the icon while it is open closes it. A request to open that
-     * comes within {@code SAME_CLICK} (400 ms) of the popup closing is the click that closed it, and does nothing.
+     * A request to open that comes within {@code SAME_CLICK} (400 ms) of the popup closing is the click that closed it, and does nothing.
      *
      * @param view the dashboard to show; taken out of the window if it is there
      * @param reported where the tray says the icon is, in JavaFX's screen coordinates; another process (the panel)
@@ -105,7 +99,6 @@ final class DashboardPopup {
         }
     }
 
-    /** Shows the view beside the icon, in front and with the focus. */
     private void open(DashboardView view, Point2D reported) {
         var screens = Screen.getScreens().stream().map(Screen::getBounds).toList();
         iconPosition = PopupPlacement.onScreenOrFallback(reported, screens, Screen.getPrimary().getVisualBounds());
@@ -126,10 +119,8 @@ final class DashboardPopup {
     }
 
     /**
-     * Puts another view where one is shown, such as the same dashboard in another language. The popup stays open or
-     * closed, and fits the new view.
+     * The popup stays open or closed, and fits the new view.
      *
-     * @param before the view that may be in the popup now
      * @param after the view to show in its place; nothing changes when the popup does not hold {@code before}
      */
     void replace(DashboardView before, DashboardView after) {
@@ -146,7 +137,6 @@ final class DashboardPopup {
         }
     }
 
-    /** Closes the popup; does nothing when it is closed. */
     void close() {
         if (stage.isShowing()) {
             stage.hide();
@@ -155,7 +145,6 @@ final class DashboardPopup {
         }
     }
 
-    /** Fits the popup to new content, still beside the icon. */
     void fit() {
         if (stage.isShowing()) {
             fitToScreen();
