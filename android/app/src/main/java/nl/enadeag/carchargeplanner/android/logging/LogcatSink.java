@@ -24,7 +24,6 @@ final class LogcatSink implements LogSink {
     /**
      * A message in parts of at most {@link #MOST_PER_ENTRY} characters, cut at a line end where it can be.
      *
-     * @param message the whole text, not null
      * @return the parts in order, one when the message is short enough; a line end where the message was cut is left
      *     out
      */
@@ -49,12 +48,6 @@ final class LogcatSink implements LogSink {
         return parts;
     }
 
-    /**
-     * Logcat's priority for an slf4j level.
-     *
-     * @param level the record's level
-     * @return the matching {@link Log} priority
-     */
     static int priority(Level level) {
         switch (level) {
             case ERROR:
