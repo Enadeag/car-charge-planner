@@ -1,0 +1,23 @@
+# Android: every screen
+
+Decisions that hold on every screen of the app: the top app bar, buttons, snackbars, dialogs and spoken names.
+
+### Top app bar and buttons
+
+- Up is Material's `ArrowBack`, mirrored right to left, and the home's Settings is Material's gear, named "Settings" (#315).
+- The top app bar's title wraps without a line limit and the bar grows with it, so nothing is cut off at 200% (#335).
+- Every button is drawn at least 48 dp high, over Material's 40 dp, through the app's own button wrappers (#315).
+- A control that is off while a change runs stays focusable: it is marked unavailable for TalkBack, drawn as off, and ignores a press, because Compose takes the focus from a disabled control (#375).
+- A button's spoken name starts with its visible word, in Dutch too, for Voice Access: "Verwijderen: rit …", "Verwijderen: …", "Toevoegen: afwezigheid" (#375).
+
+### Snackbars
+
+- `AppSnackbar` draws the app's own **Close** (`action_close`) on every snackbar that asks for a close button, the Undo one too, never Material's "Dismiss"; `BarScaffold` pads the page's bottom by the shown snackbar's height, so the last row and the footer scroll above it (#338).
+
+### Dialogs
+
+- An entry dialog's title is a heading; Save shows its progress, and nothing closes while it saves. A failed save is read at once with the English details. Back or a tap beside it with changes asks "Discard changes?"; when it closes the focus goes back to the button that opened it, or to the title when that button is not on the page in view (#338).
+
+### Saved state
+
+- Each screen's saved state ends with it: a screen forgets what it kept when it closes, and an entry kept in the saved state that can no longer be read is closed and forgotten (#315).
