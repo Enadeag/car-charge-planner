@@ -102,6 +102,7 @@ public final class EncryptedKeychain implements Keychain {
 
         /**
          * @param millis how long, in milliseconds
+         * @throws InterruptedException when the thread is interrupted while waiting
          */
         void pause(long millis) throws InterruptedException;
     }

@@ -85,6 +85,7 @@ public abstract class AndroidApiClassesCheck extends DefaultTask {
     /**
      * @param jars the jars; never null
      * @return the names of their classes in internal form, such as {@code java/lang/String}
+     * @throws IOException when a jar cannot be read
      */
     static Set<String> classesIn(Iterable<File> jars) throws IOException {
         var classes = new HashSet<String>();

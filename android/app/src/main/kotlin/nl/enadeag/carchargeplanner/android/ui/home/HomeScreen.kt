@@ -215,6 +215,8 @@ internal class Shown(var dashboard: Dashboard? = null)
  * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, which a screen
  * reader reads when it comes, once, also after turning the phone; and when the entry closes, however it does, the
  * focus moves on.
+ *
+ * @param closed moves the focus once the entry closed
  */
 @Composable
 private fun BatteryOutcome(battery: BatteryEntry, snackbars: SnackbarHostState, closed: () -> Unit) {
@@ -419,6 +421,8 @@ private fun GridAdviceCard(advice: GridAdviceView, levels: ChargeLevels, words: 
  * the trip, what to charge and when, and the battery level it starts from, with Adjust under it. A screen reader reads
  * the advice as one heading, one sentence, and Adjust apart as a button whose name starts with its visible word, and
  * which says what a double tap does.
+ *
+ * @param adjust moves to today's tab and opens the entry of the battery level
  */
 @Composable
 private fun TripAdviceCard(advice: TripAdviceText, source: EnergySource, adjust: () -> Unit) {

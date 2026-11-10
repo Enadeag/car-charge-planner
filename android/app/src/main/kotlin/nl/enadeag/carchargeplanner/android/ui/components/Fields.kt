@@ -209,6 +209,7 @@ internal fun TypicalMark(modifier: Modifier = Modifier) {
 /**
  * A choice of one from a few, as radio buttons a screen reader reads as a group.
  *
+ * @param options the options, in the order shown
  * @param problem the problem it shows, under it and to a screen reader with the group; null for none
  * @param focus moves the focus to the group, as to the first problem after Save; null for a choice that never shows
  *     a problem, whose group then takes no focus of its own

@@ -62,6 +62,8 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
  * section per provider with its settings. An API key is masked, with Show and Hide, filled with the stored key; when
  * the stored keys could not be read, a note says so and a key left empty stays as stored. Last, the "Wi-Fi only"
  * switch of the hourly update while the app is closed, which applies at once, outside the page's Save.
+ *
+ * @param problems the page's fields in order, for the focus after Save
  */
 @Composable
 internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: ProblemFocus, wifiOnly: WifiOnly) {

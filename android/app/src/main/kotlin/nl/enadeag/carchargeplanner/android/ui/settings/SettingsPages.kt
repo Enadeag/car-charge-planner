@@ -95,6 +95,8 @@ internal fun phasesName(phases: Phases): Int = if (phases == Phases.ONE) R.strin
  * Every panel array, each named by its place and its name ("Array 2, east roof"), with its own "I don't know" and
  * Remove, which acts at once; the last array's Remove is off, with the reason, which a screen reader reads with it.
  * There is no reordering. After Add the focus goes to the new array's heading, after Remove to the one before.
+ *
+ * @param problems the page's fields in order, for the focus after Save
  */
 @Composable
 internal fun SolarPage(panels: PanelsForm, edits: Edits, problems: ProblemFocus) {
@@ -166,6 +168,8 @@ private fun RemoveArray(number: Int, removable: Boolean, onRemove: () -> Unit) {
  * Where the home is: the place search of the stored primary provider, or a line that it has none; the coordinates,
  * always shown; and the time zone under "Advanced", which typed coordinates leave alone, as a stored zone counts as
  * chosen (#315).
+ *
+ * @param problems the page's fields in order, for the focus after Save
  */
 @Composable
 internal fun LocationPage(session: SettingsSession, edits: Edits, problems: ProblemFocus) {
@@ -183,7 +187,11 @@ internal fun LocationPage(session: SettingsSession, edits: Edits, problems: Prob
         })
 }
 
-/** The car with "I don't know", then the house's baseload with its own. */
+/**
+ * The car with "I don't know", then the house's baseload with its own.
+ *
+ * @param problems the page's fields in order, for the focus after Save
+ */
 @Composable
 internal fun CarAndHousePage(car: CarForm, house: HouseForm, edits: Edits, problems: ProblemFocus) {
     SectionHeading(stringResource(R.string.settings_car_heading))
@@ -192,13 +200,21 @@ internal fun CarAndHousePage(car: CarForm, house: HouseForm, edits: Edits, probl
     HouseFields(house, edits, problems, 10, ImeAction.Done)
 }
 
-/** The wall charger, as in set-up. */
+/**
+ * The wall charger, as in set-up.
+ *
+ * @param problems the page's fields in order, for the focus after Save
+ */
 @Composable
 internal fun ChargerPage(charger: ChargerForm, edits: Edits, problems: ProblemFocus) {
     ChargerStep(charger, edits, problems)
 }
 
-/** The weekly away periods, as in set-up; one-off away periods and trips have screens of their own (#276, #278). */
+/**
+ * The weekly away periods, as in set-up; one-off away periods and trips have screens of their own (#276, #278).
+ *
+ * @param problems the page's fields in order, for the focus after Save
+ */
 @Composable
 internal fun AwayPage(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {
     Text(stringResource(R.string.settings_away_intro))
@@ -208,6 +224,8 @@ internal fun AwayPage(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus
 /**
  * The planning preferences: the charge levels and the margin in %, the import tolerance in kWh, the shortest charge
  * window and the notification's lead in minutes, and the charging hours as times typed, not on a dial.
+ *
+ * @param problems the page's fields in order, for the focus after Save
  */
 @Composable
 internal fun PlanningPage(planning: PlanningForm, edits: Edits, problems: ProblemFocus) {

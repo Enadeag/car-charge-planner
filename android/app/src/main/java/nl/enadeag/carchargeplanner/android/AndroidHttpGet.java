@@ -153,6 +153,9 @@ public final class AndroidHttpGet implements HttpGet {
     /**
      * What the worker failed with, as the exception {@link HttpGet#get} promises: an {@link IOException} as it is,
      * and anything else but an {@link Error} wrapped in one.
+     *
+     * @param cause what the worker failed with, not null
+     * @throws Error when the cause is one, as it is
      */
     static IOException failure(Throwable cause) {
         if (cause instanceof Error error) {

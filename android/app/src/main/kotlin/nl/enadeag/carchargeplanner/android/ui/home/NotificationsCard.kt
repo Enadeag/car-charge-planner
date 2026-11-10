@@ -45,6 +45,8 @@ import nl.enadeag.carchargeplanner.android.ui.notify.openNotificationSettings
  * that says why. It is one card that scrolls with the page and is no live region; a screen reader reads its title, its
  * text, its button and last its ×, which closes it for good, after which the focus goes on, as the card is gone. When
  * a refusal swaps the button for the other one, the focus goes to the card's title, as the button it was on is gone.
+ *
+ * @param closed moves the focus once the card is closed
  */
 @Composable
 internal fun NotificationsCard(card: NotificationCard, closed: () -> Unit) {

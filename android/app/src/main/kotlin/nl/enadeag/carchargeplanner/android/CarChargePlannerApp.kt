@@ -150,6 +150,8 @@ open class CarChargePlannerApp : Application(), BackgroundHost {
          * What the debug build allows on the main thread: no disk reads, disk writes or network from the app's own
          * code, or the app crashes at once, so a call that should run off the main thread is found while developing.
          * Such a call from the system's or a vendor's code alone is logged as a warning ([MainThreadViolations]).
+         *
+         * @return a new policy, with a listener of its own
          */
         fun mainThreadPolicy(): StrictMode.ThreadPolicy = StrictMode.ThreadPolicy.Builder()
             .detectDiskReads()

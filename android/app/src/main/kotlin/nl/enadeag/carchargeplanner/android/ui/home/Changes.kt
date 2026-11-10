@@ -18,6 +18,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.FailureVisuals
  * never reads, so the focus moves on once the list no longer has it; a Remove that failed forgets it, as its row stays
  * in the list.
  *
+ * @property row the row going; null when none is
  * @property rows the rows before it went, in order
  */
 internal class Going<K>(var row: K? = null, var rows: List<K> = listOf())
@@ -25,6 +26,8 @@ internal class Going<K>(var row: K? = null, var rows: List<K> = listOf())
 /**
  * The row an Undo is adding back, a one-off away period or a trip, which drawing never reads: the list on the page in
  * view puts the focus on it once it shows; an Undo that failed forgets it.
+ *
+ * @property row the row; null when no Undo is under way
  */
 internal class Restoring<K>(var row: K? = null)
 

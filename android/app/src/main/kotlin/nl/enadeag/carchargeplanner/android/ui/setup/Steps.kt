@@ -48,7 +48,11 @@ internal fun WelcomeStep(provider: String) {
     Text(stringResource(R.string.setup_welcome_typical))
 }
 
-/** The one panel array of set-up: its size, tilt, direction and losses, and "I don't know". */
+/**
+ * The one panel array of set-up: its size, tilt, direction and losses, and "I don't know".
+ *
+ * @param problems the step's fields in order, for the focus after Next
+ */
 @Composable
 internal fun PanelsStep(panels: PanelsForm, edits: Edits, problems: ProblemFocus) {
     val rows by panels.rowIds.collectAsStateWithLifecycle()
@@ -73,6 +77,7 @@ internal fun PanelsStep(panels: PanelsForm, edits: Edits, problems: ProblemFocus
 /**
  * The car: its usable battery, consumption, other driving and trip surcharge, and "I don't know".
  *
+ * @param problems the step's fields in order, for the focus after Next
  * @param lastAction the keyboard's action key on the trip surcharge: Done when it is the page's last field
  */
 @Composable
@@ -93,7 +98,11 @@ internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, lastAct
     UseTypical { edits.make { car.useTypical() } }
 }
 
-/** The wall charger: its phases, lowest and highest current, voltage and efficiency, and "I don't know". */
+/**
+ * The wall charger: its phases, lowest and highest current, voltage and efficiency, and "I don't know".
+ *
+ * @param problems the step's fields in order, for the focus after Next
+ */
 @Composable
 internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFocus) {
     val shown by charger.problems.collectAsStateWithLifecycle()
@@ -122,6 +131,8 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
 /**
  * What makes the plan better and may be skipped: the house's baseload with "I don't know", and the weekly away
  * periods, which start empty.
+ *
+ * @param problems the step's fields in order, for the focus after Next
  */
 @Composable
 internal fun MoreStep(house: HouseForm, away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {
@@ -136,6 +147,7 @@ internal fun MoreStep(house: HouseForm, away: WeeklyAwayForm, edits: Edits, prob
 /**
  * The house's baseload with "I don't know".
  *
+ * @param problems the page's fields in order, for the focus after Next or Save
  * @param imeAction the keyboard's action key: Done when it is the page's last field
  */
 @Composable
@@ -154,6 +166,8 @@ internal fun HouseFields(house: HouseForm, edits: Edits, problems: ProblemFocus,
  * end the page, so the last period's end time has the keyboard's Done. After Add the focus goes to the new period's
  * heading, after Remove to the one before, to the next when the first went, or to the line that says there are none
  * when none is left.
+ *
+ * @param problems the page's fields in order, for the focus after Next or Save
  */
 @Composable
 internal fun AwayPeriods(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {

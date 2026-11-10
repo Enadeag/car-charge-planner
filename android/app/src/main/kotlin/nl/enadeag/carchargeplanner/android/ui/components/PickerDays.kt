@@ -17,6 +17,7 @@ internal object PickerDays {
 
     /**
      * @param millis milliseconds from 1970, as the picker gives them, a UTC midnight
+     * @return the day it falls on in UTC
      */
     fun day(millis: Long): LocalDate = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
 }

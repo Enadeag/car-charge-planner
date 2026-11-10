@@ -6,6 +6,7 @@ import org.slf4j.event.Level;
 interface LogSink {
 
     /**
+     * @param tag the logging class's simple name
      * @param message the whole text, with the stack trace of an exception on the lines after it; of any length
      */
     void write(Level level, String tag, String message);

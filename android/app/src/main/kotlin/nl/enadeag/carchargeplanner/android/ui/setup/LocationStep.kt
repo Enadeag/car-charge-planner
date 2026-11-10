@@ -58,6 +58,8 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
  * Where the home is: the place search, on its button or the keyboard's search key, and its results; the coordinates
  * behind "Enter coordinates instead", which is open when coordinates were typed rather than found; and the time zone
  * under "Advanced".
+ *
+ * @param problems the step's fields in order, for the focus after Next
  */
 @Composable
 internal fun LocationStep(session: SetUpSession, edits: Edits, problems: ProblemFocus) {
@@ -82,6 +84,7 @@ internal enum class Coordinates {
  * it filled in, which takes the focus; the coordinates; and the time zone under "Advanced".
  *
  * @param hasSearch whether that provider has a place search; without one only the coordinates are offered
+ * @param problems the page's fields in order, for the focus after Next or Save
  * @param coordinates whether the coordinates are shown, or behind their toggle and how it starts
  */
 @Composable

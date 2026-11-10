@@ -124,7 +124,9 @@ internal object TimeAxis {
     }
 
     /**
+     * @param chart the day's chart, with every whole hour as a tick
      * @param hours the clock hours between two ticks, more than 0
+     * @return the ticks whose clock hour is a multiple of [hours], in time order
      */
     private fun ticksEvery(chart: DayChart, hours: Int): List<DayChart.Tick> =
         chart.ticks().filter { it.clockHour() % hours == 0 }

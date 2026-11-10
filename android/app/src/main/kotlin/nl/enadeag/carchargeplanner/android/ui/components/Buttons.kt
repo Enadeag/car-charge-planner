@@ -69,6 +69,8 @@ internal fun SaveButton(busy: Boolean, onClick: () -> Unit, enabled: Boolean = t
  * A text button that is off while a change runs yet keeps the focus: Compose takes the focus from a disabled control,
  * so a keyboard or switch user who pressed it would start again at the top of the page. It looks off, a screen reader
  * says it is, and a press does nothing until the change is done.
+ *
+ * @param onClick what a press does while no change runs
  */
 @Composable
 internal fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,

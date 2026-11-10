@@ -261,6 +261,9 @@ private fun MarkLabel(text: String, mark: BatteryBarLayout.Mark, top: Float, col
 /**
  * Draws the shapes in the charts' colours, then what [over] adds; the paths and the dashes are made once per size
  * and set of shapes, not per frame.
+ *
+ * @param shapes what to draw, in order
+ * @return the modifier that draws them behind its content
  */
 internal fun Modifier.drawn(shapes: List<Shape>, colours: SourceColours.Chart, over: DrawScope.() -> Unit = {}) =
     drawWithCache {

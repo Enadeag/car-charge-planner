@@ -36,6 +36,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook
  * @param clock the app's one clock, which the home tells the age of its plan and today by
  * @param phoneZone the phone's time zone as it is when asked
  * @param seen gets each plan the dashboard asked for, so a Problems notification it no longer shows goes
+ * @param card makes the dashboard's notification card in this model's scope
  */
 internal class AppViewModel(access: EngineAccess, saves: Saves, appScope: CoroutineScope, handle: SavedStateHandle,
     private var locale: Locale, private var language: String, clock: Clock, phoneZone: () -> ZoneId,

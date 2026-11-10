@@ -18,7 +18,11 @@ internal class Rows<F : Enum<F>>(private val handle: SavedStateHandle, private v
     /** The rows' numbers, in the order shown. */
     val rows: StateFlow<List<Int>> = ids.asStateFlow()
 
-    /** Whether the rows were made before, as when the form comes back after the system ended the app. */
+    /**
+     * Whether the rows were made before, as when the form comes back after the system ended the app.
+     *
+     * @return true once a row was added, or the list was emptied by [clear]
+     */
     fun isFilled(): Boolean = handle.contains("$prefix.rows")
 
     fun state(id: Int): FormState<F> = states.getOrPut(id) { FormState(handle, "$prefix.$id", fields) }

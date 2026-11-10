@@ -8,7 +8,8 @@ import org.slf4j.helpers.LegacyAbstractLogger;
 import org.slf4j.helpers.MessageFormatter;
 
 /**
- * slf4j's base class turns every form of call into one {@link #handleNormalizedLoggingCall}.
+ * One class's slf4j logger: it writes each record at or above its threshold to a {@link LogSink}, tagged with the
+ * class's simple name. slf4j's base class turns every form of call into one {@link #handleNormalizedLoggingCall}.
  */
 final class LogcatLogger extends LegacyAbstractLogger {
 
