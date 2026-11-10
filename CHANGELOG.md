@@ -4,14 +4,6 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
-### Changed
-- Screen readers are no longer supported: Narrator, NVDA and TalkBack are no longer checked before a release, and the code built only for them is being removed (#435). What stays: large fonts and scaling (200%) without cut-off text, contrast in light and dark, no meaning by colour alone, a label on every control, and keyboard use on the desktop.
-- A file written by a newer version of the app (`engine.json`, `app.json`, `trips.json`, `away.json`, `battery.json`, `trip-notices.json` or `secrets.json`) is no longer moved aside and replaced when you save: it is left as it is, and saving fails until you update the app.
-
-### Fixed
-- A notification lead time of 0 minutes no longer means you are never told: a charge window is told at its start, or as soon as the app sees it running, and a trip's planned grid charge within 10 minutes of its start; leads above 0 are unchanged.
-- Saving API keys no longer deletes the keys of the other providers when the keychain cannot read one of the entries: that entry is left as it is, the other changes are saved, and entering a new value for it replaces it.
-
 ### Android
 Not released yet; this is the way to the first Android release, 0.1.0.
 - First-run set-up: Welcome (what leaves the phone), Location (search for a place, shown on a card with its coordinates and time zone once chosen, or enter coordinates, with the time zone under **Advanced**), Panels, Car, Charger, More (the house and weekly away) and Check, which fetches a forecast once. Typical values are marked, and each step has "I don't know". In English and Dutch.
@@ -27,6 +19,21 @@ Not released yet; this is the way to the first Android release, 0.1.0.
 - A settings file the app cannot use shows its details (in English) and **Set up again**; one of a newer version asks you to update the app and is left as it is.
 - The API keys are kept encrypted with a key in the Android Keystore, and never in a plain file.
 - The app needs Android 10 or newer.
+
+## [0.6.0] - 2026-11-10
+
+Two fixes: saving API keys no longer loses the keys of the other providers, and a notification lead time of 0 minutes now tells you at the start of a charge window. Screen readers are no longer supported.
+
+### Changed
+- Screen readers are no longer supported: Narrator, NVDA and TalkBack are no longer checked before a release, and the code built only for them is being removed (#435). What stays: large fonts and scaling (200%) without cut-off text, contrast in light and dark, no meaning by colour alone, a label on every control, and keyboard use on the desktop.
+- A file written by a newer version of the app (`engine.json`, `app.json`, `trips.json`, `away.json`, `battery.json`, `trip-notices.json` or `secrets.json`) is no longer moved aside and replaced when you save: it is left as it is, and saving fails until you update the app.
+
+### Fixed
+- A notification lead time of 0 minutes no longer means you are never told: a charge window is told at its start, or as soon as the app sees it running, and a trip's planned grid charge within 10 minutes of its start; leads above 0 are unchanged.
+- Saving API keys no longer deletes the keys of the other providers when the keychain cannot read one of the entries: that entry is left as it is, the other changes are saved, and entering a new value for it replaces it.
+
+### Security
+- The Java runtime this release brings is Temurin 25.0.5+8, with Java's security fixes of October 2026 (0.5.0 brought 25.0.4.1+1). It does not have the removal of the eMudhra root certificates that OpenJDK announced after it (advisories of 2026-10-21 and 2026-10-24), as no Temurin 25 with it exists yet; neither did 0.5.0. The app makes HTTPS requests only to the forecast provider you chose. A release on a runtime with that removal follows once Temurin has one.
 
 ## [0.5.0] - 2026-10-22
 
@@ -162,7 +169,8 @@ First version, for Linux.
 - Installation with `pipx` as the command `car-charge-planner`.
 - `config.toml` and `state.json` say which file format they are in, so later versions can upgrade them. A config file from a newer version of the app is refused with a clear message, and a newer state file is left alone. A config file written before this release, with a single `[panels]` table, is read as one panel array.
 
-[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.2.0...v0.3.0
