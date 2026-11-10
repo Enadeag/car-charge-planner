@@ -101,10 +101,7 @@ public final class WindowTheme {
         }
     }
 
-    /**
-     * Adds the stylesheet that makes the text larger, after the shared one. At normal size the scene gets none, so it
-     * is styled exactly as before.
-     */
+    /** At normal size the scene gets none, so it is styled exactly as before. */
     private static void addTextSize(Scene scene, TextSize size) {
         if (!size.equals(TextSize.NORMAL)) {
             scene.getStylesheets().add(textSizeSheet(size));
