@@ -32,6 +32,7 @@ import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.ui.home.AwayEntryDialog
 import nl.enadeag.carchargeplanner.android.ui.home.BatteryEntryDialog
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Rule
@@ -109,5 +110,57 @@ class EntryDialogsScreenTest {
         saveIsHeldWhileItRuns(gate)
 
         assertThat(battery.text.value).isEqualTo("64")
+    }
+
+    @Test
+    fun whileABatteryLevelIsSavedTheFieldTakesNoTyping() {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        access.batteryFails = "No space left on device"
+        val battery = BatteryEntry(handle, NumberText(Locale.ENGLISH), access, scope) { }
+        battery.open()
+        battery.edit("64")
+        compose.setContent { AppTheme { BatteryEntryDialog(battery) } }
+        compose.waitForIdle()
+        val field = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.IsEditable) and
+            hasAnyAncestor(isDialog()))
+
+        button(R.string.action_save).performClick()
+        compose.waitForIdle()
+
+        field.assert(SemanticsMatcher.expectValue(SemanticsProperties.IsEditable, false))
+        gate.complete(Unit)
+        compose.waitForIdle()
+        field.assert(SemanticsMatcher.expectValue(SemanticsProperties.IsEditable, true))
+    }
+
+    @Test
+    fun whileAnUndoThatWaitedRunsOverTheOpenAwayEntrySaveIsHeldWithoutProgress() {
+        val period = OneOffAwayPeriod.allDay(today.plusDays(2), lisbon)
+        access.away = listOf(period)
+        val away = AwayEntry(handle, access, scope, clock) { }
+        val removing = CompletableDeferred<Unit>()
+        access.awayGate = removing
+        away.remove(period)
+        away.undo(period)
+        removing.complete(Unit)
+        compose.waitForIdle()
+        away.open(today.plusDays(1), lisbon)
+        compose.setContent { AppTheme { AwayEntryDialog(away) } }
+        compose.waitForIdle()
+        val restoring = CompletableDeferred<Unit>()
+        access.awayGate = restoring
+
+        compose.runOnIdle { away.noticeShown() }
+        compose.waitForIdle()
+
+        button(R.string.action_save).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Disabled))
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.RequestFocus))
+        button(R.string.saving).assertDoesNotExist()
+        button(R.string.action_save).performClick()
+        restoring.complete(Unit)
+        compose.waitForIdle()
+        assertThat(access.awayChanges.map { it.first }).containsExactly("remove", "add")
+        button(R.string.action_save).assertIsEnabled()
     }
 }
