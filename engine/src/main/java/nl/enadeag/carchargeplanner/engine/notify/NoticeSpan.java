@@ -24,10 +24,7 @@ record NoticeSpan(Instant from, Instant until) {
         return new NoticeSpan(start.minus(lead), until);
     }
 
-    /**
-     * As {@link #before}, until the start; but with a lead of 0 that is empty, so then from the start for
-     * {@link #AT_START_GRACE}, not past {@code end}.
-     */
+    /** A lead of 0 would leave no time before the start, so then the span runs from the start. */
     static NoticeSpan beforeStart(Instant start, Duration lead, Instant end) {
         if (lead.isZero()) {
             var graceEnd = start.plus(AT_START_GRACE);

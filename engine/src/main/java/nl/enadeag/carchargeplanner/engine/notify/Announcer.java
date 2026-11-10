@@ -188,7 +188,6 @@ public final class Announcer {
         }
     }
 
-    /** Before its start, or with a lead time of 0 from its start. */
     private static NoticeSpan span(Window window, Duration lead) {
         return NoticeSpan.beforeStart(window.start(), lead, window.end());
     }
