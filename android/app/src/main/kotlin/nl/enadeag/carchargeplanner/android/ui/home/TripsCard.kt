@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.Dashboard
-import nl.enadeag.carchargeplanner.android.home.ListedTrip
 import nl.enadeag.carchargeplanner.android.home.TripChoice
 import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.ui.components.HeldButton
@@ -46,6 +45,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowLine
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
+import nl.enadeag.carchargeplanner.engine.dashboard.ListedTrip
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
@@ -173,7 +173,7 @@ internal fun TripsCard(dashboard: Dashboard, day: DashboardDay, words: Dashboard
     inView: Boolean) {
     val focus = remember { RowFocus<Trip>() }
     val listed = dashboard.tripsOn(day)
-    val rows = listed.map { it.trip }
+    val rows = listed.map { it.trip() }
     LaunchedEffect(rows) {
         // only the page in view: the change was made on it, and a page beside it has its own rows
         if (!inView) {
@@ -224,7 +224,7 @@ internal fun TripsCard(dashboard: Dashboard, day: DashboardDay, words: Dashboard
 @Composable
 private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips: TripAction,
     focus: RowFocus<Trip>, rows: List<Trip>, zone: ZoneId, inView: Boolean) {
-    val trip = listed.trip
+    val trip = listed.trip()
     val spoken = words.spokenTrip(listed)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         RowLine(words.trip(listed), focus, trip, Modifier.semantics { contentDescription = spoken })

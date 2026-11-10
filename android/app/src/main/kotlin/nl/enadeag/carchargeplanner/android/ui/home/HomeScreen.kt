@@ -57,7 +57,6 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
 import nl.enadeag.carchargeplanner.android.home.Dashboard
-import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.NotificationCard
@@ -77,6 +76,7 @@ import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource
+import nl.enadeag.carchargeplanner.engine.dashboard.Footer
 import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
@@ -307,8 +307,8 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
                     notice()
                 }
                 // as the notice: once, on the day in view
-                if (index == selected && dashboard.footer.stale) {
-                    Warning(listOf(stringResource(R.string.stale_warning, words.time(dashboard.footer.fetchedAt))))
+                if (index == selected && dashboard.footer.stale()) {
+                    Warning(listOf(stringResource(R.string.stale_warning, words.time(dashboard.footer.fetchedAt()))))
                 }
                 if (index == selected) {
                     KeyRefused(dashboard.keyRefusedBy)
@@ -479,7 +479,7 @@ private fun TripAdviceCard(advice: TripAdviceText, source: EnergySource, adjust:
 /** The forecast's credit, which stays in the provider's English, its source and freshness. */
 @Composable
 private fun FooterLine(footer: Footer, words: DashboardWords) {
-    Text(inEnglish(words.footer(footer), footer.credit), style = MaterialTheme.typography.bodySmall,
+    Text(inEnglish(words.footer(footer), footer.credit()), style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 

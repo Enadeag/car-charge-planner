@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.TripSave
+import nl.enadeag.carchargeplanner.engine.dashboard.ListedTrip
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /**
@@ -74,7 +75,8 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
      * A trip as the entry that saved it reads it, in the entry's zone and by the clock at Save.
      *
      * @property zone the home's time zone, in which the trip is told
-     * @property trip the trip with its days, named from the day of Save
+     * @property trip the trip with its days, as the engine lists it, named from the day of Save; before any plan was
+     *     shown there is no day the plan was made to name them from
      */
     data class Entered(val zone: ZoneId, val trip: ListedTrip)
 
@@ -240,7 +242,7 @@ class TripEntry(private val handle: SavedStateHandle, private val numbers: Numbe
                 is TripSave.Saved -> {
                     savedTrip = trip
                     changes.say(Notice.Saved(trip, Entered(draft.zone, ListedTrip.of(trip, draft.zone,
-                        clock.instant()))))
+                        clock.instant().atZone(draft.zone).toLocalDate()))))
                     changed(outcome.trips)
                     null
                 }

@@ -239,7 +239,7 @@ class AppArchitectureTest {
         val SCREENS_LAMBDA = ScreenThatPlansARound::class.java.name + "\$planInALambda\$1"
 
         /** The files of the dashboard's models, which hold its rules and know nothing of Android. */
-        val MODEL_FILES = setOf("Dashboard.kt", "ListedTrip.kt", "ComingAway.kt")
+        val MODEL_FILES = setOf("Dashboard.kt")
 
         /** The other files in the dashboard's package: entries, notices and the like, which may use Android. */
         val NOT_MODEL_FILES = setOf("AwayEntry.kt", "BatteryEntry.kt", "TripEntry.kt", "ChangeQueue.kt", "EntryFlow.kt",
@@ -827,9 +827,7 @@ class AppArchitectureTest {
 
     @Test
     fun theDashboardModelsRuleSeesTheModelsButNotTheEntries() {
-        assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.ListedTrip"))).`as`("the listed trip")
-            .isTrue()
-        assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.Footer\$Fallback\$For")))
+        assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.Dashboard\$Companion")))
             .`as`("a class inside one").isTrue()
         assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.Dashboard"))).`as`("the dashboard").isTrue()
         assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.BatteryEntry"))).`as`("an entry").isFalse()

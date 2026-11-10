@@ -23,6 +23,7 @@ import nl.enadeag.carchargeplanner.android.home.TripEntry.Field
 import nl.enadeag.carchargeplanner.android.home.TripEntry.Notice
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.ui.components.PickerDays
+import nl.enadeag.carchargeplanner.engine.dashboard.ListedTrip
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -102,7 +103,8 @@ class TripEntryAddAndChangeTest {
         assertThat(changes).containsExactly(listOf(expected))
         assertThat(entry.draft.value).isNull()
         assertThat(entry.notice.value).isEqualTo(Notice.Saved(expected,
-            TripEntry.Entered(amsterdam, ListedTrip.of(expected, amsterdam, clock.now))))
+            TripEntry.Entered(amsterdam,
+                ListedTrip.of(expected, amsterdam, clock.now.atZone(amsterdam).toLocalDate()))))
         assertThat(entry.closedOn).isNull()
         assertThat(handle.keys()).isEmpty()
     }
