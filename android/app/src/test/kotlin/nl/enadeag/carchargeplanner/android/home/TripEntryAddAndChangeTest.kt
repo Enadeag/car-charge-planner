@@ -23,7 +23,6 @@ import nl.enadeag.carchargeplanner.android.home.TripEntry.Field
 import nl.enadeag.carchargeplanner.android.home.TripEntry.Notice
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.ui.components.PickerDays
-import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.dashboard.ListedTrip
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 import org.assertj.core.api.Assertions.assertThat
@@ -117,12 +116,11 @@ class TripEntryAddAndChangeTest {
         val entry = added(tomorrow)
         entry.fill("50", from = tomorrow, to = tomorrow)
 
-        entry.save()
-        runCurrent()
+        saved(entry)
 
-        val listed = (entry.notice.value as Notice.Saved).entered?.trip
-        assertThat(listed?.departureDay()).isEqualTo(DayName.Today(tomorrow))
-        assertThat(listed?.returnDay()).isEqualTo(DayName.Today(tomorrow))
+        val expected = Trip(at(tomorrow, "08:00"), at(tomorrow, "18:00"), 50.0, false, false)
+        assertThat((entry.notice.value as Notice.Saved).entered?.trip)
+            .isEqualTo(ListedTrip.of(expected, amsterdam, tomorrow))
     }
 
     @Test
