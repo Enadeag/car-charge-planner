@@ -59,13 +59,9 @@ import javafx.scene.layout.VBox;
  */
 final class SettingsView extends BorderPane {
 
-    /** What Settings is doing. */
     private enum State {
-        /** Reading the stores; the pages show nothing yet. */
         READING,
-        /** The pages show what is stored, and can be edited and saved. */
         READY,
-        /** Writing what the pages show. */
         SAVING,
         /** The stores could not be read; closing and opening Settings tries again. */
         UNREADABLE
@@ -93,19 +89,13 @@ final class SettingsView extends BorderPane {
     private SaveOutcome outcome;
     private Runnable afterClose = () -> { };
     private State state = State.READING;
-    /** True while a read or a Save runs in the background. */
     private boolean working;
 
     /**
-     * Makes the view, showing the first category. The pages are not loaded here: see {@link #reload()}.
+     * The pages are not loaded here: see {@link #reload()}.
      *
-     * @param form what the pages show against what is stored
-     * @param pages every category's page, in the sidebar's order
-     * @param close closes Settings; called after Cancel, or after Save and close
      * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
      *     is made again
-     * @param background reads and writes the stores away from the JavaFX thread
-     * @param messages the texts, in the owner's language
      */
     SettingsView(SettingsForm form, List<Page> pages, Runnable close, Consumer<AppSettings> saved,
             Background background, Messages messages) {
@@ -177,15 +167,9 @@ final class SettingsView extends BorderPane {
      * Makes the view with every category's page; App offers to run set-up.
      *
      * @param stores where the settings are kept; nothing is read until {@link #reload()}
-     * @param facts the version and the places of the files, for the About page
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
-     * @param close closes Settings; called after Cancel, or after Save and close
      * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
      *     is made again
-     * @param runSetUp opens set-up, after Settings closed
-     * @param background does the slow work, such as reading the stores, away from the JavaFX thread
-     * @param messages the texts, in the owner's language
-     * @return the view, showing the first category
      */
     static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
             Consumer<AppSettings> saved, Runnable runSetUp, Background background, Messages messages) {
@@ -200,14 +184,9 @@ final class SettingsView extends BorderPane {
      * Consumer, Runnable, Background, Messages)}, for an app that has no set-up: App does not offer it.
      *
      * @param stores where the settings are kept; nothing is read until {@link #reload()}
-     * @param facts the version and the places of the files, for the About page
      * @param openLink opens a web page in the owner's browser; called on the JavaFX thread, so it should not block
-     * @param close closes Settings; called after Cancel, or after Save and close
      * @param saved gets the app settings as stored after something was saved, so the app can follow them and the plan
      *     is made again
-     * @param background does the slow work, such as reading the stores, away from the JavaFX thread
-     * @param messages the texts, in the owner's language
-     * @return the view, showing the first category
      */
     static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
             Consumer<AppSettings> saved, Background background, Messages messages) {
@@ -291,28 +270,16 @@ final class SettingsView extends BorderPane {
         });
     }
 
-    /**
-     * Whether the owner changed something since Settings opened or was last saved.
-     *
-     * @return true when closing would throw edits away
-     */
     boolean isChanged() {
         return (state == State.READY || state == State.SAVING) && form.isChanged();
     }
 
-    /**
-     * Whether the stores are being read, so the pages cannot be edited yet.
-     *
-     * @return true from the time Settings opens or reads again until the pages show what is stored
-     */
     boolean isReading() {
         return state == State.READING;
     }
 
     /**
-     * Shows a category's page and puts the focus on the sidebar, where the owner can move on with the arrow keys.
-     *
-     * @param category the category to show
+     * Puts the focus on the sidebar, where the owner can move on with the arrow keys.
      */
     void show(Category category) {
         categories.getSelectionModel().select(category);
@@ -376,7 +343,6 @@ final class SettingsView extends BorderPane {
         }
     }
 
-    /** Shows what a Save came to, and moves the focus to what says so. */
     private void afterSave(SaveOutcome result) {
         if (result instanceof SaveOutcome.StartAtLoginRefused(var detail)) {
             form.showStartAtLoginFailure(detail);
@@ -393,7 +359,6 @@ final class SettingsView extends BorderPane {
         updateCancelText();
     }
 
-    /** A Save stored nothing, as values were refused: their categories are marked, and the first one shows. */
     private void afterRefused(List<Category> refusing) {
         showRefused(refusing);
         categories.refresh(); // before the focus moves there: the marked category says it has a problem
@@ -401,7 +366,6 @@ final class SettingsView extends BorderPane {
         updateCancelText();
     }
 
-    /** The status line, and the categories marked, after a Save whose values were refused. */
     private void showRefused(Collection<Category> refusing) {
         outcome = null;
         refused.clear();
@@ -409,7 +373,6 @@ final class SettingsView extends BorderPane {
         showProblem(messages.text(TextKey.SETTINGS_REFUSED));
     }
 
-    /** The status line, and the categories marked, after a Save. */
     private void showOutcome(SaveOutcome result) {
         outcome = result;
         refused.clear();
@@ -480,8 +443,6 @@ final class SettingsView extends BorderPane {
      * Closes Settings and then runs an action, after asking when closing would throw edits away; the owner may keep
      * editing instead. While a Save runs nothing closes, but a Save that waits for the owner to unlock the keychain
      * stops waiting.
-     *
-     * @param next what to run once Settings closed, such as set-up
      */
     void closeThen(Runnable next) {
         if (state == State.SAVING) {
@@ -501,19 +462,12 @@ final class SettingsView extends BorderPane {
         }
     }
 
-    /**
-     * The category whose page shows.
-     *
-     * @return the selected category
-     */
     Category shown() {
         return categories.getSelectionModel().getSelectedItem();
     }
 
     /**
      * Every category's page, also those not shown, for the tests.
-     *
-     * @return the pages in the sidebar's order
      */
     List<Page> pages() {
         return pages;

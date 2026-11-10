@@ -97,7 +97,6 @@ public final class SettingsWindow {
         });
     }
 
-    /** Makes the window and its view, in the language spoken now. */
     private void make() {
         var made = new Stage();
         stage = made;
