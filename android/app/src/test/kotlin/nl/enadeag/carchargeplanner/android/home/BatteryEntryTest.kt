@@ -369,4 +369,90 @@ class BatteryEntryTest {
         assertThat(batteryKeys()).isEmpty()
         assertThat(handle.keys()).containsExactlyInAnyOrder("batteryish", "car.text.BATTERY")
     }
+
+    @Test
+    fun whileASaveRunsTheEntryIsBusyAndASecondSaveStartsNothing() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+
+        val busy = entry.busy.value
+        entry.save()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(busy).isTrue()
+        assertThat(entry.busy.value).isFalse()
+        assertThat(access.batteryLevels).containsExactly(Percent(64.0))
+        assertThat(entry.refusals.value).isZero()
+    }
+
+    @Test
+    fun whileASaveRunsTypingIsIgnored() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        access.batteryFails = "No space left on device"
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+
+        entry.edit("70")
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(entry.text.value).isEqualTo("64")
+        assertThat(entry(handle.afterTheSystemEndedTheApp()).text.value).isEqualTo("64")
+    }
+
+    @Test
+    fun whileASaveRunsDiscardDoesNothing() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        access.batteryFails = "No space left on device"
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+
+        entry.discard()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(entry.open.value).isTrue()
+        assertThat(entry.text.value).isEqualTo("64")
+    }
+
+    @Test
+    fun aKeptQuestionWithoutAnOpenEntryDoesNotShow() = runTest {
+        handle["battery.discard"] = true
+
+        val entry = entry()
+
+        assertThat(entry.discardAsked.value).isFalse()
+    }
+
+    @Test
+    fun theSavedNoticeComesWithTheEndOfTheSaveAndNotAfterAFailure() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.batteryGate = gate
+        val entry = typed("64")
+        entry.save()
+        runCurrent()
+        val whileSaving = entry.notice.value
+
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(whileSaving).isNull()
+        assertThat(entry.notice.value).isEqualTo(BatteryEntry.Notice.Saved)
+        entry.noticeShown()
+        access.batteryGate = null
+        access.batteryFails = "No space left on device"
+        entry.open()
+        entry.edit("70")
+        entry.save()
+        runCurrent()
+        assertThat(entry.notice.value).isNull()
+    }
 }

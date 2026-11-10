@@ -643,4 +643,31 @@ class AwayEntryTest {
         assertThat(access.awayChanges).isEmpty()
         assertThat(entry.notice.value).isNull()
     }
+
+    @Test
+    fun whileASaveRunsDiscardAndCancelDoNothing() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        access.awayGate = gate
+        access.awayFails = "No space left on device"
+        val entry = partOfDay("10:00", "12:00")
+        entry.save()
+        runCurrent()
+
+        entry.discard()
+        entry.cancel()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertThat(entry.draft.value?.start).isEqualTo(LocalTime.of(10, 0))
+        assertThat(keys()).isNotEmpty()
+    }
+
+    @Test
+    fun aKeptQuestionWithoutAKeptEntryDoesNotShow() = runTest {
+        handle["oneOffAway.discard"] = true
+
+        val entry = entry()
+
+        assertThat(entry.discardAsked.value).isFalse()
+    }
 }
