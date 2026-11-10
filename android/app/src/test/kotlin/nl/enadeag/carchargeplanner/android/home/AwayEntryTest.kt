@@ -21,6 +21,7 @@ import nl.enadeag.carchargeplanner.android.home.AwayEntry.Problem
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -243,6 +244,20 @@ class AwayEntryTest {
         assertThat(keys()).isEmpty()
         entry.noticeShown()
         assertThat(entry.notice.value).isNull()
+    }
+
+    @Test
+    fun theSavedNoticeNamesTheDayInTheHomesZoneNotTheUtcDayWhenTheClockIsJustAfterLocalMidnight() = runTest {
+        val tomorrow = today.plusDays(1)
+        clock.now = at(tomorrow, "00:30")
+
+        val entry = opened(tomorrow)
+        entry.save()
+        runCurrent()
+
+        val away = (entry.notice.value as Notice.Saved).entered?.away
+        assertThat(away)
+            .isEqualTo(ComingAway.AllDay(DayName.Today(tomorrow), OneOffAwayPeriod.allDay(tomorrow, amsterdam)))
     }
 
     @Test
