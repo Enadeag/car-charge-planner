@@ -201,7 +201,6 @@ public final class ForecastPage implements ConfigPage {
         return refused.contains(true) || selection.isEmpty();
     }
 
-    /** The choice of providers with their settings as entered, after its record checked it. */
     private Optional<ForecastSelection> selection(ForecastEntry entry, Consumer<InvalidSetting> refused) {
         try {
             var shown = new LinkedHashMap<ProviderId, Map<String, String>>();
