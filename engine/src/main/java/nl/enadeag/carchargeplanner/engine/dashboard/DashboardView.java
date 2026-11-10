@@ -14,12 +14,13 @@ import java.util.Optional;
  * @param levels the minimum and target charge levels, which every day's battery bar marks
  * @param gridAdvice the plan's grid advice; never null, empty when the plan gives none; its end level is below the
  *     levels' minimum
+ * @param tripAdvice the plan's advice per trip, in order of departure, never null; may be empty
  */
 public record DashboardView(Instant madeAt, ZoneId zone, List<DashboardDay> days, ChargeLevels levels,
-        Optional<GridAdviceView> gridAdvice) {
+        Optional<GridAdviceView> gridAdvice, List<TripAdviceView> tripAdvice) {
 
     /**
-     * Keeps a copy of the days and checks the grid advice against the minimum.
+     * Keeps copies of the days and the trip advice, and checks the grid advice against the minimum.
      *
      * @throws IllegalArgumentException when the grid advice's end level is not below the levels' minimum
      */
@@ -29,6 +30,28 @@ public record DashboardView(Instant madeAt, ZoneId zone, List<DashboardDay> days
                     + levels.minimumPct().value() + "%, not " + gridAdvice.get().endLevelPct() + "%");
         }
         days = List.copyOf(days);
+        tripAdvice = List.copyOf(tripAdvice);
+    }
+
+    /**
+     * The grid advice shown with a day: only with the day the plan was made, as it tells what to do from then on.
+     *
+     * @param day one of {@link #days()}, never null
+     * @return the grid advice with the day named today; empty with any other day, or when the plan gives none
+     */
+    public Optional<GridAdviceView> gridAdviceOn(DashboardDay day) {
+        return day.name() instanceof DayName.Today ? gridAdvice : Optional.empty();
+    }
+
+    /**
+     * The trip advice shown with a day, as {@link TripAdviceView#shownOn(DayName)} says.
+     *
+     * @param day one of {@link #days()}, never null
+     * @return the advice of the trips that leave that day, and with the day named today also of those that ask the
+     *     owner to act, in order of departure
+     */
+    public List<TripAdviceView> tripAdviceOn(DashboardDay day) {
+        return tripAdvice.stream().filter(advice -> advice.shownOn(day.name())).toList();
     }
 
     /**
@@ -36,13 +59,15 @@ public record DashboardView(Instant madeAt, ZoneId zone, List<DashboardDay> days
      * seam. Nothing reads the clock: "now" is the moment the plan was made.
      *
      * @param parts the plan's parts, never null
-     * @return one dashboard day per plan day, in the same order, and the plan's grid advice
+     * @return one dashboard day per plan day, in the same order, the plan's grid advice and its advice per trip
      */
     public static DashboardView of(PlanParts parts) {
         var charts = new ChartBuilder(parts);
         var cards = new DayBuilder(parts);
+        var trips = new TripAdviceBuilder(parts);
         return new DashboardView(parts.madeAt(), parts.zone(),
                 parts.days().stream().map(day -> cards.day(day, charts.chart(day))).toList(),
-                new ChargeLevels(parts.minimumPct(), parts.targetPct()), GridAdviceBuilder.advice(parts));
+                new ChargeLevels(parts.minimumPct(), parts.targetPct()), GridAdviceBuilder.advice(parts),
+                parts.tripAdvice().stream().map(trips::advice).toList());
     }
 }

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
@@ -126,7 +127,7 @@ class DashboardRecordsTest {
     void aDashboardKeepsItsOwnDays() {
         var days = new ArrayList<>(List.of(day(MAIN, List.of(), Optional.empty())));
         var dashboard = new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), days,
-                new ChargeLevels(new Percent(20), new Percent(80)), Optional.empty());
+                new ChargeLevels(new Percent(20), new Percent(80)), Optional.empty(), List.of());
 
         days.clear();
 
@@ -246,7 +247,7 @@ class DashboardRecordsTest {
 
     private static DashboardView dashboardWith(GridAdviceView advice) {
         return new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), List.of(),
-                new ChargeLevels(new Percent(30), new Percent(80)), Optional.of(advice));
+                new ChargeLevels(new Percent(30), new Percent(80)), Optional.of(advice), List.of());
     }
 
     @ParameterizedTest
@@ -293,5 +294,98 @@ class DashboardRecordsTest {
                 .contains(before);
         assertThatThrownBy(() -> new GridAdviceView(tomorrow, 6, 10, Optional.of(after)))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static final Trip TRIP = new Trip(NOON.plusSeconds(86_400), NOON.plusSeconds(90_000), 150, false);
+    private static final TripPlan GRID_PLAN = new TripPlan.Grid(new Percent(90),
+            new TripGridStart(WINDOW, TripGridCharge.Start.PLANNED, new DayName.Today(DAY), false, false));
+
+    private static TripAdviceView tripAdvice(TripPlan plan, OptionalDouble shortKm) {
+        return new TripAdviceView(TRIP, new DayName.Tomorrow(DAY.plusDays(1)), plan, shortKm, new Percent(45), true);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0", "-0.1", "NaN", "Infinity"})
+    void theTripAdvicesDistanceShortIsFiniteAndMoreThanZero(double km) {
+        assertThatThrownBy(() -> tripAdvice(GRID_PLAN, OptionalDouble.of(km)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void theTripAdviceTakesADistanceShortJustAboveZero() {
+        assertThat(tripAdvice(GRID_PLAN, OptionalDouble.of(0.001)).shortKm()).hasValue(0.001);
+    }
+
+    @Test
+    void aTripPlanThatChargesEnoughIsNeverShort() {
+        var enough = new TripPlan.Enough(new Percent(75));
+
+        assertThat(tripAdvice(enough, OptionalDouble.empty()).plan()).isEqualTo(enough);
+        assertThatThrownBy(() -> tripAdvice(enough, OptionalDouble.of(10)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void aTripPlanThatOnlyLeavesIsAlwaysShort() {
+        var leaves = new TripPlan.Leaves(new Percent(60));
+
+        assertThat(tripAdvice(leaves, OptionalDouble.of(10)).plan()).isEqualTo(leaves);
+        assertThatThrownBy(() -> tripAdvice(leaves, OptionalDouble.empty()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void aDayOfSolarWindowsHasAtLeastOneAndKeepsItsOwnList() {
+        var windows = new ArrayList<>(List.of(WINDOW));
+        var day = new SolarDay(new DayName.Today(DAY), windows);
+
+        windows.clear();
+
+        assertThat(day.windows()).containsExactly(WINDOW);
+        assertThatThrownBy(() -> new SolarDay(new DayName.Today(DAY), List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void aSolarTripPlanHasSolarDaysAndKeepsItsOwnList() {
+        var days = new ArrayList<>(List.of(new SolarDay(new DayName.Today(DAY), List.of(WINDOW))));
+        var solar = new TripPlan.Solar(new Percent(90), days);
+        var grid = ((TripPlan.Grid) GRID_PLAN).grid();
+        var solarThenGrid = new TripPlan.SolarThenGrid(new Percent(90), days, grid);
+
+        days.clear();
+
+        assertThat(solar.days()).hasSize(1);
+        assertThat(solarThenGrid.days()).hasSize(1);
+        assertThatThrownBy(() -> new TripPlan.Solar(new Percent(90), List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new TripPlan.SolarThenGrid(new Percent(90), List.of(), grid))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void aGridStartDueNowIsNotTonight() {
+        assertThatThrownBy(() -> new TripGridStart(WINDOW, TripGridCharge.Start.NOW, new DayName.Today(DAY), true,
+                true)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void onlyAGridStartOnTheDayThePlanWasMadeIsTonight() {
+        var today = new TripGridStart(WINDOW, TripGridCharge.Start.PLANNED, new DayName.Today(DAY), false, true);
+
+        assertThat(today.tonight()).isTrue();
+        assertThatThrownBy(() -> new TripGridStart(WINDOW, TripGridCharge.Start.PLANNED,
+                new DayName.Tomorrow(DAY.plusDays(1)), false, true)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void aDashboardKeepsItsOwnTripAdvice() {
+        var advice = new ArrayList<>(List.of(tripAdvice(GRID_PLAN, OptionalDouble.empty())));
+        var dashboard = new DashboardView(NOON, ZoneId.of("Europe/Amsterdam"), List.of(),
+                new ChargeLevels(new Percent(20), new Percent(80)), Optional.empty(), advice);
+
+        advice.clear();
+
+        assertThat(dashboard.tripAdvice()).hasSize(1);
     }
 }
