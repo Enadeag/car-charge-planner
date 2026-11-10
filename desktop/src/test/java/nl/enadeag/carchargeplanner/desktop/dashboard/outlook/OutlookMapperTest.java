@@ -342,7 +342,7 @@ class OutlookMapperTest {
     }
 
     @Test
-    void aPlanWhoseFirstDayIsNotTodayHasTheGridAdviceOnNoDay() {
+    void aPlanWhoseFirstDayIsNotTodayHasNoDayWithTheGridAdvice() {
         // the engine shows grid advice with the day the plan was made only, not with the first day
         var advice = new GridAdvice(TODAY.plusDays(2), 22, 8, 11.0, Optional.empty(), Optional.empty());
 

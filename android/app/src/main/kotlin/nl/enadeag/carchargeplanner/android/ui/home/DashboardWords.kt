@@ -468,8 +468,8 @@ internal class DashboardWords(private val resources: Resources, private val loca
             is TripPlan.Leaves ->
                 listOf(text(R.string.trip_advice_leaves, whole(plan.departureLevelPct().value())))
         }
-        // rounded up here, in whole km: each platform rounds up in its own unit (decision 13), so the engine gives km as
-        // they are
+        // rounded up here, in whole km: each platform rounds up in its own unit (decision 13), so the engine gives
+        // the km as they are
         val short = if (advice.shortKm().isPresent) {
             text(R.string.trip_advice_short, ceil(advice.shortKm().asDouble).toInt().toString())
         } else {
