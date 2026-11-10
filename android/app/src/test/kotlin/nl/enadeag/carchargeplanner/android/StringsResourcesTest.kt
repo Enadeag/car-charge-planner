@@ -15,7 +15,8 @@ import org.xml.sax.InputSource
 /**
  * Every language's texts are complete and fit the English ones, so no text falls back or breaks in any language;
  * the Android counterpart of the desktop's `MessagesBundleTest`. Lint checks much of the same, but only on what the
- * build sees; this also holds the rules of `docs/translating.md` (positional places, escaping, the language list).
+ * build sees; this also holds the rules of `docs/translating-android.md` (positional places, escaping, the language
+ * list).
  */
 class StringsResourcesTest {
 
