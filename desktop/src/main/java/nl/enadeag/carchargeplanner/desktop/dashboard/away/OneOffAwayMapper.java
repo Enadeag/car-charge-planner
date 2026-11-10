@@ -27,8 +27,8 @@ public final class OneOffAwayMapper {
      * The coming periods in words.
      *
      * @param coming the periods that had not ended when the plan was made, as the engine's dashboard lists them, in
-     *     their order; may be empty
-     * @return the model with those periods, in the same order
+     *     their stored order; may be empty, never null
+     * @return the model with those periods, in their stored order
      */
     public OneOffAwayModel map(List<ComingAway> coming) {
         var listed = coming.stream()

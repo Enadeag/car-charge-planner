@@ -45,8 +45,8 @@ public final class DayMapper {
     }
 
     /**
-     * A day in words, with the trip advice its tab shows and without grid advice or trips, which
-     * {@link DayModel#withGridAdvice} and {@link DayModel#withTrips} add.
+     * A day in words, with the trip advice its tab shows and without grid advice or trips: the caller fills both
+     * afterwards, the grid advice by {@link DayModel#withGridAdvice} and the trips by {@link DayModel#withTrips}.
      *
      * @param day one of the engine's days of the plan; never null
      * @param tripAdvice the advice of the trips the day's tab shows, in its words; may be empty, never null
