@@ -300,7 +300,7 @@ class EntryFlowTest {
         runCurrent()
         flow.back()
 
-        flow.close()
+        flow.discard()
 
         assertThat(flow.saving.value).isEqualTo(SaveState.Idle)
         assertThat(flow.discardAsked.value).isFalse()
