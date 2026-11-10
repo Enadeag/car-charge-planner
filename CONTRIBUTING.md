@@ -119,7 +119,7 @@ The Android app's floor is `checkCoverage` in `android/app/build.gradle.kts`, wh
 ./mvnw -Ppit -pl :car-charge-planner-desktop -am test-compile pitest:mutationCoverage@desktop   # report: desktop/target/pit-reports/desktop/index.html
 ```
 
-The desktop run covers what the tests without JavaFX test: the mappers to the dashboard's models, the chart and popup geometry, the app settings, the logic of the Settings and set-up forms, the tray icon's drawing, the text size, the texts, `JdkHttpGet` and `PosixFilePrivacy`. The `@FxTest` classes carry the tag `fx` and are left out, because PIT does not run the JavaFX platform. That is why a form's logic (what a field shows, how a value converts, which problem applies, how the entered values become the config) lives in `desktop.settings.form`, which `ArchitectureTest` keeps free of JavaFX, and the pages only bind their controls to it. A mutant that survives is a missing test or code that does nothing; look at it before you raise or lower a threshold. The engine run leaves out what only a power cut would show (`engine/pom.xml`): the method `flushFolder`, by its name in any class (there is one), which flushes a folder after a file was moved into it, and every line that calls `FileChannel` (`avoidCallsTo`), for the flush of the file itself (`force`). That also leaves out the other lines that call `FileChannel`, in `PrivateFiles` those that open a file and write to it; `PrivateFilesTest` checks what they do. The call of `flushFolder` in `PrivateFiles.write` stays a survivor.
+The desktop run covers what the tests without JavaFX test: the mappers to the dashboard's models, the chart and popup geometry, the app settings, the logic of the Settings and set-up forms, the tray icon's drawing, the text size, the texts, `JdkHttpGet` and `PosixFilePrivacy`. The `@FxTest` classes carry the tag `fx` and are left out, because PIT does not run the JavaFX platform. That is why a form's logic (what a field shows, how a value converts, which problem applies, how the entered values become the config) lives in `desktop.settings.form`, which `ArchitectureTest` keeps free of JavaFX, and the pages only bind their controls to it. A mutant that survives is a missing test or code that does nothing; look at it before you raise or lower a threshold. A surviving mutant in new code must be fixed (a test that kills it, or the dead code removed) in `engine/plan` and in the code that guards secrets, files and outside input: `engine/secrets`, `engine/store`, the reading of the settings and the reading of the forecast providers' answers. Everywhere else, list a survivor in the pull request and fix it when that is trivial. The engine run leaves out what only a power cut would show (`engine/pom.xml`): the method `flushFolder`, by its name in any class (there is one), which flushes a folder after a file was moved into it, and every line that calls `FileChannel` (`avoidCallsTo`), for the flush of the file itself (`force`). That also leaves out the other lines that call `FileChannel`, in `PrivateFiles` those that open a file and write to it; `PrivateFilesTest` checks what they do. The call of `flushFolder` in `PrivateFiles.write` stays a survivor.
 
 The Android app's logic runs from Gradle, in `android/`, with the same PIT and JUnit 5 plugin as Maven (their versions come from `pom.xml`, see [Dependencies](#dependencies)), PIT's default mutators, two test JVMs of 512 MB each, on the debug variant only:
 
@@ -147,7 +147,6 @@ On a real desktop, with the packaged app (see [Packaging](#packaging)):
 - [ ] Start at login: switch it on, log out and in again, and the app starts; switch it off, and it does not.
 - [ ] Install, start, quit and uninstall: the Linux tar.gz with `install-launcher` and `uninstall-launcher`, and the Windows installer.
 - [ ] Once the app is on Flathub: the Flatpak's tray icon, notifications, keychain and start at login, on KDE Plasma and GNOME.
-- [ ] The dashboard, set-up and Settings read well with Narrator on Windows (Orca on Linux cannot read it yet, #132).
 - [ ] At 150% and 200% scaling nothing is cut off.
 - [ ] Switching the system between light and dark while the app runs switches the app.
 - [ ] A second start shows the running app's dashboard and ends.
@@ -279,14 +278,14 @@ How to add a forecast provider is in [docs/providers.md](docs/providers.md). `CO
 
 ## Javadoc
 
-All public, protected and package-private code carries full Javadoc; only `private` members are exempt. The build enforces it: `./mvnw verify` fails on any doclint finding in the main sources (the tests are exempt).
+Everything that is `public` carries full Javadoc, in every module. Protected, package-private and private members get a comment only where the reason does not show from the code (see Comments below). The build enforces the public part: `./mvnw verify` fails on any doclint finding at the `public` level in the main sources (the tests are exempt).
 
 - Classes, interfaces, methods and constructors: a main description, then every `@param`, `@return` and `@throws`. Each `@param` states the intent of the value: what it is used for, whether it may be null or empty, its units and range. Never a tautology such as "@param volts the volts".
 - Records: every component gets an `@param` too, but plainly as data, such as "@param volts the voltage per phase in V, more than 0". A record's docs never say how or where the data is used.
 - Enums: each constant gets a line.
-- Fields and nested types that are not private get a line as well.
+- Public fields and nested types get a line as well.
 
-The rule "comment only where needed" (below) is about inline comments. It does not apply to Javadoc: the code documents its whole non-private API, even where the name seems to say it all.
+The rule "comment only where needed" (below) is about inline comments and about everything that is not public. It does not apply to the public API: that is documented in full, even where the name seems to say it all.
 
 ## Comments
 

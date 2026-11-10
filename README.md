@@ -54,7 +54,7 @@ The `.deb` and `.rpm` put the app in `/opt/car-charge-planner` and in the applic
 ## More
 
 - [Guide](docs/guide.md): set-up, the dashboard, Settings, how it plans, the command line.
-- [Accessibility](docs/accessibility.md): keyboard, screen readers (not Orca on Linux, yet), contrast and scaling.
+- [Accessibility](docs/accessibility.md): keyboard, contrast, large fonts and scaling; screen readers are not supported.
 
 ## Data and privacy
 
