@@ -42,11 +42,7 @@ import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
 
-/**
- * What a field takes, so the keyboard offers the keys it needs and a screen reader names the same kind.
- *
- * @property keyboard the keyboard Android shows for it
- */
+/** What a field takes, so the keyboard offers the keys it needs and a screen reader names the same kind. */
 internal enum class FieldKind(val keyboard: KeyboardType) {
     /** A whole number that is never below 0, such as amps. */
     WHOLE(KeyboardType.Number),
@@ -72,28 +68,17 @@ internal class ProblemFocus {
     private val fields = sortedMapOf<Int, Entry>()
 
     /**
-     * Notes a field, as it is shown now.
-     *
      * @param order its place on the screen, from the top; unique on the screen
-     * @param focus moves the focus to it
-     * @param hasProblem whether it shows a problem now
      */
     fun note(order: Int, focus: FocusRequester, hasProblem: Boolean) {
         fields[order] = Entry(focus, hasProblem)
     }
 
-    /**
-     * Forgets a field that is no longer shown.
-     *
-     * @param order its place on the screen
-     */
     fun forget(order: Int) {
         fields.remove(order)
     }
 
     /**
-     * Moves the focus to the first field that shows a problem.
-     *
      * @return false when none does, so nothing moved
      */
     fun focusFirst(): Boolean {
@@ -104,12 +89,7 @@ internal class ProblemFocus {
 }
 
 /**
- * A field's focus, noted in [problems] at its place on the screen.
- *
  * @param problems the screen's fields, or null when its problems are not looked for
- * @param order the field's place on the screen, from the top
- * @param hasProblem whether it shows a problem now
- * @return the field's focus
  */
 @Composable
 internal fun rememberFieldFocus(problems: ProblemFocus?, order: Int, hasProblem: Boolean): FocusRequester {
@@ -122,16 +102,8 @@ internal fun rememberFieldFocus(problems: ProblemFocus?, order: Int, hasProblem:
 }
 
 /**
- * A number field: its label, what it holds, a one-line hint, the problem under it after Next, and the typical mark.
- *
- * @param label the field's name, which a screen reader reads as its label
  * @param hint what to enter, with the unit and the usual range
- * @param text what it holds
- * @param onEdit gets what the owner typed
  * @param kind what it takes; [FieldKind.SIGNED] adds a key for the minus
- * @param problem the problem it shows; null for none
- * @param typical whether it holds a typical value
- * @param focus moves the focus to it
  * @param imeAction the keyboard's action key: Next moves on to the next field; Done, on a page's last, closes the
  *     keyboard
  */
@@ -145,11 +117,6 @@ internal fun NumberField(label: String, hint: String, text: String, onEdit: (Str
 /**
  * A time field, such as 08:00, as hours and minutes on a 24-hour clock.
  *
- * @param label the field's name, which a screen reader reads as its label
- * @param text what it holds
- * @param onEdit gets what the owner typed
- * @param problem the problem it shows; null for none
- * @param focus moves the focus to it
  * @param imeAction the keyboard's action key: Next moves on to the next field; Done, on a page's last, closes the
  *     keyboard
  */
@@ -161,18 +128,6 @@ internal fun TimeField(label: String, text: String, onEdit: (String) -> Unit, pr
 }
 
 /**
- * A field the owner types into.
- *
- * @param label the field's name
- * @param hint what to enter
- * @param text what it holds
- * @param onEdit gets what the owner typed
- * @param kind what it takes
- * @param problem the problem it shows; null for none
- * @param typical whether it holds a typical value
- * @param focus moves the focus to it
- * @param modifier the field's place in the layout
- * @param imeAction the keyboard's action key
  * @param onAction what the action key does; null to move on to the next field
  * @param announceProblem whether a screen reader reads a problem as it comes, for a field that keeps the focus while
  *     its problem shows; otherwise the problem is read with the field once the focus moves to it
@@ -237,11 +192,7 @@ private fun SignKey(text: String, onEdit: (String) -> Unit) {
     }
 }
 
-/**
- * The mark of a typical value: a word, never a colour alone, with a sentence for a screen reader.
- *
- * @param modifier its place in the layout
- */
+/** The mark of a typical value: a word, never a colour alone, with a sentence for a screen reader. */
 @Composable
 internal fun TypicalMark(modifier: Modifier = Modifier) {
     val description = stringResource(R.string.typical_mark_description)
@@ -258,14 +209,6 @@ internal fun TypicalMark(modifier: Modifier = Modifier) {
 /**
  * A choice of one from a few, as radio buttons a screen reader reads as a group.
  *
- * @param T what is chosen
- * @param label the choice's name
- * @param hint what to choose; null for none
- * @param options the options, in the order shown
- * @param chosen the option chosen; null for none
- * @param name an option's name as shown
- * @param onChoose gets the option the owner chose
- * @param typical whether the choice holds a typical value
  * @param problem the problem it shows, under it and to a screen reader with the group; null for none
  * @param focus moves the focus to the group, as to the first problem after Save; null for a choice that never shows
  *     a problem, whose group then takes no focus of its own

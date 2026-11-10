@@ -64,7 +64,6 @@ internal val UNPADDED_PAGE_PADDING = 8.dp
  * @param title the page's title, which a screen reader reads as its heading
  * @param titleFocus moves the focus to the title, as on a new page; null for one that never takes it
  * @param onUp what Up does, the same as Back; null for a screen without Up
- * @param actions the bar's actions, at its end
  * @param padded false for a list whose rows have their own padding, such as Settings' pages
  * @param snackbars where a snackbar shows, such as "Saved."; null for a screen without
  * @param status what stays in view under the bar while the column scrolls: one short line at most, so the page keeps
@@ -74,8 +73,6 @@ internal val UNPADDED_PAGE_PADDING = 8.dp
  *     says is in view; null for none
  * @param onClose for a full-screen dialog: what its Close does, the bar's × in Up's place, read after the title;
  *     null for a screen
- * @param closeEnabled false while Close cannot be used, as while a save runs
- * @param content the page's parts, from top to bottom
  */
 @Composable
 internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
@@ -111,12 +108,9 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
  * @param title the screen's title, which a screen reader reads as its heading
  * @param titleFocus moves the focus to the title, as on a new screen; null for one that never takes it
  * @param onUp what Up does, the same as Back; null for a screen without Up
- * @param actions the bar's actions, at its end
  * @param snackbars where a snackbar shows; null for a screen without
  * @param onClose for a full-screen dialog: what its Close does, the bar's × in Up's place, read after the title, as
  *     Material's full-screen dialog has it; null for a screen
- * @param closeEnabled false while Close cannot be used, as while a save runs
- * @param content the column's parts, which scroll on their own
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -175,10 +169,7 @@ private fun UpButton(onUp: () -> Unit) {
 /**
  * An icon in the top app bar that acts, such as Up or the home's Settings, drawn at 48 dp.
  *
- * @param icon Material's icon
  * @param name what a screen reader says for it, as the icon has no text
- * @param enabled false while it cannot be used, as while the plan is made
- * @param onClick what it does
  */
 @Composable
 internal fun BarIconButton(icon: ImageVector, name: String, enabled: Boolean = true, onClick: () -> Unit) {

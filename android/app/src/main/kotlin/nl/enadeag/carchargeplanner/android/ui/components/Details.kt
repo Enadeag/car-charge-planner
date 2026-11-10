@@ -21,7 +21,6 @@ import nl.enadeag.carchargeplanner.android.R
  * The engine's or the system's words about a problem, which stay English, in the sentence that says so: a screen
  * reader reads them as English (a `LocaleSpan`), the sentence around them in the app's language.
  *
- * @param details the words, in English
  * @param modifier such as a live region, for details that come in while the screen is shown
  */
 @Composable
@@ -31,11 +30,7 @@ internal fun EnglishDetails(details: String, modifier: Modifier = Modifier) {
 }
 
 /**
- * A sentence with English words in it marked as English.
- *
- * @param sentence the whole sentence, in the app's language
  * @param english the English words in it; the last place they occur is marked
- * @return the sentence, with the English words in a span of their own language
  */
 internal fun inEnglish(sentence: String, english: String): AnnotatedString = buildAnnotatedString {
     append(sentence)
@@ -49,7 +44,6 @@ internal fun inEnglish(sentence: String, english: String): AnnotatedString = bui
  * Why a save in a dialog failed, with the engine's English details, in a live region a screen reader reads at once.
  * The region stays while there is no failure, so one that comes in later is read.
  *
- * @param message what failed, in the app's language
  * @param details the engine's words about it, in English; null while nothing failed, which shows nothing
  */
 @Composable

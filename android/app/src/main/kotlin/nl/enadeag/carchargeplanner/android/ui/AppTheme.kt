@@ -19,8 +19,6 @@ import androidx.compose.ui.platform.LocalContext
  * Material 3 in the system's light or dark, for every screen of the app: with the wallpaper's dynamic colours from
  * Android 12 on, and Material's own fixed colours on Android 10 and 11, which have none. The colours of the energy
  * sources stay the same everywhere ([SourceColours]).
- *
- * @param content what the theme applies to
  */
 @Composable
 internal fun AppTheme(content: @Composable () -> Unit) {

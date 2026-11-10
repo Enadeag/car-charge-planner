@@ -31,23 +31,17 @@ import nl.enadeag.carchargeplanner.engine.Outlook
  * kept here but set by each activity as it is made, as a change of the app's language makes the activity again while
  * this model stays.
  *
- * @param access the engine's reads and writes
- * @param saves the app's saves, which outlive the screens
  * @param appScope the app's scope, where work that must outlive a screen runs
- * @param handle the screen's saved state
- * @param locale the language of the activity that made this model
  * @param language that language as the place search takes it, such as "nl"
  * @param clock the app's one clock, which the home tells the age of its plan and today by
  * @param phoneZone the phone's time zone as it is when asked
  * @param seen gets each plan the dashboard asked for, so a Problems notification it no longer shows goes
- * @param card makes the dashboard's notification card in this model's scope
  */
 internal class AppViewModel(access: EngineAccess, saves: Saves, appScope: CoroutineScope, handle: SavedStateHandle,
     private var locale: Locale, private var language: String, clock: Clock, phoneZone: () -> ZoneId,
     seen: suspend (Outlook) -> Unit = {},
     card: (CoroutineScope) -> NotificationCard) : ViewModel() {
 
-    /** Which screen is shown. */
     val flow = AppFlow(access, saves, appScope, viewModelScope, handle, NumberText { locale }, phoneZone,
         { language }, Dispatchers.Main.immediate, clock, seen)
 
@@ -57,7 +51,6 @@ internal class AppViewModel(access: EngineAccess, saves: Saves, appScope: Corout
     /**
      * Takes the language of an activity made again, so what the screens write and search from now on is in it.
      *
-     * @param locale the activity's language
      * @param language that language as the place search takes it, such as "nl"
      */
     fun speak(locale: Locale, language: String) {
@@ -67,12 +60,8 @@ internal class AppViewModel(access: EngineAccess, saves: Saves, appScope: Corout
 }
 
 /**
- * The screen the app shows now.
- *
  * @param flow which screen it is, the way into Settings, and the phone's time zone, which the home names the home's
  *     against
- * @param card the dashboard's card that asks for notifications
- * @param wifiOnly the Forecast page's "Wi-Fi only" switch
  */
 @Composable
 internal fun AppScreen(flow: AppFlow, card: NotificationCard, wifiOnly: WifiOnly) {

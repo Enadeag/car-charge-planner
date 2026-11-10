@@ -10,10 +10,6 @@ import nl.enadeag.carchargeplanner.android.R
 /**
  * "Discard changes?", with Keep editing and Discard, which is named for what it does and drawn as a warning. Back, or
  * a tap beside it, keeps editing.
- *
- * @param text what would be thrown away, under the question
- * @param onKeep stays with what was typed
- * @param onDiscard throws it away
  */
 @Composable
 internal fun DiscardChangesDialog(text: String, onKeep: () -> Unit, onDiscard: () -> Unit) {
