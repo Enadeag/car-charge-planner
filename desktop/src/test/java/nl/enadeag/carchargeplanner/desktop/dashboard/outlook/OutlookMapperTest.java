@@ -351,6 +351,20 @@ class OutlookMapperTest {
     }
 
     @Test
+    void theDayWithTheGridAdviceKeepsItsTrips() {
+        var advice = new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.empty(), Optional.empty());
+        var trip = new Trip(at(TODAY, 15, 0), at(TODAY, 18, 0), 40, false);
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(day(TODAY), day(TODAY.plusDays(1))),
+                new Percent(50), false, Optional.of(advice), List.of(), fresh(), 0.4, new Percent(30),
+                new Percent(80));
+
+        var today = ((DashboardModel.Plan) MAPPER.map(planned, List.of(), List.of(trip), Units.METRIC)).days().get(0);
+
+        assertThat(today.gridAdvice()).isPresent();
+        assertThat(today.trips()).extracting(TripsModel.Listed::trip).containsExactly(trip);
+    }
+
+    @Test
     void withoutGridAdviceThereIsNone() {
         assertThat(plan(day(TODAY)).days().getFirst().gridAdvice()).isEmpty();
     }

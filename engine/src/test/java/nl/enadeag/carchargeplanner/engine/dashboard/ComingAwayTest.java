@@ -141,6 +141,18 @@ class ComingAwayTest {
     }
 
     @Test
+    void aPeriodIsDescribedFromTheHomesTodayAlsoWhenUtcIsStillTheDayBefore() {
+        // 08:00 in Auckland is 20:00 UTC the day before
+        var auckland = ZoneId.of("Pacific/Auckland");
+        var today = LocalDate.of(2026, 6, 2);
+        var madeAt = today.atTime(8, 0).atZone(auckland).toInstant();
+        var allDay = OneOffAwayPeriod.allDay(today, auckland);
+
+        assertThat(dashboard(madeAt, auckland, List.of()).describe(allDay))
+                .isEqualTo(new ComingAway.AllDay(new DayName.Today(today), allDay));
+    }
+
+    @Test
     void withoutAPlanAPeriodIsDescribedFromTheDayGiven() {
         var period = part(TODAY.plusDays(1), 9, 11);
 
