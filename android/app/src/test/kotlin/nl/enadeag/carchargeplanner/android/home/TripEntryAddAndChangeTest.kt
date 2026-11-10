@@ -142,6 +142,24 @@ class TripEntryAddAndChangeTest {
     }
 
     @Test
+    fun aChangeDiscardedAfterAnotherChangeWasSavedClosesOnItsOwnTripNotTheSavedOne() = runTest {
+        val first = trip(today.plusDays(1), "07:30", today.plusDays(1), "18:00", 300.0)
+        val second = trip(today.plusDays(2), "08:00", today.plusDays(2), "17:00", 150.0)
+        access.trips = listOf(first, second)
+        val entry = entry()
+        entry.change(first, amsterdam)
+        entry.distance("310")
+        saved(entry)
+        assertThat(entry.closedOn).isNotEqualTo(second)
+
+        entry.change(second, amsterdam)
+        entry.distance("160")
+        entry.discard()
+
+        assertThat(entry.closedOn).isEqualTo(second)
+    }
+
+    @Test
     fun aDistanceTypedOverTheShownOneIsTheDistanceTyped() = runTest {
         val stored = trip(today.plusDays(1), "07:30", today.plusDays(1), "18:00", 120.6)
         access.trips = listOf(stored)
