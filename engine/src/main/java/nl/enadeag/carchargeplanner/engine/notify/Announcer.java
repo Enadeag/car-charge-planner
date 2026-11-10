@@ -187,9 +187,12 @@ public final class Announcer {
         }
     }
 
-    /** A window is announced within the lead time before its start, and not once it has started. */
+    /**
+     * A window is announced within the lead time before its start, and not once it has started; with a lead time of 0,
+     * at its start.
+     */
     private static NoticeSpan span(Window window, Duration lead) {
-        return NoticeSpan.before(window.start(), lead, window.start());
+        return NoticeSpan.beforeStart(window.start(), lead, window.end());
     }
 
     private static boolean fitToAnnounceOn(ForecastSource source, Instant now) {

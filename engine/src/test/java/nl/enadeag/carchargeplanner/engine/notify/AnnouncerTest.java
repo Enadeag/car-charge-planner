@@ -306,6 +306,63 @@ class AnnouncerTest {
         assertThat(nextDue(announcer(), List.of(), at(DAY, 7, 0), 15)).isEmpty();
     }
 
+    @ParameterizedTest
+    @CsvSource({"9, 59, false", "10, 0, true", "10, 9, true", "10, 10, false", "11, 0, false"})
+    void aLeadTimeOfZeroAnnouncesAtTheStartForTenMinutesAtMost(int hour, int minute, boolean announced) {
+        var days = dayWith(window(10, 15));
+
+        assertThat(check(announcer(), days, at(DAY, hour, minute), 0))
+                .isEqualTo(announced ? List.of(window(10, 15)) : List.of());
+    }
+
+    @Test
+    void aLeadTimeOfZeroNeverAnnouncesAtOrAfterTheWindowsEnd() {
+        var days = dayWith(new Window(at(DAY, 10, 0), at(DAY, 10, 6), 7, 1.6, 0.2, 0.1));
+
+        assertThat(check(announcer(), days, at(DAY, 10, 5), 0)).hasSize(1);
+        assertThat(check(announcer(), days, at(DAY, 10, 6), 0)).isEmpty();
+        assertThat(check(announcer(), days, at(DAY, 10, 8), 0)).isEmpty();
+    }
+
+    @Test
+    void aLeadTimeOfZeroAnnouncesAWindowOnce() {
+        var announcer = announcer();
+        var days = dayWith(window(10, 15));
+
+        assertThat(check(announcer, days, at(DAY, 10, 0), 0)).containsExactly(window(10, 15));
+        assertThat(check(announcer, days, at(DAY, 10, 1), 0)).isEmpty();
+        assertThat(check(announcer, days, at(DAY, 10, 2), 0)).isEmpty();
+    }
+
+    @Test
+    void aLeadTimeOfOneMinuteAnnouncesBeforeTheStartAndNotAtIt() {
+        var days = dayWith(window(10, 15));
+
+        assertThat(check(announcer(), days, at(DAY, 9, 58), 1)).isEmpty();
+        assertThat(check(announcer(), days, at(DAY, 9, 59), 1)).containsExactly(window(10, 15));
+        assertThat(check(announcer(), days, at(DAY, 10, 0), 1)).isEmpty();
+    }
+
+    @Test
+    void aLeadTimeOfZeroIsDueAtTheStartThenNowForTenMinutesThenNotAtAll() {
+        var days = dayWith(window(10, 12), window(16, 18));
+
+        assertThat(nextDue(announcer(), days, at(DAY, 7, 0), 0)).contains(at(DAY, 10, 0));
+        assertThat(nextDue(announcer(), days, at(DAY, 10, 0), 0)).contains(at(DAY, 10, 0));
+        assertThat(nextDue(announcer(), days, at(DAY, 10, 9), 0)).contains(at(DAY, 10, 9));
+        assertThat(nextDue(announcer(), days, at(DAY, 10, 10), 0)).contains(at(DAY, 16, 0));
+        assertThat(nextDue(announcer(), days, at(DAY, 16, 10), 0)).isEmpty();
+    }
+
+    @Test
+    void aWindowAnnouncedWithALeadTimeOfZeroIsNotDueAgain() {
+        var announcer = announcer();
+        var days = dayWith(window(10, 12));
+        check(announcer, days, at(DAY, 10, 0), 0);
+
+        assertThat(nextDue(announcer, days, at(DAY, 10, 1), 0)).isEmpty();
+    }
+
     @Test
     void theNextDueIsAskedWithoutAnnouncingAnything() {
         var announcer = announcer();

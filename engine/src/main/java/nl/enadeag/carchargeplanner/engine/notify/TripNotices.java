@@ -149,13 +149,14 @@ final class TripNotices {
     }
 
     /**
-     * When the start of a grid charge is due: one that starts as planned within the lead time before its start, one
-     * that starts now from the lead time before its start until its end.
+     * When the start of a grid charge is due: one that starts as planned within the lead time before its start (with
+     * a lead time of 0, at its start), one that starts now from the lead time before its start until its end.
      */
     private static NoticeSpan chargeStartSpan(TripGridCharge grid, Duration lead) {
         var window = grid.window();
-        return NoticeSpan.before(window.start(), lead,
-                grid.start() == TripGridCharge.Start.PLANNED ? window.start() : window.end());
+        return grid.start() == TripGridCharge.Start.PLANNED
+                ? NoticeSpan.beforeStart(window.start(), lead, window.end())
+                : NoticeSpan.before(window.start(), lead, window.end());
     }
 
     private static LocalDate dayBefore(Instant departure, ZoneId zone) {
