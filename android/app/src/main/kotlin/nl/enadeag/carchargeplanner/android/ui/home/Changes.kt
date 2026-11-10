@@ -18,8 +18,6 @@ import nl.enadeag.carchargeplanner.android.ui.components.FailureVisuals
  * never reads, so the focus moves on once the list no longer has it; a Remove that failed forgets it, as its row stays
  * in the list.
  *
- * @param K what names a row
- * @property row the row going; null when none is
  * @property rows the rows before it went, in order
  */
 internal class Going<K>(var row: K? = null, var rows: List<K> = listOf())
@@ -27,22 +25,12 @@ internal class Going<K>(var row: K? = null, var rows: List<K> = listOf())
 /**
  * The row an Undo is adding back, a one-off away period or a trip, which drawing never reads: the list on the page in
  * view puts the focus on it once it shows; an Undo that failed forgets it.
- *
- * @param K what names a row
- * @property row the row; null when no Undo is under way
  */
 internal class Restoring<K>(var row: K? = null)
 
-/**
- * What a change to a list of the dashboard came to, as its snackbar says it.
- *
- * @param K what names a row of the list
- */
 internal sealed interface Said<out K> {
 
     /**
-     * Something was added or changed.
-     *
      * @property text the snackbar's sentence, such as "Saved: Tomorrow, all day."
      */
     data class Saved(val text: String) : Said<Nothing>
@@ -50,7 +38,6 @@ internal sealed interface Said<out K> {
     /**
      * A row was removed; Undo adds it back.
      *
-     * @param K what names a row
      * @property text the snackbar's sentence, such as "Removed: Tomorrow, all day."
      * @property row the row removed, which Undo adds back
      */
@@ -59,7 +46,6 @@ internal sealed interface Said<out K> {
     /**
      * A Remove failed, so the row stays.
      *
-     * @property text the snackbar's sentence
      * @property detail the system's or the engine's words, in English
      */
     data class NotRemoved(val text: String, val detail: String) : Said<Nothing>
@@ -67,7 +53,6 @@ internal sealed interface Said<out K> {
     /**
      * A change or an Undo failed, so the list stays as it was.
      *
-     * @property text the snackbar's sentence
      * @property detail the system's or the engine's words, in English
      */
     data class NotSaved(val text: String, val detail: String) : Said<Nothing>
@@ -78,15 +63,8 @@ internal sealed interface Said<out K> {
  * snackbar, which a screen reader reads when it comes: an added or changed row; a removed one, with Undo, which adds it
  * back; a Remove or another change that failed, with the English details and a button to close it.
  *
- * @param K what names a row
- * @param N what a change comes to
- * @param notices what the last change came to, until it was said
- * @param shown tells the changes that the notice was said
- * @param snackbars where the snackbar shows
  * @param going the Remove that was pressed, forgotten when it failed
  * @param restoring gets the row an Undo adds back, so the list puts the focus on it, forgotten when it failed
- * @param said what a notice says
- * @param undo adds a removed row back, as the snackbar's Undo
  */
 @Composable
 internal fun <K, N : Any> ChangeOutcome(notices: StateFlow<N?>, shown: () -> Unit, snackbars: SnackbarHostState,

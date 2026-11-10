@@ -69,16 +69,10 @@ internal fun tripWords(shown: Shown): (Trip, TripEntry.Entered?) -> String {
 }
 
 /**
- * What a day's Trips card changes the trips with.
- *
- * @property entry the choices and Remove
- * @property busy true while a change runs, so the choices and Remove are off
  * @property pending the choice being saved, shown at once in its new state; null while none is
  * @property going the trip whose Remove was pressed, whose neighbour takes the focus once it is out of the list
  * @property restoring the trip an Undo is adding back, whose row takes the focus once it is in the list
- * @property keys what each trip's row is keyed by
  * @property add moves the focus to the Add of the page in view
- * @property openers moves the focus to a trip's Change on the page in view
  */
 internal class TripAction(val entry: TripEntry, val busy: Boolean, val pending: TripEntry.Pending?,
     val going: Going<Trip>, val restoring: Restoring<Trip>, val keys: TripKeys, val add: FocusRequester,
@@ -91,20 +85,11 @@ internal class TripAction(val entry: TripEntry, val busy: Boolean, val pending: 
 internal class TripOpeners {
     private val changes = mutableMapOf<Trip, FocusRequester>()
 
-    /**
-     * Notes a trip's Change as it shows on the page in view.
-     *
-     * @param trip the trip
-     * @param focus moves the focus to its Change
-     */
     fun shown(trip: Trip, focus: FocusRequester) {
         changes[trip] = focus
     }
 
     /**
-     * Forgets a trip's Change that no longer shows.
-     *
-     * @param trip the trip
      * @param focus the focus it was noted with, so a later row of the same trip stays
      */
     fun gone(trip: Trip, focus: FocusRequester) {
@@ -112,9 +97,6 @@ internal class TripOpeners {
     }
 
     /**
-     * Moves the focus to a trip's Change.
-     *
-     * @param trip the trip
      * @return false when its Change is not on the page in view, so nothing moved
      */
     fun focus(trip: Trip): Boolean = changes[trip]?.requestFocus() == true
@@ -133,8 +115,6 @@ internal class TripKeys {
     private val before = mutableMapOf<Trip, Trip>()
 
     /**
-     * The keys of a page's rows.
-     *
      * @param trips the trips the page lists, each once
      * @return the key of each trip's row, in the same order, no two the same
      */
@@ -143,13 +123,7 @@ internal class TripKeys {
         return trips.map { trip -> before[trip]?.takeIf { it !in trips && taken.add(it) } ?: trip }
     }
 
-    /**
-     * A choice is being saved, so the changed trip takes the row of the trip it was.
-     *
-     * @param key the key of the row whose choice was pressed
-     * @param changed the trip with the choice changed
-     * @param listed the trips the page lists
-     */
+    /** A choice is being saved, so the changed trip takes the row of the trip it was. */
     fun changing(key: Trip, changed: Trip, listed: List<Trip>) {
         before.keys.retainAll(listed.toSet())
         before[changed] = key
@@ -162,10 +136,6 @@ internal class TripKeys {
  * with the trip; "No trip entered for this day." when there is none. After a Remove the focus goes, once the trip is
  * gone, to the trip before it, or the one after, or the line that says there is none, as in the away list.
  *
- * @param dashboard the dashboard, with the trips and the home's time zone
- * @param day the page's day, whose trips are listed
- * @param words the dashboard's words
- * @param trips the choices, Remove and whether a change runs
  * @param inView true on the page in view, where a change was made and the focus follows it
  */
 @Composable
@@ -272,11 +242,7 @@ private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips:
  * reader says it with the trip, then whether it is checked. While a change runs it is off as [HeldButton] is, so it
  * keeps the focus.
  *
- * @param label the choice's words
  * @param trip the trip as a screen reader reads it
- * @param checked whether it is ticked
- * @param busy true while a change runs
- * @param onChange gets the new state
  */
 @Composable
 private fun ChoiceRow(label: String, trip: String, checked: Boolean, busy: Boolean, onChange: (Boolean) -> Unit) {

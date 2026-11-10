@@ -41,9 +41,6 @@ import nl.enadeag.carchargeplanner.engine.plan.Window
  * The dashboard's words in the app's language: days, times in the home's time zone on the phone's 12- or 24-hour
  * clock, and numbers with the language's decimal mark.
  *
- * @param resources the app's texts, in its language
- * @param locale the app's language
- * @param twentyFour whether the phone uses a 24-hour clock
  * @param zone the home's time zone, in which the times are told
  */
 internal class DashboardWords(private val resources: Resources, private val locale: Locale, twentyFour: Boolean,
@@ -57,9 +54,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     private val numbers = NumberText(locale)
 
     /**
-     * A day's name on its tab.
-     *
-     * @param day the day
      * @return "Today", or the weekday's short name, such as "Tue"
      */
     fun tab(day: DashboardDay): String = if (day.name() is DayName.Today) text(R.string.day_today)
@@ -68,7 +62,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * A day's name as a title, which is also what a screen reader says for its tab.
      *
-     * @param day the day
      * @return "Today", "Tomorrow", or the weekday, such as "Sunday"
      */
     fun title(day: DayName): String = when (day) {
@@ -78,9 +71,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * A day's name in the middle of a sentence.
-     *
-     * @param day the day
      * @return "today", "tomorrow", or the weekday as the language writes it there: "Sunday", "zondag"
      */
     fun inSentence(day: DayName): String = when (day) {
@@ -92,7 +82,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * A day's name in a list that may reach beyond the coming week.
      *
-     * @param day the day
      * @return "Today", "Tomorrow", or the short weekday and date as the phone writes them, such as "Sat, Oct 17"
      */
     fun date(day: DayName): String = when (day) {
@@ -103,15 +92,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * A day by its weekday and date, in the middle of a sentence, as the one-off away entry's title names it.
      *
-     * @param date the day
      * @return such as "Thursday, November 5" or "donderdag 5 november", as the phone writes them
      */
     fun day(date: LocalDate): String = longDate.format(date)
 
     /**
-     * A time of day as the phone's clock shows it.
-     *
-     * @param time the time
      * @return such as "09:00" or "9:00 AM"
      */
     fun time(time: LocalTime): String = clock.format(time)
@@ -119,15 +104,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * A moment as a clock time in the home's time zone.
      *
-     * @param moment the moment
      * @return such as "13:05" or "1:05 PM"
      */
     fun time(moment: Instant): String = clock.format(moment)
 
     /**
-     * A charge window's times.
-     *
-     * @param window the window
      * @return such as "11:15 – 14:30"
      */
     fun span(window: Window): String = text(R.string.time_span, time(window.start()), time(window.end()))
@@ -135,7 +116,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * A charge window's times as a screen reader reads them.
      *
-     * @param window the window
      * @return such as "11:15 to 14:30"
      */
     fun spokenSpan(window: Window): String =
@@ -144,7 +124,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * A number with one decimal, such as a power or an energy.
      *
-     * @param value the number
      * @return such as "2.3" or "2,3"
      */
     fun decimal(value: Double): String = numbers.write(value, 1)
@@ -152,15 +131,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * A number rounded to a whole one, such as a percentage.
      *
-     * @param value the number
      * @return such as "92"
      */
     fun whole(value: Double): String = numbers.write(value, 0)
 
     /**
-     * A figure by source, as its chip shows it.
-     *
-     * @param figure the figure
      * @return such as "92% solar", "Battery 50 → 74%", on the day a trip leaves "Battery 50 → 74%, 70% after the
      *     trip", or "0.4 kWh from the grid"
      */
@@ -174,7 +149,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * A figure by source as a screen reader reads it, when its chip reads badly aloud.
      *
-     * @param figure the figure
      * @return such as "Battery from 50% to 74%", or "Battery from 50% to 74%, 70% after the trip"; null when the
      *     chip's text reads well
      */
@@ -196,9 +170,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * What a day holds, under its name.
-     *
-     * @param day the day
      * @return "Charge window", "Grid charge needed" or "No charge window"
      */
     fun heading(day: DashboardDay): String = text(when (day.kind()) {
@@ -229,9 +200,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * Grid advice's title: how much and when.
-     *
-     * @param advice the advice
      * @return such as "Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10."
      */
     fun adviceTitle(advice: GridAdviceView): String {
@@ -245,9 +213,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * Grid advice's detail: why, and what to set.
-     *
-     * @param advice the advice
      * @param levels the plan's charge levels, whose minimum the advice's end level is told against
      * @return such as "Without it the battery ends Sunday at 17%, below the minimum of 30%. Set 16 A (3.7 kW), …"
      */
@@ -263,9 +228,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * A one-off away period in a list.
-     *
-     * @param away the period
      * @return such as "Tomorrow, all day" or "Sat, Oct 17, 10:00 – 16:30"
      */
     fun away(away: ComingAway): String = when (away) {
@@ -280,7 +242,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * A trip in a list, as the desktop's: its times alone when it returns on the day it leaves, otherwise each with
      * its day, and its distance in whole km.
      *
-     * @param trip the trip
      * @return such as "Away 07:30 – 18:00 · 300 km there and back" or "Away Tomorrow 07:30 – Wed, Jun 3 18:00 · …"
      */
     fun trip(trip: ListedTrip): String = text(R.string.trip_line, if (trip.sameDay()) {
@@ -291,9 +252,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }, tripDistance(trip))
 
     /**
-     * A trip as a screen reader reads it.
-     *
-     * @param trip the trip
      * @return such as "Away from 07:30 to 18:00, 300 km there and back"
      */
     fun spokenTrip(trip: ListedTrip): String = text(R.string.trip_line_spoken, if (trip.sameDay()) {
@@ -308,7 +266,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * The footer's line, as the desktop's: the provider's credit, the fallback, updated or stale, busy.
      *
-     * @param footer the forecast's source and freshness
      * @return such as "Weather data: Open-Meteo.com (CC BY 4.0) · updated 10:51"
      */
     fun footer(footer: Footer): String {
@@ -326,14 +283,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
     /**
      * A tick's label on the chart's time axis: the hour alone, on the phone's clock.
      *
-     * @param tick the tick
      * @return such as "15" or "3 PM"
      */
     fun tick(tick: DayChart.Tick): String = hour.format(tick.at())
 
     /**
-     * The power at the top of the chart.
-     *
      * @param kw the power in kW
      * @return such as "4 kW"
      */
@@ -343,7 +297,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * A day's chart in words, as the desktop's: its peak and the house's use, its charge windows and, today, now.
      * A screen reader reads it for the chart, and it shows under the chart.
      *
-     * @param day the day, with its chart and charge windows
      * @return such as "Today, expected solar power: peak 4.2 kW around 13:00; the house uses about 0.4 kW. Charging:
      *     13:00 to 15:00. Now 09:00."; for a day without sun only that it has none
      */
@@ -360,35 +313,22 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * The battery levels beside the bar.
-     *
-     * @param battery the levels at the start of the day and after its charging
      * @return such as "50 → 74%", or on the day a trip leaves "50 → 74%, 70% after the trip"
      */
     fun batteryLevels(battery: BatteryLevels): String =
         battery(battery, R.string.battery_levels, R.string.battery_levels_trip, R.string.battery_levels_charge_trip)
 
     /**
-     * The minimum's mark on the battery bar.
-     *
-     * @param levels the charge levels
      * @return such as "min 30%"
      */
     fun minimum(levels: ChargeLevels): String = text(R.string.battery_minimum, whole(levels.minimumPct().value()))
 
     /**
-     * The target's mark on the battery bar.
-     *
-     * @param levels the charge levels
      * @return such as "target 80%"
      */
     fun target(levels: ChargeLevels): String = text(R.string.battery_target, whole(levels.targetPct().value()))
 
     /**
-     * A day's battery bar in words, as a screen reader reads it.
-     *
-     * @param day the day, with its levels
-     * @param levels the minimum and target charge levels
      * @return such as "Car battery 50% now, 74% after charging; minimum 30%, target 80%." today, followed by that the
      *     level is assumed and how to enter it while it is, and "… at the start of Sunday, …" on another day; on the
      *     day a trip leaves, followed by the level after the trip
@@ -416,15 +356,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * as the day after that tab.
      *
      * @param day the day to name, named from the day the plan was made
-     * @param onToday true on today's tab
      * @return such as "tomorrow", "Saturday" or "zaterdag"
      */
     fun adviceDay(day: DayName, onToday: Boolean): String = if (onToday) inSentence(day) else weekday(day.date())
 
     /**
-     * A day's weekday in the middle of a sentence.
-     *
-     * @param date the day
      * @return such as "Saturday" in English and "zaterdag" in Dutch
      */
     fun weekday(date: LocalDate): String = weekday(date, TextStyle.FULL)
@@ -433,10 +369,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * A trip's advice in words, as the desktop's: its title, its plan, the battery level it starts from, and all of
      * it in one sentence for a screen reader.
      *
-     * @param advice the engine's advice for the trip
      * @param tab the name of the day whose tab it shows on, which names its days as [adviceDay] does
-     * @param level the battery level the plan starts from, from the engine's dashboard
-     * @return the words
      */
     fun tripAdvice(advice: TripAdviceView, tab: DayName, level: StartLevel): TripAdviceText {
         val onToday = tab is DayName.Today
@@ -525,8 +458,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
 }
 
 /**
- * A trip's advice in words.
- *
  * @property label its heading: "Trip advice"
  * @property title the trip: "Trip tomorrow at 08:15, 150 km there and back."
  * @property plan what to charge and when: "Charge to 85%: on solar power today 12:00 – 15:00, then from the grid. …"
@@ -537,10 +468,6 @@ internal data class TripAdviceText(val label: String, val title: String, val pla
     val spoken: String)
 
 /**
- * Hours and minutes as the phone's clock shows them.
- *
- * @param twentyFour whether the phone uses a 24-hour clock
- * @param locale the app's language
  * @return such as 13:05 or 1:05 PM
  */
 internal fun clockOf(twentyFour: Boolean, locale: Locale): DateTimeFormatter =

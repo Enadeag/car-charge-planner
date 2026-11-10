@@ -101,14 +101,7 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * and the battery the level after a trip on the day it leaves. While notifications are not allowed, a card asks
  * for them, after the warnings and before the day; it is looked at again each time the owner comes back to the app.
  *
- * @param outlook the plan it shows
- * @param notice the outcome of a Settings save not shown yet
- * @param battery the entry of the battery level
- * @param away the changes to the one-off away periods
- * @param trips the changes to the trips
  * @param phoneZone the phone's time zone as it is now, read each time the plan is shown
- * @param card the card that asks for notifications
- * @param onSettings opens Settings
  */
 @Composable
 internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: BatteryEntry, away: AwayEntry,
@@ -222,10 +215,6 @@ internal class Shown(var dashboard: Dashboard? = null)
  * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, which a screen
  * reader reads when it comes, once, also after turning the phone; and when the entry closes, however it does, the
  * focus moves on.
- *
- * @param battery the entry
- * @param snackbars where the snackbar shows
- * @param closed moves the focus once the entry closed
  */
 @Composable
 private fun BatteryOutcome(battery: BatteryEntry, snackbars: SnackbarHostState, closed: () -> Unit) {
@@ -243,12 +232,7 @@ private fun BatteryOutcome(battery: BatteryEntry, snackbars: SnackbarHostState, 
     AfterClose(open, closed)
 }
 
-/**
- * Calls [closed] once an entry dialog that was open is gone, however it closed.
- *
- * @param open whether the entry is open
- * @param closed moves the focus on
- */
+/** Calls [closed] once an entry dialog that was open is gone, however it closed. */
 @Composable
 private fun AfterClose(open: Boolean, closed: () -> Unit) {
     val seen = remember { Seen(open) }
@@ -262,11 +246,7 @@ private fun AfterClose(open: Boolean, closed: () -> Unit) {
     }
 }
 
-/**
- * Whether an entry dialog was open when last looked at, which drawing never reads.
- *
- * @property open true when it was
- */
+/** Whether an entry dialog was open when last looked at, which drawing never reads. */
 private class Seen(var open: Boolean)
 
 /** A tab per day over a pager, kept in step: a tab's click moves the pager, a swipe moves the tab. */
@@ -337,7 +317,6 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
     }
 }
 
-/** A page that a pull refreshes, for the home without a plan. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColumnScope.Refreshable(refreshing: Boolean, refresh: () -> Unit,
@@ -347,7 +326,6 @@ private fun ColumnScope.Refreshable(refreshing: Boolean, refresh: () -> Unit,
     }
 }
 
-/** One column that scrolls, with the app's spacing. */
 @Composable
 private fun Page(content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -441,10 +419,6 @@ private fun GridAdviceCard(advice: GridAdviceView, levels: ChargeLevels, words: 
  * the trip, what to charge and when, and the battery level it starts from, with Adjust under it. A screen reader reads
  * the advice as one heading, one sentence, and Adjust apart as a button whose name starts with its visible word, and
  * which says what a double tap does.
- *
- * @param advice the advice's words for the tab it shows on
- * @param source where the trip's charge comes from, whose colours its heading has
- * @param adjust moves to today's tab and opens the entry of the battery level
  */
 @Composable
 private fun TripAdviceCard(advice: TripAdviceText, source: EnergySource, adjust: () -> Unit) {
@@ -486,9 +460,6 @@ private fun FooterLine(footer: Footer, words: DashboardWords) {
 /**
  * A figure about an energy source in its fixed colours, which are never its only sign: the text names the source.
  *
- * @param text the figure, such as "92% solar"
- * @param colours the source's colours
- * @param modifier such as a heading
  * @param spoken what a screen reader says instead, when the text reads badly aloud; null for the text
  */
 @Composable

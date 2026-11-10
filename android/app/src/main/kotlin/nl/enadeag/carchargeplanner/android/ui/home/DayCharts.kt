@@ -78,9 +78,6 @@ private val MIN_CHART_HEIGHT = 160.dp
  * same facts in a sentence under it. It takes the column's width, half as high but never lower than a minimum. A
  * screen reader reads the chart as one part, that sentence; the drawing, the legend and the line under it are not
  * read apart. The colours are fixed, on a ground of their own.
- *
- * @param day the day, with its chart
- * @param words the dashboard's words
  */
 @Composable
 internal fun SolarCard(day: DashboardDay, words: DashboardWords) {
@@ -97,12 +94,7 @@ internal fun SolarCard(day: DashboardDay, words: DashboardWords) {
     }
 }
 
-/**
- * Today's way into the entry of the battery level, at the end of its battery card.
- *
- * @property open opens the entry
- * @property focus moves the focus to the button that opens it
- */
+/** Today's way into the entry of the battery level, at the end of its battery card. */
 internal class BatteryAction(val open: () -> Unit, val focus: FocusRequester)
 
 /**
@@ -111,9 +103,6 @@ internal class BatteryAction(val open: () -> Unit, val focus: FocusRequester)
  * reader reads the bar as one sentence, with the levels; their words are not read apart. Today's card ends with the
  * button that opens the entry of the level the car shows.
  *
- * @param day the day, with its levels
- * @param levels the minimum and target charge levels
- * @param words the dashboard's words
  * @param update the button that opens the entry of the level; null on a day whose level cannot be entered, any but
  *     today
  */
@@ -148,7 +137,6 @@ private fun ChartCard(colours: SourceColours.Chart, content: @Composable () -> U
     }
 }
 
-/** What each sign of the chart is, in words beside the sign. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Legend(colours: SourceColours.Chart) {
@@ -273,11 +261,6 @@ private fun MarkLabel(text: String, mark: BatteryBarLayout.Mark, top: Float, col
 /**
  * Draws the shapes in the charts' colours, then what [over] adds; the paths and the dashes are made once per size
  * and set of shapes, not per frame.
- *
- * @param shapes what to draw, in order
- * @param colours the colours the shapes' inks stand for
- * @param over what is drawn on top of the shapes, such as words
- * @return the modifier that draws them behind its content
  */
 internal fun Modifier.drawn(shapes: List<Shape>, colours: SourceColours.Chart, over: DrawScope.() -> Unit = {}) =
     drawWithCache {

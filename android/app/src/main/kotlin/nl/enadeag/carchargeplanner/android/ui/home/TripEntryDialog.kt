@@ -113,7 +113,6 @@ private enum class Picking(val spot: Spot) {
  * held, and while its own save runs it shows its progress and nothing can be changed or closed. Back and Close ask
  * "Discard changes?" when something changed; a tap beside the dialog does nothing, as there is no beside.
  *
- * @param entry what is entered, the save and what it came to
  * @param phoneZone the phone's time zone, against which the home's is named
  */
 @Composable
@@ -218,13 +217,8 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
 }
 
 /**
- * One of the entry's buttons that open a picker.
- *
  * @property name what it is, such as "Departure day"
- * @property value the day or time it holds, as shown
- * @property focus moves the focus to it
  * @property noted notes that it has the focus
- * @property onClick opens its picker
  */
 private class Named(val name: String, val value: String, val focus: FocusRequester, val noted: Modifier,
     val onClick: () -> Unit)
@@ -295,7 +289,6 @@ private fun CanCharge(checked: Boolean, enabled: Boolean, modifier: Modifier, on
 private fun dayName(words: DashboardWords, today: LocalDate, day: LocalDate): String =
     words.date(DayName.of(day, today))
 
-/** The text of why Save refused the trip. */
 private fun problemId(problem: TripDraft.Problem): Int = when (problem) {
     TripDraft.Problem.RETURN_NOT_AFTER_DEPARTURE -> R.string.trip_return_before_departure
     TripDraft.Problem.PASSED -> R.string.trip_passed
