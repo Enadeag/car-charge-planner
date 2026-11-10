@@ -234,6 +234,22 @@ class DashboardViewTest {
     }
 
     @Test
+    void gridAdviceShowsOnTheTabOfTheDayTheModelPlacesItOn() throws Exception {
+        var view = shown(Models.plan(List.of(), Models.TODAY.plusDays(1), Optional.of(Models.ADVICE)));
+
+        var onTabs = Fx.call(() -> {
+            var shown = new ArrayList<Boolean>();
+            for (int day = 0; day < 3; day++) {
+                tabs(view).getSelectionModel().select(day);
+                shown.add(view.lookup(".advice-card") != null);
+            }
+            return shown;
+        });
+
+        assertThat(onTabs).containsExactly(false, true, false);
+    }
+
+    @Test
     void withoutAdviceThereIsNoGridAdviceCard() throws Exception {
         var view = shown(Models.plan(Optional.empty()));
 

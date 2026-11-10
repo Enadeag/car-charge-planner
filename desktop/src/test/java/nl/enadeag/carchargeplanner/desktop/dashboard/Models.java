@@ -135,7 +135,13 @@ public final class Models {
 
     /** The plan with this trip advice, and with this grid advice on today's tab. */
     public static DashboardModel.Plan plan(List<TripAdviceModel> tripAdvice, Optional<GridAdviceModel> advice) {
+        return plan(tripAdvice, TODAY, advice);
+    }
+
+    /** The plan with this trip advice, and with this grid advice on the tab of this day. */
+    public static DashboardModel.Plan plan(List<TripAdviceModel> tripAdvice, LocalDate day,
+            Optional<GridAdviceModel> advice) {
         return new DashboardModel.Plan(List.of(SUNNY_TODAY, CLOUDY_TOMORROW, GRID_SUNDAY), tripAdvice,
-                advice.map(shown -> new DashboardModel.GridAdviceOn(TODAY, shown)), AWAY, TRIPS, FOOTER);
+                advice.map(shown -> new DashboardModel.GridAdviceOn(day, shown)), AWAY, TRIPS, FOOTER);
     }
 }
