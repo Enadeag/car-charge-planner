@@ -6,6 +6,7 @@ import java.util.Optional
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource
 import nl.enadeag.carchargeplanner.engine.plan.Window
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

@@ -14,13 +14,13 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.ceil
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.home.ComingAway
 import nl.enadeag.carchargeplanner.android.home.Footer
 import nl.enadeag.carchargeplanner.android.home.ListedTrip
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModel
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
@@ -30,6 +30,10 @@ import nl.enadeag.carchargeplanner.engine.dashboard.DayKind
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
 import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason
+import nl.enadeag.carchargeplanner.engine.dashboard.SolarDay
+import nl.enadeag.carchargeplanner.engine.dashboard.TripAdviceView
+import nl.enadeag.carchargeplanner.engine.dashboard.TripGridStart
+import nl.enadeag.carchargeplanner.engine.dashboard.TripPlan
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge
 import nl.enadeag.carchargeplanner.engine.plan.Window
 
@@ -410,13 +414,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * the weekday, as they mean what they say there; on any other tab always the weekday, where "tomorrow" would read
      * as the day after that tab.
      *
-     * @param date the day to name
-     * @param today the day the plan was made, in the home's time zone
+     * @param day the day to name, named from the day the plan was made
      * @param onToday true on today's tab
      * @return such as "tomorrow", "Saturday" or "zaterdag"
      */
-    fun adviceDay(date: LocalDate, today: LocalDate, onToday: Boolean): String =
-        if (onToday) inSentence(DayName.of(date, today)) else weekday(date)
+    fun adviceDay(day: DayName, onToday: Boolean): String = if (onToday) inSentence(day) else weekday(day.date())
 
     /**
      * A day's weekday in the middle of a sentence.
@@ -430,63 +432,62 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * A trip's advice in words, as the desktop's: its title, its plan, the battery level it starts from, and all of
      * it in one sentence for a screen reader.
      *
-     * @param advice the advice
-     * @param tab the day of the tab it shows on, whose days it names as [adviceDay] does
-     * @param today the day the plan was made, in the home's time zone
+     * @param advice the engine's advice for the trip
+     * @param tab the name of the day whose tab it shows on, which names its days as [adviceDay] does
      * @return the words
      */
-    fun tripAdvice(advice: TripAdviceModel, tab: LocalDate, today: LocalDate): TripAdviceText {
-        val onToday = tab == today
-        val day = { date: LocalDate -> adviceDay(date, today, onToday) }
-        val title = text(R.string.trip_advice_title, day(advice.departureDay), time(advice.departure),
-            whole(advice.distanceKm))
-        val plan = planText(advice, day, onToday, today, ::unbrokenSpan)
-        val spokenPlan = planText(advice, day, onToday, today, ::spokenSpan)
-        val level = text(if (advice.levelAssumed) R.string.trip_advice_assumed else R.string.trip_advice_entered,
-            whole(advice.level.value()))
+    fun tripAdvice(advice: TripAdviceView, tab: DayName): TripAdviceText {
+        val onToday = tab is DayName.Today
+        val day = { name: DayName -> adviceDay(name, onToday) }
+        val trip = advice.trip()
+        val title = text(R.string.trip_advice_title, day(advice.departureDay()), time(trip.departure()),
+            whole(trip.distanceKm()))
+        val plan = planText(advice, day, onToday, ::unbrokenSpan)
+        val spokenPlan = planText(advice, day, onToday, ::spokenSpan)
+        val level = text(if (advice.levelAssumed()) R.string.trip_advice_assumed else R.string.trip_advice_entered,
+            whole(advice.levelPct().value()))
         val label = text(R.string.trip_advice_label)
         return TripAdviceText(label, title, plan, level,
             text(R.string.trip_advice_spoken, label, title, spokenPlan, level))
     }
 
     /** What to charge and when, each solar window's times told by [span]: as shown, or as a screen reader says them. */
-    private fun planText(advice: TripAdviceModel, day: (LocalDate) -> String, onToday: Boolean, today: LocalDate,
+    private fun planText(advice: TripAdviceView, day: (DayName) -> String, onToday: Boolean,
         span: (Window) -> String): String {
-        val sentences = when (val plan = advice.plan) {
-            is TripAdviceModel.Plan.Enough ->
-                listOf(text(R.string.trip_advice_enough, whole(plan.departurePct.value())))
-            is TripAdviceModel.Plan.Solar ->
-                listOf(text(R.string.trip_advice_solar, whole(plan.limit.value()), windows(plan.windows, day, span)))
-            is TripAdviceModel.Plan.SolarThenGrid -> listOf(text(R.string.trip_advice_solar_grid,
-                whole(plan.limit.value()), windows(plan.windows, day, span))) +
-                grid(plan.grid, plan.limit, day, onToday, today)
-            is TripAdviceModel.Plan.Grid -> listOf(text(R.string.trip_advice_grid, whole(plan.limit.value()))) +
-                grid(plan.grid, plan.limit, day, onToday, today)
-            is TripAdviceModel.Plan.Leaves ->
-                listOf(text(R.string.trip_advice_leaves, whole(plan.departurePct.value())))
+        val sentences = when (val plan = advice.plan()) {
+            is TripPlan.Enough ->
+                listOf(text(R.string.trip_advice_enough, whole(plan.departureLevelPct().value())))
+            is TripPlan.Solar -> listOf(text(R.string.trip_advice_solar, whole(plan.chargeLimitPct().value()),
+                windows(plan.days(), day, span)))
+            is TripPlan.SolarThenGrid -> listOf(text(R.string.trip_advice_solar_grid,
+                whole(plan.chargeLimitPct().value()), windows(plan.days(), day, span))) +
+                grid(plan.grid(), plan.chargeLimitPct(), day, onToday)
+            is TripPlan.Grid -> listOf(text(R.string.trip_advice_grid, whole(plan.chargeLimitPct().value()))) +
+                grid(plan.grid(), plan.chargeLimitPct(), day, onToday)
+            is TripPlan.Leaves ->
+                listOf(text(R.string.trip_advice_leaves, whole(plan.departureLevelPct().value())))
         }
-        val short = advice.shortKm?.let { text(R.string.trip_advice_short, it.toString()) }
+        // in whole km, rounded up
+        val short = advice.shortKm().takeIf { it.isPresent }
+            ?.let { text(R.string.trip_advice_short, ceil(it.asDouble).toInt().toString()) }
         return (sentences + listOfNotNull(short)).joinToString(" ")
     }
 
     /** When to start the grid charge, and what to set for it. */
-    private fun grid(grid: TripAdviceModel.GridStart, limit: Percent, day: (LocalDate) -> String, onToday: Boolean,
-        today: LocalDate): List<String> {
-        val start = grid.window.start()
-        val local = start.atZone(zone)
+    private fun grid(grid: TripGridStart, limit: Percent, day: (DayName) -> String, onToday: Boolean): List<String> {
+        val start = grid.window().start()
         val at = when {
-            grid.now -> text(R.string.trip_advice_now)
+            grid.startsNow() -> text(R.string.trip_advice_now)
             // "tonight" means what it says only on today's tab
-            onToday && local.toLocalDate() == today && !local.toLocalTime().isBefore(EVENING) ->
-                text(R.string.trip_advice_at, text(R.string.trip_advice_tonight), time(start))
-            else -> text(R.string.trip_advice_at, day(local.toLocalDate()), time(start))
+            onToday && grid.tonight() -> text(R.string.trip_advice_at, text(R.string.trip_advice_tonight), time(start))
+            else -> text(R.string.trip_advice_at, day(grid.day()), time(start))
         }
-        val starts = text(when (grid.start) {
+        val starts = text(when (grid.start()) {
             TripGridCharge.Start.PLANNED -> R.string.trip_advice_start_planned
             TripGridCharge.Start.NOW -> R.string.trip_advice_start_now
             TripGridCharge.Start.NOW_OUTSIDE_CHARGING_HOURS -> R.string.trip_advice_start_outside
         }, at)
-        return listOf(starts, text(R.string.advice_set, grid.window.amps(), decimal(grid.window.powerKw()),
+        return listOf(starts, text(R.string.advice_set, grid.window().amps(), decimal(grid.window().powerKw()),
             whole(limit.value())))
     }
 
@@ -494,9 +495,8 @@ internal class DashboardWords(private val resources: Resources, private val loca
      * The solar windows grouped by their day, each day named once: "today 12:00 – 13:30, 14:00 – 15:00, tomorrow …",
      * each window's times told by [span].
      */
-    private fun windows(days: List<TripAdviceModel.DayWindows>, day: (LocalDate) -> String,
-        span: (Window) -> String): String =
-        days.joinToString(", ") { inDay -> day(inDay.day) + " " + inDay.windows.joinToString(", ") { span(it) } }
+    private fun windows(days: List<SolarDay>, day: (DayName) -> String, span: (Window) -> String): String =
+        days.joinToString(", ") { inDay -> day(inDay.day()) + " " + inDay.windows().joinToString(", ") { span(it) } }
 
     /**
      * A window's span with no break around its dash: the span's own spaces become no-break ones, not those a 12-hour
@@ -513,9 +513,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     private fun text(id: Int, vararg args: Any): String = resources.getString(id, *args)
 
     private companion object {
-        /** From this hour a start later today is "tonight". */
-        val EVENING: LocalTime = LocalTime.of(18, 0)
-
         /** Keeps a window's times together on one line. */
         const val NO_BREAK = '\u00A0'
     }

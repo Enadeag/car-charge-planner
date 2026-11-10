@@ -2,8 +2,8 @@ package nl.enadeag.carchargeplanner.android.ui
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import nl.enadeag.carchargeplanner.android.home.EnergySource
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource
 
 /**
  * The colours that mean an energy source on the dashboard: solar amber, grid blue, the car green.

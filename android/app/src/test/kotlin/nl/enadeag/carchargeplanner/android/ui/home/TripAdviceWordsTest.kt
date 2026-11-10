@@ -9,15 +9,14 @@ import java.util.Optional
 import java.util.TimeZone
 import nl.enadeag.carchargeplanner.android.home.Plans
 import nl.enadeag.carchargeplanner.android.home.SourceFigure
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModel
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.BRUSSELS
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.SOLAR
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.TODAY
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.TOMORROW
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.advice
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.at
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.grid
-import nl.enadeag.carchargeplanner.android.home.TripAdviceModelTest.Companion.model
+import nl.enadeag.carchargeplanner.android.home.TripAdvices.BRUSSELS
+import nl.enadeag.carchargeplanner.android.home.TripAdvices.SOLAR
+import nl.enadeag.carchargeplanner.android.home.TripAdvices.TODAY
+import nl.enadeag.carchargeplanner.android.home.TripAdvices.TOMORROW
+import nl.enadeag.carchargeplanner.android.home.TripAdvices.advice
+import nl.enadeag.carchargeplanner.android.home.TripAdvices.at
+import nl.enadeag.carchargeplanner.android.home.TripAdvices.grid
+import nl.enadeag.carchargeplanner.android.home.TripAdvices.model
 import nl.enadeag.carchargeplanner.android.notify.LockScreen
 import nl.enadeag.carchargeplanner.android.ui.notify.NoticeWords
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
@@ -29,6 +28,8 @@ import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason
+import nl.enadeag.carchargeplanner.engine.dashboard.TripAdviceView
+import nl.enadeag.carchargeplanner.engine.dashboard.TripPlan
 import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows
 import nl.enadeag.carchargeplanner.engine.notify.Announcer
 import nl.enadeag.carchargeplanner.engine.notify.Notice
@@ -68,11 +69,11 @@ class TripAdviceWordsTest {
     private fun words(locale: Locale = Locale.ENGLISH, twentyFour: Boolean = true) =
         DashboardWords(resources, locale, twentyFour, BRUSSELS)
 
-    private fun onToday(model: TripAdviceModel, locale: Locale = Locale.ENGLISH, twentyFour: Boolean = true) =
-        words(locale, twentyFour).tripAdvice(model, TODAY, TODAY)
+    private fun onToday(model: TripAdviceView, locale: Locale = Locale.ENGLISH, twentyFour: Boolean = true) =
+        words(locale, twentyFour).tripAdvice(model, DayName.Today(TODAY))
 
-    private fun onTomorrow(model: TripAdviceModel, locale: Locale = Locale.ENGLISH) =
-        words(locale).tripAdvice(model, TOMORROW, TODAY)
+    private fun onTomorrow(model: TripAdviceView, locale: Locale = Locale.ENGLISH) =
+        words(locale).tripAdvice(model, DayName.Tomorrow(TOMORROW))
 
     private fun span(from: String, to: String) = "$from$NBSP–$NBSP$to"
 
@@ -377,11 +378,11 @@ class TripAdviceWordsTest {
     fun theAdvicesDayIsRelativeOnTodaysTabAndTheWeekdayElsewhereAlsoForTomorrow() {
         val words = words()
 
-        assertThat(words.adviceDay(TOMORROW, TODAY, onToday = true)).isEqualTo("tomorrow")
-        assertThat(words.adviceDay(TODAY, TODAY, onToday = true)).isEqualTo("today")
-        assertThat(words.adviceDay(TODAY.plusDays(2), TODAY, onToday = true)).isEqualTo("Sunday")
-        assertThat(words.adviceDay(TOMORROW, TODAY, onToday = false)).isEqualTo("Saturday")
-        assertThat(words.adviceDay(TODAY, TODAY, onToday = false)).isEqualTo("Friday")
+        assertThat(words.adviceDay(DayName.of(TOMORROW, TODAY), onToday = true)).isEqualTo("tomorrow")
+        assertThat(words.adviceDay(DayName.of(TODAY, TODAY), onToday = true)).isEqualTo("today")
+        assertThat(words.adviceDay(DayName.of(TODAY.plusDays(2), TODAY), onToday = true)).isEqualTo("Sunday")
+        assertThat(words.adviceDay(DayName.of(TOMORROW, TODAY), onToday = false)).isEqualTo("Saturday")
+        assertThat(words.adviceDay(DayName.of(TODAY, TODAY), onToday = false)).isEqualTo("Friday")
     }
 
     @Test
@@ -490,7 +491,7 @@ class TripAdviceWordsTest {
             val card = onToday(model(advice)).plan
             val body = NoticeWords(resources, Locale.ENGLISH, true).of(notice, LockScreen.WINDOW_SOON).body
 
-            assertThat((model(advice).plan as TripAdviceModel.Plan.Grid).limit).isEqualTo(notice.chargeLimitPct())
+            assertThat((model(advice).plan() as TripPlan.Grid).chargeLimitPct()).isEqualTo(notice.chargeLimitPct())
             assertThat(card).contains("a charge limit of 85% in the car")
             assertThat(body).contains("set the charge limit to 85%")
         }

@@ -3,19 +3,7 @@ package nl.enadeag.carchargeplanner.android.home
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
-
-/** An energy source the dashboard shows figures of, each in colours of its own. */
-enum class EnergySource {
-
-    /** The solar panels. */
-    SOLAR,
-
-    /** The grid. */
-    GRID,
-
-    /** The car and its battery. */
-    CAR,
-}
+import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource
 
 /** A figure about one energy source, as a day shows it. */
 sealed interface SourceFigure {
