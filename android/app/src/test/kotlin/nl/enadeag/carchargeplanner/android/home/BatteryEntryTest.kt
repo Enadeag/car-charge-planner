@@ -454,7 +454,7 @@ class BatteryEntryTest {
     }
 
     @Test
-    fun theSavedNoticeComesWithTheEndOfTheSaveAndNotAfterAFailure() = runTest {
+    fun theSavedNoticeComesWithTheEndOfTheSave() = runTest {
         val gate = CompletableDeferred<Unit>()
         access.batteryGate = gate
         val entry = typed("64")
@@ -467,13 +467,17 @@ class BatteryEntryTest {
 
         assertThat(whileSaving).isNull()
         assertThat(entry.notice.value).isEqualTo(BatteryEntry.Notice.Saved)
-        entry.noticeShown()
-        access.batteryGate = null
+    }
+
+    @Test
+    fun aSaveThatFailedSaysNothingThroughTheNotice() = runTest {
         access.batteryFails = "No space left on device"
-        entry.open()
-        entry.edit("70")
+        val entry = typed("70")
+
         entry.save()
         runCurrent()
+
+        assertThat(entry.saving.value).isEqualTo(SaveState.Failed("No space left on device"))
         assertThat(entry.notice.value).isNull()
     }
 }
