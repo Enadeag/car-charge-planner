@@ -1,19 +1,25 @@
 package nl.enadeag.carchargeplanner.android.ui
 
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -35,13 +41,15 @@ import nl.enadeag.carchargeplanner.android.ui.home.BatteryEntryDialog
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The Save of the away and battery entry dialogs, which is held while it saves, so it stays focusable, on
- * Robolectric; the rest of each dialog is in `AwayEntryScreenTest` and `BatteryEntryScreenTest`.
+ * The Save of the away and battery entry dialogs, which is held while it saves, so it keeps the focus, on Robolectric
+ * out of touch mode, where a control can take the focus; the rest of each dialog is in `AwayEntryScreenTest` and
+ * `BatteryEntryScreenTest`.
  */
 @RunWith(AndroidJUnit4::class)
 class EntryDialogsScreenTest {
@@ -56,6 +64,12 @@ class EntryDialogsScreenTest {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val handle = SavedStateHandle()
 
+    /** Out of touch mode, as after a key pressed on a keyboard; the dialog's window opens so as well. */
+    @Before
+    fun keyboard() {
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+    }
+
     @After
     fun stop() {
         scope.cancel()
@@ -63,26 +77,31 @@ class EntryDialogsScreenTest {
 
     private fun button(id: Int) = compose.onNode(hasText(text(id)) and hasAnyAncestor(isDialog()))
 
+    /** Presses Enter on a keyboard, on the control with the focus. */
+    private fun SemanticsNodeInteraction.enter() {
+        performKeyInput { pressKey(Key.Enter) }
+        compose.waitForIdle()
+    }
+
     /**
-     * Presses Save: while the save runs it is held, focusable yet marked off, with its progress; once the save
-     * failed it is on again.
+     * Gives Save the focus and presses it with Enter: while the save runs it is held, marked off with its progress,
+     * and keeps the focus; once the save failed it is on again, still with the focus.
      */
     private fun saveIsHeldWhileItRuns(gate: CompletableDeferred<Unit>) {
-        button(R.string.action_save).performClick()
+        button(R.string.action_save).requestFocus()
         compose.waitForIdle()
+        button(R.string.action_save).assertIsFocused().enter()
 
-        button(R.string.saving).assertIsNotEnabled()
-            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.RequestFocus))
+        button(R.string.saving).assertIsNotEnabled().assertIsFocused()
         compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo) and
             hasAnyAncestor(isDialog()), useUnmergedTree = true).assertExists()
         gate.complete(Unit)
         compose.waitForIdle()
-        button(R.string.action_save).assertIsEnabled()
-            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.RequestFocus))
+        button(R.string.action_save).assertIsEnabled().assertIsFocused()
     }
 
     @Test
-    fun whileAnAwayPeriodIsSavedSaveIsHeldAndStaysFocusable() {
+    fun whileAnAwayPeriodIsSavedSaveIsHeldAndKeepsTheFocus() {
         val gate = CompletableDeferred<Unit>()
         access.awayGate = gate
         access.awayFails = "No space left on device"
@@ -97,7 +116,7 @@ class EntryDialogsScreenTest {
     }
 
     @Test
-    fun whileABatteryLevelIsSavedSaveIsHeldAndStaysFocusable() {
+    fun whileABatteryLevelIsSavedSaveIsHeldAndKeepsTheFocus() {
         val gate = CompletableDeferred<Unit>()
         access.batteryGate = gate
         access.batteryFails = "No space left on device"
@@ -148,6 +167,8 @@ class EntryDialogsScreenTest {
         away.open(today.plusDays(1), lisbon)
         compose.setContent { AppTheme { AwayEntryDialog(away) } }
         compose.waitForIdle()
+        button(R.string.action_save).requestFocus()
+        compose.waitForIdle()
         val restoring = CompletableDeferred<Unit>()
         access.awayGate = restoring
 
@@ -155,12 +176,11 @@ class EntryDialogsScreenTest {
         compose.waitForIdle()
 
         button(R.string.action_save).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Disabled))
-            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.RequestFocus))
+            .assertIsFocused().enter()
         button(R.string.saving).assertDoesNotExist()
-        button(R.string.action_save).performClick()
         restoring.complete(Unit)
         compose.waitForIdle()
         assertThat(access.awayChanges.map { it.first }).containsExactly("remove", "add")
-        button(R.string.action_save).assertIsEnabled()
+        button(R.string.action_save).assertIsEnabled().assertIsFocused()
     }
 }
