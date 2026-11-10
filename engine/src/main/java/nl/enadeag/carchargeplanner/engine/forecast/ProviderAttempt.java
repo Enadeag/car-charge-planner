@@ -26,9 +26,6 @@ final class ProviderAttempt {
     /**
      * When a provider that failed may be asked again, and whether it failed because it refused its API key, so a
      * wait after a refused key still says so.
-     *
-     * @param at the moment from which the provider may be asked again
-     * @param keyRefused true when the failure was a refused API key
      */
     record Retry(Instant at, boolean keyRefused) {
     }
@@ -49,14 +46,10 @@ final class ProviderAttempt {
     private final boolean marksFailures;
 
     /**
-     * Prepares one attempt; nothing is read or asked yet.
-     *
-     * @param provider the provider to ask
      * @param cache where its last good forecast and cool-down are kept; written after an answer
      * @param retryAt per provider, when it may be asked again after a failure and whether it refused its API key;
      *     updated here, so a map that is safe for several threads when other providers are asked at the same time
      * @param health whether each provider gave a forecast when it was last asked; updated here
-     * @param now the current moment, by which ages, waits and cool-downs are measured
      * @param force the owner asked for a refresh: skip the minimum refresh interval and the wait after a failure,
      *     never a cool-down
      * @param marksFailures true for a request with the saved settings: it waits after an earlier failure, and keeps
@@ -80,7 +73,6 @@ final class ProviderAttempt {
     /**
      * Gets a forecast from the cache or the provider, whichever the rules allow; never throws.
      *
-     * @param system the system to forecast
      * @param settings gives the provider's settings with values, secret ones included; asked only when the cache
      *     cannot answer by itself, as it may read the keychain
      * @param key what the forecast depends on, as {@link ForecastCache#key} makes it
@@ -127,7 +119,6 @@ final class ProviderAttempt {
         return forecast.age(now).compareTo(info.maxUsefulAge()) <= 0;
     }
 
-    /** The end of the provider's cool-down while it lasts. */
     private Optional<Instant> cooldownUntil() {
         return cache.cooldownUntil(info.id()).filter(now::isBefore);
     }
@@ -139,11 +130,6 @@ final class ProviderAttempt {
     }
 
     /**
-     * Asks the provider, and keeps its forecast or what its failure means for the next attempt.
-     *
-     * @param system the system to forecast
-     * @param settings the provider's settings with values, secret ones included
-     * @param key what the forecast depends on, under which an answer is cached
      * @param secrets the secret values to keep out of a reason
      * @param held what the cache held before the provider was asked; it has no cool-down, or the provider would
      *     not be asked
@@ -236,37 +222,19 @@ final class ProviderAttempt {
      */
     private record CacheState(Optional<ForecastCache.Cached> usable, Optional<Instant> cooldownUntil) {
 
-        /** Nothing to fall back on and nothing to tell: no useful forecast, no cool-down. */
         static final CacheState NONE = new CacheState(Optional.empty(), Optional.empty());
 
-        /**
-         * The same, now that the provider said it was asked too often.
-         *
-         * @param until the end of the cool-down
-         * @return this state with that cool-down
-         */
+        /** The same, now that the provider said it was asked too often. */
         CacheState inCooldownUntil(Instant until) {
             return new CacheState(usable, Optional.of(until));
         }
 
-        /**
-         * The last forecast, while it is still useful, as a stale one.
-         *
-         * @param keyRefused true when the provider gave none because it refused its API key
-         * @return the stale forecast, or empty when there is no useful one
-         */
+        /** The last forecast, while it is still useful, as a stale one. */
         Optional<ProviderOutcome> stale(boolean keyRefused) {
             return usable.map(forecast -> fromCache(forecast, Freshness.STALE, keyRefused));
         }
 
-        /**
-         * A cached forecast, with the provider's cool-down when it has one.
-         *
-         * @param forecast the cached forecast to give
-         * @param freshness how fresh it is told to be
-         * @param keyRefused true when it is given because the provider refused its API key
-         * @return the forecast to use
-         */
+        /** A cached forecast, with the provider's cool-down when it has one. */
         ProviderOutcome fromCache(ForecastCache.Cached forecast, Freshness freshness, boolean keyRefused) {
             return new ProviderOutcome.Usable(List.copyOf(forecast.steps()), forecast.fetchedAt(), freshness,
                     cooldownUntil, keyRefused);

@@ -45,9 +45,7 @@ public final class ForecastService {
         this.secrets = secrets;
     }
 
-    /** How a request may get its forecast. */
     private enum Asking {
-        /** From the cache or a provider, as the rules allow. */
         USUAL,
         /**
          * As usual, for a check of settings that need not be saved: a provider is asked without the wait after an

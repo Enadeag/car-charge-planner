@@ -79,7 +79,6 @@ public final class ForecastCache {
      *
      * @param system the system forecast for; the arrays' names are left out
      * @param plainSettings the provider's declared settings that are not secret; a changed key does not count
-     * @return a JSON object that equals the one stored with a forecast for the same system and settings
      */
     JsonNode key(SolarSite system, Map<String, String> plainSettings) {
         var key = StoredJson.object();
@@ -101,9 +100,6 @@ public final class ForecastCache {
      * The cached forecast for this key, if it is intact. A forecast stamped after {@code now} is not used: the clock
      * was set back since, so its age is unknown and it could otherwise pass for fresh far too long.
      *
-     * @param providerId the provider whose cache to read
-     * @param key what the forecast must have been made for, as {@link #key} makes it
-     * @param now the current moment
      * @return the forecast, or empty when there is none, it is for another key, it is damaged or stamped after now
      */
     Optional<Cached> forecast(ProviderId providerId, JsonNode key, Instant now) {
@@ -117,7 +113,6 @@ public final class ForecastCache {
     /**
      * When the provider's last cool-down ends, which may have passed already.
      *
-     * @param providerId the provider whose cache to read
      * @return the end, or empty when there is none or the file cannot be read
      */
     Optional<Instant> cooldownUntil(ProviderId providerId) {
@@ -128,7 +123,6 @@ public final class ForecastCache {
      * Whether the provider failed when it was last asked, so its forecast could not be refreshed: until it answers
      * again, also in another process.
      *
-     * @param providerId the provider whose cache to read
      * @return true after a failure that no answer followed; false when the file cannot be read
      */
     boolean refreshFailed(ProviderId providerId) {
@@ -138,11 +132,6 @@ public final class ForecastCache {
     /**
      * Keeps a new forecast, replacing the provider's last one. Also ends a cool-down and a failed refresh: the
      * provider answered.
-     *
-     * @param providerId the provider that made it
-     * @param key what it was made for, as {@link #key} makes it
-     * @param fetchedAt when it was fetched
-     * @param steps its steps, keeping the providers' contract
      */
     void saveForecast(ProviderId providerId, JsonNode key, Instant fetchedAt, List<ForecastStep> steps) {
         write(providerId, new Entry(key, Optional.of(new Cached(fetchedAt, List.copyOf(steps))), Optional.empty(),
@@ -152,20 +141,13 @@ public final class ForecastCache {
     /**
      * Notes a cool-down, and so a failed refresh, keeping the cached forecast: it stays usable while the provider
      * refuses.
-     *
-     * @param providerId the provider that refused
-     * @param until when it may be asked again
      */
     void saveCooldown(ProviderId providerId, Instant until) {
         var entry = read(providerId);
         write(providerId, new Entry(entry.key(), entry.forecast(), Optional.of(until), true));
     }
 
-    /**
-     * Notes that the provider was asked and gave no forecast, keeping the cached forecast and the cool-down.
-     *
-     * @param providerId the provider that failed
-     */
+    /** Notes that the provider was asked and gave no forecast, keeping the cached forecast and the cool-down. */
     void saveRefreshFailed(ProviderId providerId) {
         var entry = read(providerId);
         write(providerId, new Entry(entry.key(), entry.forecast(), entry.cooldownUntil(), true));
