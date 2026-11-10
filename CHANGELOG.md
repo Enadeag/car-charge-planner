@@ -34,7 +34,7 @@ Two fixes: saving API keys no longer loses the keys of the other providers, and 
 - **Check connection** in Settings and set-up says what the provider said when it refuses the API key, such as "Forecast.Solar refused the request (status 401): check the API key", without "gave an answer the app does not understand" in front.
 
 ### Security
-- The Java runtime this release brings is Temurin 25.0.5+8, with Java's security fixes of October 2026 (0.5.0 brought 25.0.4.1+1). OpenJDK has since reported compromised eMudhra intermediate certificates (CVE-2026-114820, advisories of 2026-10-21 and 2026-10-24; <https://openjdk.org/emudhra>), rated 9.1. The fix is not in this Temurin build, and Temurin has not published a build with it so far; 0.5.0 has the same gap. The app makes HTTPS requests only to the forecast provider you chose. A release on a runtime with the fix follows once Temurin has one.
+- The Java runtime this release brings is Temurin 25.0.5+8, with Java's security fixes of October 2026 (0.5.0 brought 25.0.4.1+1). OpenJDK has reported compromised eMudhra intermediate certificates (CVE-2026-114820, rated 9.1; <https://openjdk.org/emudhra>). Temurin answers this in its own way, in this build already: its list of trusted certificates no longer holds the affected eMudhra roots but one that Mozilla still trusts (<https://adoptium.net/news/2026/10/temurin-october-2026-emudhra>), where OpenJDK's own fix blocks the compromised certificates. The app makes HTTPS requests only to the forecast provider you chose.
 
 ## [0.5.0] - 2026-10-22
 
