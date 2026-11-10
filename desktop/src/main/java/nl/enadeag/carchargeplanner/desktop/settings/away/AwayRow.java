@@ -20,7 +20,6 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-/** One weekly away period: a weekday, from a time to a time, and a way to remove it. */
 final class AwayRow extends VBox {
 
     private final Messages messages;
@@ -30,13 +29,6 @@ final class AwayRow extends VBox {
     private final Button removeButton;
     private final Label problem = Labels.paragraph("", "field-problem");
 
-    /**
-     * Makes the row.
-     *
-     * @param period the period to show, as the one not edited
-     * @param remove what the row's Remove button does; given this row
-     * @param messages the texts and day names, in the owner's language
-     */
     AwayRow(WeeklyAwayPeriod period, Consumer<AwayRow> remove, Messages messages) {
         this.messages = messages;
         weekday = new ChoiceInput<>(List.of(DayOfWeek.values()), new ChoiceNames(messages)::weekday);
@@ -89,8 +81,6 @@ final class AwayRow extends VBox {
 
     /**
      * Shows the period's problem below it when it is refused, and takes a problem shown before away otherwise.
-     *
-     * @return true when it is refused
      */
     boolean showProblems() {
         return switch (checked()) {
@@ -109,18 +99,11 @@ final class AwayRow extends VBox {
         return new WeeklyAwayEntry(weekday.value(), start.text(), end.text()).check(messages);
     }
 
-    /**
-     * Whether the owner changed the period since it was shown first.
-     *
-     * @return true when the weekday or a time differs
-     */
     boolean isChanged() {
         return weekday.isChanged() || start.isChanged() || end.isChanged();
     }
 
     /**
-     * Calls an action whenever the period changes.
-     *
      * @param action what to run, on the JavaFX thread
      */
     void onChange(Runnable action) {
