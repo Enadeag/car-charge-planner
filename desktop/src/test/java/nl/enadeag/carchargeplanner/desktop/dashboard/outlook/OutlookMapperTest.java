@@ -398,7 +398,7 @@ class OutlookMapperTest {
     }
 
     @Test
-    void eachDayListsTheTripsTheEngineListsWithItInTheirWordsAndThePlanTellsTheZoneAndUnits() {
+    void eachDayListsTheTripsTheEngineListsWithItInTheirWords() {
         var plan = withTrip(new Messages(Language.ENGLISH), 94);
         var away = "Away Tomorrow 08:30 – Mon 6 Jul 19:00 · 300 km there and back";
 
@@ -406,6 +406,12 @@ class OutlookMapperTest {
                 .containsExactly(List.of(), List.of(away), List.of(away), List.of(away),
                         List.of("Away 08:00 – 18:00 · 200 km there and back"));
         assertThat(plan.days().get(1).trips()).extracting(TripsModel.Listed::trip).containsExactly(LONG_TRIP);
+    }
+
+    @Test
+    void thePlanTellsTheTripsInTheHomesZoneAndTheOwnersUnits() {
+        var plan = withTrip(new Messages(Language.ENGLISH), 94);
+
         assertThat(plan.trips()).isEqualTo(new TripsModel(BRUSSELS, Units.METRIC));
     }
 
