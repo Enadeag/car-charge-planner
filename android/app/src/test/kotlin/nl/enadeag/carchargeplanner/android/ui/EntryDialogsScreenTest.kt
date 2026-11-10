@@ -49,9 +49,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The Save of the away, battery and trip entry dialogs, which is held while it saves, so it keeps the focus, on Robolectric
- * out of touch mode, where a control can take the focus; the rest of each dialog is in `AwayEntryScreenTest` and
- * `BatteryEntryScreenTest`.
+ * The Save of the away, battery and trip entry dialogs, which is held while it saves, so it keeps the focus, on
+ * Robolectric out of touch mode, where a control can take the focus; the rest of each dialog is in
+ * `AwayEntryScreenTest`, `BatteryEntryScreenTest` and `TripEntryScreenTest`.
  */
 @RunWith(AndroidJUnit4::class)
 class EntryDialogsScreenTest {
