@@ -116,6 +116,17 @@ class ListedTripTest {
     }
 
     @Test
+    void aTripWhileTheClockRunsBackOverMidnightReturnsTheDayItLeaves() {
+        // St. John's set its clock back from 00:01 to 23:01 the day before, at 02:31 UTC
+        var stJohns = ZoneId.of("America/St_Johns");
+        var today = LocalDate.of(2010, 11, 7);
+        var trip = trip(Instant.parse("2010-11-07T02:30:30Z"), Instant.parse("2010-11-07T02:45:00Z"));
+
+        assertThat(ListedTrip.of(trip, stJohns, today))
+                .isEqualTo(new ListedTrip(trip, new DayName.Today(today), new DayName.Today(today)));
+    }
+
+    @Test
     void everyStoredTripIsListedInTheStoredOrderAlsoOneBackAlreadyAndOneWithoutThisCar() {
         var coming = trip(at(TODAY.plusDays(1), 9, 0), at(TODAY.plusDays(1), 17, 0));
         var back = trip(at(TODAY, 5, 0), at(TODAY, 7, 0));

@@ -129,6 +129,17 @@ class ComingAwayTest {
     }
 
     @Test
+    void aPeriodWhileTheClockRunsBackOverMidnightIsPartOfTheDayItStarts() {
+        // St. John's set its clock back from 00:01 to 23:01 the day before, at 02:31 UTC
+        var stJohns = ZoneId.of("America/St_Johns");
+        var today = LocalDate.of(2010, 11, 7);
+        var period = new OneOffAwayPeriod(Instant.parse("2010-11-07T02:30:30Z"), Instant.parse("2010-11-07T02:45:00Z"));
+
+        assertThat(ComingAway.describe(period, stJohns, today))
+                .isEqualTo(new ComingAway.PartOfDay(new DayName.Today(today), period));
+    }
+
+    @Test
     void aPeriodThatEndedIsDescribedFromTheDayThePlanWasMade() {
         var ended = part(TODAY, 7, 8);
         var tomorrow = OneOffAwayPeriod.allDay(TODAY.plusDays(1), AMSTERDAM);

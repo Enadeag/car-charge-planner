@@ -26,8 +26,9 @@ public sealed interface ComingAway {
      * @param zone the home's time zone, never null, in which its days are told
      * @param today the day the plan was made in {@code zone}, never null, from which its days are named
      * @return {@link AllDay} for a period from one midnight to the next, so 23 or 25 hours on a daylight saving day;
-     *     {@link PartOfDay} for one that starts and ends on the same day; {@link Days} otherwise, also for one that
-     *     ends at midnight
+     *     {@link PartOfDay} for one whose end day is not after its start day, so also for one that ends on the day
+     *     before, as a zone such as America/St_Johns once set its clock back from just after midnight; {@link Days}
+     *     otherwise, also for one that ends at midnight
      */
     static ComingAway describe(OneOffAwayPeriod period, ZoneId zone, LocalDate today) {
         var startDay = period.start().atZone(zone).toLocalDate();
@@ -35,7 +36,7 @@ public sealed interface ComingAway {
         if (period.equals(OneOffAwayPeriod.allDay(startDay, zone))) {
             return new AllDay(DayName.of(startDay, today), period);
         }
-        if (startDay.equals(endDay)) {
+        if (!endDay.isAfter(startDay)) {
             return new PartOfDay(DayName.of(startDay, today), period);
         }
         return new Days(DayName.of(startDay, today), DayName.of(endDay, today), period);
