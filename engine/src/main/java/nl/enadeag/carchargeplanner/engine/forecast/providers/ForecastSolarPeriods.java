@@ -27,7 +27,6 @@ final class ForecastSolarPeriods {
 
     private static final DateTimeFormatter KEY = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss", Locale.ROOT);
 
-    /** One key of the answer. */
     private record Point(Instant at, LocalDate day, double wattHours) {
     }
 
@@ -35,13 +34,8 @@ final class ForecastSolarPeriods {
     }
 
     /**
-     * Turns the answer into steps.
-     *
-     * @param body the answer's body
      * @param systemZone the time zone to read the keys in when the answer names none
      * @return a step for each period after a day's first key; they may break the contract (negative energy)
-     * @throws ProviderError.BadResponse when the answer is not JSON, reports a problem, is empty, or is not what
-     *     the service documents
      */
     static List<ForecastStep> steps(String body, ZoneId systemZone) throws ProviderError.BadResponse {
         var root = Exchange.json(body);
@@ -115,8 +109,6 @@ final class ForecastSolarPeriods {
     /**
      * When it may be asked again after it said it was asked too often: the header, else the body.
      *
-     * @param reply the refusal
-     * @param now the moment of the refusal
      * @return the wait from now, zero when the time has passed; empty when neither says a time with a time zone
      */
     static Optional<Duration> retryAfter(HttpGet.Reply reply, Instant now) {
@@ -131,8 +123,6 @@ final class ForecastSolarPeriods {
     }
 
     /**
-     * The reason the server gives in its answer's message.
-     *
      * @param body the answer's body, which may be anything
      * @return the message's text, or empty when there is none
      */
