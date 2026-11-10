@@ -57,11 +57,11 @@ private enum class Picked {
 /**
  * The entry of a one-off away period, while it is open: Material's dialog with the day in its title, the choice of all
  * day or part of it, and for part of the day the two times, each a button that opens Material's time picker on the
- * phone's 12- or 24-hour clock, as a dial or typed; then Save and Cancel. The choice takes the focus when the entry opens, a time's button
- * when its picker closes, and what had it before when the question over the entry closes. Why Save refused the period
- * shows under the end time, or under the choice for all day, in a polite live region; a save that failed says so in the
- * entry, with the English details, in a live region read at once. While a change of the away periods runs, Save is
- * held, keeping the focus, and while its own save runs it shows its progress. The content
+ * phone's 12- or 24-hour clock, as a dial or typed; then Save and Cancel. The choice takes the focus when the entry
+ * opens, a time's button when its picker closes, and what had it before when the question over the entry closes. Why
+ * Save refused the period shows under the end time, or under the choice for all day, in a polite live region; a save
+ * that failed says so in the entry, with the English details, in a live region read at once. While a change of the away
+ * periods runs, Save is held, keeping the focus, and while its own save runs it shows its progress. The content
  * scrolls, so it stays reachable at a large font size. Back, or a tap beside the dialog, asks "Discard changes?" when
  * the choice or a time changed.
  *
