@@ -30,7 +30,7 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * @throws IllegalArgumentException when [planned] has no days, which shows as no forecast instead
  */
 data class Dashboard(val planned: Outlook.Planned, val storedAway: List<OneOffAwayPeriod>,
-    val storedTrips: List<Trip>, val keyRefusedBy: List<String> = listOf()) {
+    val storedTrips: List<Trip>, val keyRefusedBy: List<String>) {
 
     /** The engine's dashboard of [planned] with [storedAway] and [storedTrips]. */
     val view: DashboardView = planned.dashboard(storedAway, storedTrips)
