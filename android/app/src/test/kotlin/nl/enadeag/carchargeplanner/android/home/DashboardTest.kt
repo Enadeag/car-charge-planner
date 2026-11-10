@@ -161,6 +161,7 @@ class DashboardTest {
         val changed = shown.withAway(listOf(period))
 
         assertThat(changed.view).isEqualTo(shown.planned.dashboard(listOf(period), listOf(away)))
+        assertThat(changed.storedTrips).containsExactly(away)
         assertThat(changed.days[1].noWindow()).contains(NoWindowReason.AWAY)
         assertThat(changed.away).isEqualTo(listOf(ComingAway.describe(period, amsterdam, today)))
     }
