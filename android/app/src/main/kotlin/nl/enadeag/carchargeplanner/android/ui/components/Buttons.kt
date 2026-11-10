@@ -81,12 +81,7 @@ internal fun AppTextButton(onClick: () -> Unit, modifier: Modifier = Modifier, e
 @Composable
 internal fun SaveButton(busy: Boolean, onClick: () -> Unit, enabled: Boolean = true) {
     AppTextButton(onClick = onClick, enabled = enabled && !busy) {
-        if (busy) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            Text(stringResource(R.string.saving), modifier = Modifier.padding(start = 8.dp))
-        } else {
-            Text(stringResource(R.string.action_save))
-        }
+        SaveLabel(busy)
     }
 }
 
@@ -122,11 +117,21 @@ internal fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier =
 @Composable
 internal fun SaveAction(saving: Boolean, held: Boolean, onSave: () -> Unit) {
     HeldButton(busy = held, onClick = onSave) {
-        if (saving) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            Text(stringResource(R.string.saving), modifier = Modifier.padding(start = 8.dp))
-        } else {
-            Text(stringResource(R.string.action_save))
-        }
+        SaveLabel(saving)
+    }
+}
+
+/**
+ * Save's words, or its progress while it saves.
+ *
+ * @param saving true while the save runs
+ */
+@Composable
+private fun SaveLabel(saving: Boolean) {
+    if (saving) {
+        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+        Text(stringResource(R.string.saving), modifier = Modifier.padding(start = 8.dp))
+    } else {
+        Text(stringResource(R.string.action_save))
     }
 }
