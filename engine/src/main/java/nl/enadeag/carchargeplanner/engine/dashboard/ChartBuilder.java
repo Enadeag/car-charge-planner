@@ -35,8 +35,6 @@ final class ChartBuilder {
     private final double scaleKw;
 
     /**
-     * Makes the charts of one plan.
-     *
      * @param parts the plan's parts, never null: when it was made, which on today's chart is "now"; the home's time
      *     zone, in which the days start and the clock hours are told; all its days, whose highest solar power sets the
      *     shared scale; and the baseload
@@ -52,9 +50,6 @@ final class ChartBuilder {
     }
 
     /**
-     * A day's chart.
-     *
-     * @param day one of the plan's days, never null
      * @return the chart, showing the hours with sun and an hour on either side, within the day; 06:00 to 20:00 for a
      *     day without sun
      */

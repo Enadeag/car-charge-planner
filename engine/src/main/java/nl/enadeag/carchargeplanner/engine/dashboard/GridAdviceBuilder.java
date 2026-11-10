@@ -11,12 +11,6 @@ final class GridAdviceBuilder {
     private GridAdviceBuilder() {
     }
 
-    /**
-     * The grid advice of one plan.
-     *
-     * @param parts the plan's parts, never null
-     * @return the advice; empty when the plan gives none
-     */
     static Optional<GridAdviceView> advice(PlanParts parts) {
         var zone = parts.zone();
         var today = parts.madeAt().atZone(zone).toLocalDate();

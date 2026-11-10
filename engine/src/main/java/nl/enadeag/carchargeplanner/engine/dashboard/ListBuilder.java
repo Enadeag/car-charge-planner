@@ -3,7 +3,6 @@ package nl.enadeag.carchargeplanner.engine.dashboard;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Makes the dashboard's lists of the coming one-off away periods and the trips, from a plan's parts. */
 final class ListBuilder {
 
     private ListBuilder() {

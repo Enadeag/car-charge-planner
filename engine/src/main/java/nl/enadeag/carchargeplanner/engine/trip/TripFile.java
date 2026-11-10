@@ -141,7 +141,6 @@ public final class TripFile {
         }
     }
 
-    /** The JSON shape of the trips. */
     private static final class Format implements FileFormat<Entries> {
 
         @Override

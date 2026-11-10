@@ -18,7 +18,6 @@ final class ProviderHealth {
 
     private final Map<ProviderId, Boolean> answering = new ConcurrentHashMap<>();
 
-    /** Starts knowing nothing of any provider. */
     ProviderHealth() {
     }
 

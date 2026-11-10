@@ -35,9 +35,6 @@ public record Window(Instant start, Instant end, int amps, double powerKw, doubl
     }
 
     /**
-     * Whether the window is going on at a moment.
-     *
-     * @param moment the moment to test
      * @return true from the start up to, but not including, the end
      */
     boolean isRunningAt(Instant moment) {
@@ -48,7 +45,6 @@ public record Window(Instant start, Instant end, int amps, double powerKw, doubl
      * The same window with only the energy still to come after a moment: start, end and power stay.
      *
      * @param moment a moment inside the window
-     * @return the window with its solar and import energy cut to what is left
      */
     Window remainingAfter(Instant moment) {
         double share = Hours.between(moment, end) / Hours.between(start, end);

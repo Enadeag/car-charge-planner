@@ -26,12 +26,6 @@ final class GridPlacements {
     private final PlanningPreferences preferences;
     private final ZoneId zone;
 
-    /**
-     * Makes the placements for one home and one set of preferences.
-     *
-     * @param system the home and equipment, for the charger and the house's own use
-     * @param preferences the planning preferences, for the margin on the surplus and the charging hours
-     */
     GridPlacements(HomeSystem system, PlanningPreferences preferences) {
         this.system = system;
         this.preferences = preferences;
@@ -41,8 +35,6 @@ final class GridPlacements {
     /**
      * A quarter of an hour, counted from a local midnight in real time.
      *
-     * @param start the first moment of the quarter
-     * @param end the end of the quarter, 15 minutes after the start
      * @param usableKw the usable surplus in kW, 0 or more; 0 where the forecast does not reach
      * @param free whether the forecast covers it, the car is at home and nothing else is planned in it
      */
@@ -52,10 +44,8 @@ final class GridPlacements {
     /**
      * The quarters of an hour of whole days in real time, so a daylight saving day has 92 or 100 of them.
      *
-     * @param first the first local date
      * @param last the last local date, not before {@code first}
      * @param forecast the forecast, in any order
-     * @param unavailable the times in which nothing may be charged, such as away time and planned windows
      * @return the quarters in time order
      */
     List<QuarterHour> quarterHours(LocalDate first, LocalDate last, List<ForecastStep> forecast,
@@ -85,7 +75,6 @@ final class GridPlacements {
      * @param quarters the quarters to look in, in time order, without gaps
      * @param energyKwh the wall-side energy to deliver in kWh, more than 0
      * @param amps the current per phase in A
-     * @param notBefore the earliest start, such as now
      * @return the windows, in order of their start; none when no stretch is long enough
      */
     List<Window> placements(List<QuarterHour> quarters, double energyKwh, int amps, Instant notBefore) {

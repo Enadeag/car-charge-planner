@@ -10,7 +10,6 @@ import java.util.List;
  */
 final class NoFilePrivacy implements FilePrivacy {
 
-    /** Makes the one instance, {@link FilePrivacy#NONE}. */
     NoFilePrivacy() {
     }
 

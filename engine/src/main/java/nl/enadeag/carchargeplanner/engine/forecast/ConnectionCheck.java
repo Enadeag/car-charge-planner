@@ -53,9 +53,6 @@ public final class ConnectionCheck {
      * How many days, today onwards, the steps cover. A step counts on the day of its middle: Open-Meteo's first step is
      * the hour before midnight, which belongs to yesterday.
      *
-     * @param steps the forecast, possibly empty
-     * @param now the current moment; its date in {@code zone} is today
-     * @param zone the time zone of the home, in which the days are counted
      * @return the number of different dates, today or later, the steps' middles fall on
      */
     static int forecastDays(List<ForecastStep> steps, Instant now, ZoneId zone) {
@@ -68,13 +65,7 @@ public final class ConnectionCheck {
                 .count();
     }
 
-    /**
-     * What went wrong, in plain words for the owner.
-     *
-     * @param info the provider that failed, for its name
-     * @param error what it reported
-     * @return one or two sentences naming the provider and the problem
-     */
+    /** What went wrong, in plain words for the owner. */
     static String describe(ProviderInfo info, ProviderError error) {
         if (error instanceof ProviderError.RateLimited limited) {
             return limited.retryAfter()

@@ -56,11 +56,6 @@ public final class SecretsFile {
         return file.path();
     }
 
-    /**
-     * Whether there is a file.
-     *
-     * @return true when the file exists
-     */
     boolean exists() {
         return Files.exists(path());
     }
@@ -121,8 +116,6 @@ public final class SecretsFile {
     }
 
     /**
-     * Corrects a file that others can read, through the platform.
-     *
      * @return true when it had to be corrected; false when it was private, or the platform has nothing to correct
      * @throws SecretsProblem when the platform could not check or correct it
      */

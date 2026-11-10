@@ -28,16 +28,10 @@ final class DayBuilder {
     private final Percent assumed;
     /** The day the grid advice is about; null when the plan gives none. */
     private final LocalDate gridDay;
-    /** The days a trip the plan advises on leaves. */
     private final Set<LocalDate> departures;
     /** The trips made with this car, which keep it away on the days from their departure to their return. */
     private final List<Trip> trips;
 
-    /**
-     * Makes the days of one plan.
-     *
-     * @param parts the plan's parts; never null
-     */
     DayBuilder(PlanParts parts) {
         this.zone = parts.zone();
         this.today = parts.madeAt().atZone(zone).toLocalDate();
@@ -50,10 +44,6 @@ final class DayBuilder {
     }
 
     /**
-     * One day as the dashboard shows it.
-     *
-     * @param day one of the plan's days, never null
-     * @param chart the day's chart, never null
      * @return the day, named from today
      */
     DashboardDay day(DayPlan day, DayChart chart) {

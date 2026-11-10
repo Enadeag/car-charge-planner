@@ -29,11 +29,7 @@ final class Exchange {
     }
 
     /**
-     * Sends a request for a provider.
-     *
-     * @param http how to reach the network
      * @param request the request to send; its address may hold an API key
-     * @param service the service's name, for the message
      * @return the service's reply, whatever its status
      * @throws ProviderError.Unavailable when the service could not be reached, did not answer in time, gave an answer
      *     larger than the request allows, or the thread was interrupted; the message never holds the address
@@ -54,8 +50,6 @@ final class Exchange {
     }
 
     /**
-     * Parses an answer's body.
-     *
      * @param body the body, which may be anything
      * @return the parsed JSON, or a missing node when it is not JSON or has more than {@link #MAX_DOCUMENT_LENGTH}
      *     characters or {@link #MAX_TOKENS} tokens

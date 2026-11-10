@@ -46,20 +46,15 @@ public final class ApiKeys implements SecretsSource {
     private static final String CANNOT_BE_USED = "The system keychain cannot be used now, so the API keys were not "
             + "stored.";
 
-    /** What an attempt to store the keys in the keychain came to. */
     private enum SaveResult {
-        /** They are in the keychain. */
         IN_KEYCHAIN,
         /** The keychain is locked: nothing was written. */
         LOCKED,
-        /** There is no keychain that can be used: they are in the file. */
         IN_FILE
     }
 
-    /** How a save turns what is stored into what is to be stored. */
     private interface Edit {
 
-        /** The keys to store, from the ones stored now. */
         Secrets apply(Secrets stored);
 
         /** Whether what is stored now does not matter, so it need not be read. */
@@ -521,8 +516,6 @@ public final class ApiKeys implements SecretsSource {
     }
 
     /**
-     * What is stored, for a save that changes only some keys.
-     *
      * @param inKeychain what the keychain holds, as far as it could be read
      * @param secrets what the keychain holds that could be read, with the file's keys laid over it when they could be
      *     read
@@ -567,7 +560,6 @@ public final class ApiKeys implements SecretsSource {
         keptIn(KeyStorage.KEYCHAIN, "");
     }
 
-    /** Logs the entries a save kept unread, by name, when there are any. */
     private static void logKept(Map<ProviderId, Set<String>> keptUnread) {
         var names = KeychainEntries.names(keptUnread);
         if (names.isEmpty()) {

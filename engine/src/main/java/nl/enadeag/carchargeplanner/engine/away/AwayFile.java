@@ -30,7 +30,6 @@ import tools.jackson.databind.node.ObjectNode;
  */
 public final class AwayFile {
 
-    /** How long a period is kept after it ended. */
     static final Duration KEEP_AFTER_END = Duration.ofDays(1);
 
     /** The shape this app writes, and where the migrations from older shapes go: none yet, 1 is the first. */
@@ -114,7 +113,6 @@ public final class AwayFile {
         }
     }
 
-    /** The JSON shape of the periods. */
     private static final class Format implements FileFormat<Entries> {
 
         @Override

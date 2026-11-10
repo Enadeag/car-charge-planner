@@ -62,7 +62,6 @@ public final class AnnouncedWindows {
         }
     }
 
-    /** The JSON shape of the windows. */
     private static final class Format implements FileFormat<List<Window>> {
 
         @Override

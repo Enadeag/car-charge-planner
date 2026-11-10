@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
  */
 public final class CalendarLeftovers {
 
-    /** The consents file, in the data folder. */
     static final String CONSENT_FILE = "calendar-consents.json";
     /** The calendar's iCal address and the route service's API key, as they were kept. */
     static final Map<ProviderId, Set<String>> SECRETS = Map.of(

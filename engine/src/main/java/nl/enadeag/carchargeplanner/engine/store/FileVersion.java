@@ -16,7 +16,6 @@ import tools.jackson.databind.node.ObjectNode;
  */
 public record FileVersion(int current, List<UnaryOperator<ObjectNode>> migrations) {
 
-    /** The name of the version in the file's object. */
     static final String FIELD = "version";
 
     /**

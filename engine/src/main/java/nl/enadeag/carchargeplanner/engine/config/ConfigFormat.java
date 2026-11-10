@@ -56,7 +56,6 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
     private static final DateTimeFormatter TIME =
             DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
 
-    /** Makes the format; it keeps nothing. */
     ConfigFormat() {
     }
 

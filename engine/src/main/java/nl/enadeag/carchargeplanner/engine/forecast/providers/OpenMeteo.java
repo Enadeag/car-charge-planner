@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
  */
 public final class OpenMeteo implements ForecastProvider {
 
-    /** What Open-Meteo tells about itself. */
     static final ProviderInfo INFO = new ProviderInfo(
             new ProviderId("open-meteo"),
             "Open-Meteo",
@@ -80,25 +79,16 @@ public final class OpenMeteo implements ForecastProvider {
     }
 
     /**
-     * AC power of panels from the sunlight on them.
-     *
      * @param irradianceWm2 the sunlight on the panels' surface, in W/m², 0 or more
-     * @param kwp the panels' size in kWp
      * @param systemLosses the share lost in cables, inverter and dirt, from 0 up to 1
-     * @return the power in kW
      */
     static double powerKw(double irradianceWm2, double kwp, double systemLosses) {
         return kwp * (irradianceWm2 / 1000) * (1 - systemLosses);
     }
 
     /**
-     * The request for one panel array.
-     *
-     * @param system the place of the panels and its time zone
-     * @param array the panel array to ask for
      * @param settings the provider's settings: "base_url" (blank for the public service) and "api_key" (blank for
      *     none)
-     * @return the request's address
      * @throws ProviderError.MissingSetting when the server address is not one {@link ServerAddress#parse} accepts
      */
     static URI requestUri(SolarSite system, PanelArray array, Map<String, String> settings)
