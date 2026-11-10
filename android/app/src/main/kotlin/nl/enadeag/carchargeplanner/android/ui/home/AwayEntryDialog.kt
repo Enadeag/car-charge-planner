@@ -76,7 +76,7 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
     val saving by entry.saving.collectAsStateWithLifecycle()
     val asked by entry.discardAsked.collectAsStateWithLifecycle()
     val held by entry.busy.collectAsStateWithLifecycle()
-    val busy = saving == SaveState.Saving
+    val savingNow = saving == SaveState.Saving
     val words = dashboardWords(draft.zone)
     var picking by rememberSaveable { mutableStateOf<Picked?>(null) }
     var returnTo by rememberSaveable { mutableStateOf<Picked?>(null) }
@@ -100,18 +100,18 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
                 }
             }
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Kinds(draft.kind, choice, enabled = !busy) {
+                Kinds(draft.kind, choice, enabled = !savingNow) {
                     // the times' buttons may go with the choice, so the focus comes back to the choice
                     returnTo = null
                     entry.choose(it)
                 }
                 if (draft.kind == AwayEntry.Kind.PART_OF_DAY) {
-                    TimeButton(stringResource(R.string.one_off_from), words.time(draft.start), from, null, !busy) {
+                    TimeButton(stringResource(R.string.one_off_from), words.time(draft.start), from, null, !savingNow) {
                         returnTo = Picked.START
                         picking = Picked.START
                     }
                     TimeButton(stringResource(R.string.one_off_until), words.time(draft.end), until, problemText,
-                        !busy) {
+                        !savingNow) {
                         returnTo = Picked.END
                         picking = Picked.END
                     }
@@ -126,9 +126,9 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
                 SaveFailure(stringResource(R.string.one_off_not_saved), (saving as? SaveState.Failed)?.detail)
             }
         },
-        confirmButton = { SaveAction(busy, held) { entry.save() } },
+        confirmButton = { SaveAction(saving = savingNow, held = held) { entry.save() } },
         dismissButton = {
-            AppTextButton(onClick = { entry.cancel() }, enabled = !busy) {
+            AppTextButton(onClick = { entry.cancel() }, enabled = !savingNow) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
