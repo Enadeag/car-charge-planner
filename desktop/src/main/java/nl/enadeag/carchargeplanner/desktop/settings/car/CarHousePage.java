@@ -11,8 +11,8 @@ import java.util.Optional;
 import javafx.scene.layout.Region;
 
 /**
- * The car, and the house's own use of power, each with typical values on request. Distances and consumption show in
- * the units the App page chooses, also before they are saved.
+ * The car, and under "More settings" the house's own use, each with typical values on request. Distances and
+ * consumption show in the units the App page chooses, also before they are saved.
  */
 public final class CarHousePage implements ConfigPage {
 

@@ -107,7 +107,7 @@
   <string name="tilt_pitched">Pitched</string>
   <string name="tilt_steep">Steep</string>
   <string name="tilt_upright">Upright</string>
-  <!-- the row that folds an array's losses and name away -->
+  <!-- the row that folds seldom changed settings away: an array's losses and name, the house's use -->
   <string name="more_settings">More settings</string>
   <string name="panel_losses">System losses</string>
   <string name="panel_losses_hint">Percent, usually 10 to 15.</string>
@@ -136,11 +136,11 @@
   <string name="charger_efficiency">Charging efficiency</string>
   <string name="charger_efficiency_hint">Percent, usually about 90.</string>
 
-  <string name="setup_more_title">House and away periods</string>
-  <string name="setup_more_intro">Both are optional: they make the plan better, and you can also set them later in Settings. If you drive to work, add the periods the car is away.</string>
-  <string name="house_heading">House</string>
-  <string name="baseload">House baseload</string>
-  <string name="baseload_hint">kW without the car: a month\'s kWh divided by 730.</string>
+  <string name="setup_away_title">Away periods</string>
+  <string name="setup_away_intro">Optional: the periods the car is away make the plan better, and you can also set them later in Settings. If you drive to work, add them here.</string>
+  <!-- the house's own use, under More settings on the Car and house page -->
+  <string name="household_use">Household use</string>
+  <string name="household_use_hint">kWh per day, without charging the car. Your energy supplier shows your use per day.</string>
   <string name="away_heading">Weekly away periods</string>
   <string name="away_none">None: the car is treated as at home all week.</string>
   <string name="away_add">Add period</string>
@@ -540,8 +540,8 @@
   <!-- without a place name: %1$s the latitude and %2$s the longitude, written already; a language whose
        numbers have a decimal comma puts a semicolon between them -->
   <string name="settings_location_summary">%1$s, %2$s</string>
-  <!-- %1$s the usable battery in kWh and %2$s the house baseload in kW, both written already -->
-  <string name="settings_car_house_summary">Battery %1$s kWh, house %2$s kW</string>
+  <!-- %1$s the usable battery in kWh, written already -->
+  <string name="settings_car_house_summary">Battery %1$s kWh</string>
   <!-- %1$s the phases, such as "Three phases"; %2$d the minimum and %3$d the maximum charge current in A -->
   <string name="settings_charger_summary">%1$s, %2$d to %3$d A</string>
   <!-- %1$s the primary provider's name; %2$s the fallback provider's -->

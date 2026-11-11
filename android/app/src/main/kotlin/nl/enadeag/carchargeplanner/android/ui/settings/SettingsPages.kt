@@ -5,9 +5,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
@@ -31,6 +35,7 @@ import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
+import nl.enadeag.carchargeplanner.android.ui.components.Fold
 import nl.enadeag.carchargeplanner.android.ui.components.NumberField
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
@@ -42,7 +47,6 @@ import nl.enadeag.carchargeplanner.android.ui.setup.AwayPeriods
 import nl.enadeag.carchargeplanner.android.ui.setup.CarStep
 import nl.enadeag.carchargeplanner.android.ui.setup.ChargerStep
 import nl.enadeag.carchargeplanner.android.ui.setup.Edits
-import nl.enadeag.carchargeplanner.android.ui.setup.HouseFields
 import nl.enadeag.carchargeplanner.android.ui.setup.LocationFields
 import nl.enadeag.carchargeplanner.android.ui.setup.PanelArrayFields
 import nl.enadeag.carchargeplanner.android.ui.setup.UseTypical
@@ -65,7 +69,7 @@ internal fun summary(page: SettingsPage, config: EngineConfig, session: Settings
             ?: stringResource(R.string.settings_location_summary, numbers.write(system.location().latitude(), 4),
                 numbers.write(system.location().longitude(), 4))
         SettingsPage.CAR_AND_HOUSE -> stringResource(R.string.settings_car_house_summary,
-            numbers.write(system.car().usableBatteryKwh(), 1), numbers.write(system.house().baseloadKw(), 2))
+            numbers.write(system.car().usableBatteryKwh(), 1))
         SettingsPage.CHARGER -> stringResource(R.string.settings_charger_summary,
             stringResource(phasesName(system.charger().phases())), system.charger().minAmps(),
             system.charger().maxAmps())
@@ -168,16 +172,33 @@ internal fun LocationPage(session: SettingsSession, edits: Edits, problems: Prob
 }
 
 /**
- * The car with "I don't know", then the house's baseload with its own.
+ * The car with "I don't know", then the house's use with its own, folded under "More settings". The fold starts
+ * closed; a problem in the house's use opens it, and it stays open after the problem is put right, so the field being
+ * corrected does not fold away. The car's last field has the keyboard's Done while the fold is closed.
  *
  * @param problems the page's fields in order, for the focus after Save
  */
 @Composable
 internal fun CarAndHousePage(car: CarForm, house: HouseForm, edits: Edits, problems: ProblemFocus) {
+    val shown by house.problems.collectAsStateWithLifecycle()
+    val baseload = HouseForm.Field.BASELOAD
+    val problem = baseload in shown
+    var folded by rememberSaveable { mutableStateOf(true) }
+    LaunchedEffect(problem) {
+        if (problem) {
+            folded = false
+        }
+    }
+    val open = !folded || problem
     SectionHeading(stringResource(R.string.settings_car_heading))
-    CarStep(car, edits, problems, ImeAction.Next)
-    SectionHeading(stringResource(R.string.house_heading))
-    HouseFields(house, edits, problems, 10, ImeAction.Done)
+    CarStep(car, edits, problems, if (open) ImeAction.Next else ImeAction.Done)
+    Fold(stringResource(R.string.more_settings), open, { opened -> if (!problem) folded = !opened }) {
+        NumberField(stringResource(R.string.household_use), stringResource(R.string.household_use_hint),
+            edits.shown { house.text(baseload) }, { text -> edits.make { house.edit(baseload, text) } },
+            FieldKind.DECIMAL, shown[baseload], baseload in edits.shown { house.typical() },
+            rememberFieldFocus(problems, 10, problem), ImeAction.Done)
+        UseTypical { edits.make { house.useTypical() } }
+    }
 }
 
 /**

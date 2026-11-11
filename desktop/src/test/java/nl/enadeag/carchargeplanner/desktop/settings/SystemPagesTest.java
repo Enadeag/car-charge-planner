@@ -21,6 +21,7 @@ import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.PlaceName;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.House;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.PanelSize;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
@@ -715,10 +716,146 @@ class SystemPagesTest {
                 new TypicalValues(Set.of(ConfigSetting.HOUSE_BASELOAD), List.of())));
         Fx.run(() -> view.show(Category.CAR_HOUSE));
 
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_BASELOAD).getAccessibleHelp()))
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_HOUSEHOLD_USE).getAccessibleHelp()))
                 .contains(settings.messages.text(TextKey.TYPICAL_TAG));
         assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
                 .doesNotContain(settings.messages.text(TextKey.TYPICAL_TAG));
+    }
+
+    /** The example config with this house's use, nothing typical, written back before Settings opens. */
+    private SettingsView openWithHouse(Language language, double kw) throws Exception {
+        settings = new SettingsFixture(folder, language);
+        var file = new ConfigFile(settings.configPath, FILES);
+        var example = file.read();
+        file.write(example.withSystem(example.system().withHouseAndCar(new House(kw), example.system().car()),
+                TypicalValues.NONE));
+        var view = settings.open();
+        Fx.run(() -> view.show(Category.CAR_HOUSE));
+        return view;
+    }
+
+    /** The row of the fold on the Car and house page. */
+    private Button houseFoldRow(SettingsView view) {
+        var name = settings.messages.text(TextKey.MORE_SETTINGS);
+        return view.pages().stream().filter(page -> page.category() == Category.CAR_HOUSE)
+                .flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(node -> node instanceof Button button && button.getText().endsWith(" " + name))
+                .map(Button.class::cast).findFirst().orElseThrow();
+    }
+
+    private boolean houseUseShown(SettingsView view) {
+        return Scenes.reallyVisible(settings.control(view, TextKey.FIELD_HOUSEHOLD_USE));
+    }
+
+    private String houseUseText(SettingsView view) {
+        return ((TextField) settings.field(view, TextKey.FIELD_HOUSEHOLD_USE)).getText();
+    }
+
+    @Test
+    void theHouseholdUseIsFoldedAwayWithoutAHeadingAlsoWhenItIsNotTheTypicalOne() throws Exception {
+        var view = openWithHouse(Language.ENGLISH, 0.35);
+
+        assertThat(Fx.call(() -> houseFoldRow(view).getText())).isEqualTo("\u25B8 More settings");
+        assertThat(Fx.call(() -> houseUseShown(view))).isFalse();
+        assertThat(texts(view)).doesNotContain("House");
+        Fx.run(() -> houseFoldRow(view).fire());
+
+        assertThat(Fx.call(() -> houseUseShown(view))).isTrue();
+        assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("8.4");
+        assertThat(texts(view)).contains("Household use", "kWh per day");
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_HOUSEHOLD_USE).getAccessibleHelp()))
+                .contains("kWh per day, without charging the car. Your energy supplier shows your use per day.");
+        assertThat(Fx.call(view::isChanged)).isFalse();
+    }
+
+    @Test
+    void anUntouchedHouseholdUseIsSavedBackAsStoredNotRecomputedFromTheShownField() throws Exception {
+        var view = openWithHouse(Language.ENGLISH, 0.35);
+        Fx.run(() -> houseFoldRow(view).fire());
+        assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("8.4");
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "75");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().house()).isEqualTo(new House(0.35));
+        assertThat(stored().system().car().usableBatteryKwh()).isEqualTo(75);
+    }
+
+    @Test
+    void savingLoadsThePageAgainSoAnOpenHouseholdUseFoldClosesAfterwards() throws Exception {
+        var view = openWithHouse(Language.ENGLISH, 0.35);
+        Fx.run(() -> houseFoldRow(view).fire());
+        assertThat(Fx.call(() -> houseUseShown(view))).isTrue();
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "75");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().car().usableBatteryKwh()).isEqualTo(75);
+        assertThat(Fx.call(() -> houseUseShown(view))).isFalse();
+        assertThat(Fx.call(() -> houseFoldRow(view).getText())).isEqualTo("\u25B8 More settings");
+    }
+
+    @Test
+    void aTypedHouseholdUseIsSavedAsTheAverageInKwAndBroughtIntoZeroToFourHundredEighty() throws Exception {
+        var view = openWithHouse(Language.ENGLISH, 0.5);
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_HOUSEHOLD_USE, "6");
+            return SettingsFixture.save(view);
+        });
+        assertThat(stored().system().house()).isEqualTo(new House(0.25));
+        assertThat(stored().typical().system()).doesNotContain(ConfigSetting.HOUSE_BASELOAD);
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_HOUSEHOLD_USE, "480.1");
+            return SettingsFixture.save(view);
+        });
+        assertThat(stored().system().house()).isEqualTo(new House(20));
+        assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("480.0");
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_HOUSEHOLD_USE, "-0.1");
+            return SettingsFixture.save(view);
+        });
+        assertThat(stored().system().house()).isEqualTo(new House(0));
+    }
+
+    @Test
+    void inDutchTheHouseholdUseIsWrittenAndReadWithADecimalComma() throws Exception {
+        var view = openWithHouse(Language.DUTCH, 0.35);
+        assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("8,4");
+        Fx.run(() -> houseFoldRow(view).fire());
+        assertThat(texts(view)).contains("Verbruik van het huis", "kWh per dag");
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_HOUSEHOLD_USE, "7,2");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().house().baseloadKw()).isEqualTo(7.2 / 24);
+    }
+
+    @Test
+    void theTypicalHouseholdUseInsideTheFoldPutsTwelveKwhPerDayBackTagged() throws Exception {
+        var view = openWithHouse(Language.ENGLISH, 0.35);
+        Fx.run(() -> houseFoldRow(view).fire());
+        var typical = settings.messages.text(TextKey.IN_GROUP, settings.messages.text(TextKey.USE_TYPICAL),
+                "Household use");
+
+        Fx.call(() -> {
+            Scenes.all(houseFoldRow(view).getParent()).stream()
+                    .filter(node -> node instanceof Button button && typical.equals(button.getAccessibleText()))
+                    .map(Button.class::cast).findFirst().orElseThrow().fire();
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("12.0");
+        assertThat(stored().system().house()).isEqualTo(House.TYPICAL);
+        assertThat(stored().typical().system()).contains(ConfigSetting.HOUSE_BASELOAD);
     }
 
     @Test

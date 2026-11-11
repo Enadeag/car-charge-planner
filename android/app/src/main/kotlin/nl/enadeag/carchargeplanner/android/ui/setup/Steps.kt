@@ -21,7 +21,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.ChargerForm
-import nl.enadeag.carchargeplanner.android.form.HouseForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.form.PanelsForm
 import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
@@ -202,36 +201,15 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
 }
 
 /**
- * What makes the plan better and may be skipped: the house's baseload with "I don't know", and the weekly away
- * periods, which start empty.
+ * The weekly away periods, which start empty and may be skipped.
  *
  * @param problems the step's fields in order, for the focus after Next
  */
 @Composable
-internal fun MoreStep(house: HouseForm, away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {
-    Text(stringResource(R.string.setup_more_intro))
-    val periods by away.rowIds.collectAsStateWithLifecycle()
-    SectionHeading(stringResource(R.string.house_heading))
-    HouseFields(house, edits, problems, 0, if (periods.isEmpty()) ImeAction.Done else ImeAction.Next)
+internal fun AwayStep(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus) {
+    Text(stringResource(R.string.setup_away_intro))
     SectionHeading(stringResource(R.string.away_heading))
     AwayPeriods(away, edits, problems)
-}
-
-/**
- * The house's baseload with "I don't know".
- *
- * @param problems the page's fields in order, for the focus after Next or Save
- * @param imeAction the keyboard's action key: Done when it is the page's last field
- */
-@Composable
-internal fun HouseFields(house: HouseForm, edits: Edits, problems: ProblemFocus, order: Int, imeAction: ImeAction) {
-    val houseProblems by house.problems.collectAsStateWithLifecycle()
-    val baseload = HouseForm.Field.BASELOAD
-    NumberField(stringResource(R.string.baseload), stringResource(R.string.baseload_hint),
-        edits.shown { house.text(baseload) }, { text -> edits.make { house.edit(baseload, text) } },
-        FieldKind.DECIMAL, houseProblems[baseload], baseload in edits.shown { house.typical() },
-        rememberFieldFocus(problems, order, baseload in houseProblems), imeAction)
-    UseTypical { edits.make { house.useTypical() } }
 }
 
 /**

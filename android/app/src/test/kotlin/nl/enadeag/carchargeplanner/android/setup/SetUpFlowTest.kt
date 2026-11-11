@@ -10,7 +10,6 @@ import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
 import nl.enadeag.carchargeplanner.android.form.fillIn
-import nl.enadeag.carchargeplanner.android.form.HouseForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.form.PanelsForm
@@ -20,6 +19,7 @@ import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.House
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
@@ -61,7 +61,31 @@ class SetUpFlowTest {
         assertThat(flow.car.typical()).hasSize(3)
         assertThat(flow.charger.typical()).hasSize(5)
         assertThat(flow.panels.typical(flow.panels.rowIds.value.single())).containsExactly(PanelsForm.Field.LOSSES)
-        assertThat(flow.house.typical()).hasSize(1)
+    }
+
+    @Test
+    fun setUpPlansWithTheTypicalHouseUseMarkedAsTypical() {
+        val config = flow.config()
+
+        assertThat(config.system().house()).isEqualTo(House.TYPICAL)
+        assertThat(config.typical().system()).contains(ConfigSetting.HOUSE_BASELOAD)
+    }
+
+    @Test
+    fun aSetUpComingBackWithAHouseUseTypedInItDropsIt() {
+        throughTheLocation()
+        handle["house.text.BASELOAD"] = "0.8"
+        handle["house.filled"] = true
+        handle["house.edited"] = arrayListOf("BASELOAD")
+        handle["house.typical"] = arrayListOf<String>()
+
+        val restored = handle.afterTheSystemEndedTheApp()
+        val again = SetUpFlow(restored, numbers, draft, { Year.of(2026) }) { amsterdam }
+
+        assertThat(again.step.value).isEqualTo(SetUpStep.PANELS)
+        assertThat(again.config().system().house()).isEqualTo(House.TYPICAL)
+        assertThat(again.config().typical().system()).contains(ConfigSetting.HOUSE_BASELOAD)
+        assertThat(restored.keys()).noneMatch { it.startsWith("house.") }
     }
 
     @Test
@@ -151,34 +175,22 @@ class SetUpFlowTest {
         assertThat(access.written).isEmpty()
     }
 
-    /** Goes from the welcome to the step with more, every value before it accepted. */
-    private fun toTheStepWithMore() {
+    /** Goes from the welcome to the step with the away periods, every value before it accepted. */
+    private fun toTheAwayStep() {
         throughTheLocation()
         repeat(3) { flow.next() }
-        assertThat(flow.step.value).isEqualTo(SetUpStep.MORE)
+        assertThat(flow.step.value).isEqualTo(SetUpStep.AWAY)
     }
 
     @Test
-    fun aRefusedValueInTheFirstFormOfAStepKeepsTheStepWhenTheSecondIsAccepted() {
-        toTheStepWithMore()
-        flow.house.edit(HouseForm.Field.BASELOAD, "x")
-
-        assertThat(flow.next()).isFalse()
-
-        assertThat(flow.step.value).isEqualTo(SetUpStep.MORE)
-    }
-
-    @Test
-    fun aRefusedValueInTheSecondFormOfAStepKeepsTheStepAndEachFormShowsItsProblems() {
-        toTheStepWithMore()
-        flow.house.edit(HouseForm.Field.BASELOAD, "x")
+    fun aRefusedAwayPeriodKeepsTheStepAndShowsItsProblem() {
+        toTheAwayStep()
         val row = flow.away.add()
         flow.away.edit(row, WeeklyAwayForm.Field.END, "07:00")
 
         assertThat(flow.next()).isFalse()
 
-        assertThat(flow.step.value).isEqualTo(SetUpStep.MORE)
-        assertThat(flow.house.problems.value).containsOnlyKeys(HouseForm.Field.BASELOAD)
+        assertThat(flow.step.value).isEqualTo(SetUpStep.AWAY)
         assertThat(flow.away.problems(row).value).containsExactlyEntriesOf(mapOf(
             WeeklyAwayForm.Field.END to FieldProblem.Refused(InvalidSetting.Rule.NOT_AFTER_START)))
     }

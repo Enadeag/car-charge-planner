@@ -500,7 +500,7 @@ class SettingsSessionTest {
                 }
                 SettingsPage.CAR_AND_HOUSE -> {
                     forms.car.edit(CarForm.Field.BATTERY, "75")
-                    forms.house.edit(HouseForm.Field.BASELOAD, "0.5")
+                    forms.house.edit(HouseForm.Field.BASELOAD, "12")
                 }
                 SettingsPage.CHARGER -> forms.charger.edit(ChargerForm.Field.MAX_CURRENT, "20")
                 SettingsPage.FORECAST -> {

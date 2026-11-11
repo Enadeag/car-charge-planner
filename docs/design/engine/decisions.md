@@ -32,6 +32,13 @@ Decisions about the engine that both apps share, the desktop app and the Android
 - The amps and the fields in minutes refuse a number with decimals, even `,0`, with "Type a whole number, without decimals."; nothing is rounded, and those fields get a keypad without a decimal mark (`NumberText.readWhole`) (#313).
 - Each save's outcome is kept in the app's scope until a screen has shown it, oldest first (`Saves.lastOutcome`, `Saves.shown`), so a later success never takes a failure's place. Only an unshown outcome that equals a later one is replaced by it (#313).
 
+### The house's use
+
+- The settings file keeps the baseload as `baseloadKw`, the average over the whole day; `House.TYPICAL` stays 0.5 kW. The planner and the dashboard's chart use the kW, and the chart's legend stays "House" (#450).
+- Both apps show it as "Household use" in kWh per day: the stored kW times 24, with one decimal (12.0 for the typical value). A field the owner did not change, or changed back to the text it showed, gives the stored kW back exactly, so a save never drifts; a typed value is divided by 24 (#450).
+- The desktop's field keeps 0 to 480 kWh per day (20 kW), bringing a value outside it into the range as its other number fields do. Android refuses only what the engine refuses, a negative use, with the out-of-range text, and keeps a stored use over 20 kW as it was read; the bound both apps share is the open #317's (#450).
+- Neither app's set-up asks for it: set-up saves the typical value, marked as typical. In Settings the field and its "I don't know" sit under the "More settings" fold of the Car and house page, closed when the page loads; on Android a problem in the field opens the fold and holds it open until the next check finds none; the desktop's field keeps every value in its range, so it has no problem to show and its fold never opens by itself. On the desktop the unit "kWh per day" is a text of its own (`UNIT_KWH_PER_DAY`) (#450).
+
 ### Rounds and the stored forecast
 
 - `Engine.round(ForecastUse)` is one planning round in public. The desktop's schedule calls it every minute with `ASK_PROVIDERS`. `STORED_ONLY`, used only by the Android app's background work, never asks a provider, reads no API key, and plans from the stored forecast while that is still useful. The whole decision: [android/notifications.md](../android/notifications.md) (#359).

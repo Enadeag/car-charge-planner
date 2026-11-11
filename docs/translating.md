@@ -18,7 +18,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Charge power | laadvermogen |  | Charge speed, charge rate |
 | Surplus | overschot |  | Excess, spare solar |
 | Solar share | zonnestroom | as in "92% zonnestroom" | Sun share, sun (for solar power) |
-| Baseload | basisverbruik |  | House use, standby use |
+| Baseload | verbruik van het huis | shown as "Household use" ("Verbruik van het huis"), asked in kWh per day ("kWh per dag"), in both apps; "basisverbruik" is not shown | House use, standby use |
 | Weekly away period | wekelijkse afwezigheid |  | Recurring away time, absence, trip |
 | One-off away period | afwezig |  | Away day, absence, trip |
 | Trip | rit |  | Journey, ride, away period (which has no distance) |
@@ -52,7 +52,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Tilt | helling | a panel array's drop-down: Flat, Pitched, Steep, Upright (Plat, Schuin, Steil, Rechtop) |  |
 | Together about 3.6 kWp | Samen ongeveer 3,6 kWp | below a panel array's fields: the size its panels give |  |
 | Now set: 4.2 kWp. Enter the number of panels to replace this. | Nu ingesteld: 4,2 kWp. Vul het aantal panelen in om dit te vervangen. | above the fields of an array entered before as a size in kWp |  |
-| More settings | Meer instellingen | the row that folds the seldom changed settings away, such as a panel array's losses and name |  |
+| More settings | Meer instellingen | the row that folds the seldom changed settings away, such as a panel array's losses and name, and the household use on the Car and house page |  |
 | Choose… | Kies… | what a drop-down shows before a choice |  |
 | Typical value | gangbare waarde |  | Default, assumed value, guess |
 | Planning preferences | planning |  | Planning settings, options |

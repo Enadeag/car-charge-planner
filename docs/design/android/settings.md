@@ -27,6 +27,13 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - The page is set-up's Location step, with the stored place name at the top (#449). A save of another page, or of this one with the coordinates left as they show, keeps the name.
 - The list's line under Location is the place name; without one the coordinates with four decimals; the time zone is not on it (#449). In Dutch a semicolon stands between the coordinates ("52,0907; 5,1214"), as a Dutch number has a decimal comma.
 
+### Car and house
+
+- The page keeps its title "Car and house". After the car, with its own "I don't know", the household use and its "I don't know" sit under the shared fold row "More settings", without a "House" heading. The fold is closed each time the page opens, also when the value is not the typical one; a problem in the field opens it, and it stays open also after the problem is put right, while a press on its row does nothing meanwhile, as the Location page's fold (#449, #450). Its state survives turning the phone (`rememberSaveable`).
+- The car's trip surcharge has the keyboard's Done while the fold is closed, the household use while it is open (#450).
+- The field and the conversion are in [engine/decisions.md](../engine/decisions.md#the-houses-use) (#450).
+- The list's line under Car and house is the battery only, such as "Battery 60.0 kWh" (#450).
+
 ### Panel arrays
 
 - Each array has set-up's fields, in its order, with "More settings" folded; "Add an array" adds an empty one. An array stored by its kWp says "Now set: 4.2 kWp. Enter the number of panels to replace this." and keeps that kWp while the count, the year and the power are empty; a stored tilt or direction shows the nearest choice and is stored as it was until chosen, so showing it is no edit. The list's summary stays "1 array, 3.6 kWp", from the computed kWp (#448).

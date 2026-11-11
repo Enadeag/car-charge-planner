@@ -12,8 +12,8 @@ enum SetUpStep {
     CAR(TextKey.SET_UP_CAR),
     CHARGER(TextKey.CATEGORY_CHARGER),
     FORECAST(TextKey.CATEGORY_FORECAST),
-    /** What makes the plan better and may be skipped: the house's own use and the weekly away periods. */
-    MORE(TextKey.SET_UP_MORE),
+    /** The weekly away periods, which may be skipped; set-up keeps the typical house's use, asking for none. */
+    AWAY(TextKey.SET_UP_AWAY),
     /** One forecast from the primary provider for the place entered; a failure does not stop set-up. */
     CHECK(TextKey.SET_UP_CHECK),
     /** The owner's dashboard with their own plan, before Finish saves it; always the last. */

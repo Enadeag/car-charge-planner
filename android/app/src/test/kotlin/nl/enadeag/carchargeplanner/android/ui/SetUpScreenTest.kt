@@ -182,7 +182,7 @@ class SetUpScreenTest {
     private fun walkEveryStep() {
         val englishOnly = englishOnlyTexts()
         val titles = listOf(R.string.setup_welcome_title, R.string.setup_location_title, R.string.setup_panels_title,
-            R.string.setup_car_title, R.string.setup_charger_title, R.string.setup_more_title,
+            R.string.setup_car_title, R.string.setup_charger_title, R.string.setup_away_title,
             R.string.setup_check_title)
         titles.forEachIndexed { index, title ->
             heading(index + 1, title).assertExists()
@@ -221,7 +221,7 @@ class SetUpScreenTest {
     fun everyStepScrollsAndItsControlsAreNamedAndLargeEnoughAtTwiceTheFontSize() {
         val session = show(fontScaleTwo = true)
         for (step in SetUpStep.entries) {
-            if (step == SetUpStep.MORE) {
+            if (step == SetUpStep.AWAY) {
                 click(R.string.away_add)
             }
             compose.waitForIdle()
@@ -534,7 +534,7 @@ class SetUpScreenTest {
     @Test
     fun eachAwayPeriodNamesItsControlsAndAProblemOfTheSecondTakesTheFocusByItsName() {
         val session = show()
-        toTheMoreStep(session)
+        toTheAwayStep(session)
         click(R.string.away_add)
         click(R.string.away_add)
 
@@ -553,7 +553,7 @@ class SetUpScreenTest {
     @Test
     fun withTwoProblemsTheFocusGoesToTheUpperOne() {
         val session = show()
-        toTheMoreStep(session)
+        toTheAwayStep(session)
         click(R.string.away_add)
         click(R.string.away_add)
         awayField(R.string.away_until, 2).performTextReplacement("07:00")
@@ -914,7 +914,7 @@ class SetUpScreenTest {
     @Test
     fun aChoiceIsAGroupOfRadioButtonsThatShowWhichIsChosen() {
         val session = show()
-        toTheMoreStep(session)
+        toTheAwayStep(session)
         click(R.string.away_add)
         val monday = compose.onNodeWithText(DayOfWeek.MONDAY.getDisplayName(TextStyle.FULL, Locale.ENGLISH))
         val friday = compose.onNodeWithText(DayOfWeek.FRIDAY.getDisplayName(TextStyle.FULL, Locale.ENGLISH))
@@ -944,9 +944,32 @@ class SetUpScreenTest {
     }
 
     @Test
+    fun theAwayStepAsksOnlyForTheAwayPeriodsAndNoStepAsksForTheHousesUse() {
+        val session = show()
+        for (step in SetUpStep.entries) {
+            compose.onNodeWithText(text(R.string.household_use)).assertDoesNotExist()
+            if (step == SetUpStep.LOCATION) {
+                session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+            }
+            if (step == SetUpStep.PANELS) {
+                session.flow.panels.fillIn()
+            }
+            if (step == SetUpStep.AWAY) {
+                heading(step.number(), R.string.setup_away_title).assertExists()
+                compose.onNodeWithText(text(R.string.setup_away_intro)).assertExists()
+            }
+            if (step != SetUpStep.CHECK) {
+                session.next()
+                compose.waitForIdle()
+            }
+        }
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.CHECK)
+    }
+
+    @Test
     fun aStepsControlsAreNamedAndLargeEnoughAtTheNormalFontSize() {
         val session = show()
-        toTheMoreStep(session)
+        toTheAwayStep(session)
         click(R.string.away_add)
         compose.waitForIdle()
 
@@ -961,12 +984,14 @@ class SetUpScreenTest {
         compose.assertOnlyTheLastFieldIsDone()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
-        repeat(4) {
+        repeat(3) {
             session.next()
             compose.waitForIdle()
             compose.assertOnlyTheLastFieldIsDone()
         }
-        assertThat(session.flow.step.value).isEqualTo(SetUpStep.MORE)
+        session.next()
+        compose.waitForIdle()
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.AWAY)
 
         repeat(2) { click(R.string.away_add) }
         compose.waitForIdle()
@@ -974,8 +999,8 @@ class SetUpScreenTest {
         compose.assertOnlyTheLastFieldIsDone()
     }
 
-    /** Goes from the welcome to the step with the house and the away periods, Utrecht chosen. */
-    private fun toTheMoreStep(session: SetUpSession) {
+    /** Goes from the welcome to the step with the away periods, Utrecht chosen. */
+    private fun toTheAwayStep(session: SetUpSession) {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
