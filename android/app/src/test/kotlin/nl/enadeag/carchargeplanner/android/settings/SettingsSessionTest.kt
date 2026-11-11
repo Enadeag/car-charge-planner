@@ -455,7 +455,9 @@ class SettingsSessionTest {
         session.forms.car.edit(CarForm.Field.BATTERY, "75")
 
         val lisbon = Coordinates(38.72, -9.14)
-        saves.update(KeyChanges.NONE) { it.withSystem(it.system().withUnnamedLocation(lisbon, amsterdam), it.typical()) }
+        saves.update(KeyChanges.NONE) {
+            it.withSystem(it.system().withUnnamedLocation(lisbon, amsterdam), it.typical())
+        }
         runCurrent()
 
         assertThat(session.config.value.system().location()).isEqualTo(lisbon)

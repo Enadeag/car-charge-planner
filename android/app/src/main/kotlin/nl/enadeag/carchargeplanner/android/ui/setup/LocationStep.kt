@@ -60,15 +60,8 @@ internal fun LocationStep(session: SetUpSession, edits: Edits, problems: Problem
 }
 
 /**
- * The location page, the same in set-up and Settings: at the top the place chosen, or that none is yet, which takes
- * the focus after each choice; the place search, its button or the keyboard's search key, and its results; and the
- * latitude, the longitude and the time zone under the fold "Coordinates and time zone". The fold is closed with a
- * place and open without one; a new choice closes it, and a problem in a coordinate opens it and keeps it open until
- * the problem is gone. Its state survives turning the phone. Without a place search only the coordinates and the time
- * zone show, unfolded, under a line that the provider has none.
- *
- * @param hasSearch whether that provider has a place search
- * @param problems the page's fields in order, for the focus after Next or Save
+ * The location page, the same in set-up and Settings. A problem in a coordinate opens the fold, which stays open also
+ * after the problem is put right, so the field being corrected does not fold away.
  */
 @Composable
 internal fun LocationFields(location: LocationForm, places: PlaceSearch, provider: String, hasSearch: Boolean,
@@ -122,7 +115,6 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
     }
 }
 
-/** The latitude and the longitude as typed, and the time zone with the way to choose another. */
 @Composable
 private fun CoordinateFields(location: LocationForm, edits: Edits, problems: ProblemFocus,
     shown: Map<LocationForm.Field, FieldProblem>, onType: (LocationForm.Field, String) -> Unit) {

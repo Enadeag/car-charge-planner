@@ -25,8 +25,8 @@ import nl.enadeag.carchargeplanner.android.R
 
 /**
  * Settings that are seldom changed, folded under a row with an arrow, such as the panels' "▸ More settings" and the
- * location page's "Coordinates and time zone". The row is one button, at least 48 dp high, whose arrow points to the end while folded and down while open; a screen reader reads
- * its label and "Collapsed" or "Expanded".
+ * location page's "Coordinates and time zone". The row is one button, at least 48 dp high, whose arrow points to the
+ * end while folded and down while open; a screen reader reads its label and "Collapsed" or "Expanded".
  *
  * @param open whether the content shows, kept by the caller so it survives as the caller wants
  * @param onToggle called with the new state when the row is pressed

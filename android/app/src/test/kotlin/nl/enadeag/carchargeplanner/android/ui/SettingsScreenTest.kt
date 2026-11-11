@@ -1233,8 +1233,8 @@ class SettingsScreenTest {
     }
 
     /**
-     * Checks that every row's values, with Location's at their longest (a long place name), show whole at twice the font size: on every line they need, none cut short, within their
-     * row.
+     * Checks that every row's values, with Location's at their longest (a long place name), show whole at twice the
+     * font size: on every line they need, none cut short, within their row.
      *
      * @return the number of lines Location's values take
      */

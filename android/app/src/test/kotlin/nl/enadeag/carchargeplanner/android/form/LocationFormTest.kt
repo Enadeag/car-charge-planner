@@ -10,6 +10,8 @@ import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 class LocationFormTest {
 
@@ -280,6 +282,34 @@ class LocationFormTest {
         form.choose(lisbon, LISBON)
 
         form.load(DRAFT)
+
+        assertThat(form.placeName()).isNull()
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "location.placeLatitude, not a number",
+        "location.placeLongitude, ''",
+        "location.placeName, '   '",
+    )
+    fun aRestoredValueThatNoLongerFitsCountsAsNoPlaceChosen(key: String, value: String) {
+        val handle = SavedStateHandle()
+        val form = LocationForm(handle, numbers, placeRequired = false, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.choose(lisbon, LISBON)
+        handle[key] = value
+
+        assertThat(form.placeName()).isNull()
+        assertThat(form.check(DRAFT)!!.system().place()).isEmpty()
+    }
+
+    @Test
+    fun aRestoredNameOverAHundredCharactersCountsAsNoPlaceChosen() {
+        val handle = SavedStateHandle()
+        val form = LocationForm(handle, numbers, placeRequired = false, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.choose(lisbon, LISBON)
+        handle["location.placeName"] = "L".repeat(101)
 
         assertThat(form.placeName()).isNull()
     }

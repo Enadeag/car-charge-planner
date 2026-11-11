@@ -81,13 +81,17 @@ class LocationForm(private val handle: SavedStateHandle, numbers: NumberText, pr
      * The name of the place chosen, while the fields show its coordinates.
      *
      * @return the name; null when no place was chosen or stored, or a coordinate typed since differs from the
-     *     place's at four decimals, or is no number
+     *     place's at four decimals, or is no number, or a restored value is no longer a valid name or number
      */
     fun placeName(): PlaceName? {
-        val name = handle.get<String>(PLACE_NAME) ?: return null
-        val latitude = handle.get<String>(PLACE_LATITUDE)?.toDouble() ?: return null
-        val longitude = handle.get<String>(PLACE_LONGITUDE)?.toDouble() ?: return null
-        return if (shows(Field.LATITUDE, latitude) && shows(Field.LONGITUDE, longitude)) PlaceName(name) else null
+        val latitude = handle.get<String>(PLACE_LATITUDE)?.toDoubleOrNull() ?: return null
+        val longitude = handle.get<String>(PLACE_LONGITUDE)?.toDoubleOrNull() ?: return null
+        val name = try {
+            PlaceName(handle.get<String>(PLACE_NAME) ?: return null)
+        } catch (_: IllegalArgumentException) {
+            return null
+        }
+        return if (shows(Field.LATITUDE, latitude) && shows(Field.LONGITUDE, longitude)) name else null
     }
 
     /**
