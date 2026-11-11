@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import org.junit.jupiter.api.AfterEach;
@@ -77,6 +78,13 @@ class SetUpViewTest {
         }
     }
 
+    /** What a drop-down shows; its skin writes the prompt into its cell when it is laid out. */
+    private List<String> shown(SetUpView view, TextKey choice) {
+        var box = (ComboBox<?>) setUp.field(view, choice);
+        box.layout();
+        return Scenes.visibleTexts(box);
+    }
+
     /** From the welcome to the panels step, with the place found and chosen and the panels filled in. */
     private SetUpView atSolar() throws Exception {
         var view = setUp.open();
@@ -101,6 +109,8 @@ class SetUpViewTest {
         next(view, 1);
         next(view, 1);
         assertThat(Fx.call(view::step)).as("the panels step starts empty").isEqualTo(SetUpStep.SOLAR);
+        assertThat(Fx.call(() -> List.of(shown(view, TextKey.FIELD_PANEL_DIRECTION),
+                shown(view, TextKey.FIELD_PANEL_TILT)))).containsOnly(List.of(setUp.messages.text(TextKey.CHOOSE)));
         assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_PANEL_COUNT).getAccessibleHelp()))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_PANEL_COUNT));
         Fx.run(() -> {

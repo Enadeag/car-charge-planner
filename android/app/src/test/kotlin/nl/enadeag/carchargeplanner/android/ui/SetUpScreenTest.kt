@@ -252,6 +252,11 @@ class SetUpScreenTest {
         assertThat(session.flow.step.value).isEqualTo(SetUpStep.PANELS)
         field(R.string.panel_count).assertIsFocused()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_panel_count)))
+        listOf(R.string.panel_direction, R.string.panel_tilt).forEach { label ->
+            compose.onNode(hasText(text(label), substring = true)
+                and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.DropdownList))
+                .assert(hasText(text(R.string.choose), substring = true))
+        }
 
         fillPanels()
 

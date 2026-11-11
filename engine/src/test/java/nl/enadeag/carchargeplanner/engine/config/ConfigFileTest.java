@@ -78,6 +78,8 @@ class ConfigFileTest {
         "\"yearPlaced\": 2013,  | \"yearPlaced\": 1989,  | yearPlaced must be 1990 or later",
         "\"yearPlaced\": 2013,  | \"yearPlaced\": 2013.5, | system.panels[0].yearPlaced: must be a whole number",
         "\"yearPlaced\": 2013,  | \"yearPlaced\": 2000000000, | yearPlaced must be a year",
+        "\"yearPlaced\": 2013,  | \"yearPlaced\": 1000000000, | yearPlaced must be a year",
+        "\"yearPlaced\": 2013,  | \"yearPlaced\": -999999999, | yearPlaced must be 1990 or later",
         "\"wpPerPanel\": 250, \"yearPlaced\": 2013, | '' | yearPlaced is needed when wpPerPanel is not given",
         "\"phases\": 1,         | \"phases\": 1, \"phasse\": 3, | phasse",
         "\"phases\": 1,         | \"phases\": 2,         | phases must be 1 or 3",
@@ -211,6 +213,17 @@ class ConfigFileTest {
         assertThat(List.copyOf(array.propertyNames()))
                 .containsExactly("name", "count", "yearPlaced", "tiltDeg", "azimuthDeg", "systemLosses");
         assertThat(copy.read()).isEqualTo(config);
+    }
+
+    /** A file is read without a clock, so only a year that cannot be one is refused there. */
+    @Test
+    void theLastYearThereIsIsReadFromAFile() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace(COUNTED, "\"count\": 20, \"yearPlaced\": 999999999,"));
+
+        var config = new ConfigFile(file, FILES).read();
+
+        assertThat(config.system().panels().get(0).size())
+                .isEqualTo(new PanelSize.Panels(20, OptionalInt.empty(), Optional.of(Year.of(999999999))));
     }
 
     @Test

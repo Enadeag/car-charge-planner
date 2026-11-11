@@ -53,6 +53,8 @@ import javafx.scene.control.TextField;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** The system's categories: panel arrays, location, car and house, charger, and their typical values. */
 @FxTest
@@ -111,6 +113,13 @@ class SystemPagesTest {
                 .map(node -> (ComboBox<T>) node).toList();
     }
 
+    /** What a drop-down shows; its skin writes the prompt into its cell when it is laid out. */
+    private static List<String> shown(ComboBox<?> box) {
+        box.applyCss();
+        box.layout();
+        return Scenes.visibleTexts(box);
+    }
+
     private List<String> texts(SettingsView view) throws Exception {
         return Fx.call(() -> view.pages().stream().flatMap(page -> Scenes.visibleTexts(page.view()).stream())
                 .toList());
@@ -126,6 +135,9 @@ class SystemPagesTest {
         });
         assertThat(refused).as("a new array needs its panels").isTrue();
         assertThat(Fx.call(() -> choices(view, TextKey.FIELD_PANEL_DIRECTION).get(1).getValue())).isNull();
+        assertThat(Fx.call(() -> List.of(shown(choices(view, TextKey.FIELD_PANEL_DIRECTION).get(1)),
+                shown(choices(view, TextKey.FIELD_PANEL_TILT).get(1)))))
+                .containsOnly(List.of(settings.messages.text(TextKey.CHOOSE)));
         Fx.call(() -> {
             fields(view, TextKey.FIELD_PANEL_COUNT).get(1).setText("8");
             this.<CompassPoint>choices(view, TextKey.FIELD_PANEL_DIRECTION).get(1).setValue(CompassPoint.EAST);
@@ -169,6 +181,34 @@ class SystemPagesTest {
         });
         assertThat(stored().system().panels()).containsExactly(new PanelArray("Shed roof",
                 new PanelSize.Panels(10, OptionalInt.empty(), Optional.of(Year.of(2021))), 50, -100, 0.1));
+    }
+
+    @Test
+    void northChosenIsStoredAs180() throws Exception {
+        var view = open();
+
+        Fx.call(() -> {
+            this.<CompassPoint>choices(view, TextKey.FIELD_PANEL_DIRECTION).get(0).setValue(CompassPoint.NORTH);
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().panels().getFirst().azimuthDeg()).isEqualTo(180);
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = {-180, 180})
+    void aStoredNorthShowsAsNorthAndIsWrittenBackAsItWas(double azimuthDeg) throws Exception {
+        var view = openWith(config -> config.withSystem(config.system().withPanels(List.of(
+                new PanelArray("Shed", 4.2, 35, azimuthDeg, 0.14))), TypicalValues.NONE));
+        assertThat(Fx.call(() -> choices(view, TextKey.FIELD_PANEL_DIRECTION).get(0).getValue()))
+                .isEqualTo(CompassPoint.NORTH);
+
+        Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_NAME).get(0).setText("Shed roof");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().panels().getFirst().azimuthDeg()).isEqualTo(azimuthDeg);
     }
 
     @Test

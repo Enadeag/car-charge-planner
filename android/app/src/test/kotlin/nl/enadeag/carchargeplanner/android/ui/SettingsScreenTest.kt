@@ -579,6 +579,11 @@ class SettingsScreenTest {
         click(R.string.panel_add)
         compose.onNode(isHeading() and hasText(text(R.string.panel_array, 2))).assertExists()
         field(text(R.string.panel_in_array, text(R.string.panel_count), 2)).assertExists()
+        listOf(R.string.panel_direction, R.string.panel_tilt).forEach { label ->
+            compose.onNode(hasText(text(R.string.panel_in_array, text(label), 2), substring = true)
+                and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.DropdownList))
+                .assert(hasText(text(R.string.choose), substring = true))
+        }
         click(R.string.panel_remove, 1)
         compose.waitForIdle()
 
