@@ -10,7 +10,7 @@ import java.util.Optional;
  *
  * @param trip the trip
  * @param neededPct the battery level to charge to by the departure, at most 100: the minimum charge level, the trip's
- *     energy with the trip surcharge, the other driving of the days from the departure to the return, and what the
+ *     energy with the trip surcharge, the daily distance of the days from the departure to the return, and what the
  *     trips after it need that the time between them cannot charge
  * @param solarWindows the charge windows on solar power from now or the return of the trip before, up to the departure,
  *     in time order; possibly none
@@ -20,7 +20,7 @@ import java.util.Optional;
  * @param departureLevelPct the battery level at the departure with the grid charge
  * @param kmShort how many km of the trip the battery cannot hold at the departure, more than 0 when even a full battery
  *     is not enough or there is too little time to charge; 0 when the car can make it
- * @param returnLevelPct the battery level left on return, before the other driving of the days the trip lasts; 0 when
+ * @param returnLevelPct the battery level left on return, before the daily distance of the days the trip lasts; 0 when
  *     the car is short
  */
 public record TripAdvice(
