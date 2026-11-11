@@ -47,8 +47,8 @@ class HouseFormTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["0", "480"])
-    fun theEndsOfTheRangeAreAccepted(typed: String) {
+    @ValueSource(strings = ["0", "480", "480.1", "600"])
+    fun anyUseThatIsNotNegativeIsAcceptedAndStoredAsKw(typed: String) {
         form.load(DRAFT)
         form.edit(HouseForm.Field.BASELOAD, typed)
 
@@ -56,15 +56,24 @@ class HouseFormTest {
         assertThat(form.problems.value).isEmpty()
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = ["-0.1", "480.1"])
-    fun aUseJustOutsideTheRangeIsRefusedAsOutOfRange(typed: String) {
+    @Test
+    fun aNegativeUseIsRefusedAsOutOfRange() {
         form.load(DRAFT)
-        form.edit(HouseForm.Field.BASELOAD, typed)
+        form.edit(HouseForm.Field.BASELOAD, "-0.1")
 
         assertThat(form.check(DRAFT)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
             HouseForm.Field.BASELOAD to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+    }
+
+    @Test
+    fun aStoredUseOverTwentyKwLeftUntouchedIsSavedAsItWasRead() {
+        val own = withHouse(25.0)
+        form.load(own)
+        assertThat(form.text(HouseForm.Field.BASELOAD)).isEqualTo("600.0")
+
+        assertThat(form.check(own)!!.system().house()).isEqualTo(House(25.0))
+        assertThat(form.problems.value).isEmpty()
     }
 
     @Test

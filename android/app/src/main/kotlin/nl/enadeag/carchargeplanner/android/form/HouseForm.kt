@@ -4,11 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.House
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
-import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 
 /**
- * The house's own use of power, which may hold a typical value. The field asks for kWh per day, from 0 to 480; the
- * settings keep the average in kW, which a field the owner did not change gives back exactly.
+ * The house's own use of power, which may hold a typical value. The field asks for kWh per day and refuses only what the
+ * engine refuses, a negative use; the settings keep the average in kW, which a field the owner did not change gives back exactly.
  *
  * @param handle where the field's text is kept
  * @param numbers how the screen's language writes numbers
@@ -25,7 +24,6 @@ class HouseForm(handle: SavedStateHandle, numbers: NumberText) :
     private companion object {
         const val DECIMALS = 1
         const val HOURS_PER_DAY = 24.0
-        const val MOST_KWH_PER_DAY = 480.0
         val OWN = setOf(ConfigSetting.HOUSE_BASELOAD)
     }
 
@@ -43,9 +41,6 @@ class HouseForm(handle: SavedStateHandle, numbers: NumberText) :
 
     override fun readInto(config: EngineConfig, reader: FieldReader<Field>): EngineConfig? {
         val baseload = reader.number(Field.BASELOAD, config.system().house().baseloadKw(), DECIMALS, HOURS_PER_DAY)
-        if (baseload * HOURS_PER_DAY > MOST_KWH_PER_DAY) {
-            reader.problems.putIfAbsent(Field.BASELOAD, FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE))
-        }
         val house = reader.records({ Field.BASELOAD }) { House(baseload) } ?: return null
         val marked = if (Field.BASELOAD in state.typical()) OWN else emptySet()
         return config.withSystem(config.system().withHouseAndCar(house, config.system().car()),

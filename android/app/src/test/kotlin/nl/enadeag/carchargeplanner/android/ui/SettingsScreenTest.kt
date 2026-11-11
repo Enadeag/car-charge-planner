@@ -282,6 +282,15 @@ class SettingsScreenTest {
         compose.onNodeWithText("Battery $battery kWh").assertExists()
     }
 
+    @Test
+    @Config(qualifiers = "nl")
+    fun inDutchTheCarAndHouseRowGivesTheBatteryOnly() {
+        show()
+
+        val battery = NumberText(Locale.forLanguageTag("nl")).write(stored.system().car().usableBatteryKwh(), 1)
+        compose.onNodeWithText("Accu $battery kWh").assertExists()
+    }
+
     private fun houseFold() = compose.onNodeWithText(text(R.string.more_settings))
 
     private fun houseFoldIs(state: Int) =
@@ -319,7 +328,7 @@ class SettingsScreenTest {
         show()
         open(SettingsPage.CAR_AND_HOUSE)
         click(R.string.more_settings)
-        field(text(R.string.household_use)).performTextReplacement("480.1")
+        field(text(R.string.household_use)).performTextReplacement("-1")
         click(R.string.more_settings)
         houseFoldIs(R.string.fold_collapsed)
 
