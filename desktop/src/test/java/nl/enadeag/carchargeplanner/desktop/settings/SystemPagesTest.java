@@ -213,6 +213,24 @@ class SystemPagesTest {
     }
 
     @Test
+    void thisYearIsTheYearInTheDevicesTimeZoneNotInUtc() throws Exception {
+        // 23:30 UTC on 31 December is already 1 January in Amsterdam, the fixture's device zone
+        settings = new SettingsFixture(folder, Language.ENGLISH,
+                Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.UTC));
+        var view = settings.open();
+        assertThat(settings.stores(false).thisYear()).isEqualTo(Year.of(2027));
+
+        var saved = Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_YEAR).get(0).setText("2027");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(saved).isTrue();
+        assertThat(((PanelSize.Panels) stored().system().panels().getFirst().size()).placed())
+                .contains(Year.of(2027));
+    }
+
+    @Test
     void northChosenIsStoredAs180() throws Exception {
         var view = open();
 

@@ -150,8 +150,18 @@ class PanelsFormTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["1000000000", "-1000000000"])
-    fun aYearPastWhatAYearCanBeIsRefusedAtItsField(year: String) {
+    @ValueSource(strings = ["", " ", "twenty", "20,21"])
+    fun noEstimateIsShownForAnEmptyOrUnreadableYear(year: String) {
+        form.load(stored)
+        val first = form.rowIds.value.first()
+        form.edit(first, PanelsForm.Field.YEAR, year)
+
+        assertThat(form.typicalWattPeak(first)).isNull()
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["1000000000", "-1000000000", "999999999", "-999999999"])
+    fun aYearPastOrAtTheEdgeOfWhatAYearCanBeIsRefusedAtItsField(year: String) {
         form.load(stored)
         val first = form.rowIds.value.first()
         form.edit(first, PanelsForm.Field.COUNT, "10")
