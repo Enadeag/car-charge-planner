@@ -17,6 +17,7 @@ public final class Fold extends VBox {
     private final Button row = new Button();
     private final VBox content;
     private final String name;
+    private boolean held;
 
     /**
      * Makes the fold, folded.
@@ -29,7 +30,7 @@ public final class Fold extends VBox {
         this.content = new VBox(content);
         this.content.getStyleClass().add("fold-content");
         row.getStyleClass().addAll("fold-row", "flat");
-        row.setOnAction(_ -> setOpen(!isOpen()));
+        row.setOnAction(_ -> setOpen(held || !isOpen()));
         row.setMaxWidth(Double.MAX_VALUE);
         row.setWrapText(true);
         row.setAccessibleText(name);
@@ -75,5 +76,31 @@ public final class Fold extends VBox {
         content.setVisible(open);
         content.setManaged(open);
         row.setText((open ? OPEN : CLOSED) + name);
+    }
+
+    /**
+     * Opens the fold and keeps it open while held, such as while a setting under it shows a problem: a press on the
+     * row then leaves it open. Letting go leaves it open until the row is pressed.
+     *
+     * @param hold true to open it and keep it open; false to let the row fold it again
+     */
+    public void holdOpen(boolean hold) {
+        held = hold;
+        if (hold) {
+            setOpen(true);
+        }
+    }
+
+    /**
+     * Shows the settings without the row, for a page where they are all there is, or brings the row back.
+     *
+     * @param withoutRow true to hide the row and show the settings; false to show the row, the fold staying as it is
+     */
+    public void showWithoutRow(boolean withoutRow) {
+        row.setVisible(!withoutRow);
+        row.setManaged(!withoutRow);
+        if (withoutRow) {
+            setOpen(true);
+        }
     }
 }

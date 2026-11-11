@@ -27,8 +27,10 @@ import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.store.StoredKeys
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
+import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
+import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
@@ -42,7 +44,7 @@ class SettingsSessionTest {
     private val openMeteo = ProviderId("open-meteo")
     private val forecastSolar = ProviderId("forecast-solar")
     private val draft = EngineConfig.setUpDraft(amsterdam, openMeteo)
-    private val stored = draft.withSystem(draft.system().withLocation(Coordinates(52.0907, 5.1214), amsterdam),
+    private val stored = draft.withSystem(draft.system().withUnnamedLocation(Coordinates(52.0907, 5.1214), amsterdam),
         draft.typical())
     private val access = FakeEngineAccess(StartState.Ready(stored))
     private val handle = SavedStateHandle()
@@ -299,9 +301,50 @@ class SettingsSessionTest {
     }
 
     @Test
+    fun savingAnotherPageOrTheLocationPageUntouchedKeepsThePlaceName() = runTest {
+        val named = stored.withSystem(stored.system().withPlace(Coordinates(52.0907, 5.1214), amsterdam,
+            PlaceName("Utrecht, Netherlands")), stored.typical())
+        access.settings = StartState.Ready(named)
+        val session = SettingsSession(handle, NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, access,
+            Saves(access, backgroundScope), backgroundScope, StandardTestDispatcher(testScheduler), named, { }) { }
+        session.open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+
+        session.save()
+        runCurrent()
+        session.back()
+        session.open(SettingsPage.LOCATION)
+        session.forms.location.choose(ZoneId.of("Asia/Tokyo"))
+        session.save()
+        runCurrent()
+
+        assertThat(storedNow().system().car().usableBatteryKwh()).isEqualTo(75.0)
+        assertThat(storedNow().system().place()).contains(PlaceName("Utrecht, Netherlands"))
+        assertThat(storedNow().system().timezone()).isEqualTo(ZoneId.of("Asia/Tokyo"))
+        assertThat(session.forms.location.placeName()).isEqualTo(PlaceName("Utrecht, Netherlands"))
+    }
+
+    @Test
+    fun aRealDifferenceInTheCoordinatesSavesTheLocationWithoutThePlaceName() = runTest {
+        val named = stored.withSystem(stored.system().withPlace(Coordinates(52.0907, 5.1214), amsterdam,
+            PlaceName("Utrecht, Netherlands")), stored.typical())
+        access.settings = StartState.Ready(named)
+        val session = SettingsSession(handle, NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, access,
+            Saves(access, backgroundScope), backgroundScope, StandardTestDispatcher(testScheduler), named, { }) { }
+        session.open(SettingsPage.LOCATION)
+
+        session.forms.location.edit(LocationForm.Field.LONGITUDE, "5.1215")
+        session.save()
+        runCurrent()
+
+        assertThat(storedNow().system().place()).isEmpty()
+        assertThat(storedNow().system().location()).isEqualTo(Coordinates(52.0907, 5.1215))
+    }
+
+    @Test
     fun inSettingsTypedCoordinatesLeaveTheStoredZone() = runTest {
         val lisbon = ZoneId.of("Europe/Lisbon")
-        val stored = stored.withSystem(stored.system().withLocation(Coordinates(38.72, -9.14), lisbon),
+        val stored = stored.withSystem(stored.system().withUnnamedLocation(Coordinates(38.72, -9.14), lisbon),
             stored.typical())
         access.settings = StartState.Ready(stored)
         val session = SettingsSession(handle, NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, access,
@@ -412,7 +455,9 @@ class SettingsSessionTest {
         session.forms.car.edit(CarForm.Field.BATTERY, "75")
 
         val lisbon = Coordinates(38.72, -9.14)
-        saves.update(KeyChanges.NONE) { it.withSystem(it.system().withLocation(lisbon, amsterdam), it.typical()) }
+        saves.update(KeyChanges.NONE) {
+            it.withSystem(it.system().withUnnamedLocation(lisbon, amsterdam), it.typical())
+        }
         runCurrent()
 
         assertThat(session.config.value.system().location()).isEqualTo(lisbon)
@@ -447,6 +492,8 @@ class SettingsSessionTest {
                     forms.panels.add()
                 }
                 SettingsPage.LOCATION -> {
+                    forms.location.choose(Place("Lisbon", Coordinates(38.7223, -9.1393), ZoneId.of("Europe/Lisbon"),
+                        "", "Portugal", ""), "Lisbon, Portugal")
                     forms.location.edit(LocationForm.Field.LATITUDE, "52.1")
                     forms.location.choose(ZoneId.of("Europe/Lisbon"))
                     session.places.edit("Utrecht")
@@ -469,7 +516,8 @@ class SettingsSessionTest {
                 session.discard()
             }
         }
-        assertThat(handle.keys()).contains("settings.place.text", "forecast.primary", "planning.text.MARGIN")
+        assertThat(handle.keys()).contains("settings.place.text", "location.placeName", "forecast.primary",
+            "planning.text.MARGIN")
 
         SettingsSession.forget(handle)
 

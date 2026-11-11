@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory
  * which do not. A search runs only when the owner asks for it, never per keystroke, and only the latest one counts.
  * The text goes to the provider's place search, with the language the names should come in.
  *
- * @param handle where the typed text and the label of the place chosen are kept
+ * @param handle where the typed text is kept
  * @param access the engine's place search
  * @param scope where a search runs, the screen's
  * @param provider the forecast provider whose place search is used
@@ -46,8 +46,7 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
      * A place found, as the list shows it.
      *
      * @property place the place
-     * @property label its name, region and country; with its finer area too when another place found reads alike; at
-     *     most [LONGEST_TEXT] characters, as the field holds it after a choice
+     * @property label its name, region and country; with its finer area too when another place found reads alike
      */
     data class Result(val place: Place, val label: String)
 
@@ -80,21 +79,17 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
     }
 
     private val textKey = "$prefix.text"
-    private val chosenKey = "$prefix.chosen"
     private val latest = LatestAnswer<State>(scope)
     private val stateNow = MutableStateFlow<State>(State.Idle)
-    private val chosenNow = MutableStateFlow(handle.get<String>(chosenKey))
     private val chosenCountNow = MutableStateFlow(0)
 
     /** What the search shows now. */
     val state: StateFlow<State> = stateNow.asStateFlow()
 
-    /** The label of the place chosen from the results; null when none was, or coordinates were typed since. */
-    val chosen: StateFlow<String?> = chosenNow.asStateFlow()
-
     /**
-     * How many times a place was chosen since this search was made, so the screen can tell a new choice, whose
-     * confirmation then takes the focus, from one it showed before, as before turning the phone.
+     * How many times a place was chosen since this search was made, so the screen can tell a new choice, whose line
+     * at the top then takes the focus and folds the coordinates away, from one it showed before, as before turning
+     * the phone.
      */
     val chosenCount: StateFlow<Int> = chosenCountNow.asStateFlow()
 
@@ -128,31 +123,13 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
     }
 
     /**
-     * Keeps the place the owner chose, whose label the step then shows, also in the field; the results go.
-     *
-     * @param result the place chosen, from [State.Found]
+     * Notes that the owner chose a place from the results, which the location form keeps: the results go, and the
+     * field is emptied, as it is for a new search only.
      */
-    fun choose(result: Result) {
+    fun chosen() {
         cancel()
-        edit(result.label)
-        keepChosen(result.label)
+        handle.remove<String>(textKey)
         chosenCountNow.value++
-    }
-
-    /**
-     * Forgets the place chosen, as the owner typed coordinates of their own; the field, which showed its label, is
-     * emptied too, so it never names a place the coordinates are not of.
-     */
-    fun forgetChosen() {
-        if (chosenNow.value != null) {
-            keepChosen(null)
-            handle.remove<String>(textKey)
-        }
-    }
-
-    private fun keepChosen(label: String?) {
-        if (label == null) handle.remove<String>(chosenKey) else handle[chosenKey] = label
-        chosenNow.value = label
     }
 
     private suspend fun ask(text: String): State {
@@ -172,5 +149,5 @@ class PlaceSearch(private val handle: SavedStateHandle, private val access: Engi
     }
 
     private fun labelled(places: List<Place>): List<Result> =
-        places.map { place -> Result(place, place.labelAmong(places).take(LONGEST_TEXT)) }
+        places.map { place -> Result(place, place.labelAmong(places)) }
 }

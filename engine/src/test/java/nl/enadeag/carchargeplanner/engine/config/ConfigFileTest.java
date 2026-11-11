@@ -54,6 +54,7 @@ class ConfigFileTest {
         var config = new ConfigFile(EXAMPLE, FILES).read();
 
         assertThat(config.system().location()).isEqualTo(new Coordinates(51.0, 5.0));
+        assertThat(config.system().place()).contains(new PlaceName("Zonnedorp, Belgium"));
         assertThat(config.system().timezone()).isEqualTo(ZoneId.of("Europe/Brussels"));
         assertThat(config.system().panels()).containsExactly(new PanelArray("South roof",
                 new PanelSize.Panels(20, OptionalInt.of(250), Optional.of(Year.of(2013))), 35, 0, 0.14));
@@ -241,6 +242,81 @@ class ConfigFileTest {
         assertThat(array.has("yearPlaced")).isFalse();
         assertThat(array.path("wpPerPanel").intValue()).isEqualTo(410);
         assertThat(copy.read()).isEqualTo(config);
+    }
+
+    private static final String PLACE = "\"placeName\": \"Zonnedorp, Belgium\",";
+
+    /** Neither version 1 nor a version 2 file from before the place name has one: no place chosen yet. */
+    @ParameterizedTest
+    @ValueSource(ints = {1, 2})
+    void aFileWithoutAPlaceNameHasNoneAndIsWrittenWithoutOne(int version) throws IOException, ConfigProblem {
+        var example = Files.readString(EXAMPLE);
+        assertThat(example).contains(PLACE);
+        var file = write(example.replace("\"version\": 2", "\"version\": " + version).replace(PLACE, "")
+                .replace(COUNTED, "\"kwp\": 5.0,"));
+
+        var config = new ConfigFile(file, FILES).read();
+
+        assertThat(config.system().place()).isEmpty();
+        assertThat(config.system().location()).isEqualTo(new Coordinates(51.0, 5.0));
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        copy.write(config);
+        var written = StoredJson.parse(Files.readString(folder.resolve("copy.json")));
+        assertThat(written.path("version").intValue()).isEqualTo(2);
+        assertThat(written.path("system").has("placeName")).isFalse();
+        assertThat(copy.read()).isEqualTo(config);
+    }
+
+    @Test
+    void aPlaceNameIsReadTrimmedAndWrittenBesideTheCoordinates() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace(PLACE, "\"placeName\": \"  Lisbon, Portugal \","));
+
+        var config = new ConfigFile(file, FILES).read();
+
+        assertThat(config.system().place()).contains(new PlaceName("Lisbon, Portugal"));
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        copy.write(config);
+        var written = StoredJson.parse(Files.readString(folder.resolve("copy.json")));
+        assertThat(written.path("system").path("placeName").stringValue()).isEqualTo("Lisbon, Portugal");
+        assertThat(List.copyOf(written.path("system").propertyNames()))
+                .containsSubsequence("latitude", "longitude", "placeName", "timezone");
+        assertThat(copy.read()).isEqualTo(config);
+    }
+
+    /** A hand-edited name that does not belong to the coordinates is trusted; only its form is checked. */
+    @Test
+    void aBlankPlaceNameMeansNoneAndAHundredCharactersAreTheMost() throws IOException, ConfigProblem {
+        var example = Files.readString(EXAMPLE);
+        var hundred = "a".repeat(100);
+
+        var blank = new ConfigFile(write(example.replace(PLACE, "\"placeName\": \"  \",")), FILES).read();
+        var longest = new ConfigFile(write(example.replace(PLACE, "\"placeName\": \"" + hundred + "\",")), FILES)
+                .read();
+        var tooLong = write(example.replace(PLACE, "\"placeName\": \"" + hundred + "b\","));
+
+        assertThat(blank.system().place()).isEmpty();
+        assertThat(longest.system().place()).contains(new PlaceName(hundred));
+        assertThatThrownBy(() -> new ConfigFile(tooLong, FILES).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessage("engine.json: system.placeName: a place name must be at most 100 characters");
+    }
+
+    /** A line break or a direction override would break or turn the line the name is shown on. */
+    @ParameterizedTest
+    @ValueSource(strings = {"Zonne\\ndorp", "Zonne\\u202Edorp"})
+    void aPlaceNameWithALineBreakOrADirectionCharacterIsRefused(String escaped) throws IOException {
+        var file = write(Files.readString(EXAMPLE).replace(PLACE, "\"placeName\": \"" + escaped + "\","));
+
+        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessage("engine.json: system.placeName: a place name must not hold a control, line break or"
+                        + " direction character");
+    }
+
+    @Test
+    void aPlaceNameThatIsNoTextIsRefused() throws IOException {
+        var file = write(Files.readString(EXAMPLE).replace(PLACE, "\"placeName\": 12,"));
+
+        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessageContaining("system.placeName: must be a text in quotes");
     }
 
     @Test

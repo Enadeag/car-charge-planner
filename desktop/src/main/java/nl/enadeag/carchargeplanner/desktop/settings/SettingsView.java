@@ -205,7 +205,7 @@ final class SettingsView extends BorderPane {
         var solar = new SolarPage(stores::thisYear, false, messages);
         var location = new LocationPage(
                 (provider, text) -> stores.searchPlaces(provider, text, messages.language().code()),
-                background, messages);
+                stores::hasPlaceSearch, background, messages);
         var carHouse = new CarHousePage(messages);
         var charger = new ChargerPage(messages);
         ProviderTester tester = (provider, settings) -> {

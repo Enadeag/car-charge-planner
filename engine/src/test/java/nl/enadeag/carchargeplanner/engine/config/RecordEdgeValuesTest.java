@@ -116,8 +116,9 @@ class RecordEdgeValuesTest {
                 problem -> assertThat(problem.setting()).isEqualTo(setting));
     }
 
-    private static final HomeSystem SYSTEM = new HomeSystem(new Coordinates(51.0, 5.0), ZoneId.of("Europe/Brussels"),
-            List.of(PanelArray.TYPICAL), House.TYPICAL, Car.TYPICAL, Charger.TYPICAL);
+    private static final PlaceName BRUSSELS = new PlaceName("Brussels, Belgium");
+    private static final HomeSystem SYSTEM = new HomeSystem(new Coordinates(50.8503, 4.3517), Optional.of(BRUSSELS),
+            ZoneId.of("Europe/Brussels"), List.of(PanelArray.TYPICAL), House.TYPICAL, Car.TYPICAL, Charger.TYPICAL);
     private static final EngineConfig CONFIG = new EngineConfig(SYSTEM, PlanningPreferences.RECOMMENDED,
             new ForecastSelection(new ProviderId("open-meteo"), Optional.empty(), Map.of()), WeeklyAwaySchedule.NONE,
             TypicalValues.NONE);
@@ -129,12 +130,12 @@ class RecordEdgeValuesTest {
         var car = new Car(77, 16, 50);
         var charger = new Charger(Phases.THREE, 6, 32, 230, 0.95);
 
-        assertThat(SYSTEM.withPanels(panels)).isEqualTo(new HomeSystem(SYSTEM.location(), SYSTEM.timezone(), panels,
-                SYSTEM.house(), SYSTEM.car(), SYSTEM.charger()));
-        assertThat(SYSTEM.withHouseAndCar(house, car)).isEqualTo(new HomeSystem(SYSTEM.location(), SYSTEM.timezone(),
-                SYSTEM.panels(), house, car, SYSTEM.charger()));
-        assertThat(SYSTEM.withCharger(charger)).isEqualTo(new HomeSystem(SYSTEM.location(), SYSTEM.timezone(),
-                SYSTEM.panels(), SYSTEM.house(), SYSTEM.car(), charger));
+        assertThat(SYSTEM.withPanels(panels)).isEqualTo(new HomeSystem(SYSTEM.location(), Optional.of(BRUSSELS),
+                SYSTEM.timezone(), panels, SYSTEM.house(), SYSTEM.car(), SYSTEM.charger()));
+        assertThat(SYSTEM.withHouseAndCar(house, car)).isEqualTo(new HomeSystem(SYSTEM.location(),
+                Optional.of(BRUSSELS), SYSTEM.timezone(), SYSTEM.panels(), house, car, SYSTEM.charger()));
+        assertThat(SYSTEM.withCharger(charger)).isEqualTo(new HomeSystem(SYSTEM.location(), Optional.of(BRUSSELS),
+                SYSTEM.timezone(), SYSTEM.panels(), SYSTEM.house(), SYSTEM.car(), charger));
 
         var forecast = new ForecastSelection(new ProviderId("forecast-solar"), Optional.of(new ProviderId("open-meteo")),
                 Map.of());
@@ -143,6 +144,24 @@ class RecordEdgeValuesTest {
                 WeeklyAwaySchedule.NONE, TypicalValues.NONE));
         assertThat(CONFIG.withAway(away)).isEqualTo(new EngineConfig(SYSTEM, CONFIG.planning(), CONFIG.forecast(), away,
                 TypicalValues.NONE));
+    }
+
+    @Test
+    void anotherLocationSaysWhatBecomesOfThePlaceName() {
+        var lisbon = new Coordinates(38.7223, -9.1393);
+        var zone = ZoneId.of("Europe/Lisbon");
+        var named = new PlaceName("Lisbon, Portugal");
+
+        var typed = SYSTEM.withUnnamedLocation(lisbon, zone);
+        var chosen = SYSTEM.withPlace(lisbon, zone, named);
+
+        assertThat(typed.place()).isEmpty();
+        assertThat(typed.location()).isEqualTo(lisbon);
+        assertThat(typed.timezone()).isEqualTo(zone);
+        assertThat(chosen.place()).contains(named);
+        assertThat(chosen.location()).isEqualTo(lisbon);
+        assertThat(chosen.timezone()).isEqualTo(zone);
+        assertThat(typed.withPanels(SYSTEM.panels())).isEqualTo(typed);
     }
 
     @Test

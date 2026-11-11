@@ -67,6 +67,7 @@ import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.ui.setup.SetUpScreen
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
@@ -122,8 +123,13 @@ class SetUpScreenTest {
 
     private fun field(label: Int) = compose.onNode(hasSetTextAction() and hasText(text(label), substring = true))
 
-    private fun chosenCard(place: String = "Utrecht, Netherlands") =
-        compose.onNode(hasText(text(R.string.place_chosen_label, place)))
+    private fun placeLine(place: String = "Utrecht, Netherlands") =
+        compose.onNode(hasText(text(R.string.place_chosen, place)))
+
+    private fun foldRow() = compose.onNodeWithText(text(R.string.coordinates_fold))
+
+    private fun foldIs(state: Int) =
+        foldRow().assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(state)))
 
     /** Opens a drop-down by its label and chooses an option in its menu, as the owner does. */
     private fun choose(label: Int, option: Int) {
@@ -217,10 +223,6 @@ class SetUpScreenTest {
         for (step in SetUpStep.entries) {
             if (step == SetUpStep.MORE) {
                 click(R.string.away_add)
-            }
-            if (step == SetUpStep.LOCATION) {
-                compose.onNodeWithText(text(R.string.coordinates_toggle)).performScrollTo().performClick()
-                compose.onNodeWithText(text(R.string.advanced)).performScrollTo().performClick()
             }
             compose.waitForIdle()
             compose.assertScrolls()
@@ -438,7 +440,6 @@ class SetUpScreenTest {
         val session = show()
         session.next()
         compose.waitForIdle()
-        compose.onNodeWithText(text(R.string.advanced)).performScrollTo().performClick()
         click(R.string.time_zone_change)
 
         compose.onNode(hasSetTextAction() and hasText(text(R.string.time_zone_filter))).performTextInput("tokyo")
@@ -456,15 +457,34 @@ class SetUpScreenTest {
         restoration.setContent { AppTheme { SetUpScreen(session) } }
         session.next()
         compose.waitForIdle()
-        compose.onNodeWithText(text(R.string.advanced)).performScrollTo().performClick()
-        field(R.string.place_field).performTextInput("Utrecht")
+        chooseUtrecht()
+        foldRow().performScrollTo().performClick()
+        field(R.string.place_field).performTextInput("Amersfoort")
 
         restoration.emulateSavedInstanceStateRestore()
 
         heading(2, R.string.setup_location_title).assertExists()
-        compose.onNodeWithText(text(R.string.advanced))
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.fold_expanded)))
-        field(R.string.place_field).assert(hasText("Utrecht"))
+        placeLine().assertExists()
+        foldIs(R.string.fold_expanded)
+        field(R.string.place_field).assert(hasText("Amersfoort"))
+    }
+
+    @Test
+    fun theCoordinatesFoldedAwayAfterAChoiceStayFoldedAfterTurningThePhone() {
+        val restoration = StateRestorationTester(compose)
+        val session = session()
+        restoration.setContent { AppTheme { SetUpScreen(session) } }
+        session.next()
+        compose.waitForIdle()
+        foldIs(R.string.fold_expanded)
+        chooseUtrecht()
+        foldIs(R.string.fold_collapsed)
+
+        restoration.emulateSavedInstanceStateRestore()
+
+        placeLine().assertExists()
+        foldIs(R.string.fold_collapsed)
+        field(R.string.latitude).assertDoesNotExist()
     }
 
     @Test
@@ -474,7 +494,6 @@ class SetUpScreenTest {
         restoration.setContent { AppTheme { SetUpScreen(session) } }
         session.next()
         compose.waitForIdle()
-        compose.onNodeWithText(text(R.string.coordinates_toggle)).performScrollTo().performClick()
         field(R.string.latitude).performTextReplacement("52.1")
         field(R.string.longitude).performTextReplacement("5.1")
 
@@ -482,21 +501,34 @@ class SetUpScreenTest {
         restoration.emulateSavedInstanceStateRestore()
 
         heading(2, R.string.setup_location_title).assertExists()
-        compose.onNodeWithText(text(R.string.coordinates_toggle)).assertIsOn()
+        foldIs(R.string.fold_expanded)
+        compose.onNodeWithText(text(R.string.place_not_chosen)).assertExists()
         field(R.string.latitude).assert(hasText("52.1"))
         compose.onNodeWithText(text(R.string.action_next)).assertIsEnabled()
     }
 
     @Test
-    fun aDraftWithTypedCoordinatesOpensThemByItself() {
+    fun aDraftWithTypedCoordinatesShowsThemUnfolded() {
         val first = session()
         first.next()
         first.typeCoordinate(LocationForm.Field.LATITUDE, "52.1")
 
         show(session(handle.afterTheSystemEndedTheApp()))
 
-        compose.onNodeWithText(text(R.string.coordinates_toggle)).assertIsOn()
-        field(R.string.latitude).assertIsDisplayed()
+        foldIs(R.string.fold_expanded)
+        field(R.string.latitude).assertExists()
+    }
+
+    @Test
+    fun aDraftWithAChosenPlaceShowsItWithTheCoordinatesFolded() {
+        val first = session()
+        first.next()
+        first.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+
+        show(session(handle.afterTheSystemEndedTheApp()))
+
+        placeLine().assertExists()
+        foldIs(R.string.fold_collapsed)
     }
 
     @Test
@@ -589,7 +621,19 @@ class SetUpScreenTest {
     }
 
     @Test
-    fun aChosenPlaceShowsOnACardReadAsOneWithItsCoordinatesAndTimeZoneAndInTheField() {
+    fun withoutAPlaceTheTopSaysSoAndTheCoordinatesAreOpen() {
+        show()
+        click(R.string.action_next)
+        click(R.string.action_next)
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.place_not_chosen)).assertExists()
+        foldIs(R.string.fold_expanded)
+        compose.onNode(hasText(text(R.string.place_another), substring = true)).assertDoesNotExist()
+    }
+
+    @Test
+    fun aChosenPlaceShowsAtTheTopFoldsTheCoordinatesAwayAndEmptiesTheField() {
         show()
         click(R.string.action_next)
         click(R.string.action_next)
@@ -597,18 +641,20 @@ class SetUpScreenTest {
 
         chooseUtrecht()
 
-        val card = chosenCard().assertIsDisplayed().fetchSemanticsNode()
-        assertThat(card.config[SemanticsProperties.Text].map { it.text }).containsExactly(
-            text(R.string.place_chosen_label, "Utrecht, Netherlands"),
-            text(R.string.place_chosen_coordinates, "52.0907", "5.1214"), text(R.string.time_zone_now, amsterdam.id))
-        assertThat(card.config.getOrNull(SemanticsProperties.ContentDescription)).isNull()
-        field(R.string.place_field).assert(hasText("Utrecht, Netherlands"))
-            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Error))
-        compose.onNodeWithText(text(R.string.coordinates_toggle)).assertIsOff()
+        placeLine().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.place_not_chosen)).assertDoesNotExist()
+        field(R.string.place_field).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,
+            AnnotatedString(""))).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Error))
+            .assert(hasText(text(R.string.place_another), substring = true))
+        foldIs(R.string.fold_collapsed)
+        field(R.string.latitude).assertDoesNotExist()
+        foldRow().performScrollTo().performClick()
+        field(R.string.latitude).assert(hasText("52.0907"))
+        compose.onNodeWithText(text(R.string.time_zone_now, amsterdam.id)).assertExists()
     }
 
     @Test
-    fun editingTheFieldOrSearchingAgainKeepsTheCardUnderTheSearchButtonUntilAnotherPlaceIsChosen() {
+    fun searchingAgainKeepsThePlaceAtTheTopUntilAnotherIsChosen() {
         val session = show()
         session.next()
         compose.waitForIdle()
@@ -620,36 +666,80 @@ class SetUpScreenTest {
         access.searches.last().complete(PlaceResults.Found(listOf(amersfoort)))
         compose.waitForIdle()
 
-        val card = chosenCard().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        val result = compose.onNodeWithText("Amersfoort, Utrecht, Netherlands").fetchSemanticsNode().boundsInRoot
+        val line = placeLine().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val search = compose.onNodeWithText(text(R.string.place_search)).fetchSemanticsNode().boundsInRoot
-        assertThat(card.top).`as`("the card's top").isGreaterThanOrEqualTo(search.bottom)
-        assertThat(result.top).`as`("the first result's top").isGreaterThanOrEqualTo(card.bottom)
+        assertThat(line.bottom).`as`("the line's bottom").isLessThanOrEqualTo(search.top)
         compose.onNodeWithText("Amersfoort, Utrecht, Netherlands").performScrollTo().performClick()
         compose.waitForIdle()
-        chosenCard().assertDoesNotExist()
-        chosenCard("Amersfoort, Utrecht, Netherlands")
-            .assert(hasText(text(R.string.place_chosen_coordinates, "52.1561", "5.3878")))
+        placeLine().assertDoesNotExist()
+        placeLine("Amersfoort, Utrecht, Netherlands").assertIsDisplayed()
+        assertThat(session.flow.config().system().place()).contains(PlaceName("Amersfoort, Utrecht, Netherlands"))
     }
 
     @Test
-    fun aTypedCoordinateTakesTheCardAwayAndEmptiesTheField() {
+    fun aFailedSearchLeavesThePlaceAndTheFoldAlone() {
         val session = show()
         session.next()
         compose.waitForIdle()
         chooseUtrecht()
+        foldRow().performScrollTo().performClick()
 
-        click(R.string.coordinates_toggle)
-        field(R.string.latitude).performTextReplacement("52.1")
+        field(R.string.place_field).performTextInput("Amersfoort")
+        click(R.string.place_search)
+        compose.waitForIdle()
+        access.searches.last().complete(PlaceResults.Failed(PlaceResults.Problem.UNAVAILABLE))
+        compose.waitForIdle()
 
-        chosenCard().assertDoesNotExist()
-        field(R.string.place_field).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,
-            AnnotatedString("")))
-        compose.onNodeWithText(text(R.string.place_chosen_label, ""), substring = true).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.place_unavailable)).assertExists()
+        placeLine().assertExists()
+        foldIs(R.string.fold_expanded)
+        assertThat(session.flow.config().system().place()).contains(PlaceName("Utrecht, Netherlands"))
     }
 
     @Test
-    fun aChoiceMovesTheFocusToTheCardButNotAgainAfterTurningThePhone() {
+    fun typingADigitAndPuttingItBackKeepsThePlaceAndARealDifferenceDropsItAtOnce() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        chooseUtrecht()
+        foldRow().performScrollTo().performClick()
+
+        field(R.string.latitude).performTextReplacement("52.1")
+        compose.onNodeWithText(text(R.string.place_not_chosen)).assertExists()
+        placeLine().assertDoesNotExist()
+        field(R.string.latitude).performTextReplacement("52.0907")
+        placeLine().assertExists()
+
+        field(R.string.longitude).performTextReplacement("5.12")
+        compose.onNodeWithText(text(R.string.place_not_chosen)).assertExists()
+        assertThat(session.flow.config().system().place()).isEmpty()
+    }
+
+    @Test
+    fun aProblemInACoordinateOpensTheFoldAndKeepsItOpenUntilItIsPutRight() {
+        val session = show()
+        session.next()
+        compose.waitForIdle()
+        chooseUtrecht()
+        foldRow().performScrollTo().performClick()
+        field(R.string.latitude).performTextReplacement("91")
+        foldRow().performScrollTo().performClick()
+        foldIs(R.string.fold_collapsed)
+
+        click(R.string.action_next)
+        compose.waitForIdle()
+
+        foldIs(R.string.fold_expanded)
+        field(R.string.latitude).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
+        foldRow().performScrollTo().performClick()
+        foldIs(R.string.fold_expanded)
+        field(R.string.latitude).performTextReplacement("52.0907")
+        compose.waitForIdle()
+        foldIs(R.string.fold_expanded)
+    }
+
+    @Test
+    fun aChoiceMovesTheFocusToThePlaceButNotAgainAfterTurningThePhone() {
         val restoration = StateRestorationTester(compose)
         val session = session()
         restoration.setContent { AppTheme { SetUpScreen(session) } }
@@ -658,14 +748,14 @@ class SetUpScreenTest {
 
         chooseUtrecht()
 
-        chosenCard().assertIsFocused()
+        placeLine().assertIsFocused()
         field(R.string.place_field).performClick()
         restoration.emulateSavedInstanceStateRestore()
-        chosenCard().assertIsDisplayed().assertIsNotFocused()
+        placeLine().assertIsDisplayed().assertIsNotFocused()
     }
 
     @Test
-    fun comingBackToTheStepMovesTheFocusToItsHeadingNotToTheCard() {
+    fun comingBackToTheStepMovesTheFocusToItsHeadingNotToThePlace() {
         val session = show()
         session.next()
         compose.waitForIdle()
@@ -677,7 +767,7 @@ class SetUpScreenTest {
         compose.waitForIdle()
 
         heading(2, R.string.setup_location_title).assertIsFocused()
-        chosenCard().assertIsNotFocused()
+        placeLine().assertIsNotFocused()
     }
 
     @Test
@@ -733,17 +823,17 @@ class SetUpScreenTest {
     }
 
     @Test
-    fun choosingTheSamePlaceAgainMovesTheFocusToTheCardAgain() {
+    fun choosingTheSamePlaceAgainMovesTheFocusToItsLineAgain() {
         val session = show()
         session.next()
         compose.waitForIdle()
         chooseUtrecht()
         field(R.string.place_field).performClick()
-        chosenCard().assertIsNotFocused()
+        placeLine().assertIsNotFocused()
 
         chooseUtrecht()
 
-        chosenCard().assertIsFocused()
+        placeLine().assertIsFocused()
     }
 
     /** Searches for Sint-Michielsgestel, whose name wraps at twice the font size, and chooses it. */
@@ -758,10 +848,10 @@ class SetUpScreenTest {
         return label
     }
 
-    /** Checks that the chosen card's first line wraps in full and that the card can be scrolled into view. */
-    private fun assertTheCardWrapsAndIsInView(label: String) {
-        chosenCard(label).performScrollTo().assertIsDisplayed()
-        val words = compose.onNode(hasText(text(R.string.place_chosen_label, label)), useUnmergedTree = true)
+    /** Checks that the line of the place chosen wraps in full and can be scrolled into view. */
+    private fun assertTheLineWrapsAndIsInView(label: String) {
+        placeLine(label).performScrollTo().assertIsDisplayed()
+        val words = compose.onNode(hasText(text(R.string.place_chosen, label)), useUnmergedTree = true)
             .fetchSemanticsNode()
         val layout = mutableListOf<TextLayoutResult>()
         words.config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layout)
@@ -771,26 +861,26 @@ class SetUpScreenTest {
 
     @Test
     @Config(qualifiers = "w320dp-h640dp")
-    fun theCardOfALongPlaceWrapsAtTwiceTheFontSizeOnANarrowPhone() {
+    fun theLineOfALongPlaceWrapsAtTwiceTheFontSizeOnANarrowPhone() {
         val session = show(fontScaleTwo = true)
         session.next()
         compose.waitForIdle()
 
         val label = chooseALongName()
 
-        assertTheCardWrapsAndIsInView(label)
+        assertTheLineWrapsAndIsInView(label)
     }
 
     @Test
     @Config(qualifiers = "w640dp-h320dp")
-    fun theCardOfALongPlaceWrapsAtTwiceTheFontSizeOnAPhoneOnItsSide() {
+    fun theLineOfALongPlaceWrapsAtTwiceTheFontSizeOnAPhoneOnItsSide() {
         val session = show(fontScaleTwo = true)
         session.next()
         compose.waitForIdle()
 
         val label = chooseALongName()
 
-        assertTheCardWrapsAndIsInView(label)
+        assertTheLineWrapsAndIsInView(label)
     }
 
     @Test
@@ -810,7 +900,6 @@ class SetUpScreenTest {
         val session = show()
         session.next()
         compose.waitForIdle()
-        click(R.string.coordinates_toggle)
         field(R.string.latitude).performTextReplacement("52.1")
         val sign = compose.onAllNodesWithContentDescription(text(R.string.sign_toggle))[0]
 
@@ -846,7 +935,6 @@ class SetUpScreenTest {
         val session = show(fontScaleTwo = true)
         session.next()
         compose.waitForIdle()
-        click(R.string.advanced)
         click(R.string.time_zone_change)
         compose.waitForIdle()
 
@@ -869,8 +957,6 @@ class SetUpScreenTest {
     fun onEveryStepOnlyTheLastFieldHasTheKeyboardsDone() {
         val session = show()
         session.next()
-        compose.waitForIdle()
-        compose.onNodeWithText(text(R.string.coordinates_toggle)).performScrollTo().performClick()
         compose.waitForIdle()
         compose.assertOnlyTheLastFieldIsDone()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))

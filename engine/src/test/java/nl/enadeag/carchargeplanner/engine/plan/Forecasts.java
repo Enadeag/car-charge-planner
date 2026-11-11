@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /** The system the planner tests plan for, and forecasts made by hand. */
 final class Forecasts {
@@ -67,7 +68,7 @@ final class Forecasts {
 
     /** The example's roof, house and charger with another car. */
     static HomeSystem withCar(Car car, Phases phases) {
-        return new HomeSystem(new Coordinates(51.0, 5.0), TZ, List.of(PANELS), new House(0.6), car,
+        return new HomeSystem(new Coordinates(51.0, 5.0), Optional.empty(), TZ, List.of(PANELS), new House(0.6), car,
                 new Charger(phases, 6, 32, 230, 0.90));
     }
 

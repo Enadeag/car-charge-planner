@@ -294,6 +294,25 @@ final class SetUpFixture {
         type(view, TextKey.FIELD_PANEL_YEAR, "2021");
     }
 
+    /** The row of the location step's fold, "Coordinates and time zone"; on that step. */
+    Button foldRow(SetUpView view) {
+        var name = messages.text(TextKey.CARD_COORDINATES);
+        return Scenes.all(view).stream()
+                .filter(node -> node instanceof Button button && button.getText().endsWith(" " + name)
+                        && Scenes.reallyVisible(button))
+                .map(Button.class::cast).findFirst().orElseThrow();
+    }
+
+    /** Whether the location step shows the latitude, so its fold is open; on that step. */
+    boolean latitudeShown(SetUpView view) {
+        return Scenes.reallyVisible(field(view, TextKey.FIELD_LATITUDE));
+    }
+
+    /** What a screen reader reads after the latitude's name, its problem first; on the location step. */
+    String latitudeHelp(SetUpView view) {
+        return control(view, TextKey.FIELD_LATITUDE).getAccessibleHelp();
+    }
+
     /** Searches the place as the owner does and picks the one found; on the location step. */
     void choosePlace(SetUpView view) throws Exception {
         Fx.run(() -> {

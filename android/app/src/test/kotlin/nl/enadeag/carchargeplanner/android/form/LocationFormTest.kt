@@ -5,16 +5,22 @@ import java.time.ZoneId
 import java.util.Locale
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 class LocationFormTest {
 
     private companion object {
         /** The phone's time zone, which set-up's draft has too. */
         val PHONE: ZoneId = ZoneId.of("Europe/Amsterdam")
+
+        /** Lisbon's label, as the results show it. */
+        const val LISBON = "Lisbon, Portugal"
     }
 
     private val numbers = NumberText(Locale.ENGLISH)
@@ -44,12 +50,40 @@ class LocationFormTest {
         form.load(DRAFT)
         assertThat(form.timeZone()).isEqualTo(ZoneId.of("Europe/Amsterdam"))
 
-        form.choose(lisbon)
+        form.choose(lisbon, LISBON)
 
         val system = form.check(DRAFT)!!.system()
         assertThat(system.location()).isEqualTo(Coordinates(38.7223, -9.1393))
         assertThat(system.timezone()).isEqualTo(ZoneId.of("Europe/Lisbon"))
         assertThat(form.problems.value).isEmpty()
+    }
+
+    @Test
+    fun choosingAPlaceTakesNoPlaceChosenAway() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.check(DRAFT)
+        assertThat(form.problems.value).containsKey(LocationForm.Field.PLACE)
+
+        form.choose(lisbon, LISBON)
+
+        assertThat(form.problems.value).isEmpty()
+    }
+
+    /** Settings asks before it drops what the owner changed; a load puts every field back to what is stored. */
+    @Test
+    fun aLoadAfterAPlaceWasChosenOrACoordinateTypedLeavesNothingChanged() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.choose(lisbon, LISBON)
+        assertThat(form.isEdited()).isTrue()
+
+        form.load(DRAFT)
+        assertThat(form.isEdited()).isFalse()
+
+        form.edit(LocationForm.Field.LATITUDE, "52.37")
+        form.load(DRAFT)
+        assertThat(form.isEdited()).isFalse()
     }
 
     @Test
@@ -69,7 +103,7 @@ class LocationFormTest {
     fun typedCoordinatesPutTheTimeZoneOfAPlaceBackToThePhones() {
         val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
-        form.choose(lisbon)
+        form.choose(lisbon, LISBON)
 
         form.edit(LocationForm.Field.LONGITUDE, "-9.2")
 
@@ -107,7 +141,7 @@ class LocationFormTest {
         val form = LocationForm(handle, numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
         form.choose(ZoneId.of("Asia/Tokyo"))
-        form.choose(lisbon)
+        form.choose(lisbon, LISBON)
         assertThat(form.timeZone()).isEqualTo(ZoneId.of("Europe/Lisbon"))
 
         val again = LocationForm(handle.afterTheSystemEndedTheApp(), numbers, placeRequired = true,
@@ -154,7 +188,7 @@ class LocationFormTest {
 
     @Test
     fun inSettingsAStoredZoneCountsAsChosenSoTypedCoordinatesLeaveIt() {
-        val stored = DRAFT.withSystem(DRAFT.system().withLocation(Coordinates(38.7223, -9.1393),
+        val stored = DRAFT.withSystem(DRAFT.system().withUnnamedLocation(Coordinates(38.7223, -9.1393),
             ZoneId.of("Europe/Lisbon")), DRAFT.typical())
         val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE },
             storedZoneIsChosen = true)
@@ -172,14 +206,14 @@ class LocationFormTest {
             storedZoneIsChosen = true)
         form.load(DRAFT)
 
-        form.choose(lisbon)
+        form.choose(lisbon, LISBON)
 
         assertThat(form.timeZone()).isEqualTo(ZoneId.of("Europe/Lisbon"))
     }
 
     @Test
     fun inSetUpAZoneLoadedFromAFileDoesNotCountAsChosen() {
-        val stored = DRAFT.withSystem(DRAFT.system().withLocation(Coordinates(38.7223, -9.1393),
+        val stored = DRAFT.withSystem(DRAFT.system().withUnnamedLocation(Coordinates(38.7223, -9.1393),
             ZoneId.of("Europe/Lisbon")), DRAFT.typical())
         val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(stored)
@@ -187,5 +221,124 @@ class LocationFormTest {
         form.edit(LocationForm.Field.LATITUDE, "38.8")
 
         assertThat(form.timeZone()).isEqualTo(PHONE)
+    }
+
+    @Test
+    fun aChosenPlaceIsSavedWithItsNameAndItsCoordinatesAtFourDecimals() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
+        form.load(DRAFT)
+
+        form.choose(Place("Utrecht", Coordinates(52.09083, 5.12222), PHONE, "Utrecht", "Netherlands", ""),
+            "Utrecht, Netherlands")
+
+        assertThat(form.placeName()).isEqualTo(PlaceName("Utrecht, Netherlands"))
+        val system = form.check(DRAFT)!!.system()
+        assertThat(system.place()).contains(PlaceName("Utrecht, Netherlands"))
+        assertThat(system.location()).isEqualTo(Coordinates(52.0908, 5.1222))
+    }
+
+    @Test
+    fun typingADigitAndPuttingItBackKeepsTheNameAndARealDifferenceDropsIt() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.choose(lisbon, LISBON)
+
+        form.edit(LocationForm.Field.LATITUDE, "38.722")
+        assertThat(form.placeName()).isNull()
+        form.edit(LocationForm.Field.LATITUDE, "38.72230")
+        assertThat(form.placeName()).isEqualTo(PlaceName(LISBON))
+        assertThat(form.check(DRAFT)!!.system().place()).contains(PlaceName(LISBON))
+
+        form.edit(LocationForm.Field.LONGITUDE, "-9.1394")
+        assertThat(form.placeName()).isNull()
+        assertThat(form.check(DRAFT)!!.system().place()).isEmpty()
+        form.edit(LocationForm.Field.LONGITUDE, "not a number")
+        assertThat(form.placeName()).isNull()
+    }
+
+    @Test
+    fun aStoredNameStaysWhileTheFieldsAreLeftAloneAndAHandEditedOneIsTrusted() {
+        val stored = DRAFT.withSystem(DRAFT.system().withPlace(Coordinates(38.72231, -9.13931),
+            ZoneId.of("Europe/Lisbon"), PlaceName("Somewhere else")), DRAFT.typical())
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE },
+            storedZoneIsChosen = true)
+
+        form.load(stored)
+
+        assertThat(form.placeName()).isEqualTo(PlaceName("Somewhere else"))
+        assertThat(form.read(stored)).isEqualTo(stored)
+    }
+
+    @Test
+    fun aFormWithoutAStoredNameHasNone() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE })
+
+        form.load(DRAFT)
+
+        assertThat(form.placeName()).isNull()
+        assertThat(form.read(DRAFT)!!.system().place()).isEmpty()
+    }
+
+    @Test
+    fun aLabelLongerThanAPlaceNameIsCutAtAHundredCharacters() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
+        form.load(DRAFT)
+
+        form.choose(lisbon, "L".repeat(101))
+
+        assertThat(form.placeName()).isEqualTo(PlaceName("L".repeat(100)))
+    }
+
+    @Test
+    fun theChosenPlaceSurvivesTheSystemEndingTheApp() {
+        val handle = SavedStateHandle()
+        val form = LocationForm(handle, numbers, placeRequired = true, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.choose(lisbon, LISBON)
+
+        val again = LocationForm(handle.afterTheSystemEndedTheApp(), numbers, placeRequired = true,
+            phoneZone = { PHONE })
+
+        assertThat(again.placeName()).isEqualTo(PlaceName(LISBON))
+        assertThat(again.check(DRAFT)!!.system().place()).contains(PlaceName(LISBON))
+    }
+
+    @Test
+    fun loadingAgainForgetsAPlaceChosenBefore() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.choose(lisbon, LISBON)
+
+        form.load(DRAFT)
+
+        assertThat(form.placeName()).isNull()
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "location.placeLatitude, not a number",
+        "location.placeLongitude, ''",
+        "location.placeName, '   '",
+    )
+    fun aRestoredValueThatNoLongerFitsCountsAsNoPlaceChosen(key: String, value: String) {
+        val handle = SavedStateHandle()
+        val form = LocationForm(handle, numbers, placeRequired = false, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.choose(lisbon, LISBON)
+        handle[key] = value
+
+        assertThat(form.placeName()).isNull()
+        assertThat(form.check(DRAFT)!!.system().place()).isEmpty()
+    }
+
+    @Test
+    fun aRestoredNameOverAHundredCharactersCountsAsNoPlaceChosen() {
+        val handle = SavedStateHandle()
+        val form = LocationForm(handle, numbers, placeRequired = false, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.choose(lisbon, LISBON)
+        handle["location.placeName"] = "L".repeat(101)
+
+        assertThat(form.placeName()).isNull()
     }
 }

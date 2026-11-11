@@ -10,7 +10,7 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.Place;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -22,11 +22,12 @@ import javafx.scene.layout.VBox;
 final class PlaceSearchCard {
 
     private final PlaceSearcher searcher;
-    private final Consumer<Place> chosen;
+    private final BiConsumer<Place, String> chosen;
     private final Background background;
     private final Messages messages;
     private final TextField text = new TextField();
     private final Button search;
+    private final Label another;
     private final Label status = Labels.paragraph("", "note");
     private final VBox results = new VBox();
     private final CardView card;
@@ -34,9 +35,11 @@ final class PlaceSearchCard {
 
     /**
      * @param searcher asks the provider's place search; called away from the JavaFX thread
-     * @param chosen gets the place the owner picked from the results, on the JavaFX thread
+     * @param chosen gets the place the owner picked from the results and its label as the results showed it, on the
+     *     JavaFX thread
      */
-    PlaceSearchCard(PlaceSearcher searcher, Consumer<Place> chosen, Background background, Messages messages) {
+    PlaceSearchCard(PlaceSearcher searcher, BiConsumer<Place, String> chosen, Background background,
+            Messages messages) {
         this.searcher = searcher;
         this.chosen = chosen;
         this.background = background;
@@ -53,11 +56,13 @@ final class PlaceSearchCard {
         var line = new HBox(text, search);
         line.getStyleClass().add("field-line");
         results.getStyleClass().add("place-results");
+        another = Labels.paragraph(messages.text(TextKey.PLACE_ANOTHER), "note");
+        another.managedProperty().bind(another.visibleProperty());
         // nothing to say or show yet: no empty space on the card either
         status.managedProperty().bind(status.textProperty().isNotEmpty());
         results.managedProperty().bind(Bindings.isNotEmpty(results.getChildren()));
-        card = new CardView(messages.text(TextKey.CARD_PLACE), messages.text(TextKey.CARD_PLACE_HINT), line, status,
-                results);
+        card = new CardView(messages.text(TextKey.CARD_PLACE), messages.text(TextKey.CARD_PLACE_HINT), line, another,
+                status, results);
     }
 
     /**
@@ -67,6 +72,10 @@ final class PlaceSearchCard {
         provider = primary;
         results.getChildren().clear();
         status.setText("");
+    }
+
+    void showChosen(boolean placeChosen) {
+        another.setVisible(placeChosen);
     }
 
     /**
@@ -119,9 +128,10 @@ final class PlaceSearchCard {
         button.getStyleClass().addAll("flat", "place-result");
         button.setMaxWidth(Double.MAX_VALUE);
         button.setOnAction(_ -> {
-            chosen.accept(place);
             results.getChildren().clear();
-            status.setText(messages.text(TextKey.PLACE_CHOSEN, button.getText()));
+            status.setText("");
+            text.clear();
+            chosen.accept(place, button.getText());
         });
         return button;
     }

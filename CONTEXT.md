@@ -160,6 +160,10 @@ _Avoid_: Preferences, interface config
 Finding a place's coordinates and time zone from a name or postcode the owner types. A forecast provider may offer one; the typed text goes to the primary provider, and without one the owner types coordinates.
 _Avoid_: Geocoding, location lookup, address search
 
+**Place name**:
+The name of the place the owner chose from the place search, kept in the settings file with the home's coordinates, as the result's label read then ("Utrecht, Netherlands"). It belongs to those coordinates: typed coordinates that differ from them drop it, and without one the Location page says no place is chosen yet.
+_Avoid_: Address, location name, city
+
 **Charger phases**:
 Whether the charger charges on one phase or three. Each amp delivers three times the power on three phases, and so does the minimum charge current.
 _Avoid_: Single/three-phase connection (the home connection can have three phases while the charger uses one)

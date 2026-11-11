@@ -41,7 +41,7 @@ class SetUpFlowTest {
     /** Goes from the welcome to the step after the location, with Utrecht chosen. */
     private fun throughTheLocation() {
         flow.next()
-        flow.location.choose(utrecht)
+        flow.location.choose(utrecht, "Utrecht")
         assertThat(flow.next()).isTrue()
         flow.panels.fillIn()
     }

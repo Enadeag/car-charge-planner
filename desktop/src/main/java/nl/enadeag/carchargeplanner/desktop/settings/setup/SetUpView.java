@@ -156,8 +156,8 @@ final class SetUpView extends BorderPane {
         var providers = stores.providers();
         var app = new AppPage(messages, TextKey.SET_UP_DISPLAY_HINT);
         var location = new LocationPage(
-                (provider, text) -> stores.searchPlaces(provider, text, messages.language().code()), background,
-                messages);
+                (provider, text) -> stores.searchPlaces(provider, text, messages.language().code()),
+                stores::hasPlaceSearch, background, messages);
         var solar = new SolarPage(stores::thisYear, true, messages);
         var car = new CarCard(messages, false);
         app.onUnitsChanged(car::showIn);

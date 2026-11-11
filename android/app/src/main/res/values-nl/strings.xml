@@ -35,20 +35,20 @@
   <string name="place_search">Zoeken</string>
   <string name="place_searching">Zoeken…</string>
   <string name="place_choose">Kies je plaats:</string>
-  <string name="place_chosen_label">Gekozen: %1$s</string>
-  <string name="place_chosen_coordinates">Coördinaten: %1$s; %2$s</string>
+  <string name="place_chosen">Gekozen plaats: %1$s</string>
+  <string name="place_not_chosen">Nog geen plaats gekozen</string>
+  <string name="place_another">Zoek om een andere plaats te kiezen</string>
   <string name="place_none">Geen plaatsen gevonden voor “%1$s”.</string>
   <string name="place_no_search">Je voorspellingsdienst kan geen plaatsen zoeken: vul de coördinaten in.</string>
   <string name="place_too_short">Typ minstens twee letters of cijfers.</string>
   <string name="place_unavailable">De zoekdienst was niet bereikbaar. Kijk of de telefoon online is en probeer het opnieuw, of vul de coördinaten in.</string>
   <string name="place_busy">De zoekdienst is even te druk. Probeer het over een minuut opnieuw.</string>
   <string name="place_bad_response">De zoekdienst gaf een antwoord dat de app niet begrijpt.</string>
-  <string name="coordinates_toggle">Liever de coördinaten invullen</string>
   <string name="latitude">Breedtegraad</string>
   <string name="latitude_hint">Graden; positief is noord.</string>
   <string name="longitude">Lengtegraad</string>
   <string name="longitude_hint">Graden; positief is ten oosten van Greenwich.</string>
-  <string name="advanced">Geavanceerd</string>
+  <string name="coordinates_fold">Coördinaten en tijdzone</string>
   <string name="choose">Kies…</string>
   <string name="fold_expanded">Uitgevouwen</string>
   <string name="fold_collapsed">Ingevouwen</string>
@@ -352,7 +352,7 @@
     <item quantity="one">%1$d panelengroep, %2$s kWp</item>
     <item quantity="other">%1$d panelengroepen, %2$s kWp</item>
   </plurals>
-  <string name="settings_location_summary">%1$s, %2$s, %3$s</string>
+  <string name="settings_location_summary">%1$s; %2$s</string>
   <string name="settings_car_house_summary">Accu %1$s kWh, huis %2$s kW</string>
   <string name="settings_charger_summary">%1$s, %2$d tot %3$d A</string>
   <string name="settings_forecast_summary">%1$s, reservedienst %2$s</string>

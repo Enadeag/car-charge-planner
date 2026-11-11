@@ -4,6 +4,7 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.Optional
 import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.sin
@@ -45,8 +46,8 @@ internal object SunnyDayPlan {
      * @return the day's charge windows in time order; empty when the plan has none
      */
     fun windows(today: LocalDate, zone: ZoneId): List<Window> {
-        val system = HomeSystem(Coordinates.NOT_CHOSEN, zone, listOf(PanelArray.TYPICAL), House.TYPICAL,
-            Car.TYPICAL, Charger.TYPICAL)
+        val system = HomeSystem(Coordinates.NOT_CHOSEN, Optional.empty(), zone, listOf(PanelArray.TYPICAL),
+            House.TYPICAL, Car.TYPICAL, Charger.TYPICAL)
         val planner = Planner(system, PlanningPreferences.RECOMMENDED, AwayTimes.NONE)
         val forecast = forecast(today, zone) + forecast(today.plusDays(1), zone)
         val now = today.atTime(PLANNED_AT).atZone(zone).toInstant()

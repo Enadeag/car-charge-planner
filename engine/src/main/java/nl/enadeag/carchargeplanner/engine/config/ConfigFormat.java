@@ -40,8 +40,11 @@ import tools.jackson.databind.node.ObjectNode;
  * name the shape does not have is refused. Percentages, charger phases and provider ids are plain numbers and texts;
  * an empty fallback means none; a weekday is its English name in any case and a time is {@code "HH:mm"}; a typical
  * value is its {@link ConfigSetting}'s name. A panel array gives its size either as {@code kwp} or as {@code count}
- * with {@code wpPerPanel}, {@code yearPlaced} or both, never as both kinds. The file's {@code version} is 2, which
- * added the panels' count; version 1, which knows only {@code kwp}, is read as it is, and so is a file without one.
+ * with {@code wpPerPanel}, {@code yearPlaced} or both, never as both kinds. The system's {@code placeName}, the name
+ * of the place chosen from the place search, may be left out, and is written only when there is one; a blank one
+ * means none, and one longer than {@link PlaceName#LONGEST} characters is refused. The file's {@code version} is 2,
+ * which added the panels' count and the place name; version 1, which knows neither, is read as it is, and so is a
+ * file without one.
  *
  * <p>A top-level {@code calendar} section is known but skipped, with a warning in the log, and the next save leaves it
  * out: the builds of {@code main} between v0.5.0 and the removal of calendar trips wrote it, and a file from one of
@@ -55,8 +58,9 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
     private static final String OLD_CALENDAR = "calendar";
 
     /**
-     * The shape this app writes. Version 2 added an array's count of panels; a version 1 file is already a valid
-     * version 2 one, but an app that reads only version 1 refuses the count, so it is told the file is newer.
+     * The shape this app writes. Version 2 added an array's count of panels and the place name; a version 1 file is
+     * already a valid version 2 one, but an app that reads only version 1 refuses them, so it is told the file is
+     * newer.
      */
     private static final FileVersion VERSION = new FileVersion(2, List.of(UnaryOperator.identity()));
 
@@ -134,10 +138,11 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
     }
 
     private static HomeSystem system(ConfigFields system) throws FormatProblem {
-        system.only("latitude", "longitude", "timezone", "panels", "house", "car", "charger");
+        system.only("latitude", "longitude", "placeName", "timezone", "panels", "house", "car", "charger");
         double latitude = system.number("latitude");
         double longitude = system.number("longitude");
         var location = system.make(() -> new Coordinates(latitude, longitude));
+        var place = system.has("placeName") ? placeName(system) : Optional.<PlaceName>empty();
         var timezone = zone(system);
         var panels = new ArrayList<PanelArray>();
         for (var array : system.objects("panels")) {
@@ -146,7 +151,12 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         var house = house(system.object("house"));
         var car = car(system.object("car"));
         var charger = charger(system.object("charger"));
-        return system.make(() -> new HomeSystem(location, timezone, panels, house, car, charger));
+        return system.make(() -> new HomeSystem(location, place, timezone, panels, house, car, charger));
+    }
+
+    private static Optional<PlaceName> placeName(ConfigFields system) throws FormatProblem {
+        var name = system.text("placeName");
+        return system.make("placeName", () -> PlaceName.of(name));
     }
 
     private static House house(ConfigFields house) throws FormatProblem {
@@ -333,8 +343,9 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
 
     private static void writeSystem(ObjectNode node, HomeSystem system) {
         node.put("latitude", system.location().latitude())
-                .put("longitude", system.location().longitude())
-                .put("timezone", system.timezone().getId());
+                .put("longitude", system.location().longitude());
+        system.place().ifPresent(name -> node.put("placeName", name.text()));
+        node.put("timezone", system.timezone().getId());
         var panels = node.putArray("panels");
         system.panels().forEach(array -> {
             var arrayNode = panels.addObject().put("name", array.name());

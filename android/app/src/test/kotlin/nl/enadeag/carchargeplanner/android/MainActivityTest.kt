@@ -69,7 +69,8 @@ class MainActivityTest {
         access.searches.single().complete(PlaceResults.Found(listOf(utrecht)))
         compose.waitForIdle()
         compose.onNodeWithText("Utrecht, Nederland").performScrollTo().performClick()
-        click(R.string.coordinates_toggle)
+        compose.onNodeWithText(text(R.string.place_chosen, "Utrecht, Nederland")).assertExists()
+        click(R.string.coordinates_fold)
         field(R.string.latitude).assert(hasText("52,0907"))
     }
 

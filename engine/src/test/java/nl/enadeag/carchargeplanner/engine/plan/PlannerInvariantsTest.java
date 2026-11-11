@@ -22,6 +22,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -106,7 +107,7 @@ class PlannerInvariantsTest {
         var zone = Forecasts.TZ;
         var phases = random.nextBoolean() ? Phases.ONE : Phases.THREE;
         int minAmps = 6 + random.nextInt(3);
-        var system = new HomeSystem(new Coordinates(51.0, 5.0), zone, List.of(Forecasts.PANELS),
+        var system = new HomeSystem(new Coordinates(51.0, 5.0), Optional.empty(), zone, List.of(Forecasts.PANELS),
                 new House(random.nextDouble() * 1.0), new Car(30 + random.nextInt(70), 14 + random.nextInt(10),
                         random.nextInt(120)),
                 new Charger(phases, minAmps, minAmps + random.nextInt(27), 230, 0.8 + random.nextDouble() * 0.2));

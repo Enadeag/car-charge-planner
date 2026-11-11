@@ -41,7 +41,6 @@ import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
 import nl.enadeag.carchargeplanner.android.ui.setup.AwayPeriods
 import nl.enadeag.carchargeplanner.android.ui.setup.CarStep
 import nl.enadeag.carchargeplanner.android.ui.setup.ChargerStep
-import nl.enadeag.carchargeplanner.android.ui.setup.Coordinates
 import nl.enadeag.carchargeplanner.android.ui.setup.Edits
 import nl.enadeag.carchargeplanner.android.ui.setup.HouseFields
 import nl.enadeag.carchargeplanner.android.ui.setup.LocationFields
@@ -62,9 +61,9 @@ internal fun summary(page: SettingsPage, config: EngineConfig, session: Settings
     return when (page) {
         SettingsPage.SOLAR -> pluralStringResource(R.plurals.settings_solar_summary, system.panels().size,
             system.panels().size, numbers.write(system.panels().sumOf { it.kwp() }, 1))
-        SettingsPage.LOCATION -> stringResource(R.string.settings_location_summary,
-            numbers.write(system.location().latitude(), 4), numbers.write(system.location().longitude(), 4),
-            system.timezone().id)
+        SettingsPage.LOCATION -> system.place().map { it.text() }.orElse(null)
+            ?: stringResource(R.string.settings_location_summary, numbers.write(system.location().latitude(), 4),
+                numbers.write(system.location().longitude(), 4))
         SettingsPage.CAR_AND_HOUSE -> stringResource(R.string.settings_car_house_summary,
             numbers.write(system.car().usableBatteryKwh(), 1), numbers.write(system.house().baseloadKw(), 2))
         SettingsPage.CHARGER -> stringResource(R.string.settings_charger_summary,
@@ -150,9 +149,8 @@ private fun RemoveArray(number: Int, removable: Boolean, onRemove: () -> Unit) {
 }
 
 /**
- * Where the home is: the place search of the stored primary provider, or a line that it has none; the coordinates,
- * always shown; and the time zone under "Advanced", which typed coordinates leave alone, as a stored zone counts as
- * chosen (#315).
+ * Where the home is, as set-up's step shows it, with the place search of the stored primary provider; typed
+ * coordinates leave the time zone alone, as a stored zone counts as chosen (#315).
  *
  * @param problems the page's fields in order, for the focus after Save
  */
@@ -163,13 +161,10 @@ internal fun LocationPage(session: SettingsSession, edits: Edits, problems: Prob
     val places = session.places
     val primary = config.forecast().primary()
     LocationFields(location, places, session.providerName(primary), session.hasPlaceSearch(primary), edits,
-        problems, Coordinates.SHOWN, { result ->
-            location.choose(result.place)
-            places.choose(result)
-        }, { field: LocationForm.Field, text ->
-            location.edit(field, text)
-            places.forgetChosen()
-        })
+        problems, { result ->
+            location.choose(result.place, result.label)
+            places.chosen()
+        }, { field: LocationForm.Field, text -> location.edit(field, text) })
 }
 
 /**

@@ -6,18 +6,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +34,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.enadeag.carchargeplanner.android.R
+import nl.enadeag.carchargeplanner.android.form.FieldProblem
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.setup.PlaceSearch
 import nl.enadeag.carchargeplanner.android.setup.SetUpSession
@@ -56,94 +49,85 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppButton
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 
 /**
- * Where the home is: the place search, on its button or the keyboard's search key, and its results; the coordinates
- * behind "Enter coordinates instead", which is open when coordinates were typed rather than found; and the time zone
- * under "Advanced".
+ * Where the home is, as Settings' Location page shows it too.
  *
  * @param problems the step's fields in order, for the focus after Next
  */
 @Composable
 internal fun LocationStep(session: SetUpSession, edits: Edits, problems: ProblemFocus) {
-    val chosen by session.places.chosen.collectAsStateWithLifecycle()
-    val typed = chosen == null && session.flow.config().system().location().isChosen
     LocationFields(session.flow.location, session.places, session.providerName(), true, edits, problems,
-        if (typed) Coordinates.OPEN else Coordinates.CLOSED, session::choose, session::typeCoordinate)
-}
-
-/** How a location page shows the coordinates. */
-internal enum class Coordinates {
-    /** Behind "Enter coordinates instead", closed. */
-    CLOSED,
-    /** Behind "Enter coordinates instead", open, as for coordinates typed before. */
-    OPEN,
-    /** Always shown, as Settings has coordinates already. */
-    SHOWN,
+        session::choose, session::typeCoordinate)
 }
 
 /**
- * The place search with its results, or a line that the provider has none; once a place is chosen, a card with what
- * it filled in, which takes the focus; the coordinates; and the time zone under "Advanced".
- *
- * @param hasSearch whether that provider has a place search; without one only the coordinates are offered
- * @param problems the page's fields in order, for the focus after Next or Save
- * @param coordinates whether the coordinates are shown, or behind their toggle and how it starts
+ * The location page, the same in set-up and Settings. A problem in a coordinate opens the fold, which stays open also
+ * after the problem is put right, so the field being corrected does not fold away.
  */
 @Composable
 internal fun LocationFields(location: LocationForm, places: PlaceSearch, provider: String, hasSearch: Boolean,
-    edits: Edits, problems: ProblemFocus, coordinates: Coordinates, onChoose: (PlaceSearch.Result) -> Unit,
+    edits: Edits, problems: ProblemFocus, onChoose: (PlaceSearch.Result) -> Unit,
     onType: (LocationForm.Field, String) -> Unit) {
     val shown by location.problems.collectAsStateWithLifecycle()
-    val chosen by places.chosen.collectAsStateWithLifecycle()
-    val typedCoordinates = LocationForm.Field.LATITUDE in shown || LocationForm.Field.LONGITUDE in shown
-    var open by rememberSaveable { mutableStateOf(coordinates == Coordinates.OPEN) }
-    var advanced by rememberSaveable { mutableStateOf(false) }
+    val name = edits.shown { location.placeName() }
+    val coordinateProblem = LocationForm.Field.LATITUDE in shown || LocationForm.Field.LONGITUDE in shown
+    var folded by rememberSaveable { mutableStateOf(name != null) }
     val chosenCount by places.chosenCount.collectAsStateWithLifecycle()
-    // a choice made before the fields were shown, as before turning the phone or leaving the step, does not take
-    // the focus again; each one after it does, also of the same place
+    // a choice made before the page was shown, as before turning the phone or leaving the step, neither folds the
+    // coordinates nor takes the focus again; each one after it does, also of the same place
     val firstSeen = remember(places) { places.chosenCount.value }
-    val card = remember { FocusRequester() }
+    val line = remember { FocusRequester() }
     LaunchedEffect(chosenCount) {
         if (chosenCount != firstSeen) {
-            // the card is composed by the next frame at the latest, which this waits for to be sure
+            folded = true
+            // the line shows the new place by the next frame at the latest, which this waits for to be sure
             withFrameNanos { }
-            card.requestFocus()
+            line.requestFocus()
+        }
+    }
+    LaunchedEffect(coordinateProblem) {
+        // open after the problem too, so the field the owner is putting right does not fold away under them
+        if (coordinateProblem) {
+            folded = false
         }
     }
 
-    if (hasSearch) {
-        EntryField(stringResource(R.string.place_field), stringResource(R.string.place_hint, provider),
-            edits.shown { places.text() }, { text -> edits.make { places.edit(text) } }, FieldKind.TEXT,
-            shown[LocationForm.Field.PLACE], false,
-            rememberFieldFocus(problems, 0, LocationForm.Field.PLACE in shown),
-            imeAction = ImeAction.Search, onAction = { places.search() })
-        AppButton(onClick = { places.search() }) {
-            Text(stringResource(R.string.place_search))
-        }
-        chosen?.let { label -> ChosenPlace(label, location, edits, coordinates != Coordinates.SHOWN, card) }
-        SearchResults(places) { result -> edits.make { onChoose(result) } }
-    } else {
+    if (!hasSearch) {
         Text(stringResource(R.string.settings_no_place_search, provider))
+        CoordinateFields(location, edits, problems, shown, onType)
+        return
     }
+    Text(name?.let { stringResource(R.string.place_chosen, it.text()) } ?: stringResource(R.string.place_not_chosen),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.fillMaxWidth().focusRequester(line).focusable())
+    val hint = stringResource(R.string.place_hint, provider)
+    EntryField(stringResource(R.string.place_field),
+        if (name == null) hint else stringResource(R.string.place_another) + "\n" + hint,
+        edits.shown { places.text() }, { text -> edits.make { places.edit(text) } }, FieldKind.TEXT,
+        shown[LocationForm.Field.PLACE], false, rememberFieldFocus(problems, 0, LocationForm.Field.PLACE in shown),
+        imeAction = ImeAction.Search, onAction = { places.search() })
+    AppButton(onClick = { places.search() }) {
+        Text(stringResource(R.string.place_search))
+    }
+    SearchResults(places) { result -> edits.make { onChoose(result) } }
+    Fold(stringResource(R.string.coordinates_fold), !folded || coordinateProblem,
+        { open -> if (!coordinateProblem) folded = !open }) {
+        CoordinateFields(location, edits, problems, shown, onType)
+    }
+}
 
-    val showCoordinates = coordinates == Coordinates.SHOWN || open || typedCoordinates
-    if (coordinates != Coordinates.SHOWN) {
-        Toggle(stringResource(R.string.coordinates_toggle), showCoordinates) { open = it }
+@Composable
+private fun CoordinateFields(location: LocationForm, edits: Edits, problems: ProblemFocus,
+    shown: Map<LocationForm.Field, FieldProblem>, onType: (LocationForm.Field, String) -> Unit) {
+    listOf(
+        LocationForm.Field.LATITUDE to (R.string.latitude to R.string.latitude_hint),
+        LocationForm.Field.LONGITUDE to (R.string.longitude to R.string.longitude_hint),
+    ).forEachIndexed { index, (field, texts) ->
+        NumberField(stringResource(texts.first), stringResource(texts.second),
+            edits.shown { location.text(field) }, { text -> edits.make { onType(field, text) } },
+            FieldKind.SIGNED, shown[field], focus = rememberFieldFocus(problems, index + 1, field in shown),
+            imeAction = if (field == LocationForm.Field.LONGITUDE) ImeAction.Done else ImeAction.Next)
     }
-    if (showCoordinates) {
-        listOf(
-            LocationForm.Field.LATITUDE to (R.string.latitude to R.string.latitude_hint),
-            LocationForm.Field.LONGITUDE to (R.string.longitude to R.string.longitude_hint),
-        ).forEachIndexed { index, (field, texts) ->
-            NumberField(stringResource(texts.first), stringResource(texts.second),
-                edits.shown { location.text(field) }, { text -> edits.make { onType(field, text) } },
-                FieldKind.SIGNED, shown[field], focus = rememberFieldFocus(problems, index + 1, field in shown),
-                imeAction = if (field == LocationForm.Field.LONGITUDE) ImeAction.Done else ImeAction.Next)
-        }
-    }
-
-    Fold(stringResource(R.string.advanced), advanced, { advanced = it }) {
-        TimeZone(edits.shown { location.timeZone()?.id.orEmpty() }) { zone -> edits.make { location.choose(zone) } }
-    }
+    TimeZone(edits.shown { location.timeZone()?.id.orEmpty() }) { zone -> edits.make { location.choose(zone) } }
 }
 
 /** What the search found, or why it found nothing, as a live region that a screen reader reads when it changes. */
@@ -180,46 +164,6 @@ private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) ->
                 PlaceResults.Problem.BAD_RESPONSE -> R.string.place_bad_response
             }))
         }
-    }
-}
-
-/**
- * What a choice from the search filled in, on a card under the Search button: the place, its coordinates as the
- * fields hold them, and its time zone. Read as one part by a screen reader; takes the focus after a choice (see
- * [LocationFields]).
- *
- * @param withCoordinates whether the card shows the coordinates; not where the fields are always shown
- */
-@Composable
-private fun ChosenPlace(label: String, location: LocationForm, edits: Edits, withCoordinates: Boolean,
-    focus: FocusRequester) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { }.focusRequester(focus).focusable()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(16.dp)) {
-            Icon(Icons.Filled.CheckCircle, contentDescription = null)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.place_chosen_label, label), style = MaterialTheme.typography.titleMedium)
-                if (withCoordinates) {
-                    Text(stringResource(R.string.place_chosen_coordinates,
-                        edits.shown { location.text(LocationForm.Field.LATITUDE) },
-                        edits.shown { location.text(LocationForm.Field.LONGITUDE) }))
-                }
-                Text(stringResource(R.string.time_zone_now, edits.shown { location.timeZone()?.id.orEmpty() }))
-            }
-        }
-    }
-}
-
-/** A part of the step that opens and closes, as a check box a screen reader reads as on or off. */
-@Composable
-private fun Toggle(label: String, open: Boolean, onChange: (Boolean) -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-            .toggleable(value = open, role = Role.Checkbox, onValueChange = onChange),
-    ) {
-        Checkbox(checked = open, onCheckedChange = null)
-        Text(label, modifier = Modifier.padding(start = 8.dp))
     }
 }
 

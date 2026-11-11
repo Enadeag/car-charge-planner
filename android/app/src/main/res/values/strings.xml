@@ -49,12 +49,13 @@
   <string name="place_search">Search</string>
   <string name="place_searching">Searching…</string>
   <string name="place_choose">Choose your place:</string>
-  <!-- the first line of the card shown after a place is chosen from the results; %1$s the place, such as
-       "Utrecht, Netherlands" -->
-  <string name="place_chosen_label">Chosen: %1$s</string>
-  <!-- the card's line with what the choice filled in; %1$s the latitude, %2$s the longitude, written as the fields
-       write them, such as 52.0907 and 5.1214; a language with a decimal comma separates them with a semicolon -->
-  <string name="place_chosen_coordinates">Coordinates: %1$s, %2$s</string>
+  <!-- the location page's top line; %1$s the place's name as it was chosen from the results, such as
+       "Utrecht, Netherlands", kept in the language of that moment -->
+  <string name="place_chosen">Chosen place: %1$s</string>
+  <!-- the location page's top line while the settings hold no place name -->
+  <string name="place_not_chosen">No place chosen yet</string>
+  <!-- under the place search, while a place is chosen -->
+  <string name="place_another">Search to choose another place</string>
   <!-- %1$s what the owner searched for -->
   <string name="place_none">No places found for “%1$s”.</string>
   <string name="place_no_search">Your forecast provider has no place search: enter the coordinates.</string>
@@ -62,12 +63,12 @@
   <string name="place_unavailable">The place search could not be reached. Check that the phone is online and try again, or enter the coordinates.</string>
   <string name="place_busy">The place search is busy. Try again in a minute.</string>
   <string name="place_bad_response">The place search gave an answer the app does not understand.</string>
-  <string name="coordinates_toggle">Enter coordinates instead</string>
   <string name="latitude">Latitude</string>
   <string name="latitude_hint">Degrees; positive is north.</string>
   <string name="longitude">Longitude</string>
   <string name="longitude_hint">Degrees; positive is east of Greenwich.</string>
-  <string name="advanced">Advanced</string>
+  <!-- the fold that holds the latitude, the longitude and the time zone -->
+  <string name="coordinates_fold">Coordinates and time zone</string>
   <!-- %1$s the time zone's id, such as Europe/Amsterdam -->
   <string name="time_zone_now">Time zone: %1$s</string>
   <string name="time_zone_change">Change the time zone</string>
@@ -536,8 +537,9 @@
     <item quantity="one">%1$d array, %2$s kWp</item>
     <item quantity="other">%1$d arrays, %2$s kWp</item>
   </plurals>
-  <!-- %1$s the latitude and %2$s the longitude, written already; %3$s the time zone, such as Europe/Amsterdam -->
-  <string name="settings_location_summary">%1$s, %2$s, %3$s</string>
+  <!-- without a place name: %1$s the latitude and %2$s the longitude, written already; a language whose
+       numbers have a decimal comma puts a semicolon between them -->
+  <string name="settings_location_summary">%1$s, %2$s</string>
   <!-- %1$s the usable battery in kWh and %2$s the house baseload in kW, both written already -->
   <string name="settings_car_house_summary">Battery %1$s kWh, house %2$s kW</string>
   <!-- %1$s the phases, such as "Three phases"; %2$d the minimum and %3$d the maximum charge current in A -->

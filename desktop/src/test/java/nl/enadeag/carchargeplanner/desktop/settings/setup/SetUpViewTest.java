@@ -18,6 +18,7 @@ import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
+import nl.enadeag.carchargeplanner.engine.config.PlaceName;
 import nl.enadeag.carchargeplanner.engine.config.PanelSize;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
@@ -137,6 +138,7 @@ class SetUpViewTest {
         assertThat(setUp.closed).isEqualTo(1);
         var config = stored();
         assertThat(config.system().location()).isEqualTo(SetUpFixture.PLACE.location());
+        assertThat(config.system().place()).contains(new PlaceName(SetUpFixture.PLACE.label()));
         assertThat(config.system().timezone()).isEqualTo(SetUpFixture.PLACE.timezone());
         assertThat(config.system().panels()).containsExactly(new PanelArray("",
                 new PanelSize.Panels(20, OptionalInt.of(310), Optional.of(Year.of(2021))), 35, 0, 0.14));
@@ -165,6 +167,64 @@ class SetUpViewTest {
         assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_LATITUDE).getAccessibleHelp()))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_NO_PLACE));
         assertThat(setUp.configPath).doesNotExist();
+    }
+
+    @Test
+    void nextWithoutAPlaceOpensTheFoldedCoordinatesWithTheProblemAndTheRowLeavesThemOpen() throws Exception {
+        var view = setUp.open();
+        next(view, 2);
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isFalse();
+
+        next(view, 1);
+
+        assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.LOCATION);
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isTrue();
+        assertThat(Fx.call(() -> setUp.latitudeHelp(view))).startsWith(noPlace());
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isTrue();
+    }
+
+    private String noPlace() {
+        return setUp.messages.text(TextKey.PROBLEM_NO_PLACE);
+    }
+
+    @Test
+    void choosingAPlaceTakesTheProblemAwayClosesTheCoordinatesAndLetsTheRowFoldThemAgain() throws Exception {
+        var view = setUp.open();
+        next(view, 2);
+        assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("No place chosen yet");
+        next(view, 1);
+
+        setUp.choosePlace(view);
+
+        assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("Chosen place: " + SetUpFixture.PLACE.label());
+        assertThat(Fx.call(() -> setUp.latitudeHelp(view))).doesNotContain(noPlace());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isFalse();
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isTrue();
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isFalse();
+    }
+
+    @Test
+    void typedCoordinatesTakeTheProblemAwayAndLetTheRowFoldThemAgain() throws Exception {
+        var view = setUp.open();
+        next(view, 2);
+        next(view, 1);
+        Fx.run(() -> {
+            setUp.type(view, TextKey.FIELD_LATITUDE, "51.5");
+            setUp.type(view, TextKey.FIELD_LONGITUDE, "4.25");
+        });
+
+        next(view, 1);
+        Fx.run(() -> setUp.button(view, TextKey.SET_UP_BACK).fire());
+
+        assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.LOCATION);
+        assertThat(Fx.call(() -> setUp.latitudeHelp(view))).doesNotContain(noPlace());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isTrue();
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isFalse();
     }
 
     @Test
