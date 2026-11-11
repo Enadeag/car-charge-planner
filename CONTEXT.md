@@ -39,7 +39,7 @@ The part of a charge window's energy that comes from the owner's own solar panel
 _Avoid_: Sun share, sun (for solar power)
 
 **Baseload**:
-The power the house uses without the car, as an average over the whole day: the kWh of a month divided by 730.
+The power the house uses without charging the car, as an average over the whole day, night included. The settings keep it in kW; the screens ask for it as kWh per day and call it "Household use" ("Verbruik van het huis"), with what an energy supplier shows per day as the source.
 _Avoid_: House use, standby use
 
 **Weekly away period**:
@@ -125,7 +125,7 @@ _Avoid_: Grid warning, top-up, emergency charge
 ## Setting up
 
 **Set-up**:
-The guided first-run process in which the owner describes their system (location, panels, car, charger, and optionally house and away periods) so a plan can be made. Short for what the owner does once; the ongoing editing of values is Settings.
+The guided first-run process in which the owner describes their system (location, panels, car, charger, and optionally the weekly away periods; the baseload keeps its typical value) so a plan can be made. Short for what the owner does once; the ongoing editing of values is Settings.
 _Avoid_: Onboarding, configuration, wizard (the wizard is only the form set-up takes)
 
 **Not set up**:

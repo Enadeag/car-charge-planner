@@ -6,7 +6,8 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 ### Steps and Back
 
-- Set-up is seven steps, without a navigation library: Welcome, Location, Panels, Car, Charger, More (the house and the weekly away periods) and Check (#314).
+- Set-up is seven steps, without a navigation library: Welcome, Location, Panels, Car, Charger, Away periods (the weekly away periods) and Check (#314, #450).
+- Set-up does not ask for the house's use: it saves the draft's typical 0.5 kW, marked as typical. A set-up that comes back from saved state with a house's use typed in it, from before #450, forgets it (#450).
 - Back on Welcome closes the app; on a later step it goes one step back and keeps what was entered. Back while the check runs cancels it; Back while Finish saves does nothing until the save ends (#314).
 - Welcome says that the app asks the provider about once an hour while it is closed (#361).
 - Set-up forgets its step and texts when the home opens and before a new set-up, because its forms' saved-state keys are the same as Settings' (#315).

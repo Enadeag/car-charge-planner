@@ -163,7 +163,9 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Number of panels, Direction, Tilt, Year placed, Power per panel | Aantal panelen, Richting, Helling, Jaar van plaatsing, Vermogen per paneel | a panel array's fields, in this order, in set-up and Settings; the direction and the tilt are drop-downs, with the choices in [translating.md](translating.md#the-words) |
 | Wp, as on the invoice or the panel. You may leave it empty: the app then counts on 360 Wp, usual for 2021. | Wp, staat op de factuur of het paneel. Leeg laten mag: dan rekent de app met 360 Wp, gangbaar voor 2021. | under the power per panel while it is empty and a year is typed; otherwise only its first sentence |
 | Choose… | Kies… | a drop-down before a choice, such as a new array's direction |
-| More settings | Meer instellingen | the fold under an array's fields, with its losses and name |
+| More settings | Meer instellingen | the fold under an array's fields, with its losses and name; on the Car and house page the fold with the household use |
+| Household use | Verbruik van het huis | the baseload's field, under More settings on the Car and house page; its hint "kWh per day, without charging the car. Your energy supplier shows your use per day." ("kWh per dag, zonder het laden van de auto. Je energieleverancier laat je verbruik per dag zien."); never "basisverbruik" |
+| Battery 60.0 kWh | Accu 60,0 kWh | the line under Car and house in Settings: the battery only |
 | Expanded, Collapsed | Uitgevouwen, Ingevouwen | what TalkBack says of a fold's row, such as More settings and Coordinates and time zone |
 | Add an array | Panelengroep toevoegen | |
 | A system needs at least one panel array | Een systeem heeft minstens één panelengroep nodig | why the last array's Remove is off |
