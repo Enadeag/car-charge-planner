@@ -96,18 +96,17 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
      * The direction a row shows: the owner's choice, or the one nearest to the stored degrees.
      *
      * @param row the row's number
-     * @return the point; null before a choice on a new array
+     * @return the point; null before a choice on a new array, and for a restored name this version does not know
      */
-    fun direction(row: Int): CompassPoint? = text(row, Field.DIRECTION).takeIf { it.isNotEmpty() }
-        ?.let { CompassPoint.valueOf(it) }
+    fun direction(row: Int): CompassPoint? = point(text(row, Field.DIRECTION))
 
     /**
      * The tilt a row shows: the owner's choice, or the one nearest to the stored degrees.
      *
      * @param row the row's number
-     * @return the choice; null before a choice on a new array
+     * @return the choice; null before a choice on a new array, and for a restored name this version does not know
      */
-    fun tilt(row: Int): TiltChoice? = text(row, Field.TILT).takeIf { it.isNotEmpty() }?.let { TiltChoice.valueOf(it) }
+    fun tilt(row: Int): TiltChoice? = tiltChoice(text(row, Field.TILT))
 
     /**
      * Chooses a row's direction, which from now on replaces the stored degrees.
@@ -272,8 +271,8 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
         PanelArray? {
         val kept = kept(id)
         val entered = if (kept == null) entered(state, reader.problems) else null
-        val azimuth = degrees(state, Field.DIRECTION, from?.azimuthDeg()) { CompassPoint.valueOf(it).azimuthDeg() }
-        val tilt = degrees(state, Field.TILT, from?.tiltDeg()) { TiltChoice.valueOf(it).degrees() }
+        val azimuth = degrees(state, Field.DIRECTION, from?.azimuthDeg()) { point(it)?.azimuthDeg() }
+        val tilt = degrees(state, Field.TILT, from?.tiltDeg()) { tiltChoice(it)?.degrees() }
         if (azimuth == null) {
             reader.problems[Field.DIRECTION] = FieldProblem.NotChosen
         }
@@ -328,13 +327,25 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
     }
 
     /** The owner's choice once made, else the stored degrees; null on a new array before a choice. */
-    private fun degrees(state: FormState<Field>, field: Field, stored: Double?, of: (String) -> Double): Double? =
-        if (state.isEdited(field) || stored == null) state.text(field).takeIf { it.isNotEmpty() }?.let(of) else stored
+    private fun degrees(state: FormState<Field>, field: Field, stored: Double?, of: (String) -> Double?): Double? =
+        if (state.isEdited(field) || stored == null) of(state.text(field)) else stored
+
+    // the names come from the saved state, which may hold one from another version of the app
+    private fun point(name: String): CompassPoint? = CompassPoint.entries.firstOrNull { it.name == name }
+
+    private fun tiltChoice(name: String): TiltChoice? = TiltChoice.entries.firstOrNull { it.name == name }
 
     private fun kept(row: Int): PanelSize.Peak? {
         val state = rows.state(row)
         val kwp = rows.decimal(row, KEPT_KWP) ?: return null
-        return if (SIZE_FIELDS.all { state.text(it).isBlank() }) PanelSize.Peak(kwp) else null
+        if (SIZE_FIELDS.any { state.text(it).isNotBlank() }) {
+            return null
+        }
+        return try {
+            PanelSize.Peak(kwp)
+        } catch (ignored: InvalidSetting) {
+            null
+        }
     }
 
     private fun marked(typical: Set<ConfigSetting>): Set<Field> =

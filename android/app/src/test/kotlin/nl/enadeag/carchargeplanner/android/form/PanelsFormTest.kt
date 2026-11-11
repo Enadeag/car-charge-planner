@@ -262,6 +262,39 @@ class PanelsFormTest {
     }
 
     @Test
+    fun aRestoredDirectionOrTiltWhoseNameNoLongerFitsCountsAsNotChosen() {
+        form.load(stored)
+        val first = form.rowIds.value.first()
+        form.choose(first, CompassPoint.WEST)
+        form.choose(first, TiltChoice.STEEP)
+        handle["panels.$first.text.DIRECTION"] = "WEST_SOUTH_WEST"
+        handle["panels.$first.text.TILT"] = "TILTED"
+
+        val again = PanelsForm(handle.afterTheSystemEndedTheApp(), numbers, thisYear)
+
+        assertThat(again.direction(first)).isNull()
+        assertThat(again.tilt(first)).isNull()
+        assertThat(again.check(stored)).isNull()
+        assertThat(again.problems(first).value).containsExactlyEntriesOf(mapOf(
+            PanelsForm.Field.DIRECTION to FieldProblem.NotChosen, PanelsForm.Field.TILT to FieldProblem.NotChosen))
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["two", "0", "NaN"])
+    fun aRestoredPeakPowerThatNoLongerFitsIsNotKeptAndTheArrayNeedsItsPanels(kwp: String) {
+        form.load(stored)
+        val second = form.rowIds.value[1]
+        handle["panels.$second.keptKwp"] = kwp
+
+        val again = PanelsForm(handle.afterTheSystemEndedTheApp(), numbers, thisYear)
+
+        assertThat(again.keptKwp(second)).isNull()
+        assertThat(again.check(stored)).isNull()
+        assertThat(again.problems(second).value).containsExactlyEntriesOf(mapOf(
+            PanelsForm.Field.COUNT to FieldProblem.Refused(InvalidSetting.Rule.PANEL_COUNT_OUT_OF_RANGE)))
+    }
+
+    @Test
     fun theRowsTheirTextsAndTheKeptPeakPowerSurviveTheSystemEndingTheApp() {
         form.load(stored)
         form.add()
