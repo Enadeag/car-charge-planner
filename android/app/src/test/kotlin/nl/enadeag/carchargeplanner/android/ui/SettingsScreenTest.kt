@@ -1248,9 +1248,9 @@ class SettingsScreenTest {
      * @return the number of lines Location's values take
      */
     private fun assertEveryRowsValuesShowWhole(): Int {
-        val name = PlaceName("Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch, Wales, United Kingdom")
-        show(session(config = stored.withSystem(stored.system().withPlace(Coordinates(53.2225, -4.2032),
-            ZoneId.of("Europe/London"), name), stored.typical())), fontScaleTwo = true)
+        val name = PlaceName("Zonnedorpenzonneveldenzonnebergenzonnewoudenzonnemeerzonnehoeve, Zonnegouw, Zonneland")
+        show(session(config = stored.withSystem(stored.system().withPlace(Coordinates(52.0907, 5.1214), amsterdam,
+            name), stored.typical())), fontScaleTwo = true)
         return SettingsPage.entries.map { page ->
             val row = row(page)
             val summary = row.config[SemanticsProperties.Text].last().text
