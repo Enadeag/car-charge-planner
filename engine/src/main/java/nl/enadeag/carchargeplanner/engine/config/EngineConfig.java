@@ -42,8 +42,8 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
      * @return a draft that can be planned with, but whose place still has to be chosen
      */
     public static EngineConfig setUpDraft(ZoneId timezone, ProviderId primary) {
-        var system = new HomeSystem(Coordinates.NOT_CHOSEN, timezone, List.of(PanelArray.TYPICAL), House.TYPICAL,
-                Car.TYPICAL, Charger.TYPICAL);
+        var system = new HomeSystem(Coordinates.NOT_CHOSEN, Optional.empty(), timezone, List.of(PanelArray.TYPICAL),
+                House.TYPICAL, Car.TYPICAL, Charger.TYPICAL);
         return new EngineConfig(system, PlanningPreferences.RECOMMENDED,
                 new ForecastSelection(primary, Optional.empty(), Map.of()), WeeklyAwaySchedule.NONE,
                 new TypicalValues(TypicalValues.SYSTEM_SETTINGS, List.of(TypicalValues.PANEL_SETTINGS)));

@@ -531,7 +531,7 @@ class EngineTest {
         var needyId = new ProviderId("needy");
         var stored = Files.readString(config);
         var draft = EngineConfig.setUpDraft(BRUSSELS, needyId).withSystem(
-                exampleSystem().withLocation(new Coordinates(51, 5), BRUSSELS), TypicalValues.NONE);
+                exampleSystem().withUnnamedLocation(new Coordinates(51, 5), BRUSSELS), TypicalValues.NONE);
 
         var preview = engine.preview(draft, new Secrets(Map.of(needyId, Map.of("api_key", "TYPED-KEY"))));
 

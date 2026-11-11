@@ -2,11 +2,14 @@ package nl.enadeag.carchargeplanner.engine.config;
 
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Facts about the owner's home and equipment.
  *
  * @param location the coordinates of the home
+ * @param place the name of the place the owner chose from the place search for these coordinates; empty when the
+ *     owner typed them, or chose none yet
  * @param timezone the time zone of the home
  * @param panels the panel arrays, at least one
  * @param house the home's own use of power
@@ -15,6 +18,7 @@ import java.util.List;
  */
 public record HomeSystem(
         Coordinates location,
+        Optional<PlaceName> place,
         ZoneId timezone,
         List<PanelArray> panels,
         House house,
@@ -41,18 +45,31 @@ public record HomeSystem(
      * @throws IllegalArgumentException when there is no panel array
      */
     public HomeSystem withPanels(List<PanelArray> newPanels) {
-        return new HomeSystem(location, timezone, newPanels, house, car, charger);
+        return new HomeSystem(location, place, timezone, newPanels, house, car, charger);
     }
 
     /**
-     * The system at another place.
+     * The system at a place the owner chose from the place search, with its name.
      *
      * @param newLocation the coordinates of the home
      * @param newTimezone the time zone of the home
+     * @param name the name of the chosen place, which belongs to these coordinates
      * @return a system with everything else the same
      */
-    public HomeSystem withLocation(Coordinates newLocation, ZoneId newTimezone) {
-        return new HomeSystem(newLocation, newTimezone, panels, house, car, charger);
+    public HomeSystem withPlace(Coordinates newLocation, ZoneId newTimezone, PlaceName name) {
+        return new HomeSystem(newLocation, Optional.of(name), newTimezone, panels, house, car, charger);
+    }
+
+    /**
+     * The system at coordinates without a place name, as typed by the owner: a name kept before goes, so it never
+     * stays with coordinates it is not the name of.
+     *
+     * @param newLocation the coordinates of the home
+     * @param newTimezone the time zone of the home
+     * @return a system without a place name, with everything else the same
+     */
+    public HomeSystem withUnnamedLocation(Coordinates newLocation, ZoneId newTimezone) {
+        return new HomeSystem(newLocation, Optional.empty(), newTimezone, panels, house, car, charger);
     }
 
     /**
@@ -63,7 +80,7 @@ public record HomeSystem(
      * @return a system with everything else the same
      */
     public HomeSystem withHouseAndCar(House newHouse, Car newCar) {
-        return new HomeSystem(location, timezone, panels, newHouse, newCar, charger);
+        return new HomeSystem(location, place, timezone, panels, newHouse, newCar, charger);
     }
 
     /**
@@ -73,6 +90,6 @@ public record HomeSystem(
      * @return a system with everything else the same
      */
     public HomeSystem withCharger(Charger newCharger) {
-        return new HomeSystem(location, timezone, panels, house, car, newCharger);
+        return new HomeSystem(location, place, timezone, panels, house, car, newCharger);
     }
 }
