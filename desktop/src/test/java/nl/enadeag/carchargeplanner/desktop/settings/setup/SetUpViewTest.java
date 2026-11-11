@@ -14,11 +14,11 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Car;
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice;
 import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
-import nl.enadeag.carchargeplanner.engine.config.HomeChargePower;
 import nl.enadeag.carchargeplanner.engine.config.House;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.PlaceName;
@@ -102,7 +102,7 @@ class SetUpViewTest {
         Fx.run(() -> {
             setUp.fillPanels(view);
             view.show(SetUpStep.CHARGER);
-            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_11));
+            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, ChargePowerChoice.KW_11);
             view.show(SetUpStep.SOLAR);
         });
         return view;
@@ -137,7 +137,7 @@ class SetUpViewTest {
         assertThatThrownBy(() -> Fx.call(() -> setUp.field(view, TextKey.FIELD_CAR_TRIP_SURCHARGE)))
                 .as("set-up keeps the standard trip surcharge").hasMessageContaining("no field");
         next(view, 1);
-        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_11)));
+        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, ChargePowerChoice.KW_11));
         next(view, 2);
         Fx.run(() -> setUp.button(view, TextKey.AWAY_ADD).fire());
         next(view, 1);
@@ -339,7 +339,9 @@ class SetUpViewTest {
         assertThat(Fx.call(() -> help(view, TextKey.FIELD_CHARGE_POWER)))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_NOT_CHOSEN));
         assertThat(Fx.call(() -> chargerFoldOpen(view))).as("the problem is not under the fold").isFalse();
-        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_7_4)));
+        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, ChargePowerChoice.KW_7_4));
+        assertThat(Fx.call(() -> help(view, TextKey.FIELD_CHARGE_POWER)))
+                .doesNotContain(setUp.messages.text(TextKey.PROBLEM_NOT_CHOSEN));
         next(view, 1);
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.FORECAST);
     }
@@ -360,19 +362,20 @@ class SetUpViewTest {
         Fx.run(() -> setUp.button(view, TextKey.USE_TYPICAL).fire());
         assertThat(Fx.call(() -> shown(view, TextKey.FIELD_CHARGE_POWER)))
                 .containsExactly(setUp.messages.text(TextKey.CHOOSE));
-        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_3_7)));
+        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, ChargePowerChoice.KW_3_7));
         assertThat(Fx.call(() -> help(view, TextKey.FIELD_MAX_CURRENT))).doesNotContain(typicalTag);
         assertThat(Fx.call(() -> help(view, TextKey.FIELD_PHASES))).doesNotContain(typicalTag);
         assertThat(Fx.call(() -> help(view, TextKey.FIELD_VOLTAGE))).as("still 230 V").contains(typicalTag);
     }
 
     @Test
-    void otherInSetUpOpensTheFoldChangesNoValueAndLetsTheOwnerGoOn() throws Exception {
+    void otherInSetUpAfterARefusedNextOpensTheFoldChangesNoValueAndLetsTheOwnerGoOn() throws Exception {
         var view = setUp.open();
-        Fx.run(() -> {
-            view.show(SetUpStep.CHARGER);
-            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.<HomeChargePower>empty());
-        });
+        Fx.run(() -> view.show(SetUpStep.CHARGER));
+        next(view, 1);
+        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, ChargePowerChoice.OTHER));
+        assertThat(Fx.call(() -> help(view, TextKey.FIELD_CHARGE_POWER)))
+                .doesNotContain(setUp.messages.text(TextKey.PROBLEM_NOT_CHOSEN));
         assertThat(Fx.call(() -> chargerFoldOpen(view))).isTrue();
         assertThat(Fx.call(() -> shown(view, TextKey.FIELD_CHARGE_POWER))).containsExactly("Other");
         assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_MAX_CURRENT)).getText()))
@@ -384,6 +387,20 @@ class SetUpViewTest {
     }
 
     @Test
+    void aFoldedValueEditedWhileChooseShowsChoosesNoPower() throws Exception {
+        var view = setUp.open();
+        Fx.run(() -> {
+            view.show(SetUpStep.CHARGER);
+            moreRow(view).fire();
+            setUp.type(view, TextKey.FIELD_MAX_CURRENT, "32");
+            setUp.choose(view, TextKey.FIELD_PHASES, Phases.THREE);
+        });
+
+        assertThat(Fx.call(() -> shown(view, TextKey.FIELD_CHARGE_POWER)))
+                .containsExactly(setUp.messages.text(TextKey.CHOOSE));
+    }
+
+    @Test
     void aPowerWhoseMaximumEndsBelowATypedMinimumIsRefusedAtTheMaximumWithTheFoldOpen() throws Exception {
         var view = atSolar();
         Fx.run(() -> {
@@ -391,7 +408,7 @@ class SetUpViewTest {
             moreRow(view).fire();
             setUp.type(view, TextKey.FIELD_MIN_CURRENT, "20");
             moreRow(view).fire();
-            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_3_7));
+            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, ChargePowerChoice.KW_3_7);
         });
         assertThat(Fx.call(() -> chargerFoldOpen(view))).isFalse();
 
@@ -405,6 +422,15 @@ class SetUpViewTest {
                 .as("the minimum is not changed silently").isEqualTo("20");
         Fx.run(() -> moreRow(view).fire());
         assertThat(Fx.call(() -> chargerFoldOpen(view))).as("held open while the problem shows").isTrue();
+
+        Fx.run(() -> setUp.type(view, TextKey.FIELD_MIN_CURRENT, "6"));
+        next(view, 1);
+        assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.FORECAST);
+        Fx.run(() -> {
+            view.show(SetUpStep.CHARGER);
+            moreRow(view).fire();
+        });
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).as("no longer held open once put right").isFalse();
     }
 
     @Test

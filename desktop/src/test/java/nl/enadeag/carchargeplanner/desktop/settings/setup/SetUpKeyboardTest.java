@@ -9,10 +9,9 @@ import nl.enadeag.carchargeplanner.desktop.Keyboard;
 import nl.enadeag.carchargeplanner.desktop.settings.SettingsFixture;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.config.HomeChargePower;
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
@@ -104,7 +103,7 @@ class SetUpKeyboardTest {
         var view = open(ColorScheme.LIGHT);
         Fx.run(() -> {
             view.show(SetUpStep.CHARGER);
-            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_3_7));
+            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, ChargePowerChoice.KW_3_7);
             setUp.type(view, TextKey.FIELD_MIN_CURRENT, "10");
             setUp.type(view, TextKey.FIELD_MAX_CURRENT, "8");
         });

@@ -18,6 +18,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.page.ProblemRows;
 import nl.enadeag.carchargeplanner.desktop.settings.page.TypicalButton;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice;
 import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.HomeChargePower;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 import javafx.scene.layout.Region;
 
 /**
@@ -47,7 +47,7 @@ public final class ChargerPage implements ConfigPage {
     private final Messages messages;
     private final boolean setUp;
     private final PageView view;
-    private final ChoiceInput<Optional<HomeChargePower>> power;
+    private final ChoiceInput<ChargePowerChoice> power;
     private final FieldRow powerRow;
     private final ChoiceInput<Phases> phases;
     private final NumberInput minAmps;
@@ -74,10 +74,7 @@ public final class ChargerPage implements ConfigPage {
         this.setUp = setUp;
         this.view = new PageView(messages.text(Category.CHARGER.title()));
         var names = new ChoiceNames(messages);
-        var powers = Stream.concat(Stream.of(HomeChargePower.values()).map(Optional::of),
-                Stream.of(Optional.<HomeChargePower>empty())).toList();
-        power = new ChoiceInput<>(powers,
-                choice -> choice.map(names::chargePower).orElseGet(names::otherChargePower));
+        power = new ChoiceInput<>(List.of(ChargePowerChoice.values()), names::chargePower);
         phases = new ChoiceInput<>(List.of(Phases.values()), names::phases);
         var amps = new NumberRange(1, 80, 1, 0);
         minAmps = new NumberInput(amps, "A", messages);
@@ -144,7 +141,7 @@ public final class ChargerPage implements ConfigPage {
                     && typicalSettings.contains(ConfigSetting.CHARGER_MAX_CURRENT)) {
                 power.loadNone(messages.text(TextKey.CHOOSE));
             } else {
-                power.load(HomeChargePower.of(charger));
+                power.load(ChargePowerChoice.of(charger));
             }
         } finally {
             following = false;
@@ -152,7 +149,7 @@ public final class ChargerPage implements ConfigPage {
         problems.clear();
         powerRow.clearProblem();
         more.holdOpen(false);
-        more.setOpen(power.value() != null && power.value().isEmpty());
+        more.setOpen(power.value() == ChargePowerChoice.OTHER);
         view.show(card);
     }
 
@@ -213,15 +210,12 @@ public final class ChargerPage implements ConfigPage {
         }
     }
 
-    /**
-     * A power sets the phases, the highest current and 230 V; the phases and the current are the owner's from then
-     * on, the voltage only when it changed. "Other" opens the fold.
-     */
     private void powerChosen() {
-        var chosen = power.value();
-        if (following || chosen == null) {
+        if (following) {
             return;
         }
+        powerRow.clearProblem();
+        var chosen = power.value().power();
         if (chosen.isEmpty()) {
             more.setOpen(true);
             return;
@@ -235,18 +229,18 @@ public final class ChargerPage implements ConfigPage {
         } finally {
             following = false;
         }
+        // the phases and the current are the owner's even where they did not change; the voltage only where it did
         typical.edited(ConfigSetting.CHARGER_PHASES);
         typical.edited(ConfigSetting.CHARGER_MAX_CURRENT);
     }
 
-    /** The power shows what the phases, the highest current and the voltage stand for, once one is chosen. */
     private void followValues() {
         if (following || power.value() == null) {
             return;
         }
         following = true;
         try {
-            power.set(HomeChargePower.matching(phases.value(), (int) Math.round(maxAmps.value()), volts.value()));
+            power.set(ChargePowerChoice.matching(phases.value(), (int) Math.round(maxAmps.value()), volts.value()));
         } finally {
             following = false;
         }
