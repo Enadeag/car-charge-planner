@@ -44,7 +44,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.Year;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -523,13 +523,16 @@ public final class Engine {
     }
 
     /**
-     * The current year by the engine's clock, in UTC, which a client checks a panel array's year placed against
-     * ({@link nl.enadeag.carchargeplanner.engine.config.PanelSize.Panels#notPlacedAfter(Year)}). Reads nothing.
+     * The current year on the device's clock, which a client checks a panel array's year placed against
+     * ({@link nl.enadeag.carchargeplanner.engine.config.PanelSize.Panels#notPlacedAfter(Year)}): the engine's clock in
+     * the device's time zone, so the owner can enter the new year from midnight on 1 January, local time. Reads
+     * nothing.
      *
-     * @return this year
+     * @param deviceZone the device's time zone as it is now, which the owner may change while the app runs; never null
+     * @return this year in that zone
      */
-    public Year thisYear() {
-        return Year.from(clock.instant().atOffset(ZoneOffset.UTC));
+    public Year thisYear(ZoneId deviceZone) {
+        return Year.from(clock.instant().atZone(deviceZone));
     }
 
     /**

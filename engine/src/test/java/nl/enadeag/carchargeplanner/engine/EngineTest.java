@@ -349,10 +349,17 @@ class EngineTest {
     }
 
     @Test
-    void thisYearIsTheYearOfTheEnginesClockInUtc() {
-        var newYearsEve = Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), BRUSSELS);
+    void thisYearTurnsAtMidnightInTheDevicesZoneAheadOfUtc() {
+        var newYearInBrussels = Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.UTC);
 
-        assertThat(engine(newYearsEve).thisYear()).isEqualTo(Year.of(2026));
+        assertThat(engine(newYearInBrussels).thisYear(ZoneId.of("Europe/Brussels"))).isEqualTo(Year.of(2027));
+    }
+
+    @Test
+    void thisYearTurnsAtMidnightInTheDevicesZoneBehindUtc() {
+        var newYearInUtc = Clock.fixed(Instant.parse("2027-01-01T00:30:00Z"), ZoneOffset.UTC);
+
+        assertThat(engine(newYearInUtc).thisYear(ZoneId.of("America/New_York"))).isEqualTo(Year.of(2026));
     }
 
     @Test

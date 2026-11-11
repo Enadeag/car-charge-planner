@@ -47,6 +47,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -170,7 +171,8 @@ public final class SettingsFixture {
     }
 
     SettingsStores stores(boolean installed) {
-        return new SettingsStores(engine, appSettings, installed ? Optional.of(login) : Optional.empty());
+        return new SettingsStores(engine, appSettings, installed ? Optional.of(login) : Optional.empty(),
+                () -> ZoneId.of("Europe/Amsterdam"));
     }
 
     AboutFacts facts() {

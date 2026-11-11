@@ -150,7 +150,8 @@ final class SetUpFixture {
     }
 
     SettingsStores stores() {
-        return new SettingsStores(engine, appSettings, Optional.of(login));
+        return new SettingsStores(engine, appSettings, Optional.of(login),
+                () -> ZoneId.of("Europe/Amsterdam"));
     }
 
     Path keysFile() {

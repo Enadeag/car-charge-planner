@@ -67,7 +67,7 @@ class SetUpSession(handle: SavedStateHandle, numbers: NumberText, phoneZone: () 
     private val draft = SetUpFlow.draft(phoneZone(), access.providers().first().id())
 
     /** The steps and their forms. */
-    val flow = SetUpFlow(handle, numbers, draft, access::thisYear, phoneZone)
+    val flow = SetUpFlow(handle, numbers, draft, { access.thisYear(phoneZone()) }, phoneZone)
 
     /** The check of the forecast on the last step. */
     val check = SetUpCheck(access, scope)

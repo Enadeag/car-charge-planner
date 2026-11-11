@@ -330,7 +330,8 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
         }
     }
 
-    private fun newForms() = SettingsForms(handle, numbers, phoneZone, access.providers(), access::thisYear)
+    private fun newForms() = SettingsForms(handle, numbers, phoneZone, access.providers(),
+        { access.thisYear(phoneZone()) })
 
     private fun newPlaces() = PlaceSearch(handle, access, scope, configNow.value.forecast().primary(), PLACE, language)
 }
