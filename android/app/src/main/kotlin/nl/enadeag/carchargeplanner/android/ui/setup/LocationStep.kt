@@ -47,6 +47,7 @@ import nl.enadeag.carchargeplanner.android.setup.PlaceSearch
 import nl.enadeag.carchargeplanner.android.setup.SetUpSession
 import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
+import nl.enadeag.carchargeplanner.android.ui.components.Fold
 import nl.enadeag.carchargeplanner.android.ui.components.NumberField
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
@@ -140,8 +141,7 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
         }
     }
 
-    Toggle(stringResource(R.string.advanced), advanced) { advanced = it }
-    if (advanced) {
+    Fold(stringResource(R.string.advanced), advanced, { advanced = it }) {
         TimeZone(edits.shown { location.timeZone()?.id.orEmpty() }) { zone -> edits.make { location.choose(zone) } }
     }
 }

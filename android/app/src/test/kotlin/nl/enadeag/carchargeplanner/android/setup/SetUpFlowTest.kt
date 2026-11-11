@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.setup
 
 import androidx.lifecycle.SavedStateHandle
+import java.time.Year
 import java.time.ZoneId
 import java.util.Locale
 import kotlinx.coroutines.test.runCurrent
@@ -8,9 +9,11 @@ import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
+import nl.enadeag.carchargeplanner.android.form.fillIn
 import nl.enadeag.carchargeplanner.android.form.HouseForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.form.PanelsForm
 import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
@@ -32,7 +35,7 @@ class SetUpFlowTest {
     private val numbers = NumberText(Locale.ENGLISH)
     private val amsterdam = ZoneId.of("Europe/Amsterdam")
     private val draft = SetUpFlow.draft(amsterdam, ProviderId("open-meteo"))
-    private val flow = SetUpFlow(handle, numbers, draft) { amsterdam }
+    private val flow = SetUpFlow(handle, numbers, draft, { Year.of(2026) }) { amsterdam }
     private val utrecht = Place("Utrecht", Coordinates(52.0907, 5.1214), ZoneId.of("Europe/Amsterdam"), "", "", "")
 
     /** Goes from the welcome to the step after the location, with Utrecht chosen. */
@@ -40,6 +43,7 @@ class SetUpFlowTest {
         flow.next()
         flow.location.choose(utrecht)
         assertThat(flow.next()).isTrue()
+        flow.panels.fillIn()
     }
 
     @Test
@@ -56,7 +60,7 @@ class SetUpFlowTest {
         assertThat(draft.system().location().isChosen).isFalse()
         assertThat(flow.car.typical()).hasSize(3)
         assertThat(flow.charger.typical()).hasSize(5)
-        assertThat(flow.panels.typical(flow.panels.rowIds.value.single())).hasSize(4)
+        assertThat(flow.panels.typical(flow.panels.rowIds.value.single())).containsExactly(PanelsForm.Field.LOSSES)
         assertThat(flow.house.typical()).hasSize(1)
     }
 
@@ -101,7 +105,7 @@ class SetUpFlowTest {
         flow.next()
         flow.car.edit(CarForm.Field.BATTERY, "75")
 
-        val again = SetUpFlow(handle.afterTheSystemEndedTheApp(), numbers, draft) { amsterdam }
+        val again = SetUpFlow(handle.afterTheSystemEndedTheApp(), numbers, draft, { Year.of(2026) }) { amsterdam }
 
         assertThat(again.step.value).isEqualTo(SetUpStep.CAR)
         assertThat(again.car.text(CarForm.Field.BATTERY)).isEqualTo("75")

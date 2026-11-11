@@ -547,17 +547,38 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun anArrayStoredByItsPeakPowerSaysSoAndShowsTheNearestChoices() {
+        show()
+        open(SettingsPage.SOLAR)
+
+        compose.onNodeWithText(text(R.string.panel_now_set, "5.0")).performScrollTo().assertIsDisplayed()
+        field(text(R.string.panel_in_array, text(R.string.panel_count), 1)).assert(hasText("", substring = true))
+        compose.onNode(hasText(text(R.string.panel_in_array, text(R.string.panel_direction), 1), substring = true)
+            and hasText(text(R.string.direction_south), substring = true)).assertExists()
+        compose.onNodeWithText(text(R.string.use_typical), substring = true).assertDoesNotExist()
+
+        field(text(R.string.panel_in_array, text(R.string.panel_count), 1)).performTextInput("10")
+        field(text(R.string.panel_in_array, text(R.string.panel_year), 1)).performTextInput("2021")
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.panel_now_set, "5.0")).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.panel_together, "3.6")).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun theLastArraysRemoveIsOffWithItsReasonAndArraysAreNamedByPlaceAndName() {
         show()
         open(SettingsPage.SOLAR)
         compose.onNodeWithText(text(R.string.panel_remove, 1)).assertIsNotEnabled()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.panel_keep_one)))
+        compose.onNodeWithText(text(R.string.panel_in_array, text(R.string.more_settings), 1)).performScrollTo()
+            .performClick()
         field(text(R.string.panel_in_array, text(R.string.panel_name), 1)).performTextInput("east roof")
         compose.onNode(isHeading() and hasText(text(R.string.panel_array_named, 1, "east roof"))).assertExists()
 
         click(R.string.panel_add)
         compose.onNode(isHeading() and hasText(text(R.string.panel_array, 2))).assertExists()
-        field(text(R.string.panel_in_array, text(R.string.panel_tilt), 2)).assertExists()
+        field(text(R.string.panel_in_array, text(R.string.panel_count), 2)).assertExists()
         click(R.string.panel_remove, 1)
         compose.waitForIdle()
 

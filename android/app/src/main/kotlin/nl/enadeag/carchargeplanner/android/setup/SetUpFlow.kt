@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.setup
 
 import androidx.lifecycle.SavedStateHandle
+import java.time.Year
 import java.time.ZoneId
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,10 +29,11 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId
  * @param numbers how the screen's language writes numbers
  * @param draft the config set-up starts from, [draft] for the phone's time zone and the first provider offered; made
  *     again the same way after the system ended the app
+ * @param thisYear the current year, which a panel array's year placed may not be after
  * @param phoneZone the phone's time zone as it is now, which typed coordinates get
  */
 class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, private val draft: EngineConfig,
-    phoneZone: () -> ZoneId) {
+    thisYear: () -> Year, phoneZone: () -> ZoneId) {
 
     companion object {
 
@@ -54,8 +56,8 @@ class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, priva
     /** Where the home is; set-up needs a place chosen. */
     val location = LocationForm(handle, numbers, placeRequired = true, phoneZone = phoneZone)
 
-    /** The panel arrays. */
-    val panels = PanelsForm(handle, numbers)
+    /** The panel arrays; the draft's, whose size is typical, shows as a new, empty one. */
+    val panels = PanelsForm(handle, numbers, thisYear, newWhenTypical = true)
 
     /** The car. */
     val car = CarForm(handle, numbers)

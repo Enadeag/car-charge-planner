@@ -259,7 +259,7 @@ class SettingsSessionTest {
         val session = session()
         session.open(SettingsPage.SOLAR)
         val row = session.forms.panels.rowIds.value.single()
-        session.forms.panels.edit(row, PanelsForm.Field.TILT, "steep")
+        session.forms.panels.edit(row, PanelsForm.Field.COUNT, "many")
         session.save()
         assertThat(session.forms.panels.problems(row).value).isNotEmpty()
 
@@ -267,7 +267,7 @@ class SettingsSessionTest {
 
         assertThat(again.page.value).isEqualTo(SettingsPage.SOLAR)
         val kept = again.forms.panels.rowIds.value.single()
-        assertThat(again.forms.panels.text(kept, PanelsForm.Field.TILT)).isEqualTo("steep")
+        assertThat(again.forms.panels.text(kept, PanelsForm.Field.COUNT)).isEqualTo("many")
         assertThat(again.forms.panels.problems(kept).value).isEmpty()
         assertThat(again.forms.panels.isEdited()).isTrue()
     }

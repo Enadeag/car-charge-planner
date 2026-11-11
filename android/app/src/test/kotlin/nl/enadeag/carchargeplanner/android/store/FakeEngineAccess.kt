@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.android.store
 import java.io.IOException
 import java.nio.file.Path
 import java.time.Instant
+import java.time.Year
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.yield
 import nl.enadeag.carchargeplanner.engine.ForecastUse
@@ -72,6 +73,11 @@ internal class FakeEngineAccess(var settings: StartState = StartState.NotSetUp) 
     var offered: List<ProviderInfo> = PROVIDERS
 
     override fun providers(): List<ProviderInfo> = offered
+
+    /** The year the engine's clock is in. */
+    var year: Year = Year.of(2026)
+
+    override fun thisYear(): Year = year
 
     /** As the app's providers: Open-Meteo has a place search, Forecast.Solar none. */
     override fun hasPlaceSearch(provider: ProviderId) = provider.value() == "open-meteo"

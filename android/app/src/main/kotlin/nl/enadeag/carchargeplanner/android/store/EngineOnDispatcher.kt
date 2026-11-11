@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.store
 
 import java.io.IOException
 import java.time.Instant
+import java.time.Year
 import kotlin.jvm.optionals.getOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -38,6 +39,8 @@ class EngineOnDispatcher(private val engine: Engine, private val dispatcher: Cor
     override fun providers() = engine.providers().toList()
 
     override fun hasPlaceSearch(provider: ProviderId) = engine.hasPlaceSearch(provider)
+
+    override fun thisYear(): Year = engine.thisYear()
 
     override suspend fun readSettings(): StartState = withContext(dispatcher) {
         try {

@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android.store
 
 import java.nio.file.Path
 import java.time.Instant
+import java.time.Year
 import nl.enadeag.carchargeplanner.engine.ForecastUse
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
@@ -31,6 +32,13 @@ interface EngineAccess {
      * @return their information, in the order the app offers them
      */
     fun providers(): List<ProviderInfo>
+
+    /**
+     * The current year by the engine's clock, which a panel array's year placed may not be after; nothing is read.
+     *
+     * @return this year
+     */
+    fun thisYear(): Year
 
     /**
      * Whether a provider has a place search, so a screen can say so before the owner types a place; nothing is read.

@@ -49,6 +49,9 @@
   <string name="longitude">Lengtegraad</string>
   <string name="longitude_hint">Graden; positief is ten oosten van Greenwich.</string>
   <string name="advanced">Geavanceerd</string>
+  <string name="choose">Kies…</string>
+  <string name="fold_expanded">Uitgevouwen</string>
+  <string name="fold_collapsed">Ingevouwen</string>
   <string name="time_zone_now">Tijdzone: %1$s</string>
   <string name="time_zone_change">Tijdzone wijzigen</string>
   <string name="time_zone_title">Tijdzone</string>
@@ -57,12 +60,28 @@
 
   <string name="setup_panels_title">Je zonnepanelen</string>
   <string name="setup_panels_intro">Vul de panelen in met dezelfde helling en richting. Panelen die een andere kant op liggen, voeg je bij Instellingen toe, als een eigen panelengroep.</string>
-  <string name="panel_size">Vermogen</string>
-  <string name="panel_size_hint">kWp: het piekvermogen van de panelen samen.</string>
-  <string name="panel_tilt">Helling</string>
-  <string name="panel_tilt_hint">Graden vanaf plat: 0 is plat, ongeveer 35 voor een schuin dak.</string>
+  <string name="panel_count">Aantal panelen</string>
   <string name="panel_direction">Richting</string>
-  <string name="panel_direction_hint">Graden vanaf zuid: -90 is oost, 90 is west.</string>
+  <string name="panel_tilt">Helling</string>
+  <string name="panel_year">Jaar van plaatsing</string>
+  <string name="panel_power">Vermogen per paneel</string>
+  <string name="panel_power_hint">Wp, staat op de factuur of het paneel.</string>
+  <string name="panel_power_hint_typical">Wp, staat op de factuur of het paneel. Leeg laten mag: dan rekent de app met %1$d Wp, gangbaar voor %2$s.</string>
+  <string name="panel_together">Samen ongeveer %1$s kWp</string>
+  <string name="panel_now_set">Nu ingesteld: %1$s kWp. Vul het aantal panelen in om dit te vervangen.</string>
+  <string name="direction_north">Noord</string>
+  <string name="direction_north_east">Noordoost</string>
+  <string name="direction_east">Oost</string>
+  <string name="direction_south_east">Zuidoost</string>
+  <string name="direction_south">Zuid</string>
+  <string name="direction_south_west">Zuidwest</string>
+  <string name="direction_west">West</string>
+  <string name="direction_north_west">Noordwest</string>
+  <string name="tilt_flat">Plat</string>
+  <string name="tilt_pitched">Schuin</string>
+  <string name="tilt_steep">Steil</string>
+  <string name="tilt_upright">Rechtop</string>
+  <string name="more_settings">Meer instellingen</string>
   <string name="panel_losses">Systeemverlies</string>
   <string name="panel_losses_hint">Procent, meestal 10 tot 15.</string>
 
@@ -131,6 +150,11 @@
   <string name="problem_letters_and_digits">Gebruik alleen letters en cijfers, hoogstens 64: zo zien de API-sleutels van de dienst eruit.</string>
   <string name="problem_one_line">Gebruik één regel, zonder regeleinden of andere stuurtekens.</string>
   <string name="problem_no_place">Kies waar je huis staat: zoek het op, of vul de coördinaten in.</string>
+  <string name="problem_panel_count">Typ het aantal panelen: een heel getal van 1 tot en met 200.</string>
+  <string name="problem_panel_power">Typ het vermogen per paneel in Wp: een heel getal van 50 tot en met 1000.</string>
+  <string name="problem_year_placed">Typ het jaar van plaatsing: van 1990 tot en met dit jaar.</string>
+  <string name="problem_no_year_or_power">Typ het jaar van plaatsing, of het vermogen per paneel.</string>
+  <string name="problem_not_chosen">Maak een keuze.</string>
   <string name="problem_level_out_of_range">Typ een niveau van 0 tot 100.</string>
 
   <string name="unusable_title">Niet ingesteld</string>

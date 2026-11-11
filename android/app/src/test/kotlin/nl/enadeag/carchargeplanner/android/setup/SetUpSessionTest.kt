@@ -14,6 +14,7 @@ import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.form.fillIn
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
@@ -43,6 +44,7 @@ class SetUpSessionTest {
     private fun TestScope.toTheCheck(session: SetUpSession) {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         repeat(5) { assertThat(session.next()).isTrue() }
         assertThat(session.flow.step.value).isEqualTo(SetUpStep.CHECK)
         runCurrent()
