@@ -59,6 +59,34 @@ class LocationFormTest {
     }
 
     @Test
+    fun choosingAPlaceTakesNoPlaceChosenAway() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.check(DRAFT)
+        assertThat(form.problems.value).containsKey(LocationForm.Field.PLACE)
+
+        form.choose(lisbon, LISBON)
+
+        assertThat(form.problems.value).isEmpty()
+    }
+
+    /** Settings asks before it drops what the owner changed; a load puts every field back to what is stored. */
+    @Test
+    fun aLoadAfterAPlaceWasChosenOrACoordinateTypedLeavesNothingChanged() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE })
+        form.load(DRAFT)
+        form.choose(lisbon, LISBON)
+        assertThat(form.isEdited()).isTrue()
+
+        form.load(DRAFT)
+        assertThat(form.isEdited()).isFalse()
+
+        form.edit(LocationForm.Field.LATITUDE, "52.37")
+        form.load(DRAFT)
+        assertThat(form.isEdited()).isFalse()
+    }
+
+    @Test
     fun typingOneCoordinateTakesNoPlaceChosenAway() {
         val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
