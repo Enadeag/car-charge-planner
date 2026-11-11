@@ -273,8 +273,8 @@ internal fun AwayStep(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus
 
 /**
  * The weekly away periods, each with its controls named by its number, "None" when there are none, and Add. After Add
- * the focus goes to the new period's heading, after Remove to the one before, to the next when the first went, or to the line that says there are none
- * when none is left.
+ * the focus goes to the new period's heading, after Remove to the one before, to the next when the first went, or to
+ * the line that says there are none when none is left.
  *
  * @param problems the page's fields in order, for the focus after Next or Save
  */
