@@ -438,6 +438,17 @@ class SetUpViewTest {
     }
 
     @Test
+    void inDutchTheStepAfterTheForecastIsAfwezigheid() throws Exception {
+        setUp.close();
+        setUp = new SetUpFixture(folder, Language.DUTCH);
+        var view = atSolar();
+
+        Fx.run(() -> view.show(SetUpStep.AWAY));
+
+        assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains("Afwezigheid");
+    }
+
+    @Test
     void noStepAsksForTheHousesUseAndFinishSavesTheTypicalOneTagged() throws Exception {
         var view = atSolar();
         // the check and the preview ask for a forecast as they show, and ask for no value
@@ -447,7 +458,8 @@ class SetUpViewTest {
                     .as("the %s step", step).hasMessageContaining("no field");
         }
         Fx.run(() -> view.show(SetUpStep.AWAY));
-        assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains(setUp.messages.text(TextKey.SET_UP_AWAY_HINT));
+        assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains("Away periods",
+                setUp.messages.text(TextKey.SET_UP_AWAY_HINT));
         next(view, 1);
         setUp.preview(view);
         next(view, 1);
