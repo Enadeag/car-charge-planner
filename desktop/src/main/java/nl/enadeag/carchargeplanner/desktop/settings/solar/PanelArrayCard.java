@@ -216,7 +216,8 @@ final class PanelArrayCard {
         var azimuthDeg = direction.isChanged() && direction.value() != null
                 ? OptionalDouble.of(direction.value().azimuthDeg()) : storedDirection;
         return new PanelArrayEntry(name.value(), count.value(), year.value(), power.value(), tiltDeg, azimuthDeg,
-                losses.value(), Optional.ofNullable(kept));
+                losses.value(), Optional.ofNullable(kept),
+                count.isChanged() || year.isChanged() || power.isChanged());
     }
 
     private void showFigures() {

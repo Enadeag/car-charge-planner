@@ -38,10 +38,12 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.Year;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -86,7 +88,12 @@ class SystemPagesTest {
 
     /** The example config, changed and written back before Settings opens. */
     private SettingsView openWith(java.util.function.UnaryOperator<EngineConfig> change) throws Exception {
-        settings = new SettingsFixture(folder, Language.ENGLISH);
+        return openWith(Clock.systemUTC(), change);
+    }
+
+    private SettingsView openWith(Clock clock, java.util.function.UnaryOperator<EngineConfig> change)
+            throws Exception {
+        settings = new SettingsFixture(folder, Language.ENGLISH, clock);
         var file = new ConfigFile(settings.configPath, FILES);
         file.write(change.apply(file.read()));
         return settings.open();
@@ -181,6 +188,28 @@ class SystemPagesTest {
         });
         assertThat(stored().system().panels()).containsExactly(new PanelArray("Shed roof",
                 new PanelSize.Panels(10, OptionalInt.empty(), Optional.of(Year.of(2021))), 50, -100, 0.1));
+    }
+
+    @Test
+    void aStoredYearAfterThisYearSavesAsItWasUntilTheOwnerChangesTheSize() throws Exception {
+        var future = new PanelArray("Shed", new PanelSize.Panels(10, OptionalInt.empty(), Optional.of(Year.of(2027))),
+                35, 0, 0.14);
+        var view = openWith(Clock.fixed(Instant.parse("2026-06-01T12:00:00Z"), ZoneOffset.UTC),
+                config -> config.withSystem(config.system().withPanels(List.of(future)), TypicalValues.NONE));
+
+        var savedUntouched = Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_NAME).get(0).setText("Shed roof");
+            return SettingsFixture.save(view);
+        });
+        assertThat(savedUntouched).isTrue();
+        assertThat(stored().system().panels()).containsExactly(new PanelArray("Shed roof", future.size(), 35, 0, 0.14));
+
+        var savedTouched = Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_COUNT).get(0).setText("12");
+            return SettingsFixture.save(view);
+        });
+        assertThat(savedTouched).isFalse();
+        assertThat(texts(view)).contains("Type the year placed: from 1990 up to and including this year.");
     }
 
     @Test

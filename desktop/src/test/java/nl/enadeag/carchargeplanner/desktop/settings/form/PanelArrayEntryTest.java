@@ -25,7 +25,7 @@ class PanelArrayEntryTest {
     private static final OptionalDouble PITCHED = OptionalDouble.of(35);
 
     private static PanelArrayEntry typed(String count, String year, String wattPeak) {
-        return new PanelArrayEntry("", count, year, wattPeak, PITCHED, SOUTH, 14, Optional.empty());
+        return new PanelArrayEntry("", count, year, wattPeak, PITCHED, SOUTH, 14, Optional.empty(), true);
     }
 
     private static PanelArray panels(int count, OptionalInt wattPeak, Optional<Year> year) {
@@ -38,8 +38,21 @@ class PanelArrayEntryTest {
                 Optional.of(Year.of(2021))), 30, -90, 0.12);
 
         assertThat(PanelArrayEntry.of(array)).isEqualTo(new PanelArrayEntry("east roof", "12", "2021", "",
-                OptionalDouble.of(30), OptionalDouble.of(-90), 12, Optional.empty()));
+                OptionalDouble.of(30), OptionalDouble.of(-90), 12, Optional.empty(), false));
         assertThat(PanelArrayEntry.of(array).check(THIS_YEAR, ENGLISH)).isEqualTo(new Checked.Accepted(array));
+    }
+
+    @Test
+    void aStoredYearAfterThisYearIsKeptWhileTheOwnerLeavesTheSizeAlone() {
+        var array = panels(10, OptionalInt.empty(), Optional.of(Year.of(2027)));
+        var untouched = PanelArrayEntry.of(array);
+        var touched = new PanelArrayEntry("", "12", untouched.yearPlaced(), "", untouched.tiltDeg(),
+                untouched.azimuthDeg(), 14, untouched.kept(), true);
+
+        assertThat(untouched.check(THIS_YEAR, ENGLISH)).isEqualTo(new Checked.Accepted(array));
+        assertThat(untouched.together(THIS_YEAR)).hasValue(4.3);
+        assertThat(touched.check(THIS_YEAR, ENGLISH)).isEqualTo(new Checked.Refused(ConfigSetting.PANEL_YEAR,
+                "Type the year placed: from 1990 up to and including this year."));
     }
 
     @Test
@@ -56,7 +69,8 @@ class PanelArrayEntryTest {
     @Test
     void typingTheCountReplacesTheStoredPeakPower() {
         var entry = PanelArrayEntry.of(new PanelArray("", 4.2, 35, 0, 0.14));
-        var typed = new PanelArrayEntry("", "10", "2021", "", entry.tiltDeg(), entry.azimuthDeg(), 14, entry.kept());
+        var typed = new PanelArrayEntry("", "10", "2021", "", entry.tiltDeg(), entry.azimuthDeg(), 14, entry.kept(),
+                true);
 
         assertThat(typed.keepsThePeakPower()).isFalse();
         assertThat(typed.check(THIS_YEAR, ENGLISH))
@@ -66,7 +80,8 @@ class PanelArrayEntryTest {
     @Test
     void aYearWithoutTheCountIsRefusedAtTheCountForAStoredPeakPowerToo() {
         var entry = PanelArrayEntry.of(new PanelArray("", 4.2, 35, 0, 0.14));
-        var typed = new PanelArrayEntry("", "", "2021", "", entry.tiltDeg(), entry.azimuthDeg(), 14, entry.kept());
+        var typed = new PanelArrayEntry("", "", "2021", "", entry.tiltDeg(), entry.azimuthDeg(), 14, entry.kept(),
+                true);
 
         assertThat(typed.check(THIS_YEAR, ENGLISH)).isEqualTo(new Checked.Refused(ConfigSetting.PANEL_COUNT,
                 "Type the number of panels: a whole number from 1 to 200."));
@@ -116,9 +131,9 @@ class PanelArrayEntryTest {
     void aNewArrayAsksForADirectionAndATiltAfterTheCount() {
         var empty = PanelArrayEntry.empty();
         var counted = new PanelArrayEntry("", "10", "2021", "", OptionalDouble.empty(), OptionalDouble.empty(),
-                empty.lossesPct(), Optional.empty());
+                empty.lossesPct(), Optional.empty(), true);
         var directed = new PanelArrayEntry("", "10", "2021", "", OptionalDouble.empty(), SOUTH, empty.lossesPct(),
-                Optional.empty());
+                Optional.empty(), true);
 
         assertThat(empty.check(THIS_YEAR, ENGLISH)).isInstanceOfSatisfying(Checked.Refused.class,
                 refused -> assertThat(refused.setting()).isEqualTo(ConfigSetting.PANEL_COUNT));
@@ -149,7 +164,7 @@ class PanelArrayEntryTest {
 
     @Test
     void theLossesAreAShareOfOneInTheArray() {
-        var entry = new PanelArrayEntry("", "10", "", "400", PITCHED, SOUTH, 12, Optional.empty());
+        var entry = new PanelArrayEntry("", "10", "", "400", PITCHED, SOUTH, 12, Optional.empty(), true);
 
         assertThat(entry.check(THIS_YEAR, ENGLISH)).isInstanceOfSatisfying(Checked.Accepted.class,
                 accepted -> assertThat(accepted.array().systemLosses()).isEqualTo(0.12));

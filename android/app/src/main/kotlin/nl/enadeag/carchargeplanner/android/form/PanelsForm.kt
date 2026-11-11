@@ -22,7 +22,7 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
  *
  * @param handle where the rows and their texts are kept
  * @param numbers how the screen's language writes numbers
- * @param thisYear the current year, which a year placed may not be after
+ * @param thisYear the current year, which a year placed the owner typed may not be after
  * @param newWhenTypical true in set-up, which shows a loaded array whose size is a typical value as a new, empty one
  */
 class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, private val thisYear: () -> Year,
@@ -156,9 +156,10 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
      * @return the kWp; null while the count, the year or the power is missing or refused
      */
     fun together(row: Int): Double? {
-        val entered = entered(rows.state(row), LinkedHashMap()) ?: return null
+        val state = rows.state(row)
+        val entered = entered(state, LinkedHashMap()) ?: return null
         return try {
-            entered.size().notPlacedAfter(thisYear()).kwp()
+            size(state, entered).kwp()
         } catch (ignored: InvalidSetting) {
             null
         }
@@ -282,7 +283,7 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
         val losses = reader.number(Field.LOSSES, from?.systemLosses() ?: PanelArray.TYPICAL.systemLosses(),
             LOSSES_DECIMALS, scale = 100.0, untouchedIsStored = from != null)
         return reader.records({ setting -> Field.entries.first { it.setting == setting } }) {
-            val size = kept ?: entered!!.size().notPlacedAfter(thisYear())
+            val size = kept ?: size(state, entered!!)
             PanelArray(state.text(Field.NAME), size, tilt!!, azimuth!!, losses)
         }
     }
@@ -301,6 +302,13 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
         val power = whole(state, Field.POWER, problems, empty = null)
         return if (count == null || SIZE_FIELDS.any { it in problems }) null else Entered(count, year, power)
     }
+
+    /**
+     * A stored array the owner left alone is kept as read even with a year after this one, as the clock may be set
+     * back or the file come from a time zone already in the new year; a typed year may not be after this year.
+     */
+    private fun size(state: FormState<Field>, entered: Entered): PanelSize.Panels =
+        if (SIZE_FIELDS.any { state.isEdited(it) }) entered.size().notPlacedAfter(thisYear()) else entered.size()
 
     /**
      * @param empty the problem of an empty field; null when it may be empty

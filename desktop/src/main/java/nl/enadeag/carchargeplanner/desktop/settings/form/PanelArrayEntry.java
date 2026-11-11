@@ -27,9 +27,12 @@ import java.util.regex.Pattern;
  * @param lossesPct the system's losses, in %
  * @param kept the stored peak power, which stays while the count, the year and the power are all empty; empty for an
  *     array of panels or a new one
+ * @param sizeTyped whether the owner changed the count, the year or the power since the card showed the array; only
+ *     then may the year placed not be after this year, so a stored array the owner left alone is kept as it was read,
+ *     even when the clock is set back or the file came from a time zone already in the new year
  */
 public record PanelArrayEntry(String name, String count, String yearPlaced, String wattPeak, OptionalDouble tiltDeg,
-        OptionalDouble azimuthDeg, double lossesPct, Optional<PanelSize.Peak> kept) {
+        OptionalDouble azimuthDeg, double lossesPct, Optional<PanelSize.Peak> kept, boolean sizeTyped) {
 
     private static final Pattern WHOLE = Pattern.compile("[0-9]{1,9}");
 
@@ -68,10 +71,10 @@ public record PanelArrayEntry(String name, String count, String yearPlaced, Stri
             return new PanelArrayEntry(array.name(), String.valueOf(panels.count()),
                     panels.placed().map(year -> String.valueOf(year.getValue())).orElse(""),
                     panels.wattPeak().isPresent() ? String.valueOf(panels.wattPeak().getAsInt()) : "", tilt, direction,
-                    losses, Optional.empty());
+                    losses, Optional.empty(), false);
         }
         return new PanelArrayEntry(array.name(), "", "", "", tilt, direction, losses,
-                Optional.of(new PanelSize.Peak(array.kwp())));
+                Optional.of(new PanelSize.Peak(array.kwp())), false);
     }
 
     /**
@@ -81,14 +84,14 @@ public record PanelArrayEntry(String name, String count, String yearPlaced, Stri
      */
     public static PanelArrayEntry empty() {
         return new PanelArrayEntry("", "", "", "", OptionalDouble.empty(), OptionalDouble.empty(),
-                PanelArray.TYPICAL.systemLosses() * 100, Optional.empty());
+                PanelArray.TYPICAL.systemLosses() * 100, Optional.empty(), false);
     }
 
     /**
      * Has the records check the entry. The fields are looked at in the card's order: the number of panels, the
      * direction, the tilt, the year and the power; then the records' own rules.
      *
-     * @param thisYear the current year, which the year placed may not be after
+     * @param thisYear the current year, which a typed year placed may not be after
      * @param messages the texts, in the owner's language
      * @return the array, or the first problem and the field that shows it
      */
@@ -114,7 +117,7 @@ public record PanelArrayEntry(String name, String count, String yearPlaced, Stri
     /**
      * The peak power the typed panels give together, which the card shows below them.
      *
-     * @param thisYear the current year, which the year placed may not be after
+     * @param thisYear the current year, which a typed year placed may not be after
      * @return the peak power in kWp; empty while the count, the year or the power is missing or refused
      */
     public OptionalDouble together(Year thisYear) {
@@ -167,7 +170,8 @@ public record PanelArrayEntry(String name, String count, String yearPlaced, Stri
                     "wpPerPanel must be a whole number");
         }
         var placed = year.isPresent() ? Optional.of(Year.of(year.getAsInt())) : Optional.<Year>empty();
-        return new PanelSize.Panels(panels, power, placed).notPlacedAfter(thisYear);
+        var size = new PanelSize.Panels(panels, power, placed);
+        return sizeTyped ? size.notPlacedAfter(thisYear) : size;
     }
 
     private static Checked notChosen(ConfigSetting setting, Messages messages) {

@@ -47,6 +47,25 @@ class PanelsFormTest {
     }
 
     @Test
+    fun aStoredYearAfterThisYearIsKeptUntilTheOwnerChangesTheSize() {
+        val future = PanelArray("shed", panels(10, null, 2027), 35.0, 0.0, 0.14)
+        val config = DRAFT.withSystem(DRAFT.system().withPanels(listOf(future)), TypicalValues.NONE)
+        form.load(config)
+        val row = form.rowIds.value.single()
+        form.edit(row, PanelsForm.Field.NAME, "shed roof")
+
+        assertThat(form.check(config)!!.system().panels()).containsExactly(
+            PanelArray("shed roof", future.size(), 35.0, 0.0, 0.14))
+        assertThat(form.together(row)).isEqualTo(4.3)
+
+        form.edit(row, PanelsForm.Field.COUNT, "12")
+
+        assertThat(form.check(config)).isNull()
+        assertThat(form.problems(row).value).containsExactlyEntriesOf(mapOf(
+            PanelsForm.Field.YEAR to FieldProblem.Refused(InvalidSetting.Rule.YEAR_PLACED_OUT_OF_RANGE)))
+    }
+
+    @Test
     fun anArrayStoredByItsPeakPowerSaysSoAndKeepsItUntilItsPanelsAreEntered() {
         form.load(stored)
         val second = form.rowIds.value[1]
