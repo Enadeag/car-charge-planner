@@ -46,11 +46,13 @@ import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
 import nl.enadeag.carchargeplanner.android.ui.setup.AwayPeriods
 import nl.enadeag.carchargeplanner.android.ui.setup.CarStep
 import nl.enadeag.carchargeplanner.android.ui.setup.ChargerStep
+import nl.enadeag.carchargeplanner.android.ui.setup.chargePowerName
 import nl.enadeag.carchargeplanner.android.ui.setup.Edits
 import nl.enadeag.carchargeplanner.android.ui.setup.LocationFields
 import nl.enadeag.carchargeplanner.android.ui.setup.PanelArrayFields
 import nl.enadeag.carchargeplanner.android.ui.setup.UseTypical
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
@@ -70,9 +72,13 @@ internal fun summary(page: SettingsPage, config: EngineConfig, session: Settings
                 numbers.write(system.location().longitude(), 4))
         SettingsPage.CAR_AND_HOUSE -> stringResource(R.string.settings_car_house_summary,
             numbers.write(system.car().usableBatteryKwh(), 1))
-        SettingsPage.CHARGER -> stringResource(R.string.settings_charger_summary,
-            stringResource(phasesName(system.charger().phases())), system.charger().minAmps(),
-            system.charger().maxAmps())
+        SettingsPage.CHARGER -> {
+            val charger = system.charger()
+            val power = ChargePowerChoice.of(charger)
+            if (power != ChargePowerChoice.OTHER) stringResource(chargePowerName(power))
+            else stringResource(R.string.settings_charger_summary, stringResource(phasesName(charger.phases())),
+                charger.minAmps(), charger.maxAmps())
+        }
         SettingsPage.FORECAST -> {
             val forecast = config.forecast()
             val primary = session.providerName(forecast.primary())

@@ -160,7 +160,7 @@ final class SetUpView extends BorderPane {
         var solar = new SolarPage(stores::thisYear, true, messages);
         var car = new CarCard(messages, false);
         app.onUnitsChanged(car::showIn);
-        var charger = new ChargerPage(messages);
+        var charger = new ChargerPage(true, messages);
         // a provider's own Test asks for the system as it was when the owner reached the forecast step
         var system = new AtomicReference<HomeSystem>();
         ProviderTester tester = (provider, settings) -> stores.checkConnection(provider, system.get(), settings);

@@ -778,6 +778,20 @@ public enum TextKey {
     CARD_CHARGER,
     /** What the charger's values are for. */
     CARD_CHARGER_HINT,
+    /** The power the car charges with at home, chosen from a few. */
+    FIELD_CHARGE_POWER,
+    /** What the charge power at home is. */
+    FIELD_CHARGE_POWER_HINT,
+    /** 3.7 kW: one phase of 16 A. */
+    CHARGE_POWER_3_7,
+    /** 7.4 kW: one phase of 32 A. */
+    CHARGE_POWER_7_4,
+    /** 11 kW: three phases of 16 A. */
+    CHARGE_POWER_11,
+    /** 22 kW: three phases of 32 A. */
+    CHARGE_POWER_22,
+    /** A charger of values that are none of the charge powers offered. */
+    CHARGE_POWER_OTHER,
     /** The charger's phases. */
     FIELD_PHASES,
     /** What the phases are. */

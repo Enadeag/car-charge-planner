@@ -32,7 +32,7 @@ public final class SettingsPictures {
     }
 
     /**
-     * Settings on the Charger page at 200 % display scaling, the focus ring on the Phases field.
+     * Settings on the Charger page at 200 % display scaling, the focus ring on the Charge power at home field.
      *
      * @param scheme light or dark
      * @param folder an empty folder for the settings' files
@@ -48,7 +48,7 @@ public final class SettingsPictures {
             view.show(Category.CHARGER);
             var studio = new Studio(view, scheme, Frame.WINDOW, 2, SETTINGS_WIDTH, Optional.of(SETTINGS_HEIGHT));
             try {
-                settings.control(view, TextKey.FIELD_PHASES).requestFocus();
+                settings.control(view, TextKey.FIELD_CHARGE_POWER).requestFocus();
                 return studio.take();
             } finally {
                 studio.close();

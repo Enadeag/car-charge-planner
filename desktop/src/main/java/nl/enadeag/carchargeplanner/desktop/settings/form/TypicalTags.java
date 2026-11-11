@@ -71,6 +71,21 @@ public final class TypicalTags {
     }
 
     /**
+     * Fills some followed fields with a typical value and tags them, as the owner asked; the other fields keep their
+     * values and their tags.
+     *
+     * @param settings the followed settings to fill
+     * @param fill puts the typical values in those fields
+     */
+    public void useTypical(Set<ConfigSetting> settings, Runnable fill) {
+        keepTagsWhile(fill);
+        settings.stream().filter(tags::containsKey).forEach(setting -> {
+            tagged.add(setting);
+            tags.get(setting).accept(tag);
+        });
+    }
+
+    /**
      * Changes how the fields show their values without changing what they stand for, such as other units; the tags
      * stay.
      *

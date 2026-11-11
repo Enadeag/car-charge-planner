@@ -34,6 +34,11 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - The field and the conversion are in [engine/decisions.md](../engine/decisions.md#the-houses-use) (#450).
 - The list's line under Car and house is the battery only, such as "Battery 60.0 kWh" (#450).
 
+### Charger
+
+- The page is set-up's Charger step: the charge power at home, then "More settings" with the phases, the currents, the voltage, the efficiency and "I don't know", which fills in the last three only. The fold is closed on a power and open on "Other" each time the page opens; choosing "Other" or a problem under it opens it (#451).
+- The list's line under Charger is the power, such as "11 kW"; for "Other" the phases and the currents, as before ("One phase, 6 to 16 A") (#451).
+
 ### Panel arrays
 
 - Each array has set-up's fields, in its order, with "More settings" folded; "Add an array" adds an empty one. An array stored by its kWp says "Now set: 4.2 kWp. Enter the number of panels to replace this." and keeps that kWp while the count, the year and the power are empty; a stored tilt or direction shows the nearest choice and is stored as it was until chosen, so showing it is no edit. The list's summary stays "1 array, 3.6 kWp", from the computed kWp (#448).

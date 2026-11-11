@@ -207,7 +207,7 @@ final class SettingsView extends BorderPane {
                 (provider, text) -> stores.searchPlaces(provider, text, messages.language().code()),
                 stores::hasPlaceSearch, background, messages);
         var carHouse = new CarHousePage(messages);
-        var charger = new ChargerPage(messages);
+        var charger = new ChargerPage(false, messages);
         ProviderTester tester = (provider, settings) -> {
             try {
                 return stores.checkConnection(provider, stores.storedSystem(), settings);

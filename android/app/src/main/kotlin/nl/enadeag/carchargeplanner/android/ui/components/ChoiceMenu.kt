@@ -36,11 +36,13 @@ import nl.enadeag.carchargeplanner.android.form.FieldProblem
  * @param name what the owner reads for an option, in the app's language
  * @param problem the problem it shows, under it and to a screen reader with the field; null for none
  * @param focus moves the focus to the field, as to the first problem after Save
+ * @param hint what the choice is for, under the field after its problem; null for none
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun <T> ChoiceMenu(label: String, options: List<T>, chosen: T?, name: @Composable (T) -> String,
-    onChoose: (T) -> Unit, problem: FieldProblem?, focus: FocusRequester, typical: Boolean = false) {
+    onChoose: (T) -> Unit, problem: FieldProblem?, focus: FocusRequester, typical: Boolean = false,
+    hint: String? = null) {
     var open by rememberSaveable { mutableStateOf(false) }
     val problemSentence = problem?.let { problemText(it) }
     val names = options.map { name(it) }
@@ -54,7 +56,14 @@ internal fun <T> ChoiceMenu(label: String, options: List<T>, chosen: T?, name: @
                 label = { Text(label) },
                 isError = problem != null,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
-                supportingText = problemSentence?.let { sentence -> { Text(sentence) } },
+                supportingText = if (problemSentence == null && hint == null) null else {
+                    {
+                        Column {
+                            problemSentence?.let { Text(it) }
+                            hint?.let { Text(it) }
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().focusRequester(focus)
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     .semantics {

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.TimeField
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice
 import nl.enadeag.carchargeplanner.engine.config.CompassPoint
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.engine.config.TiltChoice
@@ -171,33 +173,70 @@ internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, lastAct
 }
 
 /**
- * The wall charger: its phases, lowest and highest current, voltage and efficiency, and "I don't know".
+ * The wall charger, the same in set-up and Settings: the charge power at home, then its phases, lowest and highest
+ * current, voltage and efficiency and "I don't know" folded under "More settings". The fold starts closed when the
+ * power is one of the choices or not chosen yet, and open for "Other"; choosing "Other" opens it, and a problem in one
+ * of its fields opens it and keeps it open, also after the problem is put right, while a press on its row does nothing
+ * meanwhile.
  *
- * @param problems the step's fields in order, for the focus after Next
+ * @param problems the page's fields in order, for the focus after Next or Save
  */
 @Composable
 internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFocus) {
     val shown by charger.problems.collectAsStateWithLifecycle()
     val typical = edits.shown { charger.typical() }
-    ChoiceRow(stringResource(R.string.charger_phases), stringResource(R.string.charger_phases_hint), Phases.entries,
-        edits.shown { charger.phases() },
-        { stringResource(if (it == Phases.ONE) R.string.phases_one else R.string.phases_three) },
-        { phases -> edits.make { charger.choose(phases) } }, ChargerForm.Field.PHASES in typical)
-    listOf(
-        Triple(ChargerForm.Field.MIN_CURRENT, R.string.charger_min_current to R.string.charger_min_current_hint,
-            FieldKind.WHOLE),
-        Triple(ChargerForm.Field.MAX_CURRENT, R.string.charger_max_current to R.string.charger_max_current_hint,
-            FieldKind.WHOLE),
-        Triple(ChargerForm.Field.VOLTAGE, R.string.charger_voltage to R.string.charger_voltage_hint, FieldKind.DECIMAL),
-        Triple(ChargerForm.Field.EFFICIENCY, R.string.charger_efficiency to R.string.charger_efficiency_hint,
-            FieldKind.DECIMAL),
-    ).forEachIndexed { order, (field, texts, kind) ->
-        NumberField(stringResource(texts.first), stringResource(texts.second), edits.shown { charger.text(field) },
-            { text -> edits.make { charger.edit(field, text) } }, kind, shown[field], field in typical,
-            rememberFieldFocus(problems, order, field in shown),
-            if (field == ChargerForm.Field.EFFICIENCY) ImeAction.Done else ImeAction.Next)
+    val power = edits.shown { charger.power() }
+    val problem = (shown.keys - ChargerForm.Field.POWER).isNotEmpty()
+    var folded by rememberSaveable { mutableStateOf(power != ChargePowerChoice.OTHER) }
+    LaunchedEffect(problem) {
+        if (problem) {
+            folded = false
+        }
     }
-    UseTypical { edits.make { charger.useTypical() } }
+    val open = !folded || problem
+    ChoiceMenu(stringResource(R.string.charge_power), ChargePowerChoice.entries, power,
+        { stringResource(chargePowerName(it)) },
+        { choice ->
+            val chosen = choice.power().orElse(null)
+            if (chosen != null) {
+                edits.make { charger.choose(chosen) }
+            } else {
+                edits.make { charger.chooseOther() }
+                folded = false
+            }
+        }, shown[ChargerForm.Field.POWER],
+        rememberFieldFocus(problems, 0, ChargerForm.Field.POWER in shown),
+        hint = stringResource(R.string.charge_power_hint))
+    Fold(stringResource(R.string.more_settings), open, { opened -> if (!problem) folded = !opened }) {
+        ChoiceRow(stringResource(R.string.charger_phases), stringResource(R.string.charger_phases_hint),
+            Phases.entries, edits.shown { charger.phases() },
+            { stringResource(if (it == Phases.ONE) R.string.phases_one else R.string.phases_three) },
+            { phases -> edits.make { charger.choose(phases) } }, ChargerForm.Field.PHASES in typical)
+        listOf(
+            Triple(ChargerForm.Field.MIN_CURRENT, R.string.charger_min_current to R.string.charger_min_current_hint,
+                FieldKind.WHOLE),
+            Triple(ChargerForm.Field.MAX_CURRENT, R.string.charger_max_current to R.string.charger_max_current_hint,
+                FieldKind.WHOLE),
+            Triple(ChargerForm.Field.VOLTAGE, R.string.charger_voltage to R.string.charger_voltage_hint,
+                FieldKind.DECIMAL),
+            Triple(ChargerForm.Field.EFFICIENCY, R.string.charger_efficiency to R.string.charger_efficiency_hint,
+                FieldKind.DECIMAL),
+        ).forEachIndexed { order, (field, texts, kind) ->
+            NumberField(stringResource(texts.first), stringResource(texts.second), edits.shown { charger.text(field) },
+                { text -> edits.make { charger.edit(field, text) } }, kind, shown[field], field in typical,
+                rememberFieldFocus(problems, order + 1, field in shown),
+                if (field == ChargerForm.Field.EFFICIENCY) ImeAction.Done else ImeAction.Next)
+        }
+        UseTypical { edits.make { charger.useTypical() } }
+    }
+}
+
+internal fun chargePowerName(choice: ChargePowerChoice): Int = when (choice) {
+    ChargePowerChoice.KW_3_7 -> R.string.charge_power_3_7
+    ChargePowerChoice.KW_7_4 -> R.string.charge_power_7_4
+    ChargePowerChoice.KW_11 -> R.string.charge_power_11
+    ChargePowerChoice.KW_22 -> R.string.charge_power_22
+    ChargePowerChoice.OTHER -> R.string.charge_power_other
 }
 
 /**

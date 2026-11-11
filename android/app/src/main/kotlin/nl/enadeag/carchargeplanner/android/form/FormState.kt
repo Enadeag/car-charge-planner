@@ -70,6 +70,20 @@ class FormState<F : Enum<F>>(private val handle: SavedStateHandle, private val p
     }
 
     /**
+     * Puts what the owner chose in a field that is not stored itself, such as one whose choice sets other fields: its
+     * problem goes, but the choice alone is no change to the form.
+     *
+     * @param field the field
+     * @param text what it holds now
+     */
+    fun choose(field: F, text: String) {
+        fill(field, text)
+        if (field in problemsNow.value) {
+            problemsNow.value = problemsNow.value - field
+        }
+    }
+
+    /**
      * Puts a value the app filled in for the owner, such as a typical value they asked for: it no longer stands for
      * the stored value, but it is not the owner's own either, so the field's typical mark is left to the caller.
      *

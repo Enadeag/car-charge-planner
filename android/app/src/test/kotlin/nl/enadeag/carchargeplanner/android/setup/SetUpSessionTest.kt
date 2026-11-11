@@ -20,6 +20,7 @@ import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.HomeChargePower
 import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
@@ -46,6 +47,7 @@ class SetUpSessionTest {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(5) { assertThat(session.next()).isTrue() }
         assertThat(session.flow.step.value).isEqualTo(SetUpStep.CHECK)
         runCurrent()

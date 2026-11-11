@@ -90,12 +90,15 @@ import nl.enadeag.carchargeplanner.android.ui.settings.title
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
+import nl.enadeag.carchargeplanner.engine.config.Charger
 import nl.enadeag.carchargeplanner.engine.config.House
+import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.engine.config.PanelArray
 import nl.enadeag.carchargeplanner.engine.config.PanelSize
 import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
@@ -249,6 +252,7 @@ class SettingsScreenTest {
             compose.waitForIdle()
             when (page) {
                 SettingsPage.SOLAR -> click(R.string.panel_add)
+                SettingsPage.CHARGER -> click(R.string.more_settings)
                 SettingsPage.AWAY -> click(R.string.away_add)
                 else -> Unit
             }
@@ -291,10 +295,10 @@ class SettingsScreenTest {
         compose.onNodeWithText("Accu $battery kWh").assertExists()
     }
 
-    private fun houseFold() = compose.onNodeWithText(text(R.string.more_settings))
+    private fun fold() = compose.onNodeWithText(text(R.string.more_settings))
 
-    private fun houseFoldIs(state: Int) =
-        houseFold().assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(state)))
+    private fun foldIs(state: Int) =
+        fold().assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(state)))
 
     @Test
     fun theHousesUseIsFoldedAwayAlsoWhenItIsNotTheTypicalOneAndAnUntouchedOneIsSavedExactly() {
@@ -304,7 +308,7 @@ class SettingsScreenTest {
         show(session(config = own))
         open(SettingsPage.CAR_AND_HOUSE)
 
-        houseFoldIs(R.string.fold_collapsed)
+        foldIs(R.string.fold_collapsed)
         compose.onNode(isHeading() and hasText("House")).assertDoesNotExist()
         field(text(R.string.household_use)).assertDoesNotExist()
         compose.onAllNodesWithText(text(R.string.use_typical)).assertCountEquals(1)
@@ -330,27 +334,153 @@ class SettingsScreenTest {
         click(R.string.more_settings)
         field(text(R.string.household_use)).performTextReplacement("-1")
         click(R.string.more_settings)
-        houseFoldIs(R.string.fold_collapsed)
+        foldIs(R.string.fold_collapsed)
 
         click(R.string.action_save)
         compose.waitForIdle()
 
-        houseFoldIs(R.string.fold_expanded)
+        foldIs(R.string.fold_expanded)
         field(text(R.string.household_use)).assertIsFocused()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_out_of_range)))
         assertThat(access.written).isEmpty()
         click(R.string.more_settings)
-        houseFoldIs(R.string.fold_expanded)
+        foldIs(R.string.fold_expanded)
 
         field(text(R.string.household_use)).performTextReplacement("480")
         compose.waitForIdle()
-        houseFoldIs(R.string.fold_expanded)
+        foldIs(R.string.fold_expanded)
         click(R.string.more_settings)
-        houseFoldIs(R.string.fold_collapsed)
+        foldIs(R.string.fold_collapsed)
         click(R.string.action_save)
         compose.waitForIdle()
 
         assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(20.0))
+    }
+
+    private fun withCharger(charger: Charger): EngineConfig {
+        val own = stored.withSystem(stored.system().withCharger(charger), TypicalValues.NONE)
+        access.settings = StartState.Ready(own)
+        return own
+    }
+
+    private fun savedCharger() = (access.settings as StartState.Ready).config.system().charger()
+
+    private fun powerMenu() = compose.onNode(hasText(text(R.string.charge_power), substring = true)
+        and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.DropdownList))
+
+    /** Opens the charge power's drop-down and chooses an option in its menu, as the owner does. */
+    private fun choosePower(option: Int) {
+        powerMenu().performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(text(option)).performClick()
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun theChargerRowGivesThePowerTheValuesStandFor() {
+        show()
+
+        compose.onNodeWithText("3.7 kW").assertExists()
+    }
+
+    @Test
+    fun theChargerRowGivesThePhasesAndTheCurrentsForOther() {
+        show(session(config = withCharger(Charger(Phases.ONE, 6, 16, 240.0, 0.9))))
+
+        compose.onNodeWithText(text(R.string.settings_charger_summary, text(R.string.phases_one), 6, 16))
+            .assertExists()
+        compose.onNodeWithText("3.7 kW", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun inDutchTheChargerRowWritesThePowerWithADecimalComma() {
+        show(session(config = withCharger(Charger(Phases.ONE, 6, 32, 230.0, 0.9))))
+
+        compose.onNodeWithText("7,4 kW").assertExists()
+        open(SettingsPage.CHARGER)
+        powerMenu().assert(hasText("7,4 kW", substring = true))
+            .assert(hasText("Laadvermogen thuis", substring = true))
+        choosePower(R.string.charge_power_other)
+        powerMenu().assert(hasText("Anders", substring = true))
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun inDutchTheChargerRowGivesThePhasesAndTheCurrentsForOther() {
+        show(session(config = withCharger(Charger(Phases.ONE, 6, 16, 240.0, 0.9))))
+
+        compose.onNodeWithText("Eén fase, 6 tot 16 A").assertExists()
+    }
+
+    @Test
+    fun theChargerPageShowsThePowerWithTheRestFoldedAndOtherUnfoldsItChangingNoValue() {
+        show()
+        open(SettingsPage.CHARGER)
+        powerMenu().assert(hasText("3.7 kW", substring = true))
+            .assert(hasText(text(R.string.charge_power_hint), substring = true))
+        foldIs(R.string.fold_collapsed)
+        field(text(R.string.charger_max_current)).assertDoesNotExist()
+
+        choosePower(R.string.charge_power_other)
+
+        foldIs(R.string.fold_expanded)
+        powerMenu().assert(hasText(text(R.string.charge_power_other), substring = true))
+        field(text(R.string.charger_max_current)).assert(hasText("16"))
+        field(text(R.string.charger_max_current)).performTextReplacement("32")
+        compose.waitForIdle()
+        powerMenu().assert(hasText("7.4 kW", substring = true))
+        click(R.string.action_save)
+        compose.waitForIdle()
+        assertThat(savedCharger()).isEqualTo(Charger(Phases.ONE, 6, 32, 230.0, 0.9))
+    }
+
+    @Test
+    fun aStoredChargerOfNoneOfThePowersShowsOtherWithTheFoldOpen() {
+        show(session(config = withCharger(Charger(Phases.THREE, 6, 25, 230.0, 0.9))))
+        open(SettingsPage.CHARGER)
+
+        powerMenu().assert(hasText(text(R.string.charge_power_other), substring = true))
+        foldIs(R.string.fold_expanded)
+    }
+
+    @Test
+    fun aPowerWhoseMaximumEndsBelowATypedMinimumOpensTheFoldWithTheProblemAtTheMaximum() {
+        show(session(config = withCharger(Charger(Phases.ONE, 6, 32, 230.0, 0.9))))
+        open(SettingsPage.CHARGER)
+        click(R.string.more_settings)
+        field(text(R.string.charger_min_current)).performTextReplacement("20")
+        click(R.string.more_settings)
+        choosePower(R.string.charge_power_11)
+        foldIs(R.string.fold_collapsed)
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        foldIs(R.string.fold_expanded)
+        field(text(R.string.charger_max_current)).assertIsFocused().assert(hasText("16"))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error,
+                text(R.string.problem_below_minimum_current)))
+        field(text(R.string.charger_min_current)).assert(hasText("20"))
+        assertThat(access.written).isEmpty()
+        click(R.string.more_settings)
+        foldIs(R.string.fold_expanded)
+    }
+
+    @Test
+    fun iDontKnowInsideTheChargerFoldSetsTheMinimumTheVoltageAndTheEfficiencyOnly() {
+        show(session(config = withCharger(Charger(Phases.THREE, 8, 32, 400.0, 0.95))))
+        open(SettingsPage.CHARGER)
+
+        click(R.string.use_typical)
+        compose.waitForIdle()
+        powerMenu().assert(hasText("22 kW", substring = true))
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        assertThat(savedCharger()).isEqualTo(Charger(Phases.THREE, 6, 32, 230.0, 0.9))
+        assertThat((access.settings as StartState.Ready).config.typical().system()).containsExactlyInAnyOrder(
+            ConfigSetting.CHARGER_MIN_CURRENT, ConfigSetting.CHARGER_VOLTAGE, ConfigSetting.CHARGER_EFFICIENCY)
     }
 
     /** Dutch numbers have a decimal comma, so a semicolon keeps the latitude and the longitude apart. */
@@ -1472,6 +1602,7 @@ class SettingsScreenTest {
             compose.waitForIdle()
             when (page) {
                 SettingsPage.SOLAR -> click(R.string.panel_add)
+                SettingsPage.CHARGER -> click(R.string.more_settings)
                 SettingsPage.AWAY -> repeat(2) { click(R.string.away_add) }
                 else -> Unit
             }

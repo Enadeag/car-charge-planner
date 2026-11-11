@@ -9,18 +9,21 @@ import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
 import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
+import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.Car;
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice;
 import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.CompassPoint;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.PlaceName;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.HomeChargePower;
 import nl.enadeag.carchargeplanner.engine.config.House;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.PanelSize;
@@ -58,6 +61,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** The system's categories: panel arrays, location, car and house, charger, and their typical values. */
@@ -412,22 +416,220 @@ class SystemPagesTest {
                 config.typical());
     }
 
+    /** The example config with this charger, nothing typical, written back before Settings opens on its page. */
+    private SettingsView openWithCharger(Language language, Charger charger) throws Exception {
+        settings = new SettingsFixture(folder, language);
+        var file = new ConfigFile(settings.configPath, FILES);
+        var example = file.read();
+        file.write(example.withSystem(example.system().withCharger(charger), TypicalValues.NONE));
+        var view = settings.open();
+        Fx.run(() -> view.show(Category.CHARGER));
+        return view;
+    }
+
+    private SettingsView openWithCharger(Charger charger) throws Exception {
+        return openWithCharger(Language.ENGLISH, charger);
+    }
+
+    private Button chargerFoldRow(SettingsView view) {
+        var name = settings.messages.text(TextKey.MORE_SETTINGS);
+        return view.pages().stream().filter(page -> page.category() == Category.CHARGER)
+                .flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(node -> node instanceof Button button && button.getText().endsWith(" " + name))
+                .map(Button.class::cast).findFirst().orElseThrow();
+    }
+
+    private boolean chargerFoldOpen(SettingsView view) {
+        return Scenes.reallyVisible(settings.control(view, TextKey.FIELD_MIN_CURRENT));
+    }
+
+    private List<String> powerShown(SettingsView view) {
+        return shown(choices(view, TextKey.FIELD_CHARGE_POWER).getFirst());
+    }
+
+    private void choosePower(SettingsView view, ChargePowerChoice power) {
+        settings.choose(view, TextKey.FIELD_CHARGE_POWER, power);
+    }
+
     @Test
-    void iDontKnowFillsTheCardWithTypicalValuesTaggedAsSuch() throws Exception {
-        var view = openWith(config -> config.withSystem(config.system().withCharger(
-                new Charger(Phases.THREE, 8, 32, 400, 0.95)),
-                TypicalValues.NONE));
+    void onePhaseOf16AmpsAt230VoltsShows3Point7KwWithTheRestFolded() throws Exception {
+        var view = openWithCharger(new Charger(Phases.ONE, 6, 16, 230, 0.9));
+
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("3.7 kW");
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isFalse();
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CHARGE_POWER).getAccessibleHelp()))
+                .contains("The power the car charges with at home: the lower of what the charger and the car can "
+                        + "take.");
+    }
+
+    @Test
+    void theSameChargerAt240VoltsShowsOtherWithTheFoldOpenAndIsSavedAsItWas() throws Exception {
+        var view = openWithCharger(new Charger(Phases.ONE, 6, 16, 240, 0.9));
+        var before = Files.readString(settings.configPath);
+
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("Other");
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isTrue();
+        assertThat(Fx.call(view::isChanged)).isFalse();
+        Fx.call(() -> SettingsFixture.save(view));
+        assertThat(settings.configPath).hasContent(before);
+    }
+
+    @ParameterizedTest
+    @EnumSource(HomeChargePower.class)
+    void aPowerSetsThePhasesTheMaximumAnd230VoltsAndKeepsTheMinimumAndTheEfficiencyExactly(HomeChargePower power)
+            throws Exception {
+        // 0.453 comes back as 0.45300000000000007 when made a percentage and back, so this pins the exact value
+        var view = openWithCharger(new Charger(Phases.THREE, 7, 25, 240, 0.453));
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("Other");
 
         Fx.call(() -> {
-            button(view, TextKey.USE_TYPICAL, 2).fire(); // the car, the house, the charger
+            choosePower(view, ChargePowerChoice.of(power));
             return SettingsFixture.save(view);
         });
 
-        var config = stored();
-        assertThat(config.system().charger()).isEqualTo(Charger.TYPICAL);
-        assertThat(config.typical().system()).containsExactlyInAnyOrder(ConfigSetting.CHARGER_PHASES,
-                ConfigSetting.CHARGER_MIN_CURRENT, ConfigSetting.CHARGER_MAX_CURRENT, ConfigSetting.CHARGER_VOLTAGE,
-                ConfigSetting.CHARGER_EFFICIENCY);
+        assertThat(stored().system().charger())
+                .isEqualTo(new Charger(power.phases(), 7, power.maxAmps(), 230, 0.453));
+        assertThat(stored().typical().system()).isEmpty();
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).as("closed on a match as the page loads again").isFalse();
+    }
+
+    @Test
+    void theDropDownFollowsTheValuesAndNeverShowsANearbyPower() throws Exception {
+        var view = openWithCharger(new Charger(Phases.ONE, 6, 16, 230, 0.9));
+
+        Fx.run(() -> settings.choose(view, TextKey.FIELD_PHASES, Phases.THREE));
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("11 kW");
+        Fx.run(() -> settings.type(view, TextKey.FIELD_MAX_CURRENT, "25"));
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("Other");
+        Fx.run(() -> settings.type(view, TextKey.FIELD_MAX_CURRENT, "13"));
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("Other");
+        Fx.run(() -> settings.type(view, TextKey.FIELD_MAX_CURRENT, "32"));
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("22 kW");
+        Fx.run(() -> settings.type(view, TextKey.FIELD_VOLTAGE, "231"));
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("Other");
+        Fx.run(() -> {
+            settings.choose(view, TextKey.FIELD_PHASES, Phases.ONE);
+            settings.type(view, TextKey.FIELD_VOLTAGE, "230");
+            settings.type(view, TextKey.FIELD_MAX_CURRENT, "25");
+        });
+        assertThat(Fx.call(() -> powerShown(view))).as("one phase of 25 A").containsExactly("Other");
+    }
+
+    @Test
+    void otherOpensTheFoldAndChangesNoValue() throws Exception {
+        var view = openWithCharger(new Charger(Phases.THREE, 6, 16, 230, 0.9));
+        var before = Files.readString(settings.configPath);
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isFalse();
+
+        Fx.run(() -> choosePower(view, ChargePowerChoice.OTHER));
+
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isTrue();
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("Other");
+        assertThat(Fx.call(view::isChanged)).isFalse();
+        Fx.call(() -> SettingsFixture.save(view));
+        assertThat(settings.configPath).hasContent(before);
+    }
+
+    @Test
+    void aPowerWhoseMaximumEndsBelowATypedMinimumShowsTheProblemThereAndOpensTheFold() throws Exception {
+        var view = openWithCharger(new Charger(Phases.ONE, 6, 32, 230, 0.9));
+        Fx.run(() -> {
+            chargerFoldRow(view).fire();
+            settings.type(view, TextKey.FIELD_MIN_CURRENT, "20");
+            chargerFoldRow(view).fire();
+            choosePower(view, ChargePowerChoice.KW_11);
+        });
+
+        boolean saved = Fx.call(() -> SettingsFixture.save(view));
+
+        assertThat(saved).isFalse();
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isTrue();
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
+                .startsWith(settings.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
+        assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_MIN_CURRENT)).getText()))
+                .isEqualTo("20");
+        Fx.run(() -> chargerFoldRow(view).fire());
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).as("held open while the problem shows").isTrue();
+        Fx.run(() -> settings.type(view, TextKey.FIELD_MIN_CURRENT, "6"));
+        assertThat(Fx.call(() -> SettingsFixture.save(view))).isTrue();
+        assertThat(stored().system().charger()).isEqualTo(new Charger(Phases.THREE, 6, 16, 230, 0.9));
+        Fx.run(() -> {
+            chargerFoldRow(view).fire();
+            chargerFoldRow(view).fire();
+        });
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).as("no longer held open").isFalse();
+    }
+
+    @Test
+    void iDontKnowInsideTheFoldSetsTheMinimumTheVoltageAndTheEfficiencyOnlyTaggedAsTypical() throws Exception {
+        var view = openWithCharger(new Charger(Phases.THREE, 8, 32, 400, 0.95));
+        var typical = settings.messages.text(TextKey.IN_GROUP, settings.messages.text(TextKey.USE_TYPICAL),
+                settings.messages.text(TextKey.CARD_CHARGER));
+        var button = Fx.call(() -> Scenes.all(chargerFoldRow(view).getParent()).stream()
+                .filter(node -> node instanceof Button found && typical.equals(found.getAccessibleText()))
+                .map(Button.class::cast).findFirst().orElseThrow());
+        assertThat(Fx.call(() -> Scenes.reallyVisible(button))).isTrue();
+
+        Fx.run(button::fire);
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("22 kW");
+        var tag = settings.messages.text(TextKey.TYPICAL_TAG);
+        for (var field : List.of(TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_VOLTAGE, TextKey.FIELD_EFFICIENCY)) {
+            assertThat(Fx.call(() -> settings.control(view, field).getAccessibleHelp())).as("%s", field).contains(tag);
+        }
+        Fx.call(() -> SettingsFixture.save(view));
+
+        assertThat(stored().system().charger()).isEqualTo(new Charger(Phases.THREE, 6, 32, 230, 0.9));
+        assertThat(stored().typical().system()).containsExactlyInAnyOrder(ConfigSetting.CHARGER_MIN_CURRENT,
+                ConfigSetting.CHARGER_VOLTAGE, ConfigSetting.CHARGER_EFFICIENCY);
+    }
+
+    @Test
+    void aStoredVoltageJustOff230IsOtherThoughItsFieldShows230AlsoAfterThePhasesChangeAndComeBack()
+            throws Exception {
+        var view = openWithCharger(new Charger(Phases.ONE, 6, 16, 230.4, 0.9));
+
+        assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_VOLTAGE)).getText()))
+                .isEqualTo("230");
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("Other");
+        Fx.run(() -> {
+            settings.choose(view, TextKey.FIELD_PHASES, Phases.THREE);
+            settings.choose(view, TextKey.FIELD_PHASES, Phases.ONE);
+        });
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("Other");
+    }
+
+    @Test
+    void aChargerWithTypicalPhasesAndMaximumShowsItsPowerAndChoosingItAgainMakesThemTheOwners() throws Exception {
+        var view = openWith(config -> config.withSystem(config.system().withCharger(Charger.TYPICAL),
+                new TypicalValues(Set.of(ConfigSetting.CHARGER_PHASES, ConfigSetting.CHARGER_MAX_CURRENT,
+                        ConfigSetting.CHARGER_VOLTAGE), List.of())));
+        Fx.run(() -> view.show(Category.CHARGER));
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("3.7 kW");
+        assertThat(Fx.call(view::isChanged)).isFalse();
+
+        Fx.run(() -> {
+            choosePower(view, ChargePowerChoice.KW_22);
+            choosePower(view, ChargePowerChoice.KW_3_7);
+        });
+
+        assertThat(Fx.call(view::isChanged)).isTrue();
+        assertThat(Fx.call(() -> SettingsFixture.save(view))).isTrue();
+        assertThat(stored().system().charger()).isEqualTo(Charger.TYPICAL);
+        assertThat(stored().typical().system()).containsExactly(ConfigSetting.CHARGER_VOLTAGE);
+    }
+
+    @Test
+    void inDutchThePowersAreWrittenWithADecimalComma() throws Exception {
+        var view = openWithCharger(Language.DUTCH, new Charger(Phases.ONE, 6, 32, 230, 0.9));
+
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("7,4 kW");
+        assertThat(texts(view)).contains("Laadvermogen thuis");
+        Fx.run(() -> choosePower(view, ChargePowerChoice.OTHER));
+        assertThat(Fx.call(() -> powerShown(view))).containsExactly("Anders");
+        var names = new ChoiceNames(settings.messages);
+        assertThat(Fx.call(() -> this.<ChargePowerChoice>choices(view, TextKey.FIELD_CHARGE_POWER).getFirst()
+                .getItems().stream().map(names::chargePower).toList()))
+                .containsExactly("3,7 kW", "7,4 kW", "11 kW", "22 kW", "Anders");
     }
 
     @Test
@@ -458,6 +660,7 @@ class SystemPagesTest {
         assertThat(Fx.call(view::shown)).isEqualTo(Category.CHARGER);
         assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isTrue();
     }
 
     @Test
