@@ -24,7 +24,6 @@ import nl.enadeag.carchargeplanner.engine.config.PlaceName;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.Place;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
-import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,9 +37,10 @@ import javafx.scene.layout.VBox;
 
 /**
  * Where the home is: at the top the place chosen, or that none is yet; below it the place search; and the coordinates
- * and the time zone folded under "Coordinates and time zone", closed with a place chosen and open without one. A
- * problem in a coordinate opens the fold and keeps it open until the problem goes. When the primary provider has no
- * place search the page shows only the coordinates and the time zone, unfolded.
+ * and the time zone folded under "Coordinates and time zone", closed with a place chosen and open without one. In
+ * set-up, "no place chosen" at the latitude opens the fold and keeps it open until a place is chosen or the
+ * coordinates are typed. When the primary provider has no place search the page shows only the coordinates and the
+ * time zone, unfolded.
  */
 public final class LocationPage implements ConfigPage {
 
@@ -163,32 +163,19 @@ public final class LocationPage implements ConfigPage {
 
     @Override
     public Optional<EngineConfig> read(EngineConfig config) {
-        if (!isChanged()) {
-            return Optional.of(config);
-        }
-        try {
-            return Optional.of(entry().applyTo(config));
-        } catch (InvalidSetting _) {
-            return Optional.empty();
-        }
+        // the fields keep each coordinate in its range, so the location is never refused
+        return Optional.of(isChanged() ? entry().applyTo(config) : config);
     }
 
     @Override
     public boolean showProblems() {
         problems.clear();
         fold.holdOpen(false);
-        if (!isChanged()) {
-            return false;
+        if (isChanged()) {
+            inputs().forEach(Input::commitTyped);
         }
-        inputs().forEach(Input::commitTyped);
-        try {
-            entry().coordinates();
-            return false;
-        } catch (InvalidSetting e) {
-            problems.show(e);
-            fold.holdOpen(true);
-            return true;
-        }
+        // the fields keep each coordinate in its range, so nothing is refused; set-up marks a missing place itself
+        return false;
     }
 
     /**
