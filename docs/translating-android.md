@@ -11,6 +11,7 @@ The Android app's texts are Android string resources, in `android/app/src/main/r
 
 - **A comment above a text says what each placeholder holds**, in the English file; the translations keep to it.
 - **Placeholders are always positional**: `%1$s`, `%2$d`, `%3$.1f`, never a bare `%s`. Keep every one, with the same number and type as in English, but put it where your language wants it: `%2$s` may come before `%1$s`. Numbers and times that are already written for the phone come in as `%s`; a number the app has not written yet is `%d` or `%.1f`.
+- **Two numbers in a row** are kept apart by a comma in English, and by a semicolon in a language that writes numbers with a decimal comma, such as Dutch: "52,0907; 5,1214".
 - **Escaping** differs from the desktop's: an apostrophe is `\'` (the desktop writes `''`), a literal percent sign is `%%`, a new line is `\n`, and a text that starts with `@` or `?` starts with `\@` or `\?`. An unescaped `'` or `"` is an error, and so is a text that is not valid XML: write `&amp;` and `&lt;`. Type `é` and `ü` as they are.
 - **A text with a count is a `<plurals>`**, with the forms the language has: English and Dutch both have `one` and `other`. Give every form its own sentence, also `one` when it has no number to show ("One day"), and give both languages the same forms:
 
@@ -44,6 +45,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | No place chosen yet | Nog geen plaats gekozen | the same line while the settings hold no place name |
 | Search to choose another place | Zoek om een andere plaats te kiezen | under the place search while a place is chosen, above "Searching sends it to Open-Meteo, …" |
 | Coordinates and time zone | Coördinaten en tijdzone | the fold with the latitude, the longitude and "Time zone: Europe/Amsterdam" ("Tijdzone: Europe/Amsterdam") |
+| 52.0907, 5.1214 | 52,0907; 5,1214 | the line under Location in Settings while no place is chosen; a language that writes numbers with a decimal comma puts a semicolon between the latitude and the longitude |
 | Check again | Opnieuw controleren | asks the forecast provider once more |
 | Try again | Opnieuw proberen | repeats what failed |
 | Set up again | Opnieuw instellen | for an unusable config |

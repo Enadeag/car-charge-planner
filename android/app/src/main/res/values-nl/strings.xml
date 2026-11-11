@@ -352,7 +352,7 @@
     <item quantity="one">%1$d panelengroep, %2$s kWp</item>
     <item quantity="other">%1$d panelengroepen, %2$s kWp</item>
   </plurals>
-  <string name="settings_location_summary">%1$s, %2$s</string>
+  <string name="settings_location_summary">%1$s; %2$s</string>
   <string name="settings_car_house_summary">Accu %1$s kWh, huis %2$s kW</string>
   <string name="settings_charger_summary">%1$s, %2$d tot %3$d A</string>
   <string name="settings_forecast_summary">%1$s, reservedienst %2$s</string>

@@ -537,7 +537,8 @@
     <item quantity="one">%1$d array, %2$s kWp</item>
     <item quantity="other">%1$d arrays, %2$s kWp</item>
   </plurals>
-  <!-- without a place name: %1$s the latitude and %2$s the longitude, written already -->
+  <!-- without a place name: %1$s the latitude and %2$s the longitude, written already; a language whose
+       numbers have a decimal comma puts a semicolon between them -->
   <string name="settings_location_summary">%1$s, %2$s</string>
   <!-- %1$s the usable battery in kWh and %2$s the house baseload in kW, both written already -->
   <string name="settings_car_house_summary">Battery %1$s kWh, house %2$s kW</string>

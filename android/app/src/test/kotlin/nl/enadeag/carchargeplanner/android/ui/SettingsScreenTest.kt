@@ -273,6 +273,15 @@ class SettingsScreenTest {
         compose.onNodeWithText(text(R.string.settings_away_none)).assertExists()
     }
 
+    /** Dutch numbers have a decimal comma, so a semicolon keeps the latitude and the longitude apart. */
+    @Test
+    @Config(qualifiers = "nl")
+    fun theLocationRowInDutchPutsASemicolonBetweenTheCoordinates() {
+        show()
+
+        compose.onNodeWithText("52,0907; 5,1214").assertExists()
+    }
+
     @Test
     fun theLocationRowGivesThePlaceNameInPlaceOfTheCoordinates() {
         show(session(config = stored.withSystem(stored.system().withPlace(Coordinates(52.0907, 5.1214), amsterdam,
