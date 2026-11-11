@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.desktop.app.AppSettings;
 import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
+import nl.enadeag.carchargeplanner.desktop.settings.location.LocationPage;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
@@ -576,19 +577,87 @@ class SystemPagesTest {
         assertThat(Fx.call(view::isChanged)).isFalse();
     }
 
-    @Test
-    void withoutAPlaceTheTopSaysSoAndTheCoordinatesAreOpen() throws Exception {
+    /** Settings whose home has no place chosen yet, on the location page, with a search that finds this. */
+    private SettingsView openUnnamedFinding(Place place) throws Exception {
         settings = new SettingsFixture(folder, Language.ENGLISH, List.of(new SearchOnly(
-                (text, language) -> new PlaceResults.Found(List.of(UTRECHT)))));
+                (text, language) -> new PlaceResults.Found(List.of(place)))));
         var file = new ConfigFile(settings.configPath, FILES);
         var example = file.read();
-        file.write(example.withSystem(example.system().withUnnamedLocation(example.system().location(),
+        file.write(example.withSystem(example.system().withUnnamedLocation(Coordinates.NOT_CHOSEN,
                 example.system().timezone()), example.typical()));
         var view = settings.open();
         showLocation(view);
+        return view;
+    }
+
+    private static LocationPage locationPage(SettingsView view) {
+        return view.pages().stream().filter(LocationPage.class::isInstance).map(LocationPage.class::cast).findFirst()
+                .orElseThrow();
+    }
+
+    private String latitudeHelp(SettingsView view) throws Exception {
+        return Fx.call(() -> settings.control(view, TextKey.FIELD_LATITUDE).getAccessibleHelp());
+    }
+
+    private void pressFoldRow(SettingsView view) throws Exception {
+        Fx.run(() -> foldRow(view).orElseThrow().fire());
+    }
+
+    @Test
+    void withoutAPlaceTheTopSaysSoAndTheCoordinatesAreOpen() throws Exception {
+        var view = openUnnamedFinding(UTRECHT);
 
         assertThat(texts(view)).contains("No place chosen yet").doesNotContain("Search to choose another place");
         assertThat(Fx.call(() -> coordinatesShown(view))).isTrue();
+    }
+
+    @Test
+    void whileThePageSaysNoPlaceIsChosenTheRowLeavesTheCoordinatesOpenUntilTheyArePutRight() throws Exception {
+        var view = openUnnamedFinding(UTRECHT);
+        assertThat(Fx.call(() -> locationPage(view).markNotChosen())).isTrue();
+        assertThat(texts(view)).contains(settings.messages.text(TextKey.PROBLEM_NO_PLACE));
+
+        pressFoldRow(view);
+        assertThat(Fx.call(() -> coordinatesShown(view))).isTrue();
+
+        Fx.run(() -> settings.type(view, TextKey.FIELD_LATITUDE, "51.5"));
+        assertThat(Fx.call(() -> locationPage(view).showProblems())).isFalse();
+        assertThat(latitudeHelp(view)).doesNotContain(settings.messages.text(TextKey.PROBLEM_NO_PLACE));
+        pressFoldRow(view);
+        assertThat(Fx.call(() -> coordinatesShown(view))).isFalse();
+    }
+
+    @Test
+    void choosingAPlaceRemovesTheProblemClosesTheCoordinatesAndLetsTheRowFoldThemAgain() throws Exception {
+        var view = openUnnamedFinding(UTRECHT);
+        assertThat(Fx.call(() -> locationPage(view).markNotChosen())).isTrue();
+
+        choose(view, "Utrecht, Netherlands");
+
+        assertThat(latitudeHelp(view)).doesNotContain(settings.messages.text(TextKey.PROBLEM_NO_PLACE));
+        assertThat(texts(view)).contains("Chosen place: Utrecht, Netherlands");
+        assertThat(Fx.call(() -> coordinatesShown(view))).isFalse();
+        pressFoldRow(view);
+        assertThat(Fx.call(() -> coordinatesShown(view))).isTrue();
+        pressFoldRow(view);
+        assertThat(Fx.call(() -> coordinatesShown(view))).isFalse();
+    }
+
+    @Test
+    void loadingAgainLetsTheRowFoldTheCoordinatesAgain() throws Exception {
+        var view = openUnnamedFinding(UTRECHT);
+        assertThat(Fx.call(() -> locationPage(view).markNotChosen())).isTrue();
+        var unnamed = stored();
+        var named = unnamed.withSystem(unnamed.system().withPlace(new Coordinates(51.0, 5.0),
+                ZoneId.of("Europe/Brussels"), new PlaceName("Zonnedorp, Belgium")), unnamed.typical());
+
+        Fx.run(() -> locationPage(view).load(named));
+        assertThat(latitudeHelp(view)).doesNotContain(settings.messages.text(TextKey.PROBLEM_NO_PLACE));
+        pressFoldRow(view);
+        assertThat(Fx.call(() -> coordinatesShown(view))).isTrue();
+        pressFoldRow(view);
+
+        assertThat(Fx.call(() -> coordinatesShown(view))).isFalse();
     }
 
     @Test
@@ -610,15 +679,35 @@ class SystemPagesTest {
     }
 
     @Test
+    void inDutchADecimalCommaWithMoreDecimalsKeepsTheNameAndADifferenceAtTheFourthDecimalDropsIt() throws Exception {
+        settings = new SettingsFixture(folder, Language.DUTCH, List.of(new SearchOnly(
+                (text, language) -> new PlaceResults.Found(List.of(UTRECHT)))));
+        var view = settings.open();
+        showLocation(view);
+        pressFoldRow(view);
+
+        Fx.run(() -> settings.type(view, TextKey.FIELD_LATITUDE, "51,00004"));
+        assertThat(texts(view)).contains("Gekozen plaats: Zonnedorp, Belgium")
+                .doesNotContain("Nog geen plaats gekozen");
+
+        Fx.run(() -> settings.type(view, TextKey.FIELD_LATITUDE, "51,0001"));
+        assertThat(texts(view)).contains("Nog geen plaats gekozen")
+                .doesNotContain("Gekozen plaats: Zonnedorp, Belgium");
+    }
+
+    @Test
     void anotherPlaceAtTheSameCoordinatesIsAChangeThatSavesItsName() throws Exception {
-        var view = openFinding(new Place("Molenhoek", new Coordinates(51.0, 5.0), ZoneId.of("Europe/Brussels"), "",
-                "Belgium", ""));
+        var view = openFinding(new Place("Zonnedorp", new Coordinates(51.0, 5.0), ZoneId.of("Europe/Brussels"),
+                "Westland", "Belgium", ""));
 
-        choose(view, "Molenhoek, Belgium");
+        assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("Close").doesNotContain("Cancel");
 
+        choose(view, "Zonnedorp, Westland, Belgium");
+
+        assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("Cancel").doesNotContain("Close");
         assertThat(Fx.call(view::isChanged)).isTrue();
         assertThat(Fx.call(() -> SettingsFixture.save(view))).isTrue();
-        assertThat(stored().system().place()).contains(new PlaceName("Molenhoek, Belgium"));
+        assertThat(stored().system().place()).contains(new PlaceName("Zonnedorp, Westland, Belgium"));
     }
 
     @Test

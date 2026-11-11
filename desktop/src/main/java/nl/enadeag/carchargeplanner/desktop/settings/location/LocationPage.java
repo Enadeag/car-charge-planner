@@ -221,7 +221,6 @@ public final class LocationPage implements ConfigPage {
         changeActions.forEach(Runnable::run);
     }
 
-    /** The name of the place chosen, while the fields still hold its coordinates. */
     private Optional<PlaceName> placeName() {
         return chosen == null ? Optional.empty() : chosen.nameAt(latitude.value(), longitude.value(), numbers);
     }

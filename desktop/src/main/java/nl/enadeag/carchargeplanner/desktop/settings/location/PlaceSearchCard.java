@@ -74,11 +74,6 @@ final class PlaceSearchCard {
         status.setText("");
     }
 
-    /**
-     * Says under the field that a search chooses another place, while one is chosen.
-     *
-     * @param placeChosen true while the page has a place chosen
-     */
     void showChosen(boolean placeChosen) {
         another.setVisible(placeChosen);
     }
