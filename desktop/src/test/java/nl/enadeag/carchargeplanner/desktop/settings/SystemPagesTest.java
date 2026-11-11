@@ -667,6 +667,18 @@ class SystemPagesTest {
     }
 
     @Test
+    void whileTheResultsOfANewSearchShowTheChosenPlaceStaysAtTheTop() throws Exception {
+        var view = openFinding(UTRECHT);
+
+        Fx.run(() -> search(view));
+
+        SettingsFixture.waitFor(() -> shownTexts(view).contains("Utrecht, Netherlands"));
+        assertThat(texts(view)).contains(EXAMPLE_PLACE, "Search to choose another place")
+                .doesNotContain("No place chosen yet", "Chosen place: Utrecht, Netherlands");
+        assertThat(Fx.call(view::isChanged)).isFalse();
+    }
+
+    @Test
     void aFailedSearchLeavesTheChosenPlaceAndTheFoldAlone() throws Exception {
         var view = openSearching((text, language) -> new PlaceResults.Failed(PlaceResults.Problem.UNAVAILABLE));
         Fx.run(() -> foldRow(view).orElseThrow().fire());
