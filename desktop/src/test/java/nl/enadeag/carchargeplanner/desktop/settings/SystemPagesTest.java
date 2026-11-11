@@ -19,6 +19,7 @@ import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.CompassPoint;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
+import nl.enadeag.carchargeplanner.engine.config.PlaceName;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.PanelSize;
@@ -128,8 +129,12 @@ class SystemPagesTest {
     }
 
     private List<String> texts(SettingsView view) throws Exception {
-        return Fx.call(() -> view.pages().stream().flatMap(page -> Scenes.visibleTexts(page.view()).stream())
-                .toList());
+        return Fx.call(() -> shownTexts(view));
+    }
+
+    /** On the JavaFX thread. */
+    private static List<String> shownTexts(SettingsView view) {
+        return view.pages().stream().flatMap(page -> Scenes.visibleTexts(page.view()).stream()).toList();
     }
 
     @Test
@@ -486,43 +491,180 @@ class SystemPagesTest {
         assertThat(stored().system().car().kmPerDay()).isEqualTo(40);
     }
 
-    @Test
-    void aFoundPlaceFillsInTheCoordinatesAndTheTimeZone() throws Exception {
-        var utrecht = new Place("Utrecht", new Coordinates(52.09083, 5.12222), ZoneId.of("Europe/Amsterdam"),
-                "Utrecht", "Netherlands", "");
-        settings = new SettingsFixture(folder, Language.ENGLISH, List.of(new SearchOnly(utrecht)));
+    private static final Place UTRECHT = new Place("Utrecht", new Coordinates(52.09083, 5.12222),
+            ZoneId.of("Europe/Amsterdam"), "Utrecht", "Netherlands", "");
+
+    private static final String EXAMPLE_PLACE = "Chosen place: Zonnedorp, Belgium";
+
+    /** Settings on the location page, with a primary provider whose place search finds this. */
+    private SettingsView openSearching(PlaceSearch search) throws Exception {
+        settings = new SettingsFixture(folder, Language.ENGLISH, List.of(new SearchOnly(search)));
         var view = settings.open();
+        showLocation(view);
+        return view;
+    }
 
+    /** Shows the location page, laid out as the next pulse would, so its parts are in the scene. */
+    private static void showLocation(SettingsView view) throws Exception {
         Fx.run(() -> {
-            var text = (TextField) settings.field(view, TextKey.PLACE_FIELD);
-            text.setText("Utrecht");
-            text.fireEvent(new javafx.event.ActionEvent());
+            view.show(Category.LOCATION);
+            view.applyCss();
+            view.layout();
         });
-        SettingsFixture.waitFor(() -> view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
-                .anyMatch(node -> node instanceof Button button && button.getText().equals("Utrecht, Netherlands")));
-        Fx.call(() -> {
-            view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
-                    .filter(node -> node instanceof Button button && button.getText().equals("Utrecht, Netherlands"))
-                    .map(Button.class::cast).findFirst().orElseThrow().fire();
-            return SettingsFixture.save(view);
-        });
+    }
 
+    private SettingsView openFinding(Place place) throws Exception {
+        return openSearching((text, language) -> new PlaceResults.Found(List.of(place)));
+    }
+
+    private void search(SettingsView view) {
+        var text = (TextField) settings.field(view, TextKey.PLACE_FIELD);
+        text.setText("Utrecht");
+        text.fireEvent(new javafx.event.ActionEvent());
+    }
+
+    private void choose(SettingsView view, String label) throws Exception {
+        Fx.run(() -> search(view));
+        SettingsFixture.waitFor(() -> shownTexts(view).contains(label));
+        Fx.run(() -> button(view, label).fire());
+    }
+
+    private Button button(SettingsView view, String text) {
+        return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(node -> node instanceof Button button && button.getText().equals(text))
+                .map(Button.class::cast).findFirst().orElseThrow();
+    }
+
+    /** The fold's row, whose text is the arrow and the fold's name. */
+    private Optional<Button> foldRow(SettingsView view) {
+        var name = settings.messages.text(TextKey.CARD_COORDINATES);
+        return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(node -> node instanceof Button button && button.getText().endsWith(" " + name)
+                        && Scenes.reallyVisible(button))
+                .map(Button.class::cast).findFirst();
+    }
+
+    private boolean coordinatesShown(SettingsView view) {
+        return Scenes.reallyVisible(settings.control(view, TextKey.FIELD_LATITUDE));
+    }
+
+    @Test
+    void aFoundPlaceShowsAtTheTopAndIsSavedWithItsNameItsCoordinatesAndItsTimeZone() throws Exception {
+        var view = openFinding(UTRECHT);
+
+        choose(view, "Utrecht, Netherlands");
+
+        assertThat(texts(view)).contains("Chosen place: Utrecht, Netherlands", "Search to choose another place")
+                .doesNotContain(EXAMPLE_PLACE);
+        assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.PLACE_FIELD)).getText())).isEmpty();
+        assertThat(Fx.call(() -> coordinatesShown(view))).isFalse();
+        assertThat(Fx.call(() -> SettingsFixture.save(view))).isTrue();
         var system = stored().system();
+        assertThat(system.place()).contains(new PlaceName("Utrecht, Netherlands"));
         assertThat(system.location()).isEqualTo(new Coordinates(52.09083, 5.12222));
         assertThat(system.timezone()).isEqualTo(ZoneId.of("Europe/Amsterdam"));
     }
 
     @Test
-    void withoutAPlaceSearchTheOwnerIsToldToTypeTheCoordinates() throws Exception {
-        var view = open();
+    void aStoredPlaceShowsAtTheTopWithTheCoordinatesFoldedAndOpensThemOnThePressOfTheRow() throws Exception {
+        var view = openFinding(UTRECHT);
 
-        Fx.run(() -> {
-            view.show(Category.LOCATION);
-            ((TextField) settings.field(view, TextKey.PLACE_FIELD)).setText("Utrecht");
-            settings.button(view, TextKey.PLACE_SEARCH).fire();
+        assertThat(texts(view)).contains(EXAMPLE_PLACE, "Search to choose another place");
+        assertThat(Fx.call(() -> coordinatesShown(view))).isFalse();
+        Fx.run(() -> foldRow(view).orElseThrow().fire());
+        assertThat(Fx.call(() -> coordinatesShown(view))).isTrue();
+        assertThat(Fx.call(view::isChanged)).isFalse();
+    }
+
+    @Test
+    void withoutAPlaceTheTopSaysSoAndTheCoordinatesAreOpen() throws Exception {
+        settings = new SettingsFixture(folder, Language.ENGLISH, List.of(new SearchOnly(
+                (text, language) -> new PlaceResults.Found(List.of(UTRECHT)))));
+        var file = new ConfigFile(settings.configPath, FILES);
+        var example = file.read();
+        file.write(example.withSystem(example.system().withUnnamedLocation(example.system().location(),
+                example.system().timezone()), example.typical()));
+        var view = settings.open();
+        showLocation(view);
+
+        assertThat(texts(view)).contains("No place chosen yet").doesNotContain("Search to choose another place");
+        assertThat(Fx.call(() -> coordinatesShown(view))).isTrue();
+    }
+
+    @Test
+    void typingADigitAndPuttingItBackKeepsTheNameAndARealDifferenceDropsItAtOnce() throws Exception {
+        var view = openFinding(UTRECHT);
+        Fx.run(() -> foldRow(view).orElseThrow().fire());
+
+        Fx.run(() -> settings.type(view, TextKey.FIELD_LATITUDE, "51.0001"));
+        assertThat(texts(view)).contains("No place chosen yet").doesNotContain(EXAMPLE_PLACE,
+                "Search to choose another place");
+        Fx.run(() -> settings.type(view, TextKey.FIELD_LATITUDE, "51.00000"));
+        assertThat(texts(view)).contains(EXAMPLE_PLACE);
+
+        Fx.run(() -> settings.type(view, TextKey.FIELD_LONGITUDE, "5.0001"));
+        assertThat(Fx.call(() -> SettingsFixture.save(view))).isTrue();
+        assertThat(stored().system().place()).isEmpty();
+        assertThat(stored().system().location()).isEqualTo(new Coordinates(51.0, 5.0001));
+        assertThat(texts(view)).contains("No place chosen yet");
+    }
+
+    @Test
+    void anotherPlaceAtTheSameCoordinatesIsAChangeThatSavesItsName() throws Exception {
+        var view = openFinding(new Place("Molenhoek", new Coordinates(51.0, 5.0), ZoneId.of("Europe/Brussels"), "",
+                "Belgium", ""));
+
+        choose(view, "Molenhoek, Belgium");
+
+        assertThat(Fx.call(view::isChanged)).isTrue();
+        assertThat(Fx.call(() -> SettingsFixture.save(view))).isTrue();
+        assertThat(stored().system().place()).contains(new PlaceName("Molenhoek, Belgium"));
+    }
+
+    @Test
+    void savingAnotherPageKeepsThePlaceName() throws Exception {
+        var view = openFinding(UTRECHT);
+
+        Fx.call(() -> {
+            view.show(Category.CAR_HOUSE);
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "64");
+            return SettingsFixture.save(view);
         });
 
-        SettingsFixture.waitFor(() -> Scenes.visibleTexts(view).contains(settings.messages.text(TextKey.PLACE_NO_SEARCH)));
+        assertThat(stored().system().car().usableBatteryKwh()).isEqualTo(64);
+        assertThat(stored().system().place()).contains(new PlaceName("Zonnedorp, Belgium"));
+        assertThat(stored().system().location()).isEqualTo(new Coordinates(51.0, 5.0));
+    }
+
+    @Test
+    void aFailedSearchLeavesTheChosenPlaceAndTheFoldAlone() throws Exception {
+        var view = openSearching((text, language) -> new PlaceResults.Failed(PlaceResults.Problem.UNAVAILABLE));
+        Fx.run(() -> foldRow(view).orElseThrow().fire());
+
+        Fx.run(() -> search(view));
+
+        SettingsFixture.waitFor(() -> shownTexts(view).contains(settings.messages.text(TextKey.PLACE_UNAVAILABLE)));
+        assertThat(texts(view)).contains(EXAMPLE_PLACE);
+        assertThat(Fx.call(() -> coordinatesShown(view))).isTrue();
+        assertThat(Fx.call(view::isChanged)).isFalse();
+    }
+
+    @Test
+    void withoutAPlaceSearchOnlyTheCoordinatesAndTheTimeZoneShowUnfoldedBeforeAnythingIsSearched() throws Exception {
+        var view = open();
+
+        showLocation(view);
+
+        var shown = texts(view);
+        assertThat(shown).contains(settings.messages.text(TextKey.PLACE_NO_SEARCH),
+                settings.messages.text(TextKey.CARD_COORDINATES));
+        assertThat(shown).doesNotContain(EXAMPLE_PLACE, "No place chosen yet",
+                settings.messages.text(TextKey.CARD_PLACE));
+        assertThat(Fx.call(() -> coordinatesShown(view))).isTrue();
+        assertThat(Fx.call(() -> foldRow(view))).isEmpty();
+        assertThat(Fx.call(() -> Scenes.all(view).stream().filter(Scenes::reallyVisible)
+                .noneMatch(node -> SettingsFixture.named(node, settings.messages.text(TextKey.PLACE_FIELD)))))
+                .isTrue();
     }
 
     @Test
@@ -551,8 +693,8 @@ class SystemPagesTest {
         assertThat(Fx.call(view::isChanged)).isFalse();
     }
 
-    /** A provider with only a place search, which always finds the one place. */
-    private record SearchOnly(Place place) implements ForecastProvider {
+    /** A provider with only a place search, which answers as the test says. */
+    private record SearchOnly(PlaceSearch search) implements ForecastProvider {
 
         @Override
         public ProviderInfo info() {
@@ -567,7 +709,7 @@ class SystemPagesTest {
 
         @Override
         public Optional<PlaceSearch> placeSearch() {
-            return Optional.of((text, language) -> new PlaceResults.Found(List.of(place)));
+            return Optional.of(search);
         }
     }
 }

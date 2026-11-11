@@ -714,8 +714,12 @@ public enum TextKey {
     PLACE_SEARCHING,
     /** Said above the results. */
     PLACE_CHOOSE,
-    /** Said after a place was chosen: {0} the place. */
+    /** At the top of the location page, with a place chosen: {0} its name. */
     PLACE_CHOSEN,
+    /** At the top of the location page, without a place chosen. */
+    PLACE_NOT_CHOSEN,
+    /** Under the place search, with a place chosen. */
+    PLACE_ANOTHER,
     /** No places matched: {0} what was typed. */
     PLACE_NONE,
     /** The provider has no place search. */
@@ -728,7 +732,7 @@ public enum TextKey {
     PLACE_BUSY,
     /** The search gave an answer the app cannot read. */
     PLACE_BAD_RESPONSE,
-    /** The title of the coordinates' card. */
+    /** The name of the fold that holds the coordinates and the time zone, and of their card without a place search. */
     CARD_COORDINATES,
     /** What the coordinates are for. */
     CARD_COORDINATES_HINT,
