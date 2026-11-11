@@ -11,6 +11,7 @@ import java.util.OptionalInt;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class PanelSizeTest {
 
@@ -26,6 +27,16 @@ class PanelSizeTest {
     })
     void theTypicalPowerPerPanelFollowsTheYearPlaced(int year, int wattPeak) {
         assertThat(PanelSize.Panels.typicalWattPeak(Year.of(year))).isEqualTo(wattPeak);
+    }
+
+    @ParameterizedTest
+    @CsvSource(nullValues = "-", value = {
+        "1989, -", "1990, 220", "2026, 430", "2027, -", "-1000000000, -", "1000000000, -",
+    })
+    void theEstimateIsShownOnlyForAYearTheArrayMayHave(int year, Integer wattPeak) {
+        var estimate = PanelSize.Panels.typicalWattPeakFor(year, Year.of(2026));
+
+        assertThat(estimate).isEqualTo(wattPeak == null ? OptionalInt.empty() : OptionalInt.of(wattPeak));
     }
 
     @Test
@@ -114,5 +125,17 @@ class PanelSizeTest {
     void aStoredDirectionIsShownAsTheNearestPointTheOneFurthestFromSouthOnATie(double azimuthDeg,
             CompassPoint point) {
         assertThat(CompassPoint.nearest(azimuthDeg)).isEqualTo(point);
+    }
+
+    @ParameterizedTest
+    @EnumSource(TiltChoice.class)
+    void eachTiltChoiceIsNearestToItself(TiltChoice choice) {
+        assertThat(TiltChoice.nearest(choice.degrees())).isEqualTo(choice);
+    }
+
+    @ParameterizedTest
+    @EnumSource(CompassPoint.class)
+    void eachCompassPointIsNearestToItself(CompassPoint point) {
+        assertThat(CompassPoint.nearest(point.azimuthDeg())).isEqualTo(point);
     }
 }

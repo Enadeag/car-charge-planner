@@ -133,11 +133,7 @@ public record PanelArrayEntry(String name, String count, String yearPlaced, Stri
      */
     public OptionalInt typicalWattPeak(Year thisYear) {
         var year = whole(yearPlaced);
-        if (year.isEmpty() || year.getAsInt() < PanelSize.Panels.FIRST_YEAR.getValue()
-                || year.getAsInt() > thisYear.getValue()) {
-            return OptionalInt.empty();
-        }
-        return OptionalInt.of(PanelSize.Panels.typicalWattPeak(Year.of(year.getAsInt())));
+        return year.isEmpty() ? OptionalInt.empty() : PanelSize.Panels.typicalWattPeakFor(year.getAsInt(), thisYear);
     }
 
     /**

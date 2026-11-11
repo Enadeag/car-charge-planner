@@ -115,7 +115,7 @@ public sealed interface PanelSize permits PanelSize.Peak, PanelSize.Panels {
          * Checks that the panels were not placed after this year, as a client does with what the owner entered; a
          * file is read without a clock, so the record itself cannot.
          *
-         * @param thisYear the current year in the home's or the device's time zone
+         * @param thisYear the current year on the device's clock, in the device's time zone
          * @return this array's size
          * @throws InvalidSetting when the year placed is after {@code thisYear}
          */
@@ -125,6 +125,22 @@ public sealed interface PanelSize permits PanelSize.Peak, PanelSize.Panels {
                         "yearPlaced must be " + thisYear + " or earlier, not " + placed.get());
             }
             return this;
+        }
+
+        /**
+         * The power per panel a client shows as the estimate while the owner leaves it empty: the typical one for a
+         * year placed the array may have.
+         *
+         * @param year the year placed as the owner typed it, any whole number
+         * @param thisYear the current year on the device's clock, in the device's time zone
+         * @return the power per panel in Wp; empty when the year is before {@link #FIRST_YEAR} or after
+         *     {@code thisYear}
+         */
+        public static OptionalInt typicalWattPeakFor(int year, Year thisYear) {
+            if (year < FIRST_YEAR.getValue() || year > thisYear.getValue()) {
+                return OptionalInt.empty();
+            }
+            return OptionalInt.of(typicalWattPeak(Year.of(year)));
         }
 
         /**
