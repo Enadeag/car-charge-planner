@@ -20,7 +20,15 @@ public class InvalidSetting extends IllegalArgumentException {
         /** An away period does not end after it starts on the same day. */
         NOT_AFTER_START,
         /** The charging hours end at the time they start. */
-        SAME_AS_START
+        SAME_AS_START,
+        /** The number of panels is not a whole number from 1 to 200. */
+        PANEL_COUNT_OUT_OF_RANGE,
+        /** The power per panel is not a whole number of Wp from 50 to 1000. */
+        PANEL_POWER_OUT_OF_RANGE,
+        /** The year placed is before 1990 or after this year. */
+        YEAR_PLACED_OUT_OF_RANGE,
+        /** Neither the year placed nor the power per panel is given, so the power cannot be estimated. */
+        NO_YEAR_OR_POWER
     }
 
     private final ConfigSetting setting;

@@ -61,9 +61,11 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.time.Year
 import java.time.ZoneId
 import java.util.Locale
 import java.util.Optional
+import java.util.OptionalInt
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,7 +90,10 @@ import nl.enadeag.carchargeplanner.android.ui.settings.title
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
+import nl.enadeag.carchargeplanner.engine.config.PanelArray
+import nl.enadeag.carchargeplanner.engine.config.PanelSize
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.config.TypicalValues
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
@@ -259,13 +264,23 @@ class SettingsScreenTest {
     fun eachRowSaysWhatThePageHoldsNow() {
         show()
 
-        val kwp = NumberText(Locale.ENGLISH).write(stored.system().panels().single().kwp(), 2)
+        val kwp = NumberText(Locale.ENGLISH).write(stored.system().panels().single().kwp(), 1)
         compose.onNodeWithText(compose.activity.resources.getQuantityString(R.plurals.settings_solar_summary, 1, 1,
             kwp)).assertExists()
         compose.onNodeWithText(text(R.string.settings_location_summary, "52.0907", "5.1214", "Europe/Amsterdam"))
             .assertExists()
         compose.onNodeWithText(text(R.string.settings_forecast_summary_alone, "Open-Meteo")).assertExists()
         compose.onNodeWithText(text(R.string.settings_away_none)).assertExists()
+    }
+
+    @Test
+    fun theSolarRowGivesACountedArraysPeakPowerWithOneDecimal() {
+        val counted = stored.withSystem(stored.system().withPanels(listOf(PanelArray("roof",
+            PanelSize.Panels(10, OptionalInt.empty(), Optional.of(Year.of(2021))), 35.0, 0.0, 0.14))),
+            TypicalValues.NONE)
+        show(session(config = counted))
+
+        compose.onNodeWithText("1 array, 3.6 kWp").assertExists()
     }
 
     @Test
@@ -547,17 +562,43 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun anArrayStoredByItsPeakPowerSaysSoAndShowsTheNearestChoices() {
+        show()
+        open(SettingsPage.SOLAR)
+
+        compose.onNodeWithText(text(R.string.panel_now_set, "5.0")).performScrollTo().assertIsDisplayed()
+        field(text(R.string.panel_in_array, text(R.string.panel_count), 1)).assert(hasText("", substring = true))
+        compose.onNode(hasText(text(R.string.panel_in_array, text(R.string.panel_direction), 1), substring = true)
+            and hasText(text(R.string.direction_south), substring = true)).assertExists()
+        compose.onNodeWithText(text(R.string.use_typical), substring = true).assertDoesNotExist()
+
+        field(text(R.string.panel_in_array, text(R.string.panel_count), 1)).performTextInput("10")
+        field(text(R.string.panel_in_array, text(R.string.panel_year), 1)).performTextInput("2021")
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.panel_now_set, "5.0")).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.panel_together, "3.6")).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun theLastArraysRemoveIsOffWithItsReasonAndArraysAreNamedByPlaceAndName() {
         show()
         open(SettingsPage.SOLAR)
         compose.onNodeWithText(text(R.string.panel_remove, 1)).assertIsNotEnabled()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.panel_keep_one)))
+        compose.onNodeWithText(text(R.string.panel_in_array, text(R.string.more_settings), 1)).performScrollTo()
+            .performClick()
         field(text(R.string.panel_in_array, text(R.string.panel_name), 1)).performTextInput("east roof")
         compose.onNode(isHeading() and hasText(text(R.string.panel_array_named, 1, "east roof"))).assertExists()
 
         click(R.string.panel_add)
         compose.onNode(isHeading() and hasText(text(R.string.panel_array, 2))).assertExists()
-        field(text(R.string.panel_in_array, text(R.string.panel_tilt), 2)).assertExists()
+        field(text(R.string.panel_in_array, text(R.string.panel_count), 2)).assertExists()
+        listOf(R.string.panel_direction, R.string.panel_tilt).forEach { label ->
+            compose.onNode(hasText(text(R.string.panel_in_array, text(label), 2), substring = true)
+                and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.DropdownList))
+                .assert(hasText(text(R.string.choose), substring = true))
+        }
         click(R.string.panel_remove, 1)
         compose.waitForIdle()
 

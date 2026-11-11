@@ -19,6 +19,10 @@ internal fun problemText(problem: FieldProblem): String = stringResource(when (p
         InvalidSetting.Rule.SAME_AS_PRIMARY -> R.string.problem_same_as_primary
         InvalidSetting.Rule.NOT_AFTER_START -> R.string.problem_not_after_start
         InvalidSetting.Rule.SAME_AS_START -> R.string.problem_same_as_start
+        InvalidSetting.Rule.PANEL_COUNT_OUT_OF_RANGE -> R.string.problem_panel_count
+        InvalidSetting.Rule.PANEL_POWER_OUT_OF_RANGE -> R.string.problem_panel_power
+        InvalidSetting.Rule.YEAR_PLACED_OUT_OF_RANGE -> R.string.problem_year_placed
+        InvalidSetting.Rule.NO_YEAR_OR_POWER -> R.string.problem_no_year_or_power
     }
     FieldProblem.NotANumber -> R.string.problem_not_a_number
     FieldProblem.NotAWholeNumber -> R.string.problem_not_a_whole_number
@@ -28,5 +32,6 @@ internal fun problemText(problem: FieldProblem): String = stringResource(when (p
     FieldProblem.ServerAddress -> R.string.problem_server_address
     FieldProblem.LettersAndDigits -> R.string.problem_letters_and_digits
     FieldProblem.OneLine -> R.string.problem_one_line
+    FieldProblem.NotChosen -> R.string.problem_not_chosen
     FieldProblem.NoPlaceChosen -> R.string.problem_no_place
 })

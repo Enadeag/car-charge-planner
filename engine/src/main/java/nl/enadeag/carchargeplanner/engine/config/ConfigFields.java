@@ -192,6 +192,10 @@ final class ConfigFields {
         }
     }
 
+    FormatProblem problem(String message) {
+        return new FormatProblem(prefix() + message);
+    }
+
     private JsonNode value(String name) throws FormatProblem {
         var value = object.get(name);
         if (value == null) {

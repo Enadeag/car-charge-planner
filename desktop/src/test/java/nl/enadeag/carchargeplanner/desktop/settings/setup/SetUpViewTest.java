@@ -18,6 +18,7 @@ import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
+import nl.enadeag.carchargeplanner.engine.config.PanelSize;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException;
@@ -28,9 +29,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.time.Year;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.Set;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import org.junit.jupiter.api.AfterEach;
@@ -72,12 +78,20 @@ class SetUpViewTest {
         }
     }
 
-    /** From the welcome to the location step, with the place found and chosen. */
+    /** What a drop-down shows; its skin writes the prompt into its cell when it is laid out. */
+    private List<String> shown(SetUpView view, TextKey choice) {
+        var box = (ComboBox<?>) setUp.field(view, choice);
+        box.layout();
+        return Scenes.visibleTexts(box);
+    }
+
+    /** From the welcome to the panels step, with the place found and chosen and the panels filled in. */
     private SetUpView atSolar() throws Exception {
         var view = setUp.open();
         next(view, 2);
         setUp.choosePlace(view);
         next(view, 1);
+        Fx.run(() -> setUp.fillPanels(view));
         return view;
     }
 
@@ -93,7 +107,16 @@ class SetUpViewTest {
         next(view, 1);
         setUp.choosePlace(view);
         next(view, 1);
-        Fx.run(() -> setUp.type(view, TextKey.FIELD_PANEL_SIZE, "6.2"));
+        next(view, 1);
+        assertThat(Fx.call(view::step)).as("the panels step starts empty").isEqualTo(SetUpStep.SOLAR);
+        assertThat(Fx.call(() -> List.of(shown(view, TextKey.FIELD_PANEL_DIRECTION),
+                shown(view, TextKey.FIELD_PANEL_TILT)))).containsOnly(List.of(setUp.messages.text(TextKey.CHOOSE)));
+        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_PANEL_COUNT).getAccessibleHelp()))
+                .startsWith(setUp.messages.text(TextKey.PROBLEM_PANEL_COUNT));
+        Fx.run(() -> {
+            setUp.fillPanels(view);
+            setUp.type(view, TextKey.FIELD_PANEL_POWER, "310");
+        });
         next(view, 1);
         Fx.run(() -> setUp.type(view, TextKey.FIELD_CAR_BATTERY, "75"));
         assertThat(Fx.call(() -> SetUpFixture.field(view, setUp.messages.text(TextKey.FIELD_CAR_OTHER_DRIVING))))
@@ -115,12 +138,14 @@ class SetUpViewTest {
         var config = stored();
         assertThat(config.system().location()).isEqualTo(SetUpFixture.PLACE.location());
         assertThat(config.system().timezone()).isEqualTo(SetUpFixture.PLACE.timezone());
+        assertThat(config.system().panels()).containsExactly(new PanelArray("",
+                new PanelSize.Panels(20, OptionalInt.of(310), Optional.of(Year.of(2021))), 35, 0, 0.14));
         assertThat(config.system().panels()).extracting(PanelArray::kwp).containsExactly(6.2);
         assertThat(config.system().car()).isEqualTo(new Car(75, Car.TYPICAL.consumptionKwhPer100km(),
                 Car.TYPICAL.kmPerDay()));
         assertThat(config.typical().system()).contains(ConfigSetting.CAR_CONSUMPTION, ConfigSetting.HOUSE_BASELOAD,
                 ConfigSetting.CHARGER_MAX_CURRENT).doesNotContain(ConfigSetting.CAR_BATTERY);
-        assertThat(config.typical().ofPanel(0)).contains(ConfigSetting.PANEL_TILT).doesNotContain(ConfigSetting.PANEL_SIZE);
+        assertThat(config.typical().ofPanel(0)).containsExactly(ConfigSetting.PANEL_LOSSES);
         assertThat(config.away().weekly()).containsExactly(
                 new WeeklyAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0)));
         assertThat(setUp.appSettings.read().units()).isEqualTo(Units.IMPERIAL);
@@ -208,13 +233,13 @@ class SetUpViewTest {
     @Test
     void backKeepsWhatWasEntered() throws Exception {
         var view = atSolar();
-        Fx.run(() -> setUp.type(view, TextKey.FIELD_PANEL_TILT, "20"));
+        Fx.run(() -> setUp.type(view, TextKey.FIELD_PANEL_COUNT, "17"));
         next(view, 1);
 
         Fx.run(() -> setUp.button(view, TextKey.SET_UP_BACK).fire());
 
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.SOLAR);
-        assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_PANEL_TILT)).getText())).isEqualTo("20");
+        assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_PANEL_COUNT)).getText())).isEqualTo("17");
     }
 
     @Test
@@ -332,7 +357,7 @@ class SetUpViewTest {
         assertThat(Fx.call(() -> setUp.button(view, TextKey.SET_UP_CANCEL).isCancelButton())).isTrue();
         // the focus is on the step's first field, ready to type
         assertThat(Fx.call(() -> view.getScene().getFocusOwner().getAccessibleText()))
-                .isEqualTo(setUp.messages.text(TextKey.FIELD_PANEL_NAME));
+                .isEqualTo(setUp.messages.text(TextKey.FIELD_PANEL_COUNT));
     }
 
     @Test
@@ -364,7 +389,7 @@ class SetUpViewTest {
         assertThat(config.system().house().baseloadKw()).isEqualTo(0.35);
         assertThat(config.typical().system()).doesNotContain(ConfigSetting.HOUSE_BASELOAD);
         assertThat(config.away().weekly()).isEmpty();
-        assertThat(config.typical().panels()).containsExactly(TypicalValues.PANEL_SETTINGS);
+        assertThat(config.typical().panels()).containsExactly(Set.of(ConfigSetting.PANEL_LOSSES));
     }
 
     @Test

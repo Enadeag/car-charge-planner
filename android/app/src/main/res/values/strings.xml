@@ -72,17 +72,42 @@
   <string name="time_zone_now">Time zone: %1$s</string>
   <string name="time_zone_change">Change the time zone</string>
   <string name="time_zone_title">Time zone</string>
+  <!-- what a drop-down shows before a choice is made -->
+  <string name="choose">Choose…</string>
+  <!-- what TalkBack says of a fold's row, such as More settings: whether what it folds away shows under it -->
+  <string name="fold_expanded">Expanded</string>
+  <string name="fold_collapsed">Collapsed</string>
   <string name="time_zone_filter">Search the time zones</string>
   <string name="time_zone_none">No time zone matches.</string>
 
   <string name="setup_panels_title">Your solar panels</string>
   <string name="setup_panels_intro">Enter the panels that share one tilt and one direction. Panels that face another way are added in Settings, as an array of their own.</string>
-  <string name="panel_size">Size</string>
-  <string name="panel_size_hint">kWp: the peak power of the panels together.</string>
-  <string name="panel_tilt">Tilt</string>
-  <string name="panel_tilt_hint">Degrees from flat: 0 is flat, about 35 for a pitched roof.</string>
+  <string name="panel_count">Number of panels</string>
   <string name="panel_direction">Direction</string>
-  <string name="panel_direction_hint">Degrees from south: -90 is east, 90 is west.</string>
+  <string name="panel_tilt">Tilt</string>
+  <string name="panel_year">Year placed</string>
+  <string name="panel_power">Power per panel</string>
+  <string name="panel_power_hint">Wp, as on the invoice or the panel.</string>
+  <!-- under the power per panel while it is empty: %1$d the typical power in Wp; %2$s the year typed, such as 2021 -->
+  <string name="panel_power_hint_typical">Wp, as on the invoice or the panel. You may leave it empty: the app then counts on %1$d Wp, usual for %2$s.</string>
+  <!-- below an array's fields: %1$s the peak power the panels give together, written already, such as 3.6 -->
+  <string name="panel_together">Together about %1$s kWp</string>
+  <!-- above the fields of an array stored by its peak power: %1$s that power, written already, such as 4.2 -->
+  <string name="panel_now_set">Now set: %1$s kWp. Enter the number of panels to replace this.</string>
+  <string name="direction_north">North</string>
+  <string name="direction_north_east">North-east</string>
+  <string name="direction_east">East</string>
+  <string name="direction_south_east">South-east</string>
+  <string name="direction_south">South</string>
+  <string name="direction_south_west">South-west</string>
+  <string name="direction_west">West</string>
+  <string name="direction_north_west">North-west</string>
+  <string name="tilt_flat">Flat</string>
+  <string name="tilt_pitched">Pitched</string>
+  <string name="tilt_steep">Steep</string>
+  <string name="tilt_upright">Upright</string>
+  <!-- the row that folds an array's losses and name away -->
+  <string name="more_settings">More settings</string>
   <string name="panel_losses">System losses</string>
   <string name="panel_losses_hint">Percent, usually 10 to 15.</string>
 
@@ -158,6 +183,11 @@
   <string name="problem_letters_and_digits">Use only letters and digits, at most 64: that is what the provider\'s API keys look like.</string>
   <string name="problem_one_line">Use one line, without line breaks or other control characters.</string>
   <string name="problem_no_place">Choose where your home is: search for it, or enter its coordinates.</string>
+  <string name="problem_panel_count">Type the number of panels: a whole number from 1 to 200.</string>
+  <string name="problem_panel_power">Type the power per panel in Wp: a whole number from 50 to 1000.</string>
+  <string name="problem_year_placed">Type the year placed: from 1990 up to and including this year.</string>
+  <string name="problem_no_year_or_power">Type the year placed, or the power per panel.</string>
+  <string name="problem_not_chosen">Choose one.</string>
   <!-- under the battery level's field, for a whole number below 0 or above 100 -->
   <string name="problem_level_out_of_range">Type a level from 0 to 100.</string>
 

@@ -45,6 +45,7 @@ import nl.enadeag.carchargeplanner.android.ui.setup.Coordinates
 import nl.enadeag.carchargeplanner.android.ui.setup.Edits
 import nl.enadeag.carchargeplanner.android.ui.setup.HouseFields
 import nl.enadeag.carchargeplanner.android.ui.setup.LocationFields
+import nl.enadeag.carchargeplanner.android.ui.setup.PanelArrayFields
 import nl.enadeag.carchargeplanner.android.ui.setup.UseTypical
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.Phases
@@ -60,7 +61,7 @@ internal fun summary(page: SettingsPage, config: EngineConfig, session: Settings
     val system = config.system()
     return when (page) {
         SettingsPage.SOLAR -> pluralStringResource(R.plurals.settings_solar_summary, system.panels().size,
-            system.panels().size, numbers.write(system.panels().sumOf { it.kwp() }, 2))
+            system.panels().size, numbers.write(system.panels().sumOf { it.kwp() }, 1))
         SettingsPage.LOCATION -> stringResource(R.string.settings_location_summary,
             numbers.write(system.location().latitude(), 4), numbers.write(system.location().longitude(), 4),
             system.timezone().id)
@@ -92,9 +93,9 @@ internal fun summary(page: SettingsPage, config: EngineConfig, session: Settings
 internal fun phasesName(phases: Phases): Int = if (phases == Phases.ONE) R.string.phases_one else R.string.phases_three
 
 /**
- * Every panel array, each named by its place and its name ("Array 2, east roof"), with its own "I don't know" and
- * Remove, which acts at once; the last array's Remove is off, with the reason, which a screen reader reads with it.
- * There is no reordering. After Add the focus goes to the new array's heading, after Remove to the one before.
+ * Every panel array, each named by its place and its name ("Array 2, east roof"), with its own Remove, which acts at
+ * once; the last array's Remove is off, with the reason, which a screen reader reads with it. There is no reordering.
+ * After Add the focus goes to the new array's heading, after Remove to the one before.
  *
  * @param problems the page's fields in order, for the focus after Save
  */
@@ -117,30 +118,14 @@ internal fun SolarPage(panels: PanelsForm, edits: Edits, problems: ProblemFocus)
 private fun PanelArray(panels: PanelsForm, row: Int, index: Int, rows: List<Int>, edits: Edits,
     problems: ProblemFocus, focus: RowFocus<Int>) {
     val count = rows.size
-    val shown by panels.problems(row).collectAsStateWithLifecycle()
-    val typical = edits.shown { panels.typical(row) }
     val number = index + 1
     val name = edits.shown { panels.text(row, PanelsForm.Field.NAME) }.trim()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         RowHeading(if (name.isEmpty()) stringResource(R.string.panel_array, number)
             else stringResource(R.string.panel_array_named, number, name), MaterialTheme.typography.titleMedium, focus,
             row)
-        listOf(
-            Triple(PanelsForm.Field.NAME, R.string.panel_name to R.string.panel_name_hint, FieldKind.TEXT),
-            Triple(PanelsForm.Field.SIZE, R.string.panel_size to R.string.panel_size_hint, FieldKind.DECIMAL),
-            Triple(PanelsForm.Field.TILT, R.string.panel_tilt to R.string.panel_tilt_hint, FieldKind.DECIMAL),
-            Triple(PanelsForm.Field.DIRECTION, R.string.panel_direction to R.string.panel_direction_hint,
-                FieldKind.SIGNED),
-            Triple(PanelsForm.Field.LOSSES, R.string.panel_losses to R.string.panel_losses_hint, FieldKind.DECIMAL),
-        ).forEachIndexed { place, (field, texts, kind) ->
-            EntryField(stringResource(R.string.panel_in_array, stringResource(texts.first), number),
-                stringResource(texts.second), edits.shown { panels.text(row, field) },
-                { text -> edits.make { panels.edit(row, field, text) } }, kind, shown[field], field in typical,
-                rememberFieldFocus(problems, 10 * index + place, field in shown),
-                imeAction = if (field == PanelsForm.Field.LOSSES && number == count) ImeAction.Done else ImeAction.Next)
-        }
-        UseTypical(stringResource(R.string.panel_in_array, stringResource(R.string.use_typical), number)) {
-            edits.make { panels.useTypical(row) }
+        PanelArrayFields(panels, row, edits, problems, 10 * index, last = number == count) { label ->
+            stringResource(R.string.panel_in_array, label, number)
         }
         RemoveArray(number, count > 1) {
             edits.make {

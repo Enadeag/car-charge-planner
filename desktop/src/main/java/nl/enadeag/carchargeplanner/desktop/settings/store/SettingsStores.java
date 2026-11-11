@@ -12,9 +12,12 @@ import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
+import java.time.Year;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * Where the settings are kept: the engine keeps its own, the desktop app keeps its own, and the system keeps start at
@@ -23,8 +26,10 @@ import java.util.Optional;
  * @param engine the engine, which reads, checks and writes its config file
  * @param appSettings the desktop app's settings file
  * @param startAtLogin the system's start at login; empty when this copy of the app cannot start at login
+ * @param deviceZone the system's time zone as it is when asked
  */
-public record SettingsStores(Engine engine, AppSettingsFile appSettings, Optional<StartAtLogin> startAtLogin) {
+public record SettingsStores(Engine engine, AppSettingsFile appSettings, Optional<StartAtLogin> startAtLogin,
+        Supplier<ZoneId> deviceZone) {
 
     /**
      * The forecast providers this version knows. The views reach the engine only through these methods, so that no
@@ -34,6 +39,15 @@ public record SettingsStores(Engine engine, AppSettingsFile appSettings, Optiona
      */
     public List<ProviderInfo> providers() {
         return engine.providers();
+    }
+
+    /**
+     * The current year, which a panel array's year placed may not be after.
+     *
+     * @return this year on the device's clock, in the system's time zone
+     */
+    public Year thisYear() {
+        return engine.thisYear(deviceZone.get());
     }
 
     /**

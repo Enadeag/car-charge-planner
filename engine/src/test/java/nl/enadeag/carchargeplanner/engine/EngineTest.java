@@ -70,6 +70,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -348,8 +349,22 @@ class EngineTest {
     }
 
     @Test
+    void thisYearTurnsAtMidnightInTheDevicesZoneAheadOfUtc() {
+        var newYearInBrussels = Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.UTC);
+
+        assertThat(engine(newYearInBrussels).thisYear(ZoneId.of("Europe/Brussels"))).isEqualTo(Year.of(2027));
+    }
+
+    @Test
+    void thisYearTurnsAtMidnightInTheDevicesZoneBehindUtc() {
+        var newYearInUtc = Clock.fixed(Instant.parse("2027-01-01T00:30:00Z"), ZoneOffset.UTC);
+
+        assertThat(engine(newYearInUtc).thisYear(ZoneId.of("America/New_York"))).isEqualTo(Year.of(2026));
+    }
+
+    @Test
     void aConfigFileOfANewerVersionCannotBeUsedForThatReason() throws IOException {
-        Files.writeString(config, Files.readString(config).replace("\"version\": 1", "\"version\": 2"));
+        Files.writeString(config, Files.readString(config).replace("\"version\": 2", "\"version\": 3"));
 
         assertThat(engine(clockAt(7)).outlook()).isInstanceOfSatisfying(Outlook.ConfigUnusable.class,
                 unusable -> assertThat(unusable.kind()).isEqualTo(ConfigProblem.Kind.NEWER_VERSION));

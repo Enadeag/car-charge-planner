@@ -10,6 +10,7 @@ import java.time.DateTimeException;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.time.Year;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -22,7 +23,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
@@ -36,11 +39,13 @@ import tools.jackson.databind.node.ObjectNode;
  * are written only when they differ from the standard, so the app versions from before them still read the file. A
  * name the shape does not have is refused. Percentages, charger phases and provider ids are plain numbers and texts;
  * an empty fallback means none; a weekday is its English name in any case and a time is {@code "HH:mm"}; a typical
- * value is its {@link ConfigSetting}'s name. The file's {@code version} is 1; a file without one is read as version 1.
+ * value is its {@link ConfigSetting}'s name. A panel array gives its size either as {@code kwp} or as {@code count}
+ * with {@code wpPerPanel}, {@code yearPlaced} or both, never as both kinds. The file's {@code version} is 2, which
+ * added the panels' count; version 1, which knows only {@code kwp}, is read as it is, and so is a file without one.
  *
  * <p>A top-level {@code calendar} section is known but skipped, with a warning in the log, and the next save leaves it
  * out: the builds of {@code main} between v0.5.0 and the removal of calendar trips wrote it, and a file from one of
- * them must still load. The version stays 1, as no released app ever wrote the section.
+ * them must still load.
  */
 final class ConfigFormat implements FileFormat<EngineConfig> {
 
@@ -49,8 +54,11 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
     /** The section of the withdrawn calendar trips, skipped when read. */
     private static final String OLD_CALENDAR = "calendar";
 
-    /** The shape this app writes, and where the migrations from older shapes go: none yet, 1 is the first. */
-    private static final FileVersion VERSION = new FileVersion(1, List.of());
+    /**
+     * The shape this app writes. Version 2 added an array's count of panels; a version 1 file is already a valid
+     * version 2 one, but an app that reads only version 1 refuses the count, so it is told the file is newer.
+     */
+    private static final FileVersion VERSION = new FileVersion(2, List.of(UnaryOperator.identity()));
 
     /** Strict, so that "24:00" is refused rather than read as the midnight that starts the day. */
     private static final DateTimeFormatter TIME =
@@ -168,13 +176,39 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
     }
 
     private static PanelArray panelArray(ConfigFields array) throws FormatProblem {
-        array.only("name", "kwp", "tiltDeg", "azimuthDeg", "systemLosses");
+        array.only("name", "kwp", "count", "wpPerPanel", "yearPlaced", "tiltDeg", "azimuthDeg", "systemLosses");
         var name = array.text("name");
-        double kwp = array.number("kwp");
+        var size = panelSize(array);
         double tilt = array.number("tiltDeg");
         double azimuth = array.number("azimuthDeg");
         double losses = array.number("systemLosses");
-        return array.make(() -> new PanelArray(name, kwp, tilt, azimuth, losses));
+        return array.make(() -> new PanelArray(name, size, tilt, azimuth, losses));
+    }
+
+    private static PanelSize panelSize(ConfigFields array) throws FormatProblem {
+        boolean counted = array.has("count");
+        if (array.has("kwp")) {
+            if (counted || array.has("wpPerPanel") || array.has("yearPlaced")) {
+                throw array.problem("an array has either 'kwp' or 'count' with 'wpPerPanel' or 'yearPlaced', not both");
+            }
+            double kwp = array.number("kwp");
+            return array.make(() -> new PanelSize.Peak(kwp));
+        }
+        if (!counted) {
+            throw array.problem("'kwp' or 'count' is missing");
+        }
+        int count = array.wholeNumber("count");
+        var wattPeak = array.has("wpPerPanel") ? OptionalInt.of(array.wholeNumber("wpPerPanel")) : OptionalInt.empty();
+        var placed = array.has("yearPlaced") ? Optional.of(year(array)) : Optional.<Year>empty();
+        return array.make(() -> new PanelSize.Panels(count, wattPeak, placed));
+    }
+
+    private static Year year(ConfigFields array) throws FormatProblem {
+        int year = array.wholeNumber("yearPlaced");
+        if (year < Year.MIN_VALUE || year > Year.MAX_VALUE) {
+            throw array.problem("yearPlaced must be a year such as 2021, not " + year);
+        }
+        return Year.of(year);
     }
 
     private static Charger charger(ConfigFields charger) throws FormatProblem {
@@ -302,12 +336,19 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
                 .put("longitude", system.location().longitude())
                 .put("timezone", system.timezone().getId());
         var panels = node.putArray("panels");
-        system.panels().forEach(array -> panels.addObject()
-                .put("name", array.name())
-                .put("kwp", array.kwp())
-                .put("tiltDeg", array.tiltDeg())
-                .put("azimuthDeg", array.azimuthDeg())
-                .put("systemLosses", array.systemLosses()));
+        system.panels().forEach(array -> {
+            var arrayNode = panels.addObject().put("name", array.name());
+            if (array.size() instanceof PanelSize.Panels counted) {
+                arrayNode.put("count", counted.count());
+                counted.wattPeak().ifPresent(wattPeak -> arrayNode.put("wpPerPanel", wattPeak));
+                counted.placed().ifPresent(year -> arrayNode.put("yearPlaced", year.getValue()));
+            } else {
+                arrayNode.put("kwp", array.kwp());
+            }
+            arrayNode.put("tiltDeg", array.tiltDeg())
+                    .put("azimuthDeg", array.azimuthDeg())
+                    .put("systemLosses", array.systemLosses());
+        });
         node.putObject("house").put("baseloadKw", system.house().baseloadKw());
         var car = system.car();
         var carNode = node.putObject("car")

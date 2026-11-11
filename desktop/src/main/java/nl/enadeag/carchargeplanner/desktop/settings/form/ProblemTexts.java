@@ -25,6 +25,10 @@ public final class ProblemTexts {
             case SAME_AS_PRIMARY -> TextKey.PROBLEM_SAME_AS_PRIMARY;
             case NOT_AFTER_START -> TextKey.PROBLEM_NOT_AFTER_START;
             case SAME_AS_START -> TextKey.PROBLEM_SAME_AS_START;
+            case PANEL_COUNT_OUT_OF_RANGE -> TextKey.PROBLEM_PANEL_COUNT;
+            case PANEL_POWER_OUT_OF_RANGE -> TextKey.PROBLEM_PANEL_POWER;
+            case YEAR_PLACED_OUT_OF_RANGE -> TextKey.PROBLEM_YEAR_PLACED;
+            case NO_YEAR_OR_POWER -> TextKey.PROBLEM_NO_YEAR_OR_POWER;
         });
     }
 }

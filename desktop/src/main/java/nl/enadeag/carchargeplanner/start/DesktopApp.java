@@ -220,7 +220,7 @@ public final class DesktopApp {
     private Windows makeWindows(Engine engine, DashboardChanges changes, Path secretsPath, Path dataFolder,
             AppIcon icon, FxPreferences preferences) throws InterruptedException, ExecutionException {
         var dashboardMade = new CompletableFuture<Dashboard>();
-        var stores = new SettingsStores(engine, appSettingsFile, parts.startAtLogin());
+        var stores = new SettingsStores(engine, appSettingsFile, parts.startAtLogin(), ZoneId::systemDefault);
         // a Save may have chosen another language, appearance or units: every part follows at once; the engine plans
         // again by itself after a save of its config. This runs on the JavaFX thread.
         Consumer<AppSettings> saved = chosen -> {

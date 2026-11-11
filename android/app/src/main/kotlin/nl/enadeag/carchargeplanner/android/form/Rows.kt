@@ -59,6 +59,15 @@ internal class Rows<F : Enum<F>>(private val handle: SavedStateHandle, private v
         if (value == null) handle.remove<Int>("$prefix.$id.$name") else handle["$prefix.$id.$name"] = value
     }
 
+    fun decimal(id: Int, name: String): Double? = handle.get<String>("$prefix.$id.$name")?.toDoubleOrNull()
+
+    /**
+     * @param value the number, kept exactly, as a text, which the handle keeps like the forms' own; null to forget it
+     */
+    fun keepDecimal(id: Int, name: String, value: Double?) {
+        if (value == null) handle.remove<String>("$prefix.$id.$name") else handle["$prefix.$id.$name"] = value.toString()
+    }
+
     private fun keep(rows: List<Int>) {
         handle["$prefix.rows"] = ArrayList(rows)
         ids.value = rows

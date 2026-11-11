@@ -39,6 +39,9 @@ sealed interface FieldProblem {
     /** A value with a line break or another control character, which must be on one line. */
     data object OneLine : FieldProblem
 
+    /** A drop-down without a choice, such as a new panel array's direction. */
+    data object NotChosen : FieldProblem
+
     /** Set-up's location step without a place chosen; set-up does not go on without one. */
     data object NoPlaceChosen : FieldProblem
 }

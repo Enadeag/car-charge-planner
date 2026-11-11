@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.settings
 
 import androidx.lifecycle.SavedStateHandle
+import java.time.Year
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.ChargerForm
@@ -22,9 +23,10 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
  * @param numbers how the screen's language writes numbers
  * @param phoneZone the phone's time zone as it is now
  * @param providers what the known forecast providers tell about themselves, in the order offered
+ * @param thisYear the current year, which a panel array's year placed may not be after
  */
 class SettingsForms(handle: SavedStateHandle, numbers: NumberText, phoneZone: () -> ZoneId,
-    providers: List<ProviderInfo>) {
+    providers: List<ProviderInfo>, thisYear: () -> Year) {
 
     companion object {
         /** The first part of the forms' keys in the handle, which set-up's forms share in part. */
@@ -32,7 +34,7 @@ class SettingsForms(handle: SavedStateHandle, numbers: NumberText, phoneZone: ()
     }
 
     /** Every panel array. */
-    val panels = PanelsForm(handle, numbers)
+    val panels = PanelsForm(handle, numbers, thisYear)
 
     /** Where the home is; a zone loaded from the file counts as chosen by hand (#315). */
     val location = LocationForm(handle, numbers, placeRequired = false, phoneZone = phoneZone,

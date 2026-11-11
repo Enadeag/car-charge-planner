@@ -10,7 +10,7 @@ Start the app from the Start menu (Windows) or with `bin/car-charge-planner` in 
 
 Until you have said where your panels are, the app knows nothing about you: it **fetches nothing** (no request leaves your computer) and there is no plan. Set-up opens by itself the first time, and the dashboard and the tray menu lead back to it until it is done.
 
-Set-up takes a few minutes. It starts with what leaves your computer, then asks for your language and units, the **place** of your panels (searched by name, or typed as coordinates), the panels' **size, direction and tilt** (more than one array if your panels face different ways), your **car** and **charger**, the forecast provider, and optionally more, such as the house's own use and when the car is away. Every question says where to find the answer, and a typical value is used where you don't know one. Before Finish it checks the forecast and shows a preview of the dashboard. **Nothing is saved until Finish**: cancelled, the app stays not set up.
+Set-up takes a few minutes. It starts with what leaves your computer, then asks for your language and units, the **place** of your panels (searched by name, or typed as coordinates), your panels: their **number, direction, tilt and the year they were placed**, and the power per panel if you know it (more than one array if your panels face different ways), your **car** and **charger**, the forecast provider, and optionally more, such as the house's own use and when the car is away. Every question says where to find the answer, and a typical value is used where you don't know one. Before Finish it checks the forecast and shows a preview of the dashboard. **Nothing is saved until Finish**: cancelled, the app stays not set up.
 
 <p>
 <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/setup-welcome-english-dark.png"><img alt="Set-up's welcome step: what the app does, what leaves your computer, and typical values for when you are not sure." src="screenshots/java/setup-welcome-english-light.png" width="300"></picture>
@@ -95,7 +95,7 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 
 | Page | What it holds |
 | --- | --- |
-| Solar panels | The panel arrays: size, tilt, direction and losses of each. The forecast is the sum of the arrays. |
+| Solar panels | The panel arrays: of each the number of panels, direction, tilt, year placed and power per panel, with the peak power they give together, and under **More settings** the losses and the name. The forecast is the sum of the arrays. |
 | Location | Latitude, longitude and time zone, or a place search. |
 | Car and house | The car's usable battery capacity, consumption, other driving per day and trip surcharge; the house's baseload. |
 | Charger | One or three phases, minimum and maximum charge current, voltage, charging efficiency. |
@@ -104,6 +104,8 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 | Planning | Minimum and target charge level, the hours you can start charging, the planning margin, the import tolerance, the minimum charge window length, the notification lead time. |
 | App | Language, light or dark, units (metric or imperial), whether the app shows a tray icon or a window, and start at login. Set-up can be run again from here. |
 | About | The version, the licence, the source, and where your files are kept. |
+
+The power per panel (Wp) is on the invoice or the panel itself. Left empty, the app counts on the usual power of a panel placed in that year, from 220 Wp up to 2010 to 430 Wp from 2024, which may be 30 to 40 Wp off; the field shows it in grey. An array entered in an older version as a size in kWp says "Now set: … kWp" and keeps that size until you enter its number of panels. A tilt or direction entered in degrees shows as the nearest choice and stays as it is until you choose.
 
 **Save** checks everything together. If something is wrong, it says what and writes nothing; otherwise the change applies at once. How the app shows itself (tray icon or window) applies the next time it starts.
 
@@ -138,4 +140,4 @@ The program also takes a few commands:
 
 The app keeps its settings, your entries, a forecast cache and a log of what it did in files on your computer; [What is kept, and where](privacy.md#what-is-kept-and-where) lists them per system.
 
-[`docs/example-engine.json`](example-engine.json) shows every setting of `engine.json`, for a made-up place. The app reads the files when it starts and writes them whole when you save; edit one by hand only while the app is closed. Each file says which version of its shape it holds (`"version": 1`); one without it, from before, is read as version 1, and one written by a newer version of the app is not used. A file the app cannot use, such as a damaged one, is never overwritten: before it saves, the app renames it to `<name>.damaged-<date>-<time>` (UTC) and logs that, so you can still recover what it held. A file written by a newer version of the app is never overwritten, renamed or removed: saving then fails, until you update the app. Delete the data folder to reset your entries and the cache.
+[`docs/example-engine.json`](example-engine.json) shows every setting of `engine.json`, for a made-up place. The app reads the files when it starts and writes them whole when you save; edit one by hand only while the app is closed. Each file says which version of its shape it holds, such as `"version": 2` in `engine.json`, which a panel array's number of panels needs; one without it, from before, is read as version 1, and one written by a newer version of the app is not used, so a settings file saved by this version cannot be read by 0.6.0 or older. A file the app cannot use, such as a damaged one, is never overwritten: before it saves, the app renames it to `<name>.damaged-<date>-<time>` (UTC) and logs that, so you can still recover what it held. A file written by a newer version of the app is never overwritten, renamed or removed: saving then fails, until you update the app. Delete the data folder to reset your entries and the cache.

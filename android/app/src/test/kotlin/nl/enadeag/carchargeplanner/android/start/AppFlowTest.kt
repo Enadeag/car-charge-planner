@@ -17,6 +17,7 @@ import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.form.fillIn
 import nl.enadeag.carchargeplanner.android.home.Dashboard
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.Plans
@@ -67,6 +68,7 @@ class AppFlowTest {
     private fun TestScope.finishSetUp(session: SetUpSession, place: Place = utrecht) {
         session.next()
         session.choose(PlaceSearch.Result(place, place.label()))
+        session.flow.panels.fillIn()
         repeat(5) { session.next() }
         session.finish()
         runCurrent()
@@ -116,6 +118,7 @@ class AppFlowTest {
         val session = (flow.screen.value as AppFlow.Screen.SetUp).session
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         repeat(5) { session.next() }
 
         session.finish()
@@ -136,6 +139,7 @@ class AppFlowTest {
         val session = (flow.screen.value as AppFlow.Screen.SetUp).session
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         repeat(5) { session.next() }
         access.settings = StartState.NewerVersion("version 99")
 
@@ -281,6 +285,7 @@ class AppFlowTest {
         val session = (flow(access, handle = handle).screen.value as AppFlow.Screen.SetUp).session
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         session.next()
         access.settings = StartState.Unusable("engine.json", "not valid JSON")
 
@@ -322,6 +327,7 @@ class AppFlowTest {
         val session = (flow(access, handle = handle).screen.value as AppFlow.Screen.SetUp).session
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         repeat(2) { session.next() }
         session.flow.car.edit(CarForm.Field.BATTERY, "75")
         val latitude = session.flow.location.text(LocationForm.Field.LATITUDE)

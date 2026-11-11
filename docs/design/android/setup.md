@@ -16,9 +16,14 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - The check runs on entering the Check step, on coming back to it, and after the system ended the app; a failure shows **Check again** and the English details, and Finish stays on (#314).
 - While saving, Finish is off and shows progress. Saved opens the dashboard without a message; Failed keeps the English details and **Try again**, in a live region. A newer settings file opens the "update the app" screen; a value the engine refuses goes back to the first step with a refused value, with a line that says why (#314).
 
+### Panels
+
+- The step asks one array, empty but for the typical losses: the number of panels, the direction and the tilt (shared exposed drop-downs, "Choose…" until chosen), the year placed and the power per panel, the kWp they give together, and the losses and the name under the shared fold row "More settings", which opens by itself while one of them shows a problem. There is no "I don't know" on this step (#448).
+- A number with decimals is refused as for the amps; an empty count is refused with the count's own sentence. The power's placeholder, the typical power of the year, shows only while the field has the focus, as Material draws a placeholder beside a label; its hint says the same at all times (#448).
+
 ### Time zone
 
-- The zone is chosen under **Advanced**, from the list of zone ids only. A chosen place sets it; typed coordinates put it back to the phone's zone unless the owner chose one by hand. The phone's zone is read when used, not at start (#314).
+- The zone is chosen under **Advanced**, the shared fold row with an arrow, like "More settings" (#448), from the list of zone ids only; "Enter coordinates instead" on the same step stays a check box until #449. A chosen place sets it; typed coordinates put it back to the phone's zone unless the owner chose one by hand. The phone's zone is read when used, not at start (#314).
 
 ### Place search
 

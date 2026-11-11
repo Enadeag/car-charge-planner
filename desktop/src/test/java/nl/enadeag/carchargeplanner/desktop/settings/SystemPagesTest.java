@@ -10,18 +10,22 @@ import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.Car;
 import nl.enadeag.carchargeplanner.engine.config.Charger;
+import nl.enadeag.carchargeplanner.engine.config.CompassPoint;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
+import nl.enadeag.carchargeplanner.engine.config.PanelSize;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.config.TiltChoice;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
@@ -34,24 +38,34 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.Year;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** The system's categories: panel arrays, location, car and house, charger, and their typical values. */
 @FxTest
 class SystemPagesTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
+    private static final PanelArray EXAMPLE_ARRAY = new PanelArray("South roof",
+            new PanelSize.Panels(20, OptionalInt.of(250), Optional.of(Year.of(2013))), 35, 0, 0.14);
 
     @TempDir
     Path folder;
@@ -74,7 +88,12 @@ class SystemPagesTest {
 
     /** The example config, changed and written back before Settings opens. */
     private SettingsView openWith(java.util.function.UnaryOperator<EngineConfig> change) throws Exception {
-        settings = new SettingsFixture(folder, Language.ENGLISH);
+        return openWith(Clock.systemUTC(), change);
+    }
+
+    private SettingsView openWith(Clock clock, java.util.function.UnaryOperator<EngineConfig> change)
+            throws Exception {
+        settings = new SettingsFixture(folder, Language.ENGLISH, clock);
         var file = new ConfigFile(settings.configPath, FILES);
         file.write(change.apply(file.read()));
         return settings.open();
@@ -93,21 +112,182 @@ class SystemPagesTest {
                 .map(TextField.class::cast).toList();
     }
 
+    @SuppressWarnings("unchecked")
+    private <T> List<ComboBox<T>> choices(SettingsView view, TextKey name) {
+        var label = settings.messages.text(name);
+        return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(node -> SettingsFixture.named(node, label) && node instanceof ComboBox<?>)
+                .map(node -> (ComboBox<T>) node).toList();
+    }
+
+    /** What a drop-down shows; its skin writes the prompt into its cell when it is laid out. */
+    private static List<String> shown(ComboBox<?> box) {
+        box.applyCss();
+        box.layout();
+        return Scenes.visibleTexts(box);
+    }
+
+    private List<String> texts(SettingsView view) throws Exception {
+        return Fx.call(() -> view.pages().stream().flatMap(page -> Scenes.visibleTexts(page.view()).stream())
+                .toList());
+    }
+
     @Test
-    void anAddedArrayIsStoredWithItsNameAndItsTypicalValuesTagged() throws Exception {
+    void anAddedArrayStartsEmptyAndIsStoredWithWhatWasEnteredAndItsTypicalLosses() throws Exception {
         var view = open();
 
-        Fx.call(() -> {
+        var refused = Fx.call(() -> {
             button(view, TextKey.PANELS_ADD, 0).fire();
+            return !SettingsFixture.save(view);
+        });
+        assertThat(refused).as("a new array needs its panels").isTrue();
+        assertThat(Fx.call(() -> choices(view, TextKey.FIELD_PANEL_DIRECTION).get(1).getValue())).isNull();
+        assertThat(Fx.call(() -> List.of(shown(choices(view, TextKey.FIELD_PANEL_DIRECTION).get(1)),
+                shown(choices(view, TextKey.FIELD_PANEL_TILT).get(1)))))
+                .containsOnly(List.of(settings.messages.text(TextKey.CHOOSE)));
+        Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_COUNT).get(1).setText("8");
+            this.<CompassPoint>choices(view, TextKey.FIELD_PANEL_DIRECTION).get(1).setValue(CompassPoint.EAST);
+            this.<TiltChoice>choices(view, TextKey.FIELD_PANEL_TILT).get(1).setValue(TiltChoice.FLAT);
+            fields(view, TextKey.FIELD_PANEL_POWER).get(1).setText("400");
             fields(view, TextKey.FIELD_PANEL_NAME).get(1).setText("Garage");
             return SettingsFixture.save(view);
         });
 
         var config = stored();
-        assertThat(config.system().panels()).containsExactly(new PanelArray("South roof", 5.0, 35, 0, 0.14),
-                new PanelArray("Garage", 5, 35, 0, 0.14));
+        assertThat(config.system().panels()).containsExactly(EXAMPLE_ARRAY, new PanelArray("Garage",
+                new PanelSize.Panels(8, OptionalInt.of(400), Optional.empty()), 13, -90, 0.14));
         assertThat(config.typical().ofPanel(0)).isEmpty();
-        assertThat(config.typical().ofPanel(1)).isEqualTo(TypicalValues.PANEL_SETTINGS);
+        assertThat(config.typical().ofPanel(1)).containsExactly(ConfigSetting.PANEL_LOSSES);
+    }
+
+    @Test
+    void aStoredPeakPowerAndDegreesBetweenTheChoicesStayUntilTheOwnerReplacesThem() throws Exception {
+        var stored = new PanelArray("Shed", 4.2, 30, -100, 0.1);
+        var view = openWith(config -> config.withSystem(config.system().withPanels(List.of(stored)),
+                TypicalValues.NONE));
+
+        assertThat(texts(view)).contains("Now set: 4.2 kWp. Enter the number of panels to replace this.");
+        assertThat(Fx.call(() -> choices(view, TextKey.FIELD_PANEL_DIRECTION).get(0).getValue()))
+                .isEqualTo(CompassPoint.EAST);
+        assertThat(Fx.call(() -> choices(view, TextKey.FIELD_PANEL_TILT).get(0).getValue()))
+                .isEqualTo(TiltChoice.PITCHED);
+        assertThat(Fx.call(view::isChanged)).as("showing the nearest choice changes nothing").isFalse();
+
+        Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_NAME).get(0).setText("Shed roof");
+            return SettingsFixture.save(view);
+        });
+        assertThat(stored().system().panels()).containsExactly(new PanelArray("Shed roof", 4.2, 30, -100, 0.1));
+
+        Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_COUNT).get(0).setText("10");
+            fields(view, TextKey.FIELD_PANEL_YEAR).get(0).setText("2021");
+            this.<TiltChoice>choices(view, TextKey.FIELD_PANEL_TILT).get(0).setValue(TiltChoice.STEEP);
+            return SettingsFixture.save(view);
+        });
+        assertThat(stored().system().panels()).containsExactly(new PanelArray("Shed roof",
+                new PanelSize.Panels(10, OptionalInt.empty(), Optional.of(Year.of(2021))), 50, -100, 0.1));
+    }
+
+    @Test
+    void aStoredYearAfterThisYearSavesAsItWasUntilTheOwnerChangesTheSize() throws Exception {
+        var future = new PanelArray("Shed", new PanelSize.Panels(10, OptionalInt.empty(), Optional.of(Year.of(2027))),
+                35, 0, 0.14);
+        var view = openWith(Clock.fixed(Instant.parse("2026-06-01T12:00:00Z"), ZoneOffset.UTC),
+                config -> config.withSystem(config.system().withPanels(List.of(future)), TypicalValues.NONE));
+
+        var savedUntouched = Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_NAME).get(0).setText("Shed roof");
+            return SettingsFixture.save(view);
+        });
+        assertThat(savedUntouched).isTrue();
+        assertThat(stored().system().panels()).containsExactly(new PanelArray("Shed roof", future.size(), 35, 0, 0.14));
+
+        var savedTouched = Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_COUNT).get(0).setText("12");
+            return SettingsFixture.save(view);
+        });
+        assertThat(savedTouched).isFalse();
+        assertThat(texts(view)).contains("Type the year placed: from 1990 up to and including this year.");
+    }
+
+    @Test
+    void thisYearIsTheYearInTheDevicesTimeZoneNotInUtc() throws Exception {
+        // 23:30 UTC on 31 December is already 1 January in Amsterdam, the fixture's device zone
+        settings = new SettingsFixture(folder, Language.ENGLISH,
+                Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), ZoneOffset.UTC));
+        var view = settings.open();
+        assertThat(settings.stores(false).thisYear()).isEqualTo(Year.of(2027));
+
+        var saved = Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_YEAR).get(0).setText("2027");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(saved).isTrue();
+        assertThat(((PanelSize.Panels) stored().system().panels().getFirst().size()).placed())
+                .contains(Year.of(2027));
+    }
+
+    @Test
+    void northChosenIsStoredAs180() throws Exception {
+        var view = open();
+
+        Fx.call(() -> {
+            this.<CompassPoint>choices(view, TextKey.FIELD_PANEL_DIRECTION).get(0).setValue(CompassPoint.NORTH);
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().panels().getFirst().azimuthDeg()).isEqualTo(180);
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = {-180, 180})
+    void aStoredNorthShowsAsNorthAndIsWrittenBackAsItWas(double azimuthDeg) throws Exception {
+        var view = openWith(config -> config.withSystem(config.system().withPanels(List.of(
+                new PanelArray("Shed", 4.2, 35, azimuthDeg, 0.14))), TypicalValues.NONE));
+        assertThat(Fx.call(() -> choices(view, TextKey.FIELD_PANEL_DIRECTION).get(0).getValue()))
+                .isEqualTo(CompassPoint.NORTH);
+
+        Fx.call(() -> {
+            fields(view, TextKey.FIELD_PANEL_NAME).get(0).setText("Shed roof");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().panels().getFirst().azimuthDeg()).isEqualTo(azimuthDeg);
+    }
+
+    @Test
+    void theSumAndTheEstimateFollowTheFieldsAtOnce() throws Exception {
+        var view = open();
+
+        Fx.run(() -> {
+            fields(view, TextKey.FIELD_PANEL_COUNT).get(0).setText("10");
+            fields(view, TextKey.FIELD_PANEL_POWER).get(0).setText("");
+            fields(view, TextKey.FIELD_PANEL_YEAR).get(0).setText("2021");
+        });
+
+        assertThat(texts(view)).contains("Together about 3.6 kWp");
+        assertThat(Fx.call(() -> fields(view, TextKey.FIELD_PANEL_POWER).get(0).getPromptText())).isEqualTo("360");
+        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_PANEL_POWER).getAccessibleHelp()))
+                .contains("the app then counts on 360 Wp, usual for 2021");
+        Fx.run(() -> fields(view, TextKey.FIELD_PANEL_YEAR).get(0).setText("2023"));
+        assertThat(texts(view)).contains("Together about 4.0 kWp");
+    }
+
+    @Test
+    void theLossesAndTheNameAreFoldedUnderMoreSettingsUntilItsRowIsPressed() throws Exception {
+        var view = open();
+        var fold = Fx.call(() -> view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(Fold.class::isInstance).map(Fold.class::cast).findFirst().orElseThrow());
+        assertThat(texts(view)).doesNotContain("System losses").contains("▸ More settings");
+
+        Fx.run(() -> Scenes.all(fold).stream().filter(Button.class::isInstance).map(Button.class::cast).findFirst()
+                .orElseThrow().fire());
+
+        assertThat(Fx.call(fold::isOpen)).isTrue();
+        assertThat(texts(view)).contains("System losses", "▾ More settings");
     }
 
     @Test
@@ -233,7 +413,7 @@ class SystemPagesTest {
                 TypicalValues.NONE));
 
         Fx.call(() -> {
-            button(view, TextKey.USE_TYPICAL, 3).fire(); // the panel array, the car, the house, the charger
+            button(view, TextKey.USE_TYPICAL, 2).fire(); // the car, the house, the charger
             return SettingsFixture.save(view);
         });
 

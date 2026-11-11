@@ -47,6 +47,19 @@ public final class ProblemRows {
         }
     }
 
+    /**
+     * Shows a problem the form found itself at its field, such as a choice not made.
+     *
+     * @param setting the setting whose field shows it; one without a row here is ignored
+     * @param problem what the field says, in the owner's language
+     */
+    public void show(ConfigSetting setting, String problem) {
+        var row = rows.get(setting);
+        if (row != null) {
+            row.showProblem(problem);
+        }
+    }
+
     /** Takes every problem away. */
     public void clear() {
         rows.values().forEach(FieldRow::clearProblem);

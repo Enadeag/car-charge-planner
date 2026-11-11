@@ -9,9 +9,12 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
@@ -19,7 +22,8 @@ import javafx.scene.layout.Region;
 
 /**
  * The panel arrays, one card each: panels that face another way or have another tilt, such as an east and a west roof,
- * are an array of their own. The forecast is the sum of all of them.
+ * are an array of their own. The forecast is the sum of all of them. An added array starts empty; so does, in set-up,
+ * an array whose size is a typical value, such as the one of set-up's draft.
  */
 public final class SolarPage implements ConfigPage {
 
@@ -28,15 +32,21 @@ public final class SolarPage implements ConfigPage {
     private final List<PanelArrayCard> cards = new ArrayList<>();
     private final List<Runnable> listeners = new ArrayList<>();
     private final HBox add;
+    private final Supplier<Year> thisYear;
+    private final boolean setUp;
     private int loadedCount;
 
     /**
      * Makes the page, empty until {@link #load(EngineConfig)}.
      *
+     * @param thisYear the current year, which a year placed may not be after; asked whenever the arrays are read
+     * @param setUp true in set-up, which shows an array whose size is a typical value as a new, empty one
      * @param messages the texts, in the owner's language
      */
-    public SolarPage(Messages messages) {
+    public SolarPage(Supplier<Year> thisYear, boolean setUp, Messages messages) {
         this.messages = messages;
+        this.thisYear = thisYear;
+        this.setUp = setUp;
         this.view = new PageView(messages.text(Category.SOLAR.title()));
         var button = new Button(messages.text(TextKey.PANELS_ADD));
         button.setOnAction(_ -> addArray());
@@ -70,7 +80,12 @@ public final class SolarPage implements ConfigPage {
         cards.clear();
         var panels = config.system().panels();
         for (int index = 0; index < panels.size(); index++) {
-            newCard().load(panels.get(index), config.typical().ofPanel(index));
+            var typical = config.typical().ofPanel(index);
+            if (setUp && typical.contains(ConfigSetting.PANEL_SIZE)) {
+                newCard().loadNew();
+            } else {
+                newCard().load(panels.get(index), typical);
+            }
         }
         loadedCount = panels.size();
         showCards();
@@ -105,15 +120,14 @@ public final class SolarPage implements ConfigPage {
         return cards.stream().map(PanelArrayCard::showProblems).toList().contains(true);
     }
 
-    /** One more array, with typical values tagged as such until the owner enters their own. */
     private void addArray() {
-        newCard().load(PanelArray.TYPICAL, TypicalValues.PANEL_SETTINGS);
+        newCard().loadNew();
         showCards();
         listeners.forEach(Runnable::run);
     }
 
     private PanelArrayCard newCard() {
-        var card = new PanelArrayCard(this::remove, messages);
+        var card = new PanelArrayCard(this::remove, thisYear, messages);
         cards.add(card);
         listeners.forEach(card::onChange);
         return card;

@@ -141,7 +141,7 @@ The file that holds the description of the owner's system, the planning preferen
 _Avoid_: Config file, configuration, engine config
 
 **Panel array**:
-Solar panels that share one tilt and one direction, described by their size (kWp), tilt, direction, losses and an optional name. A home has one or more (an east and a west roof, a garage); the forecast is the sum of all of them.
+Solar panels that share one tilt and one direction, described by their number and the power per panel (Wp), or the year they were placed when the power is not known, from which the app takes the usual power of that year; by their tilt and direction, chosen from fixed choices; and by their losses and an optional name. Their size in kWp, which the forecast providers get, follows from these. An array entered before as a size in kWp keeps that size until its panels are entered. A home has one or more (an east and a west roof, a garage); the forecast is the sum of all of them.
 _Avoid_: Plane (the forecast services' word), string (an electrical term), roof
 
 **Typical value**:

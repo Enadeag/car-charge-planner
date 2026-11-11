@@ -57,6 +57,7 @@ import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
+import nl.enadeag.carchargeplanner.android.form.fillIn
 import nl.enadeag.carchargeplanner.android.setup.PlaceSearch
 import nl.enadeag.carchargeplanner.android.setup.SetUpSession
 import nl.enadeag.carchargeplanner.android.setup.SetUpStep
@@ -124,6 +125,25 @@ class SetUpScreenTest {
     private fun chosenCard(place: String = "Utrecht, Netherlands") =
         compose.onNode(hasText(text(R.string.place_chosen_label, place)))
 
+    /** Opens a drop-down by its label and chooses an option in its menu, as the owner does. */
+    private fun choose(label: Int, option: Int) {
+        compose.onNode(hasText(text(label), substring = true)
+            and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.DropdownList)).performScrollTo()
+            .performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(text(option)).performClick()
+        compose.waitForIdle()
+    }
+
+    /** Fills the panels step as the owner does: 20 panels facing south, pitched, placed in 2021. */
+    private fun fillPanels() {
+        field(R.string.panel_count).performScrollTo().performTextInput("20")
+        choose(R.string.panel_direction, R.string.direction_south)
+        choose(R.string.panel_tilt, R.string.tilt_pitched)
+        field(R.string.panel_year).performScrollTo().performTextInput("2021")
+        compose.waitForIdle()
+    }
+
     /** Searches for Utrecht and chooses it, on the location step. */
     private fun chooseUtrecht() {
         field(R.string.place_field).performTextInput("Utrecht")
@@ -167,6 +187,10 @@ class SetUpScreenTest {
             if (index == 1) {
                 chooseUtrecht()
             }
+            if (index == 2) {
+                fillPanels()
+                compose.assertShowsNoneOf(englishOnly)
+            }
             if (index < titles.size - 1) {
                 click(R.string.action_next)
                 compose.waitForIdle()
@@ -204,11 +228,48 @@ class SetUpScreenTest {
             if (step == SetUpStep.LOCATION) {
                 chooseUtrecht()
             }
+            if (step == SetUpStep.PANELS) {
+                fillPanels()
+            }
             if (step != SetUpStep.CHECK) {
                 click(R.string.action_next)
             }
         }
         assertThat(session.flow.step.value).isEqualTo(SetUpStep.CHECK)
+    }
+
+    @Test
+    fun thePanelsStepStartsEmptyAndShowsWhatTheEnteredPanelsGiveTogether() {
+        val session = show()
+        session.next()
+        session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.next()
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.use_typical)).assertDoesNotExist()
+
+        click(R.string.action_next)
+        compose.waitForIdle()
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.PANELS)
+        field(R.string.panel_count).assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_panel_count)))
+        listOf(R.string.panel_direction, R.string.panel_tilt).forEach { label ->
+            compose.onNode(hasText(text(label), substring = true)
+                and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.DropdownList))
+                .assert(hasText(text(R.string.choose), substring = true))
+        }
+
+        fillPanels()
+
+        compose.onNodeWithText(text(R.string.panel_together, "7.2")).performScrollTo().assertIsDisplayed()
+        field(R.string.panel_power).assert(hasText(text(R.string.panel_power_hint_typical, 360, "2021"),
+            substring = true))
+        compose.onNodeWithText(text(R.string.panel_losses), substring = true).assertDoesNotExist()
+        click(R.string.more_settings)
+        compose.waitForIdle()
+        field(R.string.panel_losses).performScrollTo().assertIsDisplayed()
+        click(R.string.action_next)
+        compose.waitForIdle()
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.CAR)
     }
 
     @Test
@@ -240,6 +301,7 @@ class SetUpScreenTest {
         val session = show()
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         repeat(2) { session.next() }
         compose.waitForIdle()
         field(R.string.car_battery).performTextReplacement("sixty")
@@ -277,6 +339,7 @@ class SetUpScreenTest {
         val session = show()
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         repeat(2) { session.next() }
         compose.waitForIdle()
 
@@ -399,7 +462,8 @@ class SetUpScreenTest {
         restoration.emulateSavedInstanceStateRestore()
 
         heading(2, R.string.setup_location_title).assertExists()
-        compose.onNodeWithText(text(R.string.advanced)).assertIsOn()
+        compose.onNodeWithText(text(R.string.advanced))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.fold_expanded)))
         field(R.string.place_field).assert(hasText("Utrecht"))
     }
 
@@ -810,6 +874,7 @@ class SetUpScreenTest {
         compose.waitForIdle()
         compose.assertOnlyTheLastFieldIsDone()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         repeat(4) {
             session.next()
             compose.waitForIdle()
@@ -827,6 +892,7 @@ class SetUpScreenTest {
     private fun toTheMoreStep(session: SetUpSession) {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         repeat(4) { session.next() }
         compose.waitForIdle()
     }
@@ -843,6 +909,7 @@ class SetUpScreenTest {
     private fun toTheCheck(session: SetUpSession) {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
         repeat(5) { session.next() }
         compose.waitForIdle()
     }

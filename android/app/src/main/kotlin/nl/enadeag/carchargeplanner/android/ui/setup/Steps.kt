@@ -7,7 +7,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -19,10 +22,14 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.ChargerForm
 import nl.enadeag.carchargeplanner.android.form.HouseForm
+import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.form.PanelsForm
 import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
+import nl.enadeag.carchargeplanner.android.ui.components.ChoiceMenu
 import nl.enadeag.carchargeplanner.android.ui.components.ChoiceRow
+import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
+import nl.enadeag.carchargeplanner.android.ui.components.Fold
 import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.NumberField
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
@@ -31,7 +38,9 @@ import nl.enadeag.carchargeplanner.android.ui.components.TimeField
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
+import nl.enadeag.carchargeplanner.engine.config.CompassPoint
 import nl.enadeag.carchargeplanner.engine.config.Phases
+import nl.enadeag.carchargeplanner.engine.config.TiltChoice
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
@@ -49,7 +58,7 @@ internal fun WelcomeStep(provider: String) {
 }
 
 /**
- * The one panel array of set-up: its size, tilt, direction and losses, and "I don't know".
+ * The one panel array of set-up; more are added in Settings.
  *
  * @param problems the step's fields in order, for the focus after Next
  */
@@ -57,21 +66,85 @@ internal fun WelcomeStep(provider: String) {
 internal fun PanelsStep(panels: PanelsForm, edits: Edits, problems: ProblemFocus) {
     val rows by panels.rowIds.collectAsStateWithLifecycle()
     val row = rows.firstOrNull() ?: return
+    Text(stringResource(R.string.setup_panels_intro))
+    PanelArrayFields(panels, row, edits, problems, 0, last = true) { it }
+}
+
+/**
+ * A panel array's fields, the same in set-up and Settings: the number of panels, the direction, the tilt, the year
+ * placed and the power per panel, the peak power they give together, and the losses and the name folded under "More
+ * settings", which opens by itself while one of them shows a problem. An array stored by its peak power says so above
+ * them. Only the page's last field has the keyboard's Done: the power while the fold is closed, else the name.
+ *
+ * @param problems the page's fields in order, for the focus after Next or Save
+ * @param order the place of the array's first field on the page; its others follow it
+ * @param last whether the array ends the page
+ * @param named the label of a field as the page names it, such as with the array's number
+ */
+@Composable
+internal fun PanelArrayFields(panels: PanelsForm, row: Int, edits: Edits, problems: ProblemFocus, order: Int,
+    last: Boolean, named: @Composable (String) -> String) {
     val shown by panels.problems(row).collectAsStateWithLifecycle()
     val typical = edits.shown { panels.typical(row) }
-    Text(stringResource(R.string.setup_panels_intro))
-    listOf(
-        Triple(PanelsForm.Field.SIZE, R.string.panel_size to R.string.panel_size_hint, FieldKind.DECIMAL),
-        Triple(PanelsForm.Field.TILT, R.string.panel_tilt to R.string.panel_tilt_hint, FieldKind.DECIMAL),
-        Triple(PanelsForm.Field.DIRECTION, R.string.panel_direction to R.string.panel_direction_hint, FieldKind.SIGNED),
-        Triple(PanelsForm.Field.LOSSES, R.string.panel_losses to R.string.panel_losses_hint, FieldKind.DECIMAL),
-    ).forEachIndexed { order, (field, texts, kind) ->
-        NumberField(stringResource(texts.first), stringResource(texts.second), edits.shown { panels.text(row, field) },
-            { text -> edits.make { panels.edit(row, field, text) } }, kind, shown[field], field in typical,
-            rememberFieldFocus(problems, order, field in shown),
-            if (field == PanelsForm.Field.LOSSES) ImeAction.Done else ImeAction.Next)
+    val numbers = NumberText(LocalConfiguration.current.locales[0])
+    var folded by rememberSaveable(row) { mutableStateOf(true) }
+    val open = !folded || PanelsForm.Field.LOSSES in shown
+    edits.shown { panels.keptKwp(row) }?.let { kwp ->
+        Text(stringResource(R.string.panel_now_set, numbers.write(kwp, if (Math.round(kwp * 10) / 10.0 == kwp) 1 else 2)))
     }
-    UseTypical { edits.make { panels.useTypical(row) } }
+    @Composable
+    fun typed(field: PanelsForm.Field, label: Int, hint: String, place: Int, imeAction: ImeAction = ImeAction.Next,
+        kind: FieldKind = FieldKind.WHOLE, placeholder: String? = null) {
+        EntryField(named(stringResource(label)), hint, edits.shown { panels.text(row, field) },
+            { text -> edits.make { panels.edit(row, field, text) } }, kind, shown[field], field in typical,
+            rememberFieldFocus(problems, order + place, field in shown), imeAction = imeAction,
+            placeholder = placeholder)
+    }
+    typed(PanelsForm.Field.COUNT, R.string.panel_count, "", 0)
+    ChoiceMenu(named(stringResource(R.string.panel_direction)), CompassPoint.entries,
+        edits.shown { panels.direction(row) }, { stringResource(directionName(it)) },
+        { point -> edits.make { panels.choose(row, point) } }, shown[PanelsForm.Field.DIRECTION],
+        rememberFieldFocus(problems, order + 1, PanelsForm.Field.DIRECTION in shown),
+        PanelsForm.Field.DIRECTION in typical)
+    ChoiceMenu(named(stringResource(R.string.panel_tilt)), TiltChoice.entries, edits.shown { panels.tilt(row) },
+        { stringResource(tiltName(it)) }, { tilt -> edits.make { panels.choose(row, tilt) } },
+        shown[PanelsForm.Field.TILT], rememberFieldFocus(problems, order + 2, PanelsForm.Field.TILT in shown),
+        PanelsForm.Field.TILT in typical)
+    typed(PanelsForm.Field.YEAR, R.string.panel_year, "", 3)
+    val estimate = edits.shown { panels.typicalWattPeak(row) }
+    val powerEmpty = edits.shown { panels.text(row, PanelsForm.Field.POWER) }.isBlank()
+    typed(PanelsForm.Field.POWER, R.string.panel_power,
+        if (estimate != null && powerEmpty) stringResource(R.string.panel_power_hint_typical, estimate,
+            edits.shown { panels.text(row, PanelsForm.Field.YEAR) }.trim())
+        else stringResource(R.string.panel_power_hint), 4,
+        if (last && !open) ImeAction.Done else ImeAction.Next, placeholder = estimate?.toString())
+    edits.shown { panels.together(row) }?.let { kwp ->
+        Text(stringResource(R.string.panel_together, numbers.write(kwp, 1)), style = MaterialTheme.typography.bodyLarge)
+    }
+    Fold(named(stringResource(R.string.more_settings)), open, { folded = !it }) {
+        typed(PanelsForm.Field.LOSSES, R.string.panel_losses, stringResource(R.string.panel_losses_hint), 5,
+            kind = FieldKind.DECIMAL)
+        typed(PanelsForm.Field.NAME, R.string.panel_name, stringResource(R.string.panel_name_hint), 6,
+            if (last) ImeAction.Done else ImeAction.Next, FieldKind.TEXT)
+    }
+}
+
+internal fun directionName(point: CompassPoint): Int = when (point) {
+    CompassPoint.NORTH -> R.string.direction_north
+    CompassPoint.NORTH_EAST -> R.string.direction_north_east
+    CompassPoint.EAST -> R.string.direction_east
+    CompassPoint.SOUTH_EAST -> R.string.direction_south_east
+    CompassPoint.SOUTH -> R.string.direction_south
+    CompassPoint.SOUTH_WEST -> R.string.direction_south_west
+    CompassPoint.WEST -> R.string.direction_west
+    CompassPoint.NORTH_WEST -> R.string.direction_north_west
+}
+
+internal fun tiltName(tilt: TiltChoice): Int = when (tilt) {
+    TiltChoice.FLAT -> R.string.tilt_flat
+    TiltChoice.PITCHED -> R.string.tilt_pitched
+    TiltChoice.STEEP -> R.string.tilt_steep
+    TiltChoice.UPRIGHT -> R.string.tilt_upright
 }
 
 /**

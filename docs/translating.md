@@ -45,6 +45,15 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Unusable config | niet ingesteld | with what to fix | Broken config, not set up (that is the state without a file) |
 | Settings file | instellingenbestand |  | Config file, configuration, engine config |
 | Panel array | panelengroep |  | Plane (the forecast services' word), string (an electrical term), roof |
+| Number of panels | aantal panelen | a panel array's field |  |
+| Power per panel | vermogen per paneel | in Wp, a panel array's field; its hint "Wp, as on the invoice or the panel." ("Wp, staat op de factuur of het paneel.") |  |
+| Year placed | jaar van plaatsing | a panel array's field, a number |  |
+| Direction | richting | a panel array's drop-down: North, North-east, East, South-east, South, South-west, West, North-west (Noord, Noordoost, Oost, Zuidoost, Zuid, Zuidwest, West, Noordwest) |  |
+| Tilt | helling | a panel array's drop-down: Flat, Pitched, Steep, Upright (Plat, Schuin, Steil, Rechtop) |  |
+| Together about 3.6 kWp | Samen ongeveer 3,6 kWp | below a panel array's fields: the size its panels give |  |
+| Now set: 4.2 kWp. Enter the number of panels to replace this. | Nu ingesteld: 4,2 kWp. Vul het aantal panelen in om dit te vervangen. | above the fields of an array entered before as a size in kWp |  |
+| More settings | Meer instellingen | the row that folds the seldom changed settings away, such as a panel array's losses and name |  |
+| Choose… | Kies… | what a drop-down shows before a choice |  |
 | Typical value | gangbare waarde |  | Default, assumed value, guess |
 | Planning preferences | planning |  | Planning settings, options |
 | App settings | app-instellingen |  | Preferences, interface config |

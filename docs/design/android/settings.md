@@ -27,6 +27,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 ### Panel arrays
 
+- Each array has set-up's fields, in its order, with "More settings" folded; "Add an array" adds an empty one. An array stored by its kWp says "Now set: 4.2 kWp. Enter the number of panels to replace this." and keeps that kWp while the count, the year and the power are empty; a stored tilt or direction shows the nearest choice and is stored as it was until chosen, so showing it is no edit. The list's summary stays "1 array, 3.6 kWp", from the computed kWp (#448).
 - Remove acts at once. The last array's Remove is off, with the reason "A system needs at least one panel array", read with the button. Arrays are named by position and name ("Array 2, east roof"); there is no reordering (#315).
 
 ### Forecast and API keys
