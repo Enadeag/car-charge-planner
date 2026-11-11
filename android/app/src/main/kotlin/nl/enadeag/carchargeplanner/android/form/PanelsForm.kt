@@ -54,7 +54,6 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
         /** Where in the stored list a row came from, so an untouched value is the stored one exactly. */
         const val STORED_AT = "storedAt"
 
-        /** The peak power a row was stored with, for an array stored by it. */
         const val KEPT_KWP = "keptKwp"
 
         /** Kept as 1 for a row set-up shows as new, which has no stored values of its own. */
@@ -65,7 +64,6 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
         val SIZE_FIELDS = listOf(Field.COUNT, Field.YEAR, Field.POWER)
     }
 
-    /** The count, the year and the power as whole numbers, before the engine checks them. */
     private class Entered(val count: Int, val year: Int?, val power: Int?) {
         fun size(): PanelSize.Panels = PanelSize.Panels(count, power?.let { OptionalInt.of(it) } ?: OptionalInt.empty(),
             Optional.ofNullable(year?.let { Year.of(it) }))
@@ -175,10 +173,7 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
     fun typicalWattPeak(row: Int): Int? {
         val year = (numbers.readWhole(text(row, Field.YEAR).trim()) as? NumberText.WholeNumber.Read)?.value
             ?: return null
-        if (year < PanelSize.Panels.FIRST_YEAR.value || year > thisYear().value) {
-            return null
-        }
-        return PanelSize.Panels.typicalWattPeak(Year.of(year))
+        return PanelSize.Panels.typicalWattPeakFor(year, thisYear()).takeIf { it.isPresent }?.asInt
     }
 
     /**
@@ -300,6 +295,9 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
         val count = whole(state, Field.COUNT, problems,
             empty = FieldProblem.Refused(InvalidSetting.Rule.PANEL_COUNT_OUT_OF_RANGE))
         val year = whole(state, Field.YEAR, problems, empty = null)
+        if (year != null && (year < Year.MIN_VALUE || year > Year.MAX_VALUE)) {
+            problems[Field.YEAR] = FieldProblem.Refused(InvalidSetting.Rule.YEAR_PLACED_OUT_OF_RANGE)
+        }
         val power = whole(state, Field.POWER, problems, empty = null)
         return if (count == null || SIZE_FIELDS.any { it in problems }) null else Entered(count, year, power)
     }
@@ -325,7 +323,6 @@ class PanelsForm(handle: SavedStateHandle, private val numbers: NumberText, priv
     private fun degrees(state: FormState<Field>, field: Field, stored: Double?, of: (String) -> Double): Double? =
         if (state.isEdited(field) || stored == null) state.text(field).takeIf { it.isNotEmpty() }?.let(of) else stored
 
-    /** The stored peak power, while the count, the year and the power are all empty. */
     private fun kept(row: Int): PanelSize.Peak? {
         val state = rows.state(row)
         val kwp = rows.decimal(row, KEPT_KWP) ?: return null

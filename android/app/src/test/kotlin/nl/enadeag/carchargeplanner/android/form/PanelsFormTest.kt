@@ -17,6 +17,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 
 class PanelsFormTest {
 
@@ -117,6 +118,56 @@ class PanelsFormTest {
         form.edit(first, PanelsForm.Field.YEAR, "2027")
         assertThat(form.typicalWattPeak(first)).isNull()
         assertThat(form.together(first)).isNull()
+    }
+
+    @ParameterizedTest
+    @CsvSource(nullValues = ["-"], value = ["1989, -", "1990, 220", "2026, 430", "2027, -"])
+    fun theEstimateIsShownOnlyForAYearTheArrayMayHave(year: String, wattPeak: Int?) {
+        form.load(stored)
+        val first = form.rowIds.value.first()
+        form.edit(first, PanelsForm.Field.YEAR, year)
+
+        assertThat(form.typicalWattPeak(first)).isEqualTo(wattPeak)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["1000000000", "-1000000000"])
+    fun aYearPastWhatAYearCanBeIsRefusedAtItsField(year: String) {
+        form.load(stored)
+        val first = form.rowIds.value.first()
+        form.edit(first, PanelsForm.Field.COUNT, "10")
+        form.edit(first, PanelsForm.Field.POWER, "")
+        form.edit(first, PanelsForm.Field.YEAR, year)
+
+        assertThat(form.together(first)).isNull()
+        assertThat(form.check(stored)).isNull()
+
+        assertThat(form.problems(first).value).containsExactlyEntriesOf(mapOf(
+            PanelsForm.Field.YEAR to FieldProblem.Refused(InvalidSetting.Rule.YEAR_PLACED_OUT_OF_RANGE)))
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = ["WEST, 90.0", "NORTH, 180.0"])
+    fun aChosenDirectionIsStoredAsItsDegrees(point: CompassPoint, azimuthDeg: Double) {
+        form.load(stored)
+        val first = form.rowIds.value.first()
+
+        form.choose(first, point)
+
+        assertThat(form.read(stored)!!.system().panels()[0].azimuthDeg()).isEqualTo(azimuthDeg)
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = [-180.0, 180.0])
+    fun aStoredNorthShowsAsNorthAndIsWrittenBackAsItWas(azimuthDeg: Double) {
+        val north = DRAFT.withSystem(DRAFT.system().withPanels(listOf(PanelArray("shed", 2.0, 35.0, azimuthDeg, 0.14))),
+            TypicalValues.NONE)
+        form.load(north)
+        val row = form.rowIds.value.single()
+        form.edit(row, PanelsForm.Field.NAME, "shed roof")
+
+        assertThat(form.direction(row)).isEqualTo(CompassPoint.NORTH)
+        assertThat(form.read(north)!!.system().panels().single().azimuthDeg()).isEqualTo(azimuthDeg)
     }
 
     @ParameterizedTest
