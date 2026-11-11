@@ -102,7 +102,7 @@ internal fun SetUpScreen(session: SetUpSession) {
             SetUpStep.PANELS -> PanelsStep(session.flow.panels, edits, problems)
             SetUpStep.CAR -> CarStep(session.flow.car, edits, problems)
             SetUpStep.CHARGER -> ChargerStep(session.flow.charger, edits, problems)
-            SetUpStep.MORE -> MoreStep(session.flow.house, session.flow.away, edits, problems)
+            SetUpStep.AWAY -> AwayStep(session.flow.away, edits, problems)
             SetUpStep.CHECK -> CheckStep(session)
         }
         StepButtons(session, step)
@@ -156,6 +156,6 @@ private fun SetUpStep.title(): Int = when (this) {
     SetUpStep.PANELS -> R.string.setup_panels_title
     SetUpStep.CAR -> R.string.setup_car_title
     SetUpStep.CHARGER -> R.string.setup_charger_title
-    SetUpStep.MORE -> R.string.setup_more_title
+    SetUpStep.AWAY -> R.string.setup_away_title
     SetUpStep.CHECK -> R.string.setup_check_title
 }

@@ -10,11 +10,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.ChargerForm
 import nl.enadeag.carchargeplanner.android.form.ConfigForm
-import nl.enadeag.carchargeplanner.android.form.HouseForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.form.PanelsForm
 import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
+import nl.enadeag.carchargeplanner.android.form.forget
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
@@ -23,7 +23,8 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId
  * Set-up's steps and their forms: Next checks the step's values as the engine's records do and goes on only when
  * they are accepted, Back goes to the step before, and Finish saves the whole config once; nothing is saved before.
  * The step, the typed texts and the typical marks are kept in the [SavedStateHandle], so they survive turning the
- * phone and the system ending the app. Called from the main thread.
+ * phone and the system ending the app. Set-up does not ask for the house's use: it keeps the draft's typical one.
+ * Called from the main thread.
  *
  * @param handle the set-up screen's saved state
  * @param numbers how the screen's language writes numbers
@@ -39,8 +40,14 @@ class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, priva
 
         private const val STEP = "setUp.step"
 
-        /** The first part of the forms' keys in the handle, which Settings' forms share. */
-        val PREFIXES = listOf("location", "panels", "car", "charger", "house", "away")
+        /** Where a set-up that still asked for the house's use kept what was typed in it. */
+        private const val HOUSE = "house"
+
+        /**
+         * The first part of the forms' keys in the handle, which Settings' forms share, and the house's, which an
+         * earlier set-up may have left.
+         */
+        val PREFIXES = listOf("location", "panels", "car", "charger", "away", HOUSE)
 
         /**
          * What set-up starts from: no place chosen yet, the typical home with its values marked as typical, the
@@ -65,10 +72,7 @@ class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, priva
     /** The wall charger. */
     val charger = ChargerForm(handle, numbers)
 
-    /** The house's own use, on the step with more. */
-    val house = HouseForm(handle, numbers)
-
-    /** The weekly away periods, on the step with more. */
+    /** The weekly away periods. */
     val away = WeeklyAwayForm(handle)
 
     private val forms: Map<SetUpStep, List<ConfigForm>> = mapOf(
@@ -76,7 +80,7 @@ class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, priva
         SetUpStep.PANELS to listOf(panels),
         SetUpStep.CAR to listOf(car),
         SetUpStep.CHARGER to listOf(charger),
-        SetUpStep.MORE to listOf(house, away),
+        SetUpStep.AWAY to listOf(away),
     )
 
     private val stepNow: MutableStateFlow<SetUpStep>
@@ -85,6 +89,10 @@ class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, priva
     val step: StateFlow<SetUpStep>
 
     init {
+        // a set-up that comes back with a house's use typed in it plans with the typical one, as set-up asks none
+        if (handle.contains(STEP)) {
+            handle.forget(listOf(HOUSE))
+        }
         val kept = handle.get<String>(STEP)?.let { name -> SetUpStep.entries.firstOrNull { it.name == name } }
         if (kept == null) {
             forms.values.flatten().forEach { it.load(draft) }

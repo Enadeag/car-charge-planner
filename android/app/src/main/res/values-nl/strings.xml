@@ -109,11 +109,10 @@
   <string name="charger_efficiency">Laadrendement</string>
   <string name="charger_efficiency_hint">Procent, meestal ongeveer 90.</string>
 
-  <string name="setup_more_title">Huis en afwezigheid</string>
-  <string name="setup_more_intro">Allebei optioneel: ze maken de planning beter, en je kunt ze ook later bij Instellingen invullen. Rijd je naar je werk, voeg dan de tijden toe waarop de auto afwezig is.</string>
-  <string name="house_heading">Huis</string>
-  <string name="baseload">Basisverbruik van het huis</string>
-  <string name="baseload_hint">kW zonder de auto: de kWh van een maand gedeeld door 730.</string>
+  <string name="setup_away_title">Afwezigheid</string>
+  <string name="setup_away_intro">Optioneel: de tijden waarop de auto afwezig is maken de planning beter, en je kunt ze ook later bij Instellingen invullen. Rijd je naar je werk, voeg ze dan hier toe.</string>
+  <string name="household_use">Verbruik van het huis</string>
+  <string name="household_use_hint">kWh per dag, zonder het laden van de auto. Je energieleverancier laat je verbruik per dag zien.</string>
   <string name="away_heading">Wekelijkse afwezigheid</string>
   <string name="away_none">Geen: de planning gaat ervan uit dat de auto de hele week thuis is.</string>
   <string name="away_add">Afwezigheid toevoegen</string>
@@ -353,7 +352,7 @@
     <item quantity="other">%1$d panelengroepen, %2$s kWp</item>
   </plurals>
   <string name="settings_location_summary">%1$s; %2$s</string>
-  <string name="settings_car_house_summary">Accu %1$s kWh, huis %2$s kW</string>
+  <string name="settings_car_house_summary">Accu %1$s kWh</string>
   <string name="settings_charger_summary">%1$s, %2$d tot %3$d A</string>
   <string name="settings_forecast_summary">%1$s, reservedienst %2$s</string>
   <string name="settings_forecast_summary_alone">%1$s, geen reservedienst</string>

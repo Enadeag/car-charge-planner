@@ -12,8 +12,8 @@ enum class SetUpStep {
     CAR,
     /** The wall charger. */
     CHARGER,
-    /** What makes the plan better and may be skipped: the house's own use and the weekly away periods. */
-    MORE,
+    /** The weekly away periods, which may be skipped. */
+    AWAY,
     /** One forecast for the place entered, then Finish; a failure does not stop set-up. */
     CHECK;
 
