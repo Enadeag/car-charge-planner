@@ -24,9 +24,6 @@ sealed interface FieldProblem {
     /** A whole number below 0 or above 100 where the field takes a level in %, such as the battery level. */
     data object NotFrom0To100 : FieldProblem
 
-    /** The text is not a time such as 07:30. */
-    data object NotATime : FieldProblem
-
     /** A forecast provider's setting that it needs has no value. */
     data object Required : FieldProblem
 

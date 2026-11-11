@@ -17,6 +17,7 @@ import java.util.Locale
 import kotlin.math.ceil
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.ui.components.clockOf
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
@@ -466,12 +467,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
  */
 internal data class TripAdviceText(val label: String, val title: String, val plan: String, val level: String,
     val spoken: String)
-
-/**
- * @return such as 13:05 or 1:05 PM
- */
-internal fun clockOf(twentyFour: Boolean, locale: Locale): DateTimeFormatter =
-    DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, if (twentyFour) "Hm" else "hma"), locale)
 
 /** The dashboard's words in the app's language and the phone's clock, with the times in this zone. */
 @Composable

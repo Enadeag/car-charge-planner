@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.setup
 
 import androidx.lifecycle.SavedStateHandle
+import java.time.LocalTime
 import java.time.Year
 import java.time.ZoneId
 import java.util.Locale
@@ -188,7 +189,7 @@ class SetUpFlowTest {
     fun aRefusedAwayPeriodKeepsTheStepAndShowsItsProblem() {
         toTheAwayStep()
         val row = flow.away.add()
-        flow.away.edit(row, WeeklyAwayForm.Field.END, "07:00")
+        flow.away.choose(row, WeeklyAwayForm.Field.END, LocalTime.of(7, 0))
 
         assertThat(flow.next()).isFalse()
 

@@ -10,7 +10,7 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.WeeklyAwaySchedule
 
 /**
- * The weekly away periods, possibly none, each a weekday and two times within that day.
+ * The weekly away periods, possibly none, each a weekday and two times within that day, both chosen rather than typed.
  *
  * @param handle where the rows and their texts are kept
  */
@@ -33,7 +33,7 @@ class WeeklyAwayForm(private val handle: SavedStateHandle) : ConfigForm {
         /** How many periods were loaded, so removing one counts as an edit. */
         const val LOADED = "away.loaded"
 
-        /** Times are written alike in every language; the reader needs a writer of numbers all the same. */
+        /** No field here is a number; the reader, which has the record check a period, needs a writer all the same. */
         val NO_NUMBERS = NumberText(Locale.ROOT)
     }
 
@@ -52,13 +52,29 @@ class WeeklyAwayForm(private val handle: SavedStateHandle) : ConfigForm {
     fun text(row: Int, field: Field): String = rows.state(row).text(field)
 
     /**
-     * Puts what the owner typed in a row: the field's problem goes.
+     * A row's time as it shows and is saved.
      *
      * @param row the row's number
      * @param field the start or the end
-     * @param text what it holds now
+     * @return the time chosen; a new period's when the kept text is no time, as only an older version of the app can
+     *     leave
      */
-    fun edit(row: Int, field: Field, text: String) = rows.state(row).edit(field, text)
+    fun time(row: Int, field: Field): LocalTime = TimeText.read(text(row, field))
+        ?: if (field == Field.START) NEW.start() else NEW.end()
+
+    /**
+     * Chooses a row's start or end: the field's problem goes. Choosing the time shown changes nothing.
+     *
+     * @param row the row's number
+     * @param field the start or the end
+     * @param time the time, to the minute
+     */
+    fun choose(row: Int, field: Field, time: LocalTime) {
+        val text = TimeText.write(time)
+        if (text(row, field) != text) {
+            rows.state(row).edit(field, text)
+        }
+    }
 
     /**
      * Chooses a row's weekday.
@@ -118,8 +134,8 @@ class WeeklyAwayForm(private val handle: SavedStateHandle) : ConfigForm {
             val state = rows.state(id)
             val reader = FieldReader(state, NO_NUMBERS)
             val weekday = DayOfWeek.entries.firstOrNull { it.name == state.text(Field.WEEKDAY) } ?: NEW.weekday()
-            val start = reader.time(Field.START, NEW.start())
-            val end = reader.time(Field.END, NEW.end())
+            val start = time(id, Field.START)
+            val end = time(id, Field.END)
             val period = reader.records({ Field.END }) { WeeklyAwayPeriod(weekday, start, end) }
             if (period == null) problems[id] = reader.problems.toMap() else periods += period
         }

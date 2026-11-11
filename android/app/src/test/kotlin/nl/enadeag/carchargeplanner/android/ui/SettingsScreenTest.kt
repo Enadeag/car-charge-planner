@@ -40,6 +40,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -61,6 +62,8 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.time.Duration
+import java.time.LocalTime
 import java.time.Year
 import java.time.ZoneId
 import java.util.Locale
@@ -77,12 +80,16 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
+import nl.enadeag.carchargeplanner.android.form.PlanningForm
+import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
 import nl.enadeag.carchargeplanner.android.prefs.WifiOnly
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.components.DISTANCE_UNIT
+import nl.enadeag.carchargeplanner.android.ui.components.clockOf
 import nl.enadeag.carchargeplanner.android.ui.settings.SettingsIcons
 import nl.enadeag.carchargeplanner.android.ui.settings.SettingsScreen
 import nl.enadeag.carchargeplanner.android.ui.settings.icon
@@ -96,6 +103,7 @@ import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.engine.config.PanelArray
 import nl.enadeag.carchargeplanner.engine.config.PanelSize
 import nl.enadeag.carchargeplanner.engine.config.PlaceName
+import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
@@ -252,7 +260,7 @@ class SettingsScreenTest {
             compose.waitForIdle()
             when (page) {
                 SettingsPage.SOLAR -> click(R.string.panel_add)
-                SettingsPage.CHARGER -> click(R.string.more_settings)
+                SettingsPage.CHARGER, SettingsPage.CAR_AND_HOUSE, SettingsPage.PLANNING -> click(R.string.more_settings)
                 SettingsPage.AWAY -> click(R.string.away_add)
                 else -> Unit
             }
@@ -355,6 +363,193 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(20.0))
+    }
+
+    private fun timeButton(name: String) = compose.onNode(hasText(name, substring = true) and hasClickAction()
+        and SemanticsMatcher.keyIsDefined(SemanticsProperties.Role))
+
+    private fun clock(hours: String) {
+        Settings.System.putString(compose.activity.contentResolver, Settings.System.TIME_12_24, hours)
+    }
+
+    private fun savedPlanning() = (access.settings as StartState.Ready).config.planning()
+
+    private fun withPlanning(planning: PlanningPreferences): EngineConfig {
+        val own = stored.withPlanning(planning)
+        access.settings = StartState.Ready(own)
+        return own
+    }
+
+    private fun leadMenu() = compose.onNode(hasText(text(R.string.planning_lead), substring = true)
+        and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.DropdownList))
+
+    private fun ahead(minutes: Int) =
+        compose.activity.resources.getQuantityString(R.plurals.planning_lead_ahead, minutes, minutes)
+
+    @Test
+    fun thePlanningPageShowsTheLevelsTheHoursAndTheLeadWithTheRestFoldedUnderMoreSettings() {
+        show()
+        open(SettingsPage.PLANNING)
+
+        field(text(R.string.planning_target)).assertExists()
+        timeButton(text(R.string.planning_hours_until)).assertExists()
+        leadMenu().assert(hasText(ahead(15), substring = true))
+            .assert(hasText(text(R.string.planning_lead_hint), substring = true))
+        foldIs(R.string.fold_collapsed)
+        listOf(R.string.planning_margin, R.string.planning_tolerance, R.string.planning_min_window).forEach {
+            field(text(it)).assertDoesNotExist()
+        }
+
+        click(R.string.more_settings)
+
+        listOf(R.string.planning_margin, R.string.planning_tolerance, R.string.planning_min_window).forEach {
+            field(text(it)).assertExists()
+        }
+    }
+
+    @Test
+    fun theLeadIsChosenFromTheStartToAnHourAhead() {
+        show()
+        open(SettingsPage.PLANNING)
+
+        leadMenu().performScrollTo().performClick()
+        compose.waitForIdle()
+        listOf(text(R.string.planning_lead_at_start), ahead(5), ahead(10), ahead(30), ahead(60)).forEach {
+            compose.onNodeWithText(it).assertExists()
+        }
+        compose.onNodeWithText(text(R.string.planning_lead_at_start)).performClick()
+        compose.waitForIdle()
+        leadMenu().assert(hasText(text(R.string.planning_lead_at_start), substring = true))
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        assertThat(savedPlanning().notifyLead()).isZero()
+    }
+
+    @Test
+    fun aStoredLeadThatIsNoneOfTheChoicesIsKeptExactlyWhenAnotherValueIsSaved() {
+        show(session(config = withLeadOf20Minutes()))
+        open(SettingsPage.PLANNING)
+        field(text(R.string.planning_target)).performTextReplacement("90")
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        assertThat(savedPlanning().notifyLead()).isEqualTo(Duration.ofMinutes(20))
+        assertThat(savedPlanning().targetPct().value()).isEqualTo(90.0)
+    }
+
+    private fun withLeadOf20Minutes(): EngineConfig {
+        val recommended = PlanningPreferences.RECOMMENDED
+        return withPlanning(PlanningPreferences(recommended.minimumPct(), recommended.targetPct(), recommended.margin(),
+            recommended.importToleranceKwh(), recommended.minWindow(), Duration.ofMinutes(20)))
+    }
+
+    @Test
+    fun aStoredLeadThatIsNoneOfTheChoicesIsARowOfItsOwnUntilAnotherIsChosen() {
+        show(session(config = withLeadOf20Minutes()))
+        open(SettingsPage.PLANNING)
+        leadMenu().assert(hasText(ahead(20), substring = true))
+
+        leadMenu().performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onAllNodesWithText(ahead(20)).assertCountEquals(2)
+        compose.onNodeWithText(ahead(30)).performClick()
+        compose.waitForIdle()
+        leadMenu().performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(ahead(20)).assertDoesNotExist()
+        compose.onAllNodesWithText(ahead(30)).assertCountEquals(2)
+    }
+
+    @Test
+    fun theChargingHoursShowOnThePhonesTwelveOrTwentyFourHourClock() {
+        clock("12")
+        show()
+        open(SettingsPage.PLANNING)
+
+        timeButton(text(R.string.planning_hours_from))
+            .assert(hasText(clockOf(false, Locale.ENGLISH).format(LocalTime.of(7, 0)), substring = true))
+    }
+
+    @Test
+    fun aChargingHoursButtonOpensTheTimePickerWhoseOkPutsTheTimeAndTheFocusBackOnTheButton() {
+        clock("24")
+        val session = show()
+        open(SettingsPage.PLANNING)
+
+        timeButton(text(R.string.planning_hours_from)).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNode(isHeading() and hasText(text(R.string.planning_hours_from)) and hasAnyAncestor(isDialog()))
+            .assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.one_off_keyboard)).assertExists()
+        compose.onNode(hasContentDescription("10 hours") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.action_ok)).performClick()
+        compose.waitForIdle()
+
+        assertThat(session.forms.planning.time(PlanningForm.Field.CHARGING_START)).isEqualTo(LocalTime.of(10, 0))
+        timeButton(text(R.string.planning_hours_from)).assert(hasText("10:00", substring = true)).assertIsFocused()
+        click(R.string.action_save)
+        compose.waitForIdle()
+        assertThat(savedPlanning().chargingHours().start()).isEqualTo(LocalTime.of(10, 0))
+    }
+
+    @Test
+    fun chargingHoursThatEndWhenTheyStartShowTheProblemUnderTheUntilButtonWhichTakesTheFocus() {
+        val session = show()
+        open(SettingsPage.PLANNING)
+        session.forms.planning.choose(PlanningForm.Field.CHARGING_END, LocalTime.of(7, 0))
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        timeButton(text(R.string.planning_hours_until)).assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_same_as_start)))
+        assertThat(access.written).isEmpty()
+    }
+
+    @Test
+    fun aProblemInAFoldedPlanningFieldOpensTheFoldAndTakesTheFocus() {
+        show()
+        open(SettingsPage.PLANNING)
+        click(R.string.more_settings)
+        field(text(R.string.planning_min_window)).performTextReplacement("0")
+        click(R.string.more_settings)
+        foldIs(R.string.fold_collapsed)
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        foldIs(R.string.fold_expanded)
+        field(text(R.string.planning_min_window)).assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_out_of_range)))
+        click(R.string.more_settings)
+        foldIs(R.string.fold_expanded)
+    }
+
+    @Test
+    fun theTripSurchargeIsFoldedWithTheHouseholdUseAndAProblemInItOpensTheFoldAndTakesTheFocus() {
+        show()
+        open(SettingsPage.CAR_AND_HOUSE)
+        field(text(R.string.car_daily_distance)).assert(hasText(DISTANCE_UNIT, substring = true))
+            .assert(hasText(text(R.string.car_daily_distance_hint), substring = true))
+        field(text(R.string.car_trip_surcharge)).assertDoesNotExist()
+        compose.onAllNodesWithText(text(R.string.more_settings)).assertCountEquals(1)
+        click(R.string.more_settings)
+        field(text(R.string.car_trip_surcharge)).performTextReplacement("101")
+        click(R.string.more_settings)
+        foldIs(R.string.fold_collapsed)
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        foldIs(R.string.fold_expanded)
+        field(text(R.string.car_trip_surcharge)).assertIsFocused()
+        field(text(R.string.household_use)).assertExists()
+        assertThat(access.written).isEmpty()
     }
 
     private fun withCharger(charger: Charger): EngineConfig {
@@ -999,11 +1194,17 @@ class SettingsScreenTest {
         assertThat(drawn(apiKey)).isNotEqualTo("STORED1").hasSize("STORED1".length)
     }
 
-    /** Takes the focus off the headings, so what moves it back is what is under test. */
-    private fun focusAwayFromTheHeadings() {
-        compose.onAllNodes(hasSetTextAction()).onFirst().performSemanticsAction(SemanticsActions.RequestFocus)
+    /**
+     * Takes the focus off the headings, so what moves it back is what is under test.
+     *
+     * @param to what takes it, the first of them: a field, or on a page without one, such as Away, a button
+     */
+    private fun focusAwayFromTheHeadings(to: SemanticsMatcher = hasSetTextAction()) {
+        compose.onAllNodes(to).onFirst().performSemanticsAction(SemanticsActions.RequestFocus)
         compose.waitForIdle()
     }
+
+    private val awayTime = hasText(text(R.string.away_from, 1), substring = true) and hasClickAction()
 
     private fun array(number: Int) = compose.onNode(isHeading() and hasText(text(R.string.panel_array, number)))
 
@@ -1078,7 +1279,7 @@ class SettingsScreenTest {
             compose.waitForIdle()
         }
         compose.onNode(isHeading() and hasText(text(R.string.away_period, 2))).assertIsFocused()
-        focusAwayFromTheHeadings()
+        focusAwayFromTheHeadings(awayTime)
         click(R.string.away_remove, 2)
         compose.waitForIdle()
 
@@ -1091,7 +1292,7 @@ class SettingsScreenTest {
         open(SettingsPage.AWAY)
         click(R.string.away_add)
         compose.waitForIdle()
-        focusAwayFromTheHeadings()
+        focusAwayFromTheHeadings(awayTime)
 
         click(R.string.away_remove, 1)
         compose.waitForIdle()
@@ -1102,19 +1303,19 @@ class SettingsScreenTest {
 
     @Test
     fun aRefusedValueFarDownThePageIsNotScrolledAwayFromItsField() {
-        show(fontScaleTwo = true)
+        val session = show(fontScaleTwo = true)
         open(SettingsPage.AWAY)
         repeat(4) {
             click(R.string.away_add)
             compose.waitForIdle()
         }
-        field(text(R.string.away_from, 4)).performScrollTo().performTextReplacement("not a time")
-        field(text(R.string.away_from, 4)).assertIsDisplayed()
+        session.forms.away.choose(session.forms.away.rowIds.value.last(), WeeklyAwayForm.Field.END, LocalTime.of(7, 0))
+        timeButton(text(R.string.away_until, 4)).performScrollTo().assertIsDisplayed()
 
         compose.onNodeWithText(text(R.string.action_save)).performClick()
         compose.waitForIdle()
 
-        field(text(R.string.away_from, 4)).assertIsFocused().assertIsDisplayed()
+        timeButton(text(R.string.away_until, 4)).assertIsFocused().assertIsDisplayed()
     }
 
     /** The text a field draws, after its mask. */
@@ -1585,6 +1786,7 @@ class SettingsScreenTest {
     fun withTwoProblemsTheFocusGoesToTheUpperOne() {
         show()
         open(SettingsPage.PLANNING)
+        click(R.string.more_settings)
         field(text(R.string.planning_margin)).performTextReplacement("lots")
         field(text(R.string.planning_minimum)).performTextReplacement("lots")
 
@@ -1603,11 +1805,20 @@ class SettingsScreenTest {
             when (page) {
                 SettingsPage.SOLAR -> click(R.string.panel_add)
                 SettingsPage.CHARGER -> click(R.string.more_settings)
+                SettingsPage.CAR_AND_HOUSE, SettingsPage.PLANNING -> {
+                    compose.assertOnlyTheLastFieldIsDone()
+                    click(R.string.more_settings)
+                }
                 SettingsPage.AWAY -> repeat(2) { click(R.string.away_add) }
                 else -> Unit
             }
             compose.waitForIdle()
-            compose.assertOnlyTheLastFieldIsDone()
+            if (page == SettingsPage.AWAY) {
+                // its times are chosen on the picker, not typed
+                compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+            } else {
+                compose.assertOnlyTheLastFieldIsDone()
+            }
             session.back()
             session.discard()
             compose.waitForIdle()

@@ -59,9 +59,9 @@ import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
-import nl.enadeag.carchargeplanner.android.ui.home.DISTANCE_UNIT
+import nl.enadeag.carchargeplanner.android.ui.components.DISTANCE_UNIT
 import nl.enadeag.carchargeplanner.android.ui.home.HomeScreen
-import nl.enadeag.carchargeplanner.android.ui.home.clockOf
+import nl.enadeag.carchargeplanner.android.ui.components.clockOf
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.trip.Trip

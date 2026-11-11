@@ -50,8 +50,6 @@ internal enum class FieldKind(val keyboard: KeyboardType) {
     DECIMAL(KeyboardType.Decimal),
     /** A number that may be below 0, such as a longitude; the field has a minus key, which a number pad may lack. */
     SIGNED(KeyboardType.Decimal),
-    /** A time of day such as 07:30, whose colon a number pad lacks. */
-    TIME(KeyboardType.Ascii),
     /** Any text, such as a place's name. */
     TEXT(KeyboardType.Text),
     /** A server's address, such as https://example.org, on a keyboard with its slashes and dots. */
@@ -101,30 +99,21 @@ internal fun rememberFieldFocus(problems: ProblemFocus?, order: Int, hasProblem:
     return focus
 }
 
+/** The unit of a distance the owner types, after it in its field; kilometres only, as the app has no miles yet. */
+internal const val DISTANCE_UNIT = "km"
+
 /**
- * @param hint what to enter, with the unit and the usual range
+ * @param hint what to enter, with the unit and the usual range, unless [suffix] gives the unit
  * @param kind what it takes; [FieldKind.SIGNED] adds a key for the minus
  * @param imeAction the keyboard's action key: Next moves on to the next field; Done, on a page's last, closes the
  *     keyboard
+ * @param suffix the unit after what is typed, which a screen reader reads with it, such as "km"; null for none
  */
 @Composable
 internal fun NumberField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
     problem: FieldProblem?, typical: Boolean = false, focus: FocusRequester = remember { FocusRequester() },
-    imeAction: ImeAction = ImeAction.Next) {
-    EntryField(label, hint, text, onEdit, kind, problem, typical, focus, imeAction = imeAction)
-}
-
-/**
- * A time field, such as 08:00, as hours and minutes on a 24-hour clock.
- *
- * @param imeAction the keyboard's action key: Next moves on to the next field; Done, on a page's last, closes the
- *     keyboard
- */
-@Composable
-internal fun TimeField(label: String, text: String, onEdit: (String) -> Unit, problem: FieldProblem?,
-    focus: FocusRequester = remember { FocusRequester() }, imeAction: ImeAction = ImeAction.Next) {
-    EntryField(label, stringResource(R.string.time_hint), text, onEdit, FieldKind.TIME, problem, false, focus,
-        imeAction = imeAction)
+    imeAction: ImeAction = ImeAction.Next, suffix: String? = null) {
+    EntryField(label, hint, text, onEdit, kind, problem, typical, focus, imeAction = imeAction, suffix = suffix)
 }
 
 /**
@@ -138,7 +127,7 @@ internal fun TimeField(label: String, text: String, onEdit: (String) -> Unit, pr
 internal fun EntryField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
     problem: FieldProblem?, typical: Boolean, focus: FocusRequester, modifier: Modifier = Modifier,
     imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null, announceProblem: Boolean = false,
-    readOnly: Boolean = false, placeholder: String? = null) {
+    readOnly: Boolean = false, placeholder: String? = null, suffix: String? = null) {
     val problemSentence = problem?.let { problemText(it) }
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
@@ -146,6 +135,7 @@ internal fun EntryField(label: String, hint: String, text: String, onEdit: (Stri
             onValueChange = onEdit,
             label = { Text(label) },
             placeholder = placeholder?.let { shown -> { Text(shown) } },
+            suffix = suffix?.let { unit -> { Text(unit) } },
             singleLine = true,
             readOnly = readOnly,
             isError = problem != null,

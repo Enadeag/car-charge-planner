@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.time.Duration
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.ChargerForm
@@ -33,6 +34,7 @@ import nl.enadeag.carchargeplanner.android.form.PlanningForm
 import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
+import nl.enadeag.carchargeplanner.android.ui.components.ChoiceMenu
 import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
 import nl.enadeag.carchargeplanner.android.ui.components.Fold
@@ -41,7 +43,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.SectionHeading
-import nl.enadeag.carchargeplanner.android.ui.components.TimeField
+import nl.enadeag.carchargeplanner.android.ui.components.TimeChoice
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
 import nl.enadeag.carchargeplanner.android.ui.setup.AwayPeriods
 import nl.enadeag.carchargeplanner.android.ui.setup.CarStep
@@ -53,6 +55,7 @@ import nl.enadeag.carchargeplanner.android.ui.setup.PanelArrayFields
 import nl.enadeag.carchargeplanner.android.ui.setup.UseTypical
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice
+import nl.enadeag.carchargeplanner.engine.config.NotifyLeadChoices
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
@@ -178,9 +181,8 @@ internal fun LocationPage(session: SettingsSession, edits: Edits, problems: Prob
 }
 
 /**
- * The car with "I don't know", then the house's use with its own, folded under "More settings". The fold starts
- * closed; a problem in the house's use opens it, and it stays open after the problem is put right, so the field being
- * corrected does not fold away. The car's last field has the keyboard's Done while the fold is closed.
+ * The car as in set-up, with the house's use and its own "I don't know" after the trip surcharge under the car's "More
+ * settings"; a problem in the house's use opens the fold as one in the trip surcharge does.
  *
  * @param problems the page's fields in order, for the focus after Save
  */
@@ -189,16 +191,8 @@ internal fun CarAndHousePage(car: CarForm, house: HouseForm, edits: Edits, probl
     val shown by house.problems.collectAsStateWithLifecycle()
     val baseload = HouseForm.Field.BASELOAD
     val problem = baseload in shown
-    var folded by rememberSaveable { mutableStateOf(true) }
-    LaunchedEffect(problem) {
-        if (problem) {
-            folded = false
-        }
-    }
-    val open = !folded || problem
     SectionHeading(stringResource(R.string.settings_car_heading))
-    CarStep(car, edits, problems, if (open) ImeAction.Next else ImeAction.Done)
-    Fold(stringResource(R.string.more_settings), open, { opened -> if (!problem) folded = !opened }) {
+    CarStep(car, edits, problems, problem) {
         NumberField(stringResource(R.string.household_use), stringResource(R.string.household_use_hint),
             edits.shown { house.text(baseload) }, { text -> edits.make { house.edit(baseload, text) } },
             FieldKind.DECIMAL, shown[baseload], baseload in edits.shown { house.typical() },
@@ -229,38 +223,66 @@ internal fun AwayPage(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus
 }
 
 /**
- * The planning preferences: the charge levels and the margin in %, the import tolerance in kWh, the shortest charge
- * window and the notification's lead in minutes, and the charging hours as times typed, not on a dial.
+ * The planning preferences: the charge levels in %, the charging hours, each chosen on the time picker, and the
+ * notification's lead, chosen from a few, then folded under "More settings" the margin in %, the import tolerance in
+ * kWh and the shortest charge window in minutes. A stored lead that is none of the few is offered too while it is the
+ * one chosen. The fold starts closed; a problem in one of its fields opens it and keeps it open, also after the problem
+ * is put right, while a press on its row does nothing meanwhile. Only the page's last field has the keyboard's Done:
+ * the target while the fold is closed, else the shortest window.
  *
  * @param problems the page's fields in order, for the focus after Save
  */
 @Composable
 internal fun PlanningPage(planning: PlanningForm, edits: Edits, problems: ProblemFocus) {
     val shown by planning.problems.collectAsStateWithLifecycle()
-    listOf(
-        Triple(PlanningForm.Field.MINIMUM_CHARGE, R.string.planning_minimum to R.string.planning_minimum_hint,
-            FieldKind.DECIMAL),
-        Triple(PlanningForm.Field.TARGET_CHARGE, R.string.planning_target to R.string.planning_target_hint,
-            FieldKind.DECIMAL),
-        Triple(PlanningForm.Field.MARGIN, R.string.planning_margin to R.string.planning_margin_hint, FieldKind.DECIMAL),
-        Triple(PlanningForm.Field.IMPORT_TOLERANCE, R.string.planning_tolerance to R.string.planning_tolerance_hint,
-            FieldKind.DECIMAL),
-        Triple(PlanningForm.Field.MINIMUM_WINDOW, R.string.planning_min_window to R.string.planning_min_window_hint,
-            FieldKind.WHOLE),
-        Triple(PlanningForm.Field.NOTIFY_LEAD, R.string.planning_lead to R.string.planning_lead_hint,
-            FieldKind.WHOLE),
-    ).forEachIndexed { order, (field, texts, kind) ->
-        NumberField(stringResource(texts.first), stringResource(texts.second), edits.shown { planning.text(field) },
-            { text -> edits.make { planning.edit(field, text) } }, kind, shown[field],
-            focus = rememberFieldFocus(problems, order, field in shown))
+    val folded = listOf(PlanningForm.Field.MARGIN, PlanningForm.Field.IMPORT_TOLERANCE,
+        PlanningForm.Field.MINIMUM_WINDOW)
+    val problem = folded.any { it in shown }
+    var closed by rememberSaveable { mutableStateOf(true) }
+    LaunchedEffect(problem) {
+        if (problem) {
+            closed = false
+        }
     }
+    val open = !closed || problem
+    @Composable
+    fun typed(field: PlanningForm.Field, label: Int, hint: Int, kind: FieldKind, order: Int, imeAction: ImeAction) {
+        NumberField(stringResource(label), stringResource(hint), edits.shown { planning.text(field) },
+            { text -> edits.make { planning.edit(field, text) } }, kind, shown[field],
+            focus = rememberFieldFocus(problems, order, field in shown), imeAction = imeAction)
+    }
+    typed(PlanningForm.Field.MINIMUM_CHARGE, R.string.planning_minimum, R.string.planning_minimum_hint,
+        FieldKind.DECIMAL, 0, ImeAction.Next)
+    typed(PlanningForm.Field.TARGET_CHARGE, R.string.planning_target, R.string.planning_target_hint,
+        FieldKind.DECIMAL, 1, if (open) ImeAction.Next else ImeAction.Done)
     SectionHeading(stringResource(R.string.planning_hours_heading))
     Text(stringResource(R.string.planning_hours_intro))
     listOf(PlanningForm.Field.CHARGING_START to R.string.planning_hours_from,
         PlanningForm.Field.CHARGING_END to R.string.planning_hours_until).forEachIndexed { place, (field, label) ->
-        TimeField(stringResource(label), edits.shown { planning.text(field) },
-            { text -> edits.make { planning.edit(field, text) } }, shown[field],
-            rememberFieldFocus(problems, 10 + place, field in shown),
-            if (field == PlanningForm.Field.CHARGING_END) ImeAction.Done else ImeAction.Next)
+        TimeChoice(stringResource(label), edits.shown { planning.time(field) }, shown[field],
+            rememberFieldFocus(problems, 2 + place, field in shown)) { time ->
+            edits.make { planning.choose(field, time) }
+        }
+    }
+    val lead = edits.shown { planning.lead() }
+    ChoiceMenu(stringResource(R.string.planning_lead), lead?.let { NotifyLeadChoices.offered(it) }
+        ?: NotifyLeadChoices.STANDARD, lead, { leadName(it) }, { chosen -> edits.make { planning.choose(chosen) } },
+        shown[PlanningForm.Field.NOTIFY_LEAD],
+        rememberFieldFocus(problems, 4, PlanningForm.Field.NOTIFY_LEAD in shown),
+        hint = stringResource(R.string.planning_lead_hint))
+    Fold(stringResource(R.string.more_settings), open, { opened -> if (!problem) closed = !opened }) {
+        typed(PlanningForm.Field.MARGIN, R.string.planning_margin, R.string.planning_margin_hint, FieldKind.DECIMAL,
+            5, ImeAction.Next)
+        typed(PlanningForm.Field.IMPORT_TOLERANCE, R.string.planning_tolerance, R.string.planning_tolerance_hint,
+            FieldKind.DECIMAL, 6, ImeAction.Next)
+        typed(PlanningForm.Field.MINIMUM_WINDOW, R.string.planning_min_window, R.string.planning_min_window_hint,
+            FieldKind.WHOLE, 7, ImeAction.Done)
     }
 }
+
+/**
+ * @return "At the start" for 0, otherwise such as "20 minutes ahead"
+ */
+@Composable
+internal fun leadName(lead: Duration): String = if (lead.isZero) stringResource(R.string.planning_lead_at_start)
+    else lead.toMinutes().toInt().let { pluralStringResource(R.plurals.planning_lead_ahead, it, it) }

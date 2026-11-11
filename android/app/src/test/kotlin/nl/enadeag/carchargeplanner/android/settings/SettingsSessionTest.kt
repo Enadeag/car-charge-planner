@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.android.settings
 
 import androidx.lifecycle.SavedStateHandle
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Locale
 import kotlinx.coroutines.CompletableDeferred
@@ -508,7 +509,7 @@ class SettingsSessionTest {
                     forms.forecast.chooseFallback(openMeteo)
                     forms.forecast.edit(openMeteo, "base_url", "https://example.org")
                 }
-                SettingsPage.AWAY -> forms.away.edit(forms.away.add(), WeeklyAwayForm.Field.START, "08:00")
+                SettingsPage.AWAY -> forms.away.choose(forms.away.add(), WeeklyAwayForm.Field.START, LocalTime.of(9, 0))
                 SettingsPage.PLANNING -> forms.planning.edit(PlanningForm.Field.MARGIN, "50")
             }
             session.back()
