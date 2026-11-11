@@ -63,7 +63,7 @@ final class PanelArrayCard {
     private final CardView card;
     private OptionalDouble storedTilt = OptionalDouble.empty();
     private OptionalDouble storedDirection = OptionalDouble.empty();
-    /** The stored peak power while the array is kept as one; null for an array of panels or a new one. */
+    /** Null for an array of panels or a new one. */
     private PanelSize.Peak kept;
 
     /**

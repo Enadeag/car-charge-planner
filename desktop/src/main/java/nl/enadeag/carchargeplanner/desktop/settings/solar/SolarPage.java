@@ -120,7 +120,6 @@ public final class SolarPage implements ConfigPage {
         return cards.stream().map(PanelArrayCard::showProblems).toList().contains(true);
     }
 
-    /** One more array, empty but for the typical losses, tagged as such until the owner enters their own. */
     private void addArray() {
         newCard().loadNew();
         showCards();
