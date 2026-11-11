@@ -17,6 +17,7 @@ import nl.enadeag.carchargeplanner.engine.config.Car;
 import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.House;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.PlaceName;
 import nl.enadeag.carchargeplanner.engine.config.PanelSize;
@@ -437,17 +438,23 @@ class SetUpViewTest {
     }
 
     @Test
-    void theHubHoldsTheHouseAndTheAwayTimesBothOptional() throws Exception {
+    void noStepAsksForTheHousesUseAndFinishSavesTheTypicalOneTagged() throws Exception {
         var view = atSolar();
-        Fx.run(() -> view.show(SetUpStep.MORE));
-        Fx.run(() -> setUp.type(view, TextKey.FIELD_BASELOAD, "0.35"));
+        // the check and the preview ask for a forecast as they show, and ask for no value
+        for (var step : List.of(SetUpStep.values()).subList(0, SetUpStep.CHECK.ordinal())) {
+            Fx.run(() -> view.show(step));
+            assertThatThrownBy(() -> Fx.call(() -> setUp.field(view, TextKey.FIELD_HOUSEHOLD_USE)))
+                    .as("the %s step", step).hasMessageContaining("no field");
+        }
+        Fx.run(() -> view.show(SetUpStep.AWAY));
+        assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains(setUp.messages.text(TextKey.SET_UP_AWAY_HINT));
         next(view, 1);
         setUp.preview(view);
         next(view, 1);
 
         var config = stored();
-        assertThat(config.system().house().baseloadKw()).isEqualTo(0.35);
-        assertThat(config.typical().system()).doesNotContain(ConfigSetting.HOUSE_BASELOAD);
+        assertThat(config.system().house()).isEqualTo(House.TYPICAL);
+        assertThat(config.typical().system()).contains(ConfigSetting.HOUSE_BASELOAD);
         assertThat(config.away().weekly()).isEmpty();
         assertThat(config.typical().panels()).containsExactly(Set.of(ConfigSetting.PANEL_LOSSES));
     }
