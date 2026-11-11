@@ -300,6 +300,17 @@ class ConfigFileTest {
                 .hasMessage("engine.json: system.placeName: a place name must be at most 100 characters");
     }
 
+    /** A line break or a direction override would break or turn the line the name is shown on. */
+    @ParameterizedTest
+    @ValueSource(strings = {"Zonne\\ndorp", "Zonne\\u202Edorp"})
+    void aPlaceNameWithALineBreakOrADirectionCharacterIsRefused(String escaped) throws IOException {
+        var file = write(Files.readString(EXAMPLE).replace(PLACE, "\"placeName\": \"" + escaped + "\","));
+
+        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessage("engine.json: system.placeName: a place name must not hold a control, line break or"
+                        + " direction character");
+    }
+
     @Test
     void aPlaceNameThatIsNoTextIsRefused() throws IOException {
         var file = write(Files.readString(EXAMPLE).replace(PLACE, "\"placeName\": 12,"));
