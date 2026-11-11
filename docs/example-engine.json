@@ -1,11 +1,14 @@
 {
-  "version": 1,
+  "version": 2,
   "system": {
     "latitude": 51.0,
     "longitude": 5.0,
     "timezone": "Europe/Brussels",
     "panels": [
-      { "name": "South roof", "kwp": 5.0, "tiltDeg": 35, "azimuthDeg": 0, "systemLosses": 0.14 }
+      {
+        "name": "South roof", "count": 20, "wpPerPanel": 250, "yearPlaced": 2013,
+        "tiltDeg": 35, "azimuthDeg": 0, "systemLosses": 0.14
+      }
     ],
     "house": { "baseloadKw": 0.5 },
     "car": { "usableBatteryKwh": 60, "consumptionKwhPer100km": 18, "kmPerDay": 40 },

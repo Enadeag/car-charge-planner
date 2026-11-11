@@ -9,8 +9,14 @@ public enum ConfigSetting {
     LATITUDE,
     /** The longitude of the home. */
     LONGITUDE,
-    /** The size of a panel array in kWp. */
+    /** The size of a panel array in kWp, as the owner once entered it. */
     PANEL_SIZE,
+    /** The number of panels in a panel array. */
+    PANEL_COUNT,
+    /** The power of one panel of a panel array, in Wp. */
+    PANEL_POWER,
+    /** The year a panel array's panels were placed. */
+    PANEL_YEAR,
     /** The tilt of a panel array. */
     PANEL_TILT,
     /** The direction a panel array faces. */

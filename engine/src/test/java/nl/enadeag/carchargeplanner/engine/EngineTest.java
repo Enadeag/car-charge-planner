@@ -349,7 +349,7 @@ class EngineTest {
 
     @Test
     void aConfigFileOfANewerVersionCannotBeUsedForThatReason() throws IOException {
-        Files.writeString(config, Files.readString(config).replace("\"version\": 1", "\"version\": 2"));
+        Files.writeString(config, Files.readString(config).replace("\"version\": 2", "\"version\": 3"));
 
         assertThat(engine(clockAt(7)).outlook()).isInstanceOfSatisfying(Outlook.ConfigUnusable.class,
                 unusable -> assertThat(unusable.kind()).isEqualTo(ConfigProblem.Kind.NEWER_VERSION));

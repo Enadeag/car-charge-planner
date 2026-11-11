@@ -17,11 +17,13 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.time.Year;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -37,6 +39,9 @@ class ConfigFileTest {
 
     private static final Path EXAMPLE = Path.of("docs", "example-engine.json");
 
+    /** The example array's size: its count, its power per panel and its year. */
+    private static final String COUNTED = "\"count\": 20, \"wpPerPanel\": 250, \"yearPlaced\": 2013,";
+
     @TempDir
     Path folder;
 
@@ -50,7 +55,9 @@ class ConfigFileTest {
 
         assertThat(config.system().location()).isEqualTo(new Coordinates(51.0, 5.0));
         assertThat(config.system().timezone()).isEqualTo(ZoneId.of("Europe/Brussels"));
-        assertThat(config.system().panels()).containsExactly(new PanelArray("South roof", 5.0, 35, 0, 0.14));
+        assertThat(config.system().panels()).containsExactly(new PanelArray("South roof",
+                new PanelSize.Panels(20, OptionalInt.of(250), Optional.of(Year.of(2013))), 35, 0, 0.14));
+        assertThat(config.system().panels().get(0).kwp()).isEqualTo(5.0);
         assertThat(config.system().charger()).isEqualTo(new Charger(Phases.ONE, 6, 16, 230, 0.9));
         assertThat(config.planning()).isEqualTo(new PlanningPreferences(new Percent(30), new Percent(80), 0.85, 0.2,
                 Duration.ofMinutes(45), Duration.ofMinutes(15)));
@@ -58,7 +65,20 @@ class ConfigFileTest {
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
-        "\"kwp\": 5.0           | \"kwhp\": 5.0          | kwp",
+        "\"count\": 20,         | \"cuont\": 20,         | cuont",
+        "\"count\": 20,         | \"count\": 0,          | count must be from 1 to 200",
+        "\"count\": 20,         | \"count\": 201,        | count must be from 1 to 200",
+        "\"count\": 20,         | \"count\": 2.5,        | system.panels[0].count: must be a whole number",
+        "\"count\": 20,         | ''                     | system.panels[0]: 'kwp' or 'count' is missing",
+        "\"count\": 20,         | \"count\": 20, \"kwp\": 5.0, | either 'kwp' or 'count'",
+        "\"count\": 20,         | \"kwp\": 5.0,          | either 'kwp' or 'count'",
+        "\"wpPerPanel\": 250,   | \"wpPerPanel\": 49,    | wpPerPanel must be from 50 to 1000",
+        "\"wpPerPanel\": 250,   | \"wpPerPanel\": 1001,  | wpPerPanel must be from 50 to 1000",
+        "\"wpPerPanel\": 250,   | \"wpPerPanel\": 250.5, | system.panels[0].wpPerPanel: must be a whole number",
+        "\"yearPlaced\": 2013,  | \"yearPlaced\": 1989,  | yearPlaced must be 1990 or later",
+        "\"yearPlaced\": 2013,  | \"yearPlaced\": 2013.5, | system.panels[0].yearPlaced: must be a whole number",
+        "\"yearPlaced\": 2013,  | \"yearPlaced\": 2000000000, | yearPlaced must be a year",
+        "\"wpPerPanel\": 250, \"yearPlaced\": 2013, | '' | yearPlaced is needed when wpPerPanel is not given",
         "\"phases\": 1,         | \"phases\": 1, \"phasse\": 3, | phasse",
         "\"phases\": 1,         | \"phases\": 2,         | phases must be 1 or 3",
         "\"phases\": 1,         | \"phases\": 0,         | phases must be 1 or 3",
@@ -92,7 +112,6 @@ class ConfigFileTest {
         "\"kmPerDay\": 40      | \"kmPerDay\": 1e400    | kmPerDay",
         "\"volts\": 230        | \"volts\": 1e400       | volts",
         "\"baseloadKw\": 0.5   | \"baseloadKw\": 1e400  | baseloadKw",
-        "\"kwp\": 5.0          | \"kwp\": 1e400         | kwp",
         "\"importToleranceKwh\": 0.2 | \"importToleranceKwh\": 1e400 | importToleranceKwh",
         "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": \"07:00\", \"end\": \"07:00\"} | planning.chargingHours: chargingHours must end at another time",
         "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": \"7am\", \"end\": \"22:00\"} | planning.chargingHours.start",
@@ -144,10 +163,71 @@ class ConfigFileTest {
 
     @Test
     void aWrongValueIsNamedByItsWholePlaceInTheFile() throws IOException {
-        var file = write(Files.readString(EXAMPLE).replace("\"kwp\": 5.0", "\"kwp\": 0"));
+        var file = write(Files.readString(EXAMPLE).replace(COUNTED, "\"kwp\": 0,"));
 
         assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessage("engine.json: system.panels[0]: kwp must be more than 0");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\"kwp\": \"x\",", "\"kwp\": 1e400,", "\"kwp\": -1,"})
+    void aWrongPeakPowerIsRefused(String kwp) throws IOException {
+        var file = write(Files.readString(EXAMPLE).replace(COUNTED, kwp));
+
+        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+                .hasMessageContaining("system.panels[0]").hasMessageContaining("kwp");
+    }
+
+    /** Version 1 knew only the peak power; such a file is read as it is, and written back as version 2. */
+    @Test
+    void aVersionOneFileWithThePeakPowerIsStillRead() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace("\"version\": 2", "\"version\": 1")
+                .replace(COUNTED, "\"kwp\": 4.2,"));
+
+        var config = new ConfigFile(file, FILES).read();
+
+        assertThat(config.system().panels().get(0).size()).isEqualTo(new PanelSize.Peak(4.2));
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        copy.write(config);
+        var written = StoredJson.parse(Files.readString(folder.resolve("copy.json")));
+        assertThat(written.path("version").intValue()).isEqualTo(2);
+        assertThat(written.path("system").path("panels").path(0).path("kwp").doubleValue()).isEqualTo(4.2);
+        assertThat(written.path("system").path("panels").path(0).has("count")).isFalse();
+        assertThat(copy.read()).isEqualTo(config);
+    }
+
+    /** An empty power per panel is not stored: the engine estimates it from the year. */
+    @Test
+    void anArrayWithoutThePowerPerPanelKeepsOnlyTheCountAndTheYear() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace(COUNTED, "\"count\": 10, \"yearPlaced\": 2021,"));
+
+        var config = new ConfigFile(file, FILES).read();
+
+        assertThat(config.system().panels().get(0).kwp()).isEqualTo(3.6);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        copy.write(config);
+        var array = StoredJson.parse(Files.readString(folder.resolve("copy.json"))).path("system").path("panels")
+                .path(0);
+        assertThat(List.copyOf(array.propertyNames()))
+                .containsExactly("name", "count", "yearPlaced", "tiltDeg", "azimuthDeg", "systemLosses");
+        assertThat(copy.read()).isEqualTo(config);
+    }
+
+    @Test
+    void anArrayWithThePowerPerPanelMayLeaveOutTheYear() throws IOException, ConfigProblem {
+        var file = write(Files.readString(EXAMPLE).replace(COUNTED, "\"count\": 12, \"wpPerPanel\": 410,"));
+
+        var config = new ConfigFile(file, FILES).read();
+
+        assertThat(config.system().panels().get(0).size())
+                .isEqualTo(new PanelSize.Panels(12, OptionalInt.of(410), Optional.empty()));
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        copy.write(config);
+        var array = StoredJson.parse(Files.readString(folder.resolve("copy.json"))).path("system").path("panels")
+                .path(0);
+        assertThat(array.has("yearPlaced")).isFalse();
+        assertThat(array.path("wpPerPanel").intValue()).isEqualTo(410);
+        assertThat(copy.read()).isEqualTo(config);
     }
 
     @Test
@@ -241,7 +321,7 @@ class ConfigFileTest {
         }
         var written = StoredJson.parse(Files.readString(folder.resolve("copy.json")));
         assertThat(written.has("calendar")).isFalse();
-        assertThat(written.path("version").intValue()).isEqualTo(1);
+        assertThat(written.path("version").intValue()).isEqualTo(2);
     }
 
     @Test
@@ -414,19 +494,19 @@ class ConfigFileTest {
     }
 
     @Test
-    void aWrittenFileHasVersionOneFirst() throws IOException, ConfigProblem {
+    void aWrittenFileHasVersionTwoFirst() throws IOException, ConfigProblem {
         var path = folder.resolve("engine.json");
         new ConfigFile(path, FILES).write(new ConfigFile(EXAMPLE, FILES).read());
 
         var written = StoredJson.parse(Files.readString(path));
         assertThat(List.copyOf(written.propertyNames())).startsWith("version", "system");
-        assertThat(written.path("version").intValue()).isEqualTo(1);
+        assertThat(written.path("version").intValue()).isEqualTo(2);
         assertThat(new ConfigFile(path, FILES).read()).isEqualTo(new ConfigFile(EXAMPLE, FILES).read());
     }
 
     @Test
     void aFileOfANewerVersionIsRefusedAsWrittenByANewerApp() throws IOException {
-        var file = write(Files.readString(EXAMPLE).replace("\"version\": 1", "\"version\": 2"));
+        var file = write(Files.readString(EXAMPLE).replace("\"version\": 2", "\"version\": 3"));
 
         assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOfSatisfying(ConfigProblem.class,
                 problem -> {
@@ -452,7 +532,7 @@ class ConfigFileTest {
 
     @Test
     void aFileOfANewerVersionIsNotSetAsideAndStaysUnusableForThatReason() throws IOException {
-        var file = write(Files.readString(EXAMPLE).replace("\"version\": 1", "\"version\": 2"));
+        var file = write(Files.readString(EXAMPLE).replace("\"version\": 2", "\"version\": 3"));
         var config = new ConfigFile(file, FILES);
 
         assertThatThrownBy(config::setAside).isInstanceOf(IOException.class)
@@ -463,7 +543,7 @@ class ConfigFileTest {
 
     @Test
     void aFileOfANewerVersionIsNotWrittenOver() throws IOException, ConfigProblem {
-        var newer = Files.readString(EXAMPLE).replace("\"version\": 1", "\"version\": 2");
+        var newer = Files.readString(EXAMPLE).replace("\"version\": 2", "\"version\": 3");
         var file = write(newer);
 
         assertThatThrownBy(() -> new ConfigFile(file, FILES).write(new ConfigFile(EXAMPLE, FILES).read()))
@@ -474,7 +554,7 @@ class ConfigFileTest {
 
     @Test
     void anUnknownNameIsStillRefusedBesideTheVersion() throws IOException {
-        var file = write(Files.readString(EXAMPLE).replaceFirst("\\{", "{\"version\": 1, \"extra\": 1,"));
+        var file = write(Files.readString(EXAMPLE).replaceFirst("\\{", "{\"version\": 2, \"extra\": 1,"));
 
         assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining("unknown setting 'extra'");
