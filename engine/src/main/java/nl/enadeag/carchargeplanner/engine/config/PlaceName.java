@@ -71,9 +71,9 @@ public record PlaceName(String text) {
 
     private static boolean isRefused(int c) {
         return Character.getType(c) == Character.CONTROL
-                || c == ' ' || c == ' '
-                || c == '‎' || c == '‏' || c == '؜'
-                || c >= '‪' && c <= '‮'
-                || c >= '⁦' && c <= '⁩';
+                || c == 0x2028 || c == 0x2029
+                || c == 0x200E || c == 0x200F || c == 0x061C
+                || c >= 0x202A && c <= 0x202E
+                || c >= 0x2066 && c <= 0x2069;
     }
 }
