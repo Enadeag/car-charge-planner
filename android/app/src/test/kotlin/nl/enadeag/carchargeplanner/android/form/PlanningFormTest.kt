@@ -124,12 +124,22 @@ class PlanningFormTest {
     fun aTypedTextAnOlderVersionKeptThatIsNoTimeOrLeadShowsTheStandardHoursAndAsksForALead() {
         form.load(stored)
         form.edit(PlanningForm.Field.CHARGING_START, "7 uur")
+        form.edit(PlanningForm.Field.CHARGING_END, "10 pm")
         form.edit(PlanningForm.Field.NOTIFY_LEAD, "soon")
 
         assertThat(form.time(PlanningForm.Field.CHARGING_START)).isEqualTo(ChargingHours.STANDARD.start())
+        assertThat(form.time(PlanningForm.Field.CHARGING_END)).isEqualTo(ChargingHours.STANDARD.end())
         assertThat(form.lead()).isNull()
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
             PlanningForm.Field.NOTIFY_LEAD to FieldProblem.NotANumber))
+    }
+
+    @Test
+    fun aKeptNegativeLeadIsNoLead() {
+        form.load(stored)
+        form.edit(PlanningForm.Field.NOTIFY_LEAD, "-5")
+
+        assertThat(form.lead()).isNull()
     }
 }

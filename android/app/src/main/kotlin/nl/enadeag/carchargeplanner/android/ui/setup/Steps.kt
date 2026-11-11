@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +38,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.TimeChoice
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
+import nl.enadeag.carchargeplanner.android.ui.components.rememberProblemFold
 import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice
 import nl.enadeag.carchargeplanner.engine.config.CompassPoint
 import nl.enadeag.carchargeplanner.engine.config.Phases
@@ -167,13 +167,8 @@ internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, foldedP
     val shown by car.problems.collectAsStateWithLifecycle()
     val typical = edits.shown { car.typical() }
     val problem = CarForm.Field.TRIP_SURCHARGE in shown || foldedProblem
-    var folded by rememberSaveable { mutableStateOf(true) }
-    LaunchedEffect(problem) {
-        if (problem) {
-            folded = false
-        }
-    }
-    val open = !folded || problem
+    val fold = rememberProblemFold(problem)
+    val open = fold.open
     @Composable
     fun typed(field: CarForm.Field, label: Int, hint: Int, order: Int, imeAction: ImeAction, suffix: String? = null) {
         NumberField(stringResource(label), stringResource(hint), edits.shown { car.text(field) },
@@ -185,7 +180,7 @@ internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, foldedP
     typed(CarForm.Field.DAILY_DISTANCE, R.string.car_daily_distance, R.string.car_daily_distance_hint, 2,
         if (open) ImeAction.Next else ImeAction.Done, DISTANCE_UNIT)
     UseTypical { edits.make { car.useTypical() } }
-    Fold(stringResource(R.string.more_settings), open, { opened -> if (!problem) folded = !opened }) {
+    Fold(stringResource(R.string.more_settings), fold) {
         typed(CarForm.Field.TRIP_SURCHARGE, R.string.car_trip_surcharge, R.string.car_trip_surcharge_hint, 3,
             if (more == null) ImeAction.Done else ImeAction.Next)
         more?.invoke()
@@ -207,13 +202,7 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
     val typical = edits.shown { charger.typical() }
     val power = edits.shown { charger.power() }
     val problem = (shown.keys - ChargerForm.Field.POWER).isNotEmpty()
-    var folded by rememberSaveable { mutableStateOf(power != ChargePowerChoice.OTHER) }
-    LaunchedEffect(problem) {
-        if (problem) {
-            folded = false
-        }
-    }
-    val open = !folded || problem
+    val fold = rememberProblemFold(problem, startFolded = power != ChargePowerChoice.OTHER)
     ChoiceMenu(stringResource(R.string.charge_power), ChargePowerChoice.entries, power,
         { stringResource(chargePowerName(it)) },
         { choice ->
@@ -222,12 +211,12 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
                 edits.make { charger.choose(chosen) }
             } else {
                 edits.make { charger.chooseOther() }
-                folded = false
+                fold.unfold()
             }
         }, shown[ChargerForm.Field.POWER],
         rememberFieldFocus(problems, 0, ChargerForm.Field.POWER in shown),
         hint = stringResource(R.string.charge_power_hint))
-    Fold(stringResource(R.string.more_settings), open, { opened -> if (!problem) folded = !opened }) {
+    Fold(stringResource(R.string.more_settings), fold) {
         ChoiceRow(stringResource(R.string.charger_phases), stringResource(R.string.charger_phases_hint),
             Phases.entries, edits.shown { charger.phases() },
             { stringResource(if (it == Phases.ONE) R.string.phases_one else R.string.phases_three) },

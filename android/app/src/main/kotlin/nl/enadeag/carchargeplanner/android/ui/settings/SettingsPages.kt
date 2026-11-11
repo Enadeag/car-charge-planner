@@ -5,13 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
@@ -45,6 +41,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.SectionHeading
 import nl.enadeag.carchargeplanner.android.ui.components.TimeChoice
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
+import nl.enadeag.carchargeplanner.android.ui.components.rememberProblemFold
 import nl.enadeag.carchargeplanner.android.ui.setup.AwayPeriods
 import nl.enadeag.carchargeplanner.android.ui.setup.CarStep
 import nl.enadeag.carchargeplanner.android.ui.setup.ChargerStep
@@ -238,13 +235,8 @@ internal fun PlanningPage(planning: PlanningForm, edits: Edits, problems: Proble
     val folded = listOf(PlanningForm.Field.MARGIN, PlanningForm.Field.IMPORT_TOLERANCE,
         PlanningForm.Field.MINIMUM_WINDOW)
     val problem = folded.any { it in shown }
-    var closed by rememberSaveable { mutableStateOf(true) }
-    LaunchedEffect(problem) {
-        if (problem) {
-            closed = false
-        }
-    }
-    val open = !closed || problem
+    val fold = rememberProblemFold(problem)
+    val open = fold.open
     @Composable
     fun typed(field: PlanningForm.Field, label: Int, hint: Int, kind: FieldKind, order: Int, imeAction: ImeAction) {
         NumberField(stringResource(label), stringResource(hint), edits.shown { planning.text(field) },
@@ -270,7 +262,7 @@ internal fun PlanningPage(planning: PlanningForm, edits: Edits, problems: Proble
         shown[PlanningForm.Field.NOTIFY_LEAD],
         rememberFieldFocus(problems, 4, PlanningForm.Field.NOTIFY_LEAD in shown),
         hint = stringResource(R.string.planning_lead_hint))
-    Fold(stringResource(R.string.more_settings), open, { opened -> if (!problem) closed = !opened }) {
+    Fold(stringResource(R.string.more_settings), fold) {
         typed(PlanningForm.Field.MARGIN, R.string.planning_margin, R.string.planning_margin_hint, FieldKind.DECIMAL,
             5, ImeAction.Next)
         typed(PlanningForm.Field.IMPORT_TOLERANCE, R.string.planning_tolerance, R.string.planning_tolerance_hint,

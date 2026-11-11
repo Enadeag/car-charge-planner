@@ -64,7 +64,9 @@ class WeeklyAwayFormTest {
         form.choose(row, WeeklyAwayForm.Field.START, LocalTime.of(6, 0))
         assertThat(form.isEdited()).isFalse()
 
+        handle["away.$row.text.START"] = "six"
         handle["away.$row.text.END"] = "seven"
+        assertThat(form.time(row, WeeklyAwayForm.Field.START)).isEqualTo(LocalTime.of(8, 0))
         assertThat(form.time(row, WeeklyAwayForm.Field.END)).isEqualTo(LocalTime.of(17, 0))
     }
 

@@ -83,10 +83,11 @@ internal fun TimeButton(name: String, time: String, focus: FocusRequester, probl
 /**
  * A time the owner chooses on a form, such as a start of the charging hours: its [TimeButton], which shows the time on
  * the phone's 12- or 24-hour clock and opens the [TimeDialog], and under it the problem that Next or Save found,
- * which a screen reader reads with the button. The focus comes back to the button when the picker closes, once the page's
- * window has it again.
+ * which a screen reader reads with the button. The focus comes back to the button when the picker closes, once the
+ * page's window has it again.
  *
  * @param label what it is, such as "Start charging from": the button's name and the picker's title
+ * @param time the time chosen now, shown on the button and where the picker starts
  * @param problem the problem it shows; null for none
  * @param focus moves the focus to the button, as to the first problem after Next or Save
  * @param onChoose gets the time on the picker's OK

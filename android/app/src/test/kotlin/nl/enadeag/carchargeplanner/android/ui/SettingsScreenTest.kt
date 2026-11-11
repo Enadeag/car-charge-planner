@@ -512,7 +512,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun aProblemInAFoldedPlanningFieldOpensTheFoldAndTakesTheFocus() {
+    fun aProblemInAFoldedPlanningFieldOpensTheFoldTakesTheFocusAndKeepsItOpenAfterItIsPutRight() {
         show()
         open(SettingsPage.PLANNING)
         click(R.string.more_settings)
@@ -528,6 +528,12 @@ class SettingsScreenTest {
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_out_of_range)))
         click(R.string.more_settings)
         foldIs(R.string.fold_expanded)
+
+        field(text(R.string.planning_min_window)).performTextReplacement("30")
+        compose.waitForIdle()
+        foldIs(R.string.fold_expanded)
+        click(R.string.more_settings)
+        foldIs(R.string.fold_collapsed)
     }
 
     @Test
