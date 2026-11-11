@@ -68,11 +68,7 @@ public final class PlanningPage implements ConfigPage {
         importTolerance = new NumberInput(new NumberRange(0, 100, 0.05, 2), "kWh", messages);
         minWindow = new NumberInput(MINUTES, messages.text(TextKey.UNIT_MINUTES), messages);
         notifyLead = new ChoiceInput<>(NotifyLeadChoices.STANDARD, new ChoiceNames(messages)::notifyLead);
-        notifyLead.onChange(() -> {
-            if (notifyLead.value() != null) {
-                notifyLead.offer(NotifyLeadChoices.offered(notifyLead.value()));
-            }
-        });
+        notifyLead.onChange(() -> notifyLead.offer(NotifyLeadChoices.offered(notifyLead.value())));
         chargingHours = new TimeSpanInput(messages.text(TextKey.CHARGING_HOURS_AND),
                 messages.text(TextKey.CHARGING_HOURS_END_FIELD));
         more = new Fold(messages.text(TextKey.MORE_SETTINGS),
@@ -93,8 +89,8 @@ public final class PlanningPage implements ConfigPage {
                     row(ConfigSetting.CHARGING_HOURS, TextKey.FIELD_CHARGING_HOURS, TextKey.FIELD_CHARGING_HOURS_HINT,
                             chargingHours)),
             new CardView(messages.text(TextKey.CARD_NOTIFICATIONS), messages.text(TextKey.CARD_NOTIFICATIONS_HINT),
-                    row(ConfigSetting.NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD_HINT,
-                            notifyLead)),
+                    new FieldRow(messages.text(TextKey.FIELD_NOTIFY_LEAD),
+                            messages.text(TextKey.FIELD_NOTIFY_LEAD_HINT), notifyLead)),
             moreCard
         };
     }
@@ -165,7 +161,7 @@ public final class PlanningPage implements ConfigPage {
     /** The preferences as entered, after their records checked them; a refused value goes to {@code refused}. */
     private Optional<PlanningPreferences> planning(Consumer<PlanningEntry.Checked.Refused> refused) {
         var entry = new PlanningEntry(minimum.value(), target.value(), margin.value(), importTolerance.value(),
-                minWindow.value(), notifyLead.value().toMinutes(), chargingHours.startText(), chargingHours.endText());
+                minWindow.value(), notifyLead.value(), chargingHours.startText(), chargingHours.endText());
         return switch (entry.check(messages)) {
             case PlanningEntry.Checked.Accepted accepted -> Optional.of(accepted.planning());
             case PlanningEntry.Checked.Refused problem -> {

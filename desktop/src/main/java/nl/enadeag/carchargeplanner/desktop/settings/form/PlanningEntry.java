@@ -10,20 +10,31 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.time.Duration;
 
 /**
- * The planning preferences as their page shows them: the margin as a percentage, the durations in minutes, the
- * charging hours as typed.
+ * The planning preferences as their page shows them: the margin as a percentage, the shortest window in minutes, the
+ * lead as one of its choices, the charging hours as typed.
  *
  * @param minimumPct the minimum charge level, in %
  * @param targetPct the target charge level, in %
  * @param marginPct the share of the forecast surplus to count on, in %
  * @param importToleranceKwh the grid energy a charge window may take, in kWh
  * @param minWindowMinutes the shortest charge window, in minutes
- * @param notifyLeadMinutes how long before a charge window the owner is told, in minutes
+ * @param notifyLead how long before a charge window the owner is told, in whole minutes, 0 or more
  * @param chargingStart the start of the charging hours as typed, such as "07:00"
  * @param chargingEnd the end of the charging hours as typed, such as "22:00"
  */
 public record PlanningEntry(double minimumPct, double targetPct, double marginPct, double importToleranceKwh,
-        double minWindowMinutes, double notifyLeadMinutes, String chargingStart, String chargingEnd) {
+        double minWindowMinutes, Duration notifyLead, String chargingStart, String chargingEnd) {
+
+    /**
+     * Checks the lead, which comes from a choice and so never has a problem to show.
+     *
+     * @throws IllegalArgumentException when {@code notifyLead} is negative or not whole minutes
+     */
+    public PlanningEntry {
+        if (notifyLead.isNegative() || notifyLead.toSecondsPart() != 0 || notifyLead.toNanosPart() != 0) {
+            throw new IllegalArgumentException("notifyLead must be whole minutes, 0 or more, not " + notifyLead);
+        }
+    }
 
     /** The preferences as entered, or what is wrong with them. */
     public sealed interface Checked {
@@ -55,12 +66,12 @@ public record PlanningEntry(double minimumPct, double targetPct, double marginPc
     public static PlanningEntry of(PlanningPreferences planning) {
         var hours = planning.chargingHours();
         return new PlanningEntry(planning.minimumPct().value(), planning.targetPct().value(), planning.margin() * 100,
-                planning.importToleranceKwh(), planning.minWindow().toMinutes(), planning.notifyLead().toMinutes(),
+                planning.importToleranceKwh(), planning.minWindow().toMinutes(), planning.notifyLead(),
                 TimeText.write(hours.start()), TimeText.write(hours.end()));
     }
 
     /**
-     * Has the preferences' records check the entry, with the durations rounded to whole minutes.
+     * Has the preferences' records check the entry, with the shortest window rounded to whole minutes.
      *
      * @param messages the texts, in the owner's language
      * @return the preferences, or the problem and the field that shows it
@@ -75,7 +86,7 @@ public record PlanningEntry(double minimumPct, double targetPct, double marginPc
         try {
             return new Checked.Accepted(new PlanningPreferences(new Percent(minimumPct), new Percent(targetPct),
                     marginPct / 100, importToleranceKwh, Duration.ofMinutes(Math.round(minWindowMinutes)),
-                    Duration.ofMinutes(Math.round(notifyLeadMinutes)), new ChargingHours(start.get(), end.get())));
+                    notifyLead, new ChargingHours(start.get(), end.get())));
         } catch (InvalidSetting e) {
             return new Checked.Refused(e.setting(), ProblemTexts.of(e.rule(), messages));
         }

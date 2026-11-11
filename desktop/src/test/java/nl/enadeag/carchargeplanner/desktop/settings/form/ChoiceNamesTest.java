@@ -59,6 +59,8 @@ class ChoiceNamesTest {
         assertThat(english.notifyLead(Duration.ofMinutes(20))).isEqualTo("20 minutes ahead");
         assertThat(english.notifyLead(Duration.ofMinutes(1))).isEqualTo("1 minute ahead");
         assertThat(dutch.notifyLead(Duration.ofMinutes(1))).isEqualTo("1 minuut ervoor");
+        assertThat(english.notifyLead(Duration.ofMinutes(1440))).isEqualTo("1440 minutes ahead");
+        assertThat(dutch.notifyLead(Duration.ofMinutes(1440))).isEqualTo("1440 minuten ervoor");
     }
 
     @Test

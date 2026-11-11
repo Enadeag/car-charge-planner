@@ -150,6 +150,35 @@ class SettingsViewTest {
     }
 
     @Test
+    void choosingAnotherLeadIsAnEditThatClosingAsksAbout() throws Exception {
+        var view = settings.open();
+
+        Fx.run(() -> settings.choose(view, TextKey.FIELD_NOTIFY_LEAD, Duration.ofMinutes(30)));
+
+        assertThat(Fx.call(view::isChanged)).isTrue();
+        assertThat(Fx.call(() -> settings.button(view, TextKey.SETTINGS_CANCEL).getText()))
+                .isEqualTo(settings.messages.text(TextKey.SETTINGS_CANCEL));
+        Fx.run(view::cancel);
+        assertThat(settings.closed).as("asks before throwing the lead away").isZero();
+    }
+
+    @Test
+    void choosingTheStoredLeadAgainLeavesNothingToSave() throws Exception {
+        var view = settings.open();
+
+        Fx.run(() -> {
+            settings.choose(view, TextKey.FIELD_NOTIFY_LEAD, Duration.ofMinutes(30));
+            settings.choose(view, TextKey.FIELD_NOTIFY_LEAD, Duration.ofMinutes(15));
+        });
+
+        assertThat(Fx.call(view::isChanged)).isFalse();
+        assertThat(Fx.call(() -> settings.button(view, TextKey.SETTINGS_CLOSE).getText()))
+                .isEqualTo(settings.messages.text(TextKey.SETTINGS_CLOSE));
+        Fx.run(view::cancel);
+        assertThat(settings.closed).isEqualTo(1);
+    }
+
+    @Test
     void aStoredLeadThatIsNoneOfTheChoicesShowsAsARowOfItsOwnUntilAnotherIsChosen() throws Exception {
         Files.writeString(settings.configPath, Files.readString(settings.configPath)
                 .replace("\"notifyLeadMinutes\": 15", "\"notifyLeadMinutes\": 20"));
