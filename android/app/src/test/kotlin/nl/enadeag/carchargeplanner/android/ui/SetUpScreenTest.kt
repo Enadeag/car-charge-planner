@@ -66,7 +66,10 @@ import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.ui.setup.SetUpScreen
+import nl.enadeag.carchargeplanner.engine.config.Charger
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.HomeChargePower
+import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.Place
@@ -197,6 +200,10 @@ class SetUpScreenTest {
                 fillPanels()
                 compose.assertShowsNoneOf(englishOnly)
             }
+            if (index == 4) {
+                choose(R.string.charge_power, R.string.charge_power_other)
+                compose.assertShowsNoneOf(englishOnly)
+            }
             if (index < titles.size - 1) {
                 click(R.string.action_next)
                 compose.waitForIdle()
@@ -232,6 +239,13 @@ class SetUpScreenTest {
             }
             if (step == SetUpStep.PANELS) {
                 fillPanels()
+            }
+            if (step == SetUpStep.CHARGER) {
+                click(R.string.more_settings)
+                compose.waitForIdle()
+                compose.assertScrolls()
+                compose.assertEveryControlIsNamedAndLargeEnough()
+                choose(R.string.charge_power, R.string.charge_power_11)
             }
             if (step != SetUpStep.CHECK) {
                 click(R.string.action_next)
@@ -304,6 +318,7 @@ class SetUpScreenTest {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(2) { session.next() }
         compose.waitForIdle()
         field(R.string.car_battery).performTextReplacement("sixty")
@@ -342,6 +357,7 @@ class SetUpScreenTest {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(2) { session.next() }
         compose.waitForIdle()
 
@@ -351,6 +367,73 @@ class SetUpScreenTest {
         field(R.string.car_battery).performTextReplacement("75")
         assertThat(compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,
             listOf(text(R.string.typical_mark_description)))).fetchSemanticsNodes()).hasSize(2)
+    }
+
+    private fun powerMenu() = compose.onNode(hasText(text(R.string.charge_power), substring = true)
+        and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.DropdownList))
+
+    /** Goes from the welcome to the charger step, Utrecht chosen and the panels filled in. */
+    private fun toTheChargerStep(session: SetUpSession) {
+        session.next()
+        session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
+        repeat(3) { session.next() }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun theChargerStepStartsWithChooseWithTheRestFoldedAndGoesOnOnlyOnceAPowerIsChosen() {
+        val session = show()
+        toTheChargerStep(session)
+        heading(5, R.string.setup_charger_title).assertExists()
+        powerMenu().assert(hasText(text(R.string.choose), substring = true))
+            .assert(hasText(text(R.string.charge_power_hint), substring = true))
+        field(R.string.charger_min_current).assertDoesNotExist()
+
+        click(R.string.action_next)
+        compose.waitForIdle()
+
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.CHARGER)
+        powerMenu().assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_not_chosen)))
+        field(R.string.charger_min_current).assertDoesNotExist()
+        choose(R.string.charge_power, R.string.charge_power_11)
+        powerMenu().assert(hasText(text(R.string.charge_power_11), substring = true))
+        click(R.string.action_next)
+        compose.waitForIdle()
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.AWAY)
+        assertThat(session.flow.config().system().charger()).isEqualTo(Charger(Phases.THREE, 6, 16, 230.0, 0.9))
+    }
+
+    @Test
+    fun otherOnTheChargerStepUnfoldsTheTypicalValuesMarkedAsTypical() {
+        val session = show()
+        toTheChargerStep(session)
+
+        choose(R.string.charge_power, R.string.charge_power_other)
+
+        field(R.string.charger_min_current).assert(hasText("6"))
+        field(R.string.charger_voltage).assert(hasText("230"))
+        field(R.string.charger_efficiency).assert(hasText("90"))
+        assertThat(compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,
+            listOf(text(R.string.typical_mark_description)))).fetchSemanticsNodes()).hasSize(5)
+        powerMenu().assert(hasText(text(R.string.charge_power_other), substring = true))
+        click(R.string.action_next)
+        compose.waitForIdle()
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.AWAY)
+    }
+
+    @Test
+    fun aChosenPowerIsKeptWhenSetUpComesBackAfterTheSystemEndedTheApp() {
+        val session = show()
+        toTheChargerStep(session)
+        choose(R.string.charge_power, R.string.charge_power_22)
+
+        val again = session(handle.afterTheSystemEndedTheApp()).flow
+
+        assertThat(again.step.value).isEqualTo(SetUpStep.CHARGER)
+        assertThat(again.charger.power()).contains(HomeChargePower.KW_22)
+        assertThat(again.next()).isTrue()
     }
 
     @Test
@@ -953,6 +1036,7 @@ class SetUpScreenTest {
             }
             if (step == SetUpStep.PANELS) {
                 session.flow.panels.fillIn()
+                session.flow.charger.choose(HomeChargePower.KW_11)
             }
             if (step == SetUpStep.AWAY) {
                 heading(step.number(), R.string.setup_away_title).assertExists()
@@ -984,9 +1068,14 @@ class SetUpScreenTest {
         compose.assertOnlyTheLastFieldIsDone()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(3) {
             session.next()
             compose.waitForIdle()
+            if (session.flow.step.value == SetUpStep.CHARGER) {
+                click(R.string.more_settings)
+                compose.waitForIdle()
+            }
             compose.assertOnlyTheLastFieldIsDone()
         }
         session.next()
@@ -1004,6 +1093,7 @@ class SetUpScreenTest {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(4) { session.next() }
         compose.waitForIdle()
     }
@@ -1021,6 +1111,7 @@ class SetUpScreenTest {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(5) { session.next() }
         compose.waitForIdle()
     }

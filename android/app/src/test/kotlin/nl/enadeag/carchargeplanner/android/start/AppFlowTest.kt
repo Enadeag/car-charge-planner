@@ -34,6 +34,7 @@ import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
+import nl.enadeag.carchargeplanner.engine.config.HomeChargePower
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.Place
@@ -69,6 +70,7 @@ class AppFlowTest {
         session.next()
         session.choose(PlaceSearch.Result(place, place.label()))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(5) { session.next() }
         session.finish()
         runCurrent()
@@ -119,6 +121,7 @@ class AppFlowTest {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(5) { session.next() }
 
         session.finish()
@@ -140,6 +143,7 @@ class AppFlowTest {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(5) { session.next() }
         access.settings = StartState.NewerVersion("version 99")
 
@@ -286,6 +290,7 @@ class AppFlowTest {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         session.next()
         access.settings = StartState.Unusable("engine.json", "not valid JSON")
 
@@ -328,6 +333,7 @@ class AppFlowTest {
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
         session.flow.panels.fillIn()
+        session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(2) { session.next() }
         session.flow.car.edit(CarForm.Field.BATTERY, "75")
         val latitude = session.flow.location.text(LocationForm.Field.LATITUDE)

@@ -2,8 +2,10 @@ package nl.enadeag.carchargeplanner.android.form
 
 import androidx.lifecycle.SavedStateHandle
 import java.util.Locale
+import java.util.Optional
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.engine.config.Charger
+import nl.enadeag.carchargeplanner.engine.config.HomeChargePower
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
@@ -11,6 +13,8 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.ValueSource
 
 class ChargerFormTest {
@@ -75,7 +79,8 @@ class ChargerFormTest {
     @Test
     fun choosingThePhasesTakesTheirTypicalMarkAway() {
         form.load(DRAFT)
-        assertThat(form.typical()).hasSize(ChargerForm.Field.entries.size)
+        assertThat(form.typical()).containsExactlyInAnyOrder(ChargerForm.Field.PHASES, ChargerForm.Field.MIN_CURRENT,
+            ChargerForm.Field.MAX_CURRENT, ChargerForm.Field.VOLTAGE, ChargerForm.Field.EFFICIENCY)
 
         form.choose(Phases.THREE)
 
@@ -86,13 +91,150 @@ class ChargerFormTest {
     }
 
     @Test
-    fun askingForTypicalValuesGivesTheTypicalCharger() {
+    fun askingForTypicalValuesSetsTheMinimumTheVoltageAndTheEfficiencyOnlyAndMarksThem() {
         form.load(stored)
 
         form.useTypical()
 
-        assertThat(form.read(stored)!!.system().charger()).isEqualTo(Charger.TYPICAL)
-        assertThat(form.typical()).hasSize(ChargerForm.Field.entries.size)
+        assertThat(form.read(stored)!!.system().charger()).isEqualTo(Charger(Phases.THREE, 6, 32, 230.0, 0.9))
+        assertThat(form.typical()).containsExactlyInAnyOrder(ChargerForm.Field.MIN_CURRENT, ChargerForm.Field.VOLTAGE,
+            ChargerForm.Field.EFFICIENCY)
+        assertThat(form.power()).contains(HomeChargePower.KW_22)
+    }
+
+    private fun withCharger(charger: Charger) = DRAFT.withSystem(DRAFT.system().withCharger(charger),
+        TypicalValues.NONE)
+
+    @Test
+    fun onePhaseOf16AmpsAt230VoltsIs3Point7KilowattAndTheSameAt240IsOther() {
+        form.load(withCharger(Charger(Phases.ONE, 6, 16, 230.0, 0.9)))
+        assertThat(form.power()).contains(HomeChargePower.KW_3_7)
+
+        form.load(withCharger(Charger(Phases.ONE, 6, 16, 240.0, 0.9)))
+        assertThat(form.power()).isEqualTo(Optional.empty<HomeChargePower>())
+    }
+
+    @Test
+    fun aStoredVoltageJustOff230IsOtherThoughItsFieldShows230() {
+        val config = withCharger(Charger(Phases.ONE, 6, 16, 230.4, 0.9))
+        form.load(config)
+
+        assertThat(form.text(ChargerForm.Field.VOLTAGE)).isEqualTo("230")
+        assertThat(form.power()).isEqualTo(Optional.empty<HomeChargePower>())
+
+        form.choose(HomeChargePower.KW_3_7)
+
+        assertThat(form.power()).contains(HomeChargePower.KW_3_7)
+        assertThat(form.read(config)!!.system().charger().volts()).isEqualTo(230.0)
+    }
+
+    @ParameterizedTest
+    @EnumSource(HomeChargePower::class)
+    fun aPowerSetsThePhasesTheMaximumAnd230VoltsAndKeepsTheMinimumAndTheEfficiencyExactly(power: HomeChargePower) {
+        val config = withCharger(Charger(Phases.THREE, 7, 25, 240.0, 0.453))
+        form.load(config)
+
+        form.choose(power)
+
+        assertThat(form.power()).contains(power)
+        val read = form.read(config)!!
+        assertThat(read.system().charger()).isEqualTo(Charger(power.phases(), 7, power.maxAmps(), 230.0, 0.453))
+        assertThat(read.typical().system()).isEmpty()
+    }
+
+    @Test
+    fun otherChangesNoValueUntilAValueChangesAndThenTheChoiceFollowsTheValues() {
+        val config = withCharger(Charger(Phases.THREE, 6, 16, 230.0, 0.9))
+        form.load(config)
+
+        form.chooseOther()
+
+        assertThat(form.power()).isEqualTo(Optional.empty<HomeChargePower>())
+        assertThat(form.isEdited()).isFalse()
+        assertThat(form.read(config)).isEqualTo(config)
+        form.edit(ChargerForm.Field.MAX_CURRENT, "32")
+        assertThat(form.power()).contains(HomeChargePower.KW_22)
+    }
+
+    @ParameterizedTest
+    @CsvSource("THREE, 25", "ONE, 25", "THREE, 13", "ONE, 20")
+    fun aChargerOfOtherCurrentsIsOther(phases: Phases, maxAmps: Int) {
+        form.load(withCharger(Charger(Phases.ONE, 6, 16, 230.0, 0.9)))
+
+        form.choose(phases)
+        form.edit(ChargerForm.Field.MAX_CURRENT, maxAmps.toString())
+
+        assertThat(form.power()).isEqualTo(Optional.empty<HomeChargePower>())
+    }
+
+    @Test
+    fun aPowerWhoseMaximumEndsBelowATypedMinimumShowsTheProblemAtTheMaximumAndChangesNothingElse() {
+        val config = withCharger(Charger(Phases.ONE, 6, 32, 230.0, 0.9))
+        form.load(config)
+        form.edit(ChargerForm.Field.MIN_CURRENT, "20")
+
+        form.choose(HomeChargePower.KW_11)
+
+        assertThat(form.check(config)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ChargerForm.Field.MAX_CURRENT to FieldProblem.Refused(InvalidSetting.Rule.BELOW_MINIMUM_CURRENT)))
+        assertThat(form.text(ChargerForm.Field.MIN_CURRENT)).isEqualTo("20")
+    }
+
+    @Test
+    fun inSetUpThePowerStartsNotChosenAndIsRefusedUntilChosen() {
+        val setUp = ChargerForm(handle, numbers, newWhenTypical = true)
+        setUp.load(DRAFT)
+        assertThat(setUp.power()).isNull()
+
+        assertThat(setUp.check(DRAFT)).isNull()
+        assertThat(setUp.problems.value).containsExactlyEntriesOf(mapOf(
+            ChargerForm.Field.POWER to FieldProblem.NotChosen))
+
+        setUp.useTypical()
+        assertThat(setUp.power()).`as`("I don't know chooses no power").isNull()
+        setUp.choose(HomeChargePower.KW_7_4)
+        val read = setUp.check(DRAFT)!!
+        assertThat(read.system().charger()).isEqualTo(Charger(Phases.ONE, 6, 32, 230.0, 0.9))
+        assertThat(read.typical().system()).contains(ConfigSetting.CHARGER_MIN_CURRENT,
+            ConfigSetting.CHARGER_VOLTAGE, ConfigSetting.CHARGER_EFFICIENCY)
+            .doesNotContain(ConfigSetting.CHARGER_PHASES, ConfigSetting.CHARGER_MAX_CURRENT)
+    }
+
+    @Test
+    fun inSetUpAStoredChargerOfTheOwnersOwnShowsItsPower() {
+        val setUp = ChargerForm(handle, numbers, newWhenTypical = true)
+
+        setUp.load(withCharger(Charger(Phases.THREE, 6, 16, 230.0, 0.9)))
+
+        assertThat(setUp.power()).contains(HomeChargePower.KW_11)
+    }
+
+    @Test
+    fun aChosenPowerAndAChosenOtherSurviveTheSystemEndingTheApp() {
+        val setUp = ChargerForm(handle, numbers, newWhenTypical = true)
+        setUp.load(DRAFT)
+        setUp.choose(HomeChargePower.KW_22)
+        assertThat(ChargerForm(handle.afterTheSystemEndedTheApp(), numbers, newWhenTypical = true).power())
+            .contains(HomeChargePower.KW_22)
+
+        setUp.chooseOther()
+        assertThat(ChargerForm(handle.afterTheSystemEndedTheApp(), numbers, newWhenTypical = true).power())
+            .isEqualTo(Optional.empty<HomeChargePower>())
+    }
+
+    @Test
+    fun aRestoredPowerThisVersionDoesNotKnowCountsAsNotChosen() {
+        val setUp = ChargerForm(handle, numbers, newWhenTypical = true)
+        setUp.load(DRAFT)
+        setUp.choose(HomeChargePower.KW_22)
+        handle["charger.text.POWER"] = "KW_9_9"
+
+        val again = ChargerForm(handle.afterTheSystemEndedTheApp(), numbers, newWhenTypical = true)
+
+        assertThat(again.power()).isNull()
+        assertThat(again.check(DRAFT)).isNull()
+        assertThat(again.problems.value).containsKey(ChargerForm.Field.POWER)
     }
 
     @Test

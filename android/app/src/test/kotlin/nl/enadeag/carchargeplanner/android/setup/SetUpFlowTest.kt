@@ -19,6 +19,7 @@ import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.HomeChargePower
 import nl.enadeag.carchargeplanner.engine.config.House
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.Place
@@ -44,6 +45,7 @@ class SetUpFlowTest {
         flow.location.choose(utrecht, "Utrecht")
         assertThat(flow.next()).isTrue()
         flow.panels.fillIn()
+        flow.charger.choose(HomeChargePower.KW_11)
     }
 
     @Test
