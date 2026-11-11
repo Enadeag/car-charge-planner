@@ -14,13 +14,16 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Car;
+import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.HomeChargePower;
 import nl.enadeag.carchargeplanner.engine.config.House;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.PlaceName;
 import nl.enadeag.carchargeplanner.engine.config.PanelSize;
+import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.secrets.KeychainException;
@@ -87,13 +90,21 @@ class SetUpViewTest {
         return Scenes.visibleTexts(box);
     }
 
-    /** From the welcome to the panels step, with the place found and chosen and the panels filled in. */
+    /**
+     * From the welcome to the panels step, with the place found and chosen, the panels filled in, and 11 kW chosen on
+     * the charger step, as an owner who went ahead to it and came back.
+     */
     private SetUpView atSolar() throws Exception {
         var view = setUp.open();
         next(view, 2);
         setUp.choosePlace(view);
         next(view, 1);
-        Fx.run(() -> setUp.fillPanels(view));
+        Fx.run(() -> {
+            setUp.fillPanels(view);
+            view.show(SetUpStep.CHARGER);
+            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_11));
+            view.show(SetUpStep.SOLAR);
+        });
         return view;
     }
 
@@ -125,7 +136,9 @@ class SetUpViewTest {
                 .as("set-up asks for the other driving").isNotNull();
         assertThatThrownBy(() -> Fx.call(() -> setUp.field(view, TextKey.FIELD_CAR_TRIP_SURCHARGE)))
                 .as("set-up keeps the standard trip surcharge").hasMessageContaining("no field");
-        next(view, 3);
+        next(view, 1);
+        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_11)));
+        next(view, 2);
         Fx.run(() -> setUp.button(view, TextKey.AWAY_ADD).fire());
         next(view, 1);
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.CHECK);
@@ -146,8 +159,11 @@ class SetUpViewTest {
         assertThat(config.system().panels()).extracting(PanelArray::kwp).containsExactly(6.2);
         assertThat(config.system().car()).isEqualTo(new Car(75, Car.TYPICAL.consumptionKwhPer100km(),
                 Car.TYPICAL.kmPerDay()));
+        assertThat(config.system().charger()).isEqualTo(new Charger(Phases.THREE, 6, 16, 230, 0.9));
         assertThat(config.typical().system()).contains(ConfigSetting.CAR_CONSUMPTION, ConfigSetting.HOUSE_BASELOAD,
-                ConfigSetting.CHARGER_MAX_CURRENT).doesNotContain(ConfigSetting.CAR_BATTERY);
+                ConfigSetting.CHARGER_MIN_CURRENT, ConfigSetting.CHARGER_VOLTAGE, ConfigSetting.CHARGER_EFFICIENCY)
+                .doesNotContain(ConfigSetting.CAR_BATTERY, ConfigSetting.CHARGER_PHASES,
+                        ConfigSetting.CHARGER_MAX_CURRENT);
         assertThat(config.typical().ofPanel(0)).containsExactly(ConfigSetting.PANEL_LOSSES);
         assertThat(config.away().weekly()).containsExactly(
                 new WeeklyAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0)));
@@ -289,6 +305,106 @@ class SetUpViewTest {
                 .isEqualTo(setUp.messages.number(Car.TYPICAL.usableBatteryKwh(), 1));
         assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
                 .contains(setUp.messages.text(TextKey.TYPICAL_TAG));
+    }
+
+    /** The charger step's "More settings" row; on that step. */
+    private Button moreRow(SetUpView view) {
+        var name = setUp.messages.text(TextKey.MORE_SETTINGS);
+        return Scenes.all(view).stream()
+                .filter(node -> node instanceof Button button && button.getText().endsWith(" " + name)
+                        && Scenes.reallyVisible(button))
+                .map(Button.class::cast).findFirst().orElseThrow();
+    }
+
+    /** Whether the charger step shows its folded fields; on that step. */
+    private boolean chargerFoldOpen(SetUpView view) {
+        return Scenes.reallyVisible(setUp.control(view, TextKey.FIELD_MIN_CURRENT));
+    }
+
+    private String help(SetUpView view, TextKey field) {
+        return setUp.control(view, field).getAccessibleHelp();
+    }
+
+    @Test
+    void theChargerStepStartsWithChooseAndGoesOnOnlyOnceAPowerIsChosen() throws Exception {
+        var view = setUp.open();
+        Fx.run(() -> view.show(SetUpStep.CHARGER));
+        assertThat(Fx.call(() -> shown(view, TextKey.FIELD_CHARGE_POWER)))
+                .containsExactly(setUp.messages.text(TextKey.CHOOSE));
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isFalse();
+
+        next(view, 1);
+
+        assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.CHARGER);
+        assertThat(Fx.call(() -> help(view, TextKey.FIELD_CHARGE_POWER)))
+                .startsWith(setUp.messages.text(TextKey.PROBLEM_NOT_CHOSEN));
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).as("the problem is not under the fold").isFalse();
+        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_7_4)));
+        next(view, 1);
+        assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.FORECAST);
+    }
+
+    @Test
+    void theFoldedChargerFieldsStartAtTheirTypicalValuesTaggedAndIDontKnowNoLongerChoosesAPower() throws Exception {
+        var view = setUp.open();
+        Fx.run(() -> view.show(SetUpStep.CHARGER));
+        Fx.run(() -> moreRow(view).fire());
+
+        var typicalTag = setUp.messages.text(TextKey.TYPICAL_TAG);
+        assertThat(Fx.call(() -> List.of(TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_VOLTAGE, TextKey.FIELD_EFFICIENCY)
+                .stream().map(field -> ((TextField) setUp.field(view, field)).getText()).toList()))
+                .containsExactly("6", "230", "90");
+        for (var field : List.of(TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_VOLTAGE, TextKey.FIELD_EFFICIENCY)) {
+            assertThat(Fx.call(() -> help(view, field))).as("%s", field).contains(typicalTag);
+        }
+        Fx.run(() -> setUp.button(view, TextKey.USE_TYPICAL).fire());
+        assertThat(Fx.call(() -> shown(view, TextKey.FIELD_CHARGE_POWER)))
+                .containsExactly(setUp.messages.text(TextKey.CHOOSE));
+        Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_3_7)));
+        assertThat(Fx.call(() -> help(view, TextKey.FIELD_MAX_CURRENT))).doesNotContain(typicalTag);
+        assertThat(Fx.call(() -> help(view, TextKey.FIELD_PHASES))).doesNotContain(typicalTag);
+        assertThat(Fx.call(() -> help(view, TextKey.FIELD_VOLTAGE))).as("still 230 V").contains(typicalTag);
+    }
+
+    @Test
+    void otherInSetUpOpensTheFoldChangesNoValueAndLetsTheOwnerGoOn() throws Exception {
+        var view = setUp.open();
+        Fx.run(() -> {
+            view.show(SetUpStep.CHARGER);
+            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.<HomeChargePower>empty());
+        });
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isTrue();
+        assertThat(Fx.call(() -> shown(view, TextKey.FIELD_CHARGE_POWER))).containsExactly("Other");
+        assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_MAX_CURRENT)).getText()))
+                .isEqualTo("16");
+
+        next(view, 1);
+
+        assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.FORECAST);
+    }
+
+    @Test
+    void aPowerWhoseMaximumEndsBelowATypedMinimumIsRefusedAtTheMaximumWithTheFoldOpen() throws Exception {
+        var view = atSolar();
+        Fx.run(() -> {
+            view.show(SetUpStep.CHARGER);
+            moreRow(view).fire();
+            setUp.type(view, TextKey.FIELD_MIN_CURRENT, "20");
+            moreRow(view).fire();
+            setUp.choose(view, TextKey.FIELD_CHARGE_POWER, Optional.of(HomeChargePower.KW_3_7));
+        });
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isFalse();
+
+        next(view, 1);
+
+        assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.CHARGER);
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).isTrue();
+        assertThat(Fx.call(() -> help(view, TextKey.FIELD_MAX_CURRENT)))
+                .startsWith(setUp.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
+        assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_MIN_CURRENT)).getText()))
+                .as("the minimum is not changed silently").isEqualTo("20");
+        Fx.run(() -> moreRow(view).fire());
+        assertThat(Fx.call(() -> chargerFoldOpen(view))).as("held open while the problem shows").isTrue();
     }
 
     @Test
