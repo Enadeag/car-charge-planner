@@ -81,7 +81,7 @@ class SetUpSessionTest {
         assertThat(session.back()).isTrue()
         access.checks[0].complete(ConnectionResult(true, 7, "Received a forecast for 7 days."))
         runCurrent()
-        assertThat(session.flow.step.value).isEqualTo(SetUpStep.MORE)
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.AWAY)
         assertThat(session.check.state.value).isEqualTo(SetUpCheck.State.NotAsked)
 
         session.next()

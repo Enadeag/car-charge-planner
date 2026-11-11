@@ -80,7 +80,7 @@ class SettingsEditTest {
         val car = CarForm(SavedStateHandle(), numbers).apply { load(shown) }
         val house = HouseForm(SavedStateHandle(), numbers).apply { load(shown) }
         val edit = SettingsEdit(listOf(car, house), Saves(access, backgroundScope), screen())
-        house.edit(HouseForm.Field.BASELOAD, "0.8")
+        house.edit(HouseForm.Field.BASELOAD, "18")
         val elsewhere = shown.withSystem(shown.system().withHouseAndCar(House.TYPICAL, Car(77.0, 18.0, 40.0)),
             shown.typical())
         access.settings = StartState.Ready(elsewhere)
@@ -89,7 +89,7 @@ class SettingsEditTest {
         runCurrent()
 
         val saved = (access.settings as StartState.Ready).config.system()
-        assertThat(saved.house()).isEqualTo(House(0.8))
+        assertThat(saved.house()).isEqualTo(House(0.75))
         assertThat(saved.car().usableBatteryKwh()).isEqualTo(77.0)
     }
 
@@ -152,7 +152,7 @@ class SettingsEditTest {
         val house = HouseForm(SavedStateHandle(), numbers).apply { load(shown) }
         val saves = Saves(access, backgroundScope)
         val edit = SettingsEdit(listOf(house), saves, screen)
-        house.edit(HouseForm.Field.BASELOAD, "0.8")
+        house.edit(HouseForm.Field.BASELOAD, "18")
         val gate = CompletableDeferred<Unit>()
         access.readGate = gate
 
@@ -162,7 +162,7 @@ class SettingsEditTest {
         gate.complete(Unit)
         runCurrent()
 
-        assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(0.8))
+        assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(0.75))
         assertThat(saves.lastOutcome.value).isEqualTo(SaveOutcome.Saved)
     }
 
@@ -171,7 +171,7 @@ class SettingsEditTest {
         val screen = KnownScreen(screen())
         val house = Watched(HouseForm(SavedStateHandle(), numbers).apply {
             load(shown)
-            edit(HouseForm.Field.BASELOAD, "0.8")
+            edit(HouseForm.Field.BASELOAD, "18")
         }, screen)
         val edit = SettingsEdit(listOf(house), Saves(access, backgroundScope), screen)
 
@@ -179,6 +179,6 @@ class SettingsEditTest {
         runCurrent()
 
         assertThat(house.readsOnTheScreen).containsExactly(true)
-        assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(0.8))
+        assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(0.75))
     }
 }

@@ -90,6 +90,7 @@ import nl.enadeag.carchargeplanner.android.ui.settings.title
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
+import nl.enadeag.carchargeplanner.engine.config.House
 import nl.enadeag.carchargeplanner.engine.config.PanelArray
 import nl.enadeag.carchargeplanner.engine.config.PanelSize
 import nl.enadeag.carchargeplanner.engine.config.PlaceName
@@ -273,6 +274,76 @@ class SettingsScreenTest {
         compose.onNodeWithText(text(R.string.settings_away_none)).assertExists()
     }
 
+    @Test
+    fun theCarAndHouseRowGivesTheBatteryOnly() {
+        show()
+
+        val battery = NumberText(Locale.ENGLISH).write(stored.system().car().usableBatteryKwh(), 1)
+        compose.onNodeWithText("Battery $battery kWh").assertExists()
+    }
+
+    private fun houseFold() = compose.onNodeWithText(text(R.string.more_settings))
+
+    private fun houseFoldIs(state: Int) =
+        houseFold().assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(state)))
+
+    @Test
+    fun theHousesUseIsFoldedAwayAlsoWhenItIsNotTheTypicalOneAndAnUntouchedOneIsSavedExactly() {
+        val own = stored.withSystem(stored.system().withHouseAndCar(House(0.123), stored.system().car()),
+            TypicalValues.NONE)
+        access.settings = StartState.Ready(own)
+        show(session(config = own))
+        open(SettingsPage.CAR_AND_HOUSE)
+
+        houseFoldIs(R.string.fold_collapsed)
+        compose.onNode(isHeading() and hasText("House")).assertDoesNotExist()
+        field(text(R.string.household_use)).assertDoesNotExist()
+        compose.onAllNodesWithText(text(R.string.use_typical)).assertCountEquals(1)
+        click(R.string.more_settings)
+        field(text(R.string.household_use)).assert(hasText("3.0"))
+            .assert(hasText(text(R.string.household_use_hint), substring = true))
+        compose.onAllNodesWithText(text(R.string.use_typical)).assertCountEquals(2)
+        compose.assertOnlyTheLastFieldIsDone()
+
+        field(text(R.string.car_battery)).performTextReplacement("75")
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        val saved = (access.settings as StartState.Ready).config.system()
+        assertThat(saved.car().usableBatteryKwh()).isEqualTo(75.0)
+        assertThat(saved.house()).isEqualTo(House(0.123))
+    }
+
+    @Test
+    fun aProblemInTheHousesUseOpensTheFoldWhichStaysOpenUntilItIsPutRight() {
+        show()
+        open(SettingsPage.CAR_AND_HOUSE)
+        click(R.string.more_settings)
+        field(text(R.string.household_use)).performTextReplacement("480.1")
+        click(R.string.more_settings)
+        houseFoldIs(R.string.fold_collapsed)
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        houseFoldIs(R.string.fold_expanded)
+        field(text(R.string.household_use)).assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_out_of_range)))
+        assertThat(access.written).isEmpty()
+        click(R.string.more_settings)
+        houseFoldIs(R.string.fold_expanded)
+
+        field(text(R.string.household_use)).performTextReplacement("480")
+        compose.waitForIdle()
+        houseFoldIs(R.string.fold_expanded)
+        click(R.string.more_settings)
+        houseFoldIs(R.string.fold_collapsed)
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        assertThat((access.settings as StartState.Ready).config.system().house()).isEqualTo(House(20.0))
+    }
+
     /** Dutch numbers have a decimal comma, so a semicolon keeps the latitude and the longitude apart. */
     @Test
     @Config(qualifiers = "nl")
@@ -357,7 +428,7 @@ class SettingsScreenTest {
         open(SettingsPage.CAR_AND_HOUSE)
         session.forms.car.edit(CarForm.Field.BATTERY, "75")
         access.writeFails = true
-        field(text(R.string.baseload)).performScrollTo()
+        compose.onNodeWithText(text(R.string.more_settings)).performScrollTo()
         compose.onNodeWithText(text(R.string.settings_save_failed)).assertDoesNotExist()
 
         compose.onNodeWithText(text(R.string.action_save)).performClick()
@@ -376,7 +447,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
         compose.onNodeWithText(text(R.string.settings_save_failed)).assertIsDisplayed()
         access.writeFails = false
-        field(text(R.string.baseload)).performScrollTo()
+        compose.onNodeWithText(text(R.string.more_settings)).performScrollTo()
         assertThat(pageScroll()).isGreaterThan(0f)
 
         val reading = CompletableDeferred<Unit>()
