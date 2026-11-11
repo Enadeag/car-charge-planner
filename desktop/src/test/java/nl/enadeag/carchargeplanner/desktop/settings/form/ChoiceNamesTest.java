@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.config.CompassPoint;
+import nl.enadeag.carchargeplanner.engine.config.NotifyLeadChoices;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.config.TiltChoice;
@@ -47,6 +48,17 @@ class ChoiceNamesTest {
                 .containsExactly("Flat", "Pitched", "Steep", "Upright");
         assertThat(List.of(TiltChoice.values()).stream().map(dutch::tilt))
                 .containsExactly("Plat", "Schuin", "Steil", "Rechtop");
+    }
+
+    @Test
+    void theNotificationLeadsAreNamedFromTheStartOnAndAnyOtherByItsMinutes() {
+        assertThat(NotifyLeadChoices.STANDARD.stream().map(english::notifyLead)).containsExactly("At the start",
+                "5 minutes ahead", "10 minutes ahead", "15 minutes ahead", "30 minutes ahead", "60 minutes ahead");
+        assertThat(NotifyLeadChoices.STANDARD.stream().map(dutch::notifyLead)).containsExactly("Bij het begin",
+                "5 minuten ervoor", "10 minuten ervoor", "15 minuten ervoor", "30 minuten ervoor", "60 minuten ervoor");
+        assertThat(english.notifyLead(Duration.ofMinutes(20))).isEqualTo("20 minutes ahead");
+        assertThat(english.notifyLead(Duration.ofMinutes(1))).isEqualTo("1 minute ahead");
+        assertThat(dutch.notifyLead(Duration.ofMinutes(1))).isEqualTo("1 minuut ervoor");
     }
 
     @Test

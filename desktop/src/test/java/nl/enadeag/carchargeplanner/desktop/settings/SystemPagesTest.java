@@ -668,10 +668,10 @@ class SystemPagesTest {
         var view = open();
 
         Fx.run(() -> settings.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL));
-        assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_CAR_OTHER_DRIVING)).getText()))
+        assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_CAR_DAILY_DISTANCE)).getText()))
                 .isEqualTo("25"); // 40 km
         Fx.call(() -> {
-            settings.type(view, TextKey.FIELD_CAR_OTHER_DRIVING, "50");
+            settings.type(view, TextKey.FIELD_CAR_DAILY_DISTANCE, "50");
             return SettingsFixture.save(view);
         });
 
@@ -969,6 +969,22 @@ class SystemPagesTest {
         assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_HOUSEHOLD_USE).getAccessibleHelp()))
                 .contains("kWh per day, without charging the car. Your energy supplier shows your use per day.");
         assertThat(Fx.call(view::isChanged)).isFalse();
+    }
+
+    @Test
+    void theTripSurchargeIsFoldedWithTheHouseholdUseUnderOneMoreSettingsAndTheDailyDistanceIsNot() throws Exception {
+        var view = openWithHouse(Language.ENGLISH, 0.35);
+        var surcharge = settings.control(view, TextKey.FIELD_CAR_TRIP_SURCHARGE);
+
+        assertThat(Fx.call(() -> Scenes.reallyVisible(surcharge))).isFalse();
+        assertThat(Fx.call(() -> Scenes.all(view).stream().filter(node -> node instanceof Button button
+                && button.getText().endsWith(" " + settings.messages.text(TextKey.MORE_SETTINGS))).count()))
+                .isEqualTo(1);
+        assertThat(Fx.call(() -> Scenes.reallyVisible(settings.control(view, TextKey.FIELD_CAR_DAILY_DISTANCE))))
+                .isTrue();
+        Fx.run(() -> houseFoldRow(view).fire());
+
+        assertThat(Fx.call(() -> Scenes.reallyVisible(surcharge) && houseUseShown(view))).isTrue();
     }
 
     @Test

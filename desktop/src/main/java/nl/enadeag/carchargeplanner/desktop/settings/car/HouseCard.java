@@ -5,7 +5,6 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
-import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
 import nl.enadeag.carchargeplanner.desktop.settings.page.TypicalButton;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -13,14 +12,14 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.House;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
+import java.util.List;
 import java.util.Optional;
-import javafx.scene.layout.VBox;
+import javafx.scene.Node;
 
 /**
- * The house's own use, with a typical value on request, folded under "More settings". The field asks for kWh per day,
- * from 0 to 480; the settings keep the average in kW, which a field the owner did not change gives back exactly. The
- * fold is closed each time the card loads. The field keeps every value it holds within that range, so the card never
- * has a problem to show.
+ * The house's own use, with a typical value on request, which the page folds under "More settings". The field asks for
+ * kWh per day, from 0 to 480; the settings keep the average in kW, which a field the owner did not change gives back
+ * exactly. The field keeps every value it holds within that range, so it never has a problem to show.
  */
 public final class HouseCard implements ConfigPart {
 
@@ -28,11 +27,10 @@ public final class HouseCard implements ConfigPart {
 
     private final NumberInput perDay;
     private final TypicalTags typical;
-    private final Fold fold;
-    private final VBox card;
+    private final List<Node> rows;
 
     /**
-     * Makes the card, empty until {@link #load(EngineConfig)}.
+     * Makes the part, empty until {@link #load(EngineConfig)}.
      *
      * @param messages the texts, in the owner's language
      */
@@ -43,26 +41,24 @@ public final class HouseCard implements ConfigPart {
         typical.follow(ConfigSetting.HOUSE_BASELOAD, row::showTag);
         perDay.onChange(() -> typical.edited(ConfigSetting.HOUSE_BASELOAD));
         // named by its field, as the car's button is by its own
-        fold = new Fold(messages.text(TextKey.MORE_SETTINGS), row,
+        rows = List.of(row,
                 TypicalButton.line(this::useTypical, messages.text(TextKey.FIELD_HOUSEHOLD_USE), messages));
-        card = new VBox(fold);
-        card.getStyleClass().addAll("card", "settings-card");
     }
 
     /**
-     * The card itself: the fold and nothing else.
+     * What the page folds under "More settings" of the house: the household use's row and its typical value's
+     * button.
      *
-     * @return the same card every time
+     * @return the same rows every time
      */
-    public VBox view() {
-        return card;
+    public List<Node> rows() {
+        return rows;
     }
 
     @Override
     public void load(EngineConfig config) {
         var storedKw = config.system().house().baseloadKw();
         typical.load(config.typical().system(), () -> perDay.load(storedKw * HOURS_PER_DAY));
-        fold.setOpen(false);
     }
 
     @Override

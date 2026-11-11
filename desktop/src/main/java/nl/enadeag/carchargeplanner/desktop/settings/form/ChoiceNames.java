@@ -13,6 +13,7 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.config.TiltChoice;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.format.TextStyle;
 import java.util.List;
 
@@ -114,6 +115,17 @@ public final class ChoiceNames {
             case KW_22 -> TextKey.CHARGE_POWER_22;
             case OTHER -> TextKey.CHARGE_POWER_OTHER;
         });
+    }
+
+    /**
+     * A notification lead time.
+     *
+     * @param lead how long before a charge window the owner is told, in whole minutes, 0 or more
+     * @return "At the start" for 0, otherwise such as "20 minutes ahead"
+     */
+    public String notifyLead(Duration lead) {
+        return lead.isZero() ? messages.text(TextKey.NOTIFY_LEAD_AT_START)
+                : messages.text(TextKey.NOTIFY_LEAD_AHEAD, lead.toMinutes());
     }
 
     /**

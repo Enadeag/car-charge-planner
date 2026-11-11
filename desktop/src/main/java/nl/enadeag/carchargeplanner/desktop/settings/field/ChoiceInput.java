@@ -34,7 +34,8 @@ public final class ChoiceInput<T> implements Input {
 
             @Override
             public T fromString(String text) {
-                return choices.stream().filter(choice -> name.apply(choice).equals(text)).findFirst().orElse(null);
+                return box.getItems().stream().filter(choice -> name.apply(choice).equals(text)).findFirst()
+                        .orElse(null);
             }
         });
         box.getStyleClass().add("choice-field");
@@ -62,6 +63,28 @@ public final class ChoiceInput<T> implements Input {
         loaded = null;
         box.setPromptText(prompt);
         box.setValue(null);
+    }
+
+    /**
+     * Offers other choices from now on, such as a list that holds a stored value only while it is the one chosen. The
+     * choice shown stays, also when it is not among them, and nothing counts as changed by this alone.
+     *
+     * @param choices the choices in the order they are offered, none null
+     */
+    public void offer(List<T> choices) {
+        var items = box.getItems();
+        if (items.equals(choices)) {
+            return;
+        }
+        if (items.containsAll(choices)) {
+            // only taking away, which leaves the choice shown as it is, also while the owner's choice is still
+            // being handled
+            items.retainAll(choices);
+        } else {
+            var shown = box.getValue();
+            items.setAll(choices);
+            box.setValue(shown);
+        }
     }
 
     /**

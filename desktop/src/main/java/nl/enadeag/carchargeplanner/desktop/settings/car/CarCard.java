@@ -20,17 +20,16 @@ import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.scene.Node;
 
 /**
- * The car: its usable battery, its consumption, the distance of the other driving per day and, in Settings, the trip
- * surcharge, with typical values on request. Distances and consumption show in the units the owner chose, also before
- * they are saved; a typical value stays tagged in other units. Set-up leaves the trip surcharge out, and the card then
- * keeps the one stored.
+ * The car: its usable battery, its consumption and its daily distance, with typical values on request, and in Settings
+ * the trip surcharge, which the page folds away ({@link #folded()}). Distances and consumption show in the units the
+ * owner chose, also before they are saved; a typical value stays tagged in other units. Set-up leaves the trip
+ * surcharge out, and the card then keeps the one stored.
  */
 public final class CarCard implements ConfigPart {
 
@@ -40,6 +39,7 @@ public final class CarCard implements ConfigPart {
     private final UnitInput distance;
     private final NumberInput surcharge;
     private final boolean showsSurcharge;
+    private final FieldRow surchargeRow;
     private final ProblemRows problems;
     private final TypicalTags typical;
     private final CardView card;
@@ -59,20 +59,16 @@ public final class CarCard implements ConfigPart {
         surcharge = new NumberInput(new NumberRange(0, 100, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
-        var rows = new ArrayList<Node>(List.of(
+        // no typical value, so no tag, and no problem row: the range keeps the value valid
+        surchargeRow = FieldRow.of(messages, TextKey.FIELD_CAR_TRIP_SURCHARGE, TextKey.FIELD_CAR_TRIP_SURCHARGE_HINT,
+                surcharge);
+        card = new CardView(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
                 row(ConfigSetting.CAR_BATTERY, TextKey.FIELD_CAR_BATTERY, TextKey.FIELD_CAR_BATTERY_HINT, battery),
                 row(ConfigSetting.CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION_HINT,
                         consumption),
-                row(ConfigSetting.CAR_DAILY_DISTANCE, TextKey.FIELD_CAR_OTHER_DRIVING,
-                        TextKey.FIELD_CAR_OTHER_DRIVING_HINT, distance)));
-        if (showsSurcharge) {
-            // no typical value, so no tag, and no problem row: the range keeps the value valid
-            rows.add(FieldRow.of(messages, TextKey.FIELD_CAR_TRIP_SURCHARGE, TextKey.FIELD_CAR_TRIP_SURCHARGE_HINT,
-                    surcharge));
-        }
-        rows.add(TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_CAR), messages));
-        card = new CardView(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
-                rows.toArray(Node[]::new));
+                row(ConfigSetting.CAR_DAILY_DISTANCE, TextKey.FIELD_CAR_DAILY_DISTANCE,
+                        TextKey.FIELD_CAR_DAILY_DISTANCE_HINT, distance),
+                TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_CAR), messages));
     }
 
     /**
@@ -88,12 +84,22 @@ public final class CarCard implements ConfigPart {
     }
 
     /**
-     * The card itself.
+     * The card itself: the battery, the consumption, the daily distance and the typical values' button.
      *
      * @return the same card every time
      */
     public CardView view() {
         return card;
+    }
+
+    /**
+     * What the page shows of the car under its "More settings" fold, outside the card: the trip surcharge's row in
+     * Settings. The card keeps reading and checking it.
+     *
+     * @return the trip surcharge's row; empty in set-up, which leaves the trip surcharge out
+     */
+    public List<Node> folded() {
+        return showsSurcharge ? List.of(surchargeRow) : List.of();
     }
 
     @Override

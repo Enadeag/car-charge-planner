@@ -1,31 +1,40 @@
 package nl.enadeag.carchargeplanner.desktop.settings.planning;
 
+import nl.enadeag.carchargeplanner.desktop.settings.field.ChoiceInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
 import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.TimeSpanInput;
+import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.PlanningEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
 import nl.enadeag.carchargeplanner.desktop.settings.page.NoConfigCard;
 import nl.enadeag.carchargeplanner.desktop.settings.page.PageView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.NotifyLeadChoices;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
+import java.time.Duration;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 
 /**
- * The planning preferences: the charge levels, how cautious the plan is, when the owner can start a charge, and when the
- * owner is told.
+ * The planning preferences: the charge levels, when the owner can start a charge and when the owner is told, then
+ * folded under "More settings" how cautious the plan is: the margin, the import tolerance and the shortest window. The
+ * lead is chosen from a few; a stored lead that is none of them is offered too while it is the one chosen. The fold is
+ * closed each time the page loads; its fields keep every value in their ranges, so none has a problem that would open
+ * it.
  */
 public final class PlanningPage implements ConfigPage {
 
@@ -39,10 +48,11 @@ public final class PlanningPage implements ConfigPage {
     private final NumberInput margin;
     private final NumberInput importTolerance;
     private final NumberInput minWindow;
-    private final NumberInput notifyLead;
+    private final ChoiceInput<Duration> notifyLead;
     private final TimeSpanInput chargingHours;
     private final Map<ConfigSetting, FieldRow> rows = new EnumMap<>(ConfigSetting.class);
-    private final CardView[] cards;
+    private final Fold more;
+    private final Region[] cards;
 
     /**
      * Makes the page, empty until {@link #load(EngineConfig)}.
@@ -57,26 +67,35 @@ public final class PlanningPage implements ConfigPage {
         margin = new NumberInput(new NumberRange(1, 100, 5, 0), "%", messages);
         importTolerance = new NumberInput(new NumberRange(0, 100, 0.05, 2), "kWh", messages);
         minWindow = new NumberInput(MINUTES, messages.text(TextKey.UNIT_MINUTES), messages);
-        notifyLead = new NumberInput(new NumberRange(0, 1440, 5, 0), messages.text(TextKey.UNIT_MINUTES), messages);
+        notifyLead = new ChoiceInput<>(NotifyLeadChoices.STANDARD, new ChoiceNames(messages)::notifyLead);
+        notifyLead.onChange(() -> {
+            if (notifyLead.value() != null) {
+                notifyLead.offer(NotifyLeadChoices.offered(notifyLead.value()));
+            }
+        });
         chargingHours = new TimeSpanInput(messages.text(TextKey.CHARGING_HOURS_AND),
                 messages.text(TextKey.CHARGING_HOURS_END_FIELD));
-        cards = new CardView[] {
+        more = new Fold(messages.text(TextKey.MORE_SETTINGS),
+                row(ConfigSetting.PLANNING_MARGIN, TextKey.FIELD_MARGIN, TextKey.FIELD_MARGIN_HINT, margin),
+                row(ConfigSetting.IMPORT_TOLERANCE, TextKey.FIELD_IMPORT_TOLERANCE,
+                        TextKey.FIELD_IMPORT_TOLERANCE_HINT, importTolerance),
+                row(ConfigSetting.MINIMUM_WINDOW, TextKey.FIELD_MIN_WINDOW, TextKey.FIELD_MIN_WINDOW_HINT,
+                        minWindow));
+        var moreCard = new VBox(more);
+        moreCard.getStyleClass().addAll("card", "settings-card");
+        cards = new Region[] {
             new CardView(messages.text(TextKey.CARD_CHARGE_LEVELS), messages.text(TextKey.CARD_CHARGE_LEVELS_HINT),
                     row(ConfigSetting.MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE, TextKey.FIELD_MINIMUM_CHARGE_HINT,
                             minimum),
                     row(ConfigSetting.TARGET_CHARGE, TextKey.FIELD_TARGET_CHARGE, TextKey.FIELD_TARGET_CHARGE_HINT,
                             target)),
-            new CardView(messages.text(TextKey.CARD_PLAN), messages.text(TextKey.CARD_PLAN_HINT),
-                    row(ConfigSetting.PLANNING_MARGIN, TextKey.FIELD_MARGIN, TextKey.FIELD_MARGIN_HINT, margin),
-                    row(ConfigSetting.IMPORT_TOLERANCE, TextKey.FIELD_IMPORT_TOLERANCE,
-                            TextKey.FIELD_IMPORT_TOLERANCE_HINT, importTolerance),
-                    row(ConfigSetting.MINIMUM_WINDOW, TextKey.FIELD_MIN_WINDOW, TextKey.FIELD_MIN_WINDOW_HINT,
-                            minWindow),
+            new CardView(messages.text(TextKey.CARD_CHARGING_HOURS), "",
                     row(ConfigSetting.CHARGING_HOURS, TextKey.FIELD_CHARGING_HOURS, TextKey.FIELD_CHARGING_HOURS_HINT,
                             chargingHours)),
             new CardView(messages.text(TextKey.CARD_NOTIFICATIONS), messages.text(TextKey.CARD_NOTIFICATIONS_HINT),
                     row(ConfigSetting.NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD, TextKey.FIELD_NOTIFY_LEAD_HINT,
-                            notifyLead))
+                            notifyLead)),
+            moreCard
         };
     }
 
@@ -93,12 +112,14 @@ public final class PlanningPage implements ConfigPage {
     @Override
     public void onChange(Runnable action) {
         fields().forEach(field -> field.onChange(action));
+        notifyLead.onChange(action);
         chargingHours.onChange(action);
     }
 
     @Override
     public boolean isChanged() {
-        return fields().stream().anyMatch(NumberInput::isChanged) || chargingHours.isChanged();
+        return fields().stream().anyMatch(NumberInput::isChanged) || notifyLead.isChanged()
+                || chargingHours.isChanged();
     }
 
     @Override
@@ -109,9 +130,12 @@ public final class PlanningPage implements ConfigPage {
         margin.load(shown.marginPct());
         importTolerance.load(shown.importToleranceKwh());
         minWindow.load(shown.minWindowMinutes());
-        notifyLead.load(shown.notifyLeadMinutes());
+        var lead = config.planning().notifyLead();
+        notifyLead.offer(NotifyLeadChoices.offered(lead));
+        notifyLead.load(lead);
         chargingHours.load(config.planning().chargingHours().start(), config.planning().chargingHours().end());
         rows.values().forEach(FieldRow::clearProblem);
+        more.setOpen(false);
         view.show(cards);
     }
 
@@ -141,7 +165,7 @@ public final class PlanningPage implements ConfigPage {
     /** The preferences as entered, after their records checked them; a refused value goes to {@code refused}. */
     private Optional<PlanningPreferences> planning(Consumer<PlanningEntry.Checked.Refused> refused) {
         var entry = new PlanningEntry(minimum.value(), target.value(), margin.value(), importTolerance.value(),
-                minWindow.value(), notifyLead.value(), chargingHours.startText(), chargingHours.endText());
+                minWindow.value(), notifyLead.value().toMinutes(), chargingHours.startText(), chargingHours.endText());
         return switch (entry.check(messages)) {
             case PlanningEntry.Checked.Accepted accepted -> Optional.of(accepted.planning());
             case PlanningEntry.Checked.Refused problem -> {
@@ -152,7 +176,7 @@ public final class PlanningPage implements ConfigPage {
     }
 
     private List<NumberInput> fields() {
-        return List.of(minimum, target, margin, importTolerance, minWindow, notifyLead);
+        return List.of(minimum, target, margin, importTolerance, minWindow);
     }
 
     private FieldRow row(ConfigSetting setting, TextKey name, TextKey hint, Input input) {
