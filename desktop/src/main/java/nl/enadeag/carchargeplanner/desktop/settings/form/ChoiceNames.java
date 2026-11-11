@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.CompassPoint;
+import nl.enadeag.carchargeplanner.engine.config.HomeChargePower;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.config.TiltChoice;
@@ -97,6 +98,30 @@ public final class ChoiceNames {
      */
     public String phases(Phases phases) {
         return messages.text(phases == Phases.ONE ? TextKey.PHASES_ONE : TextKey.PHASES_THREE);
+    }
+
+    /**
+     * A charge power at home.
+     *
+     * @param power the power to name
+     * @return such as "3.7 kW", one text per power and language
+     */
+    public String chargePower(HomeChargePower power) {
+        return messages.text(switch (power) {
+            case KW_3_7 -> TextKey.CHARGE_POWER_3_7;
+            case KW_7_4 -> TextKey.CHARGE_POWER_7_4;
+            case KW_11 -> TextKey.CHARGE_POWER_11;
+            case KW_22 -> TextKey.CHARGE_POWER_22;
+        });
+    }
+
+    /**
+     * The choice for a charger whose values are none of the charge powers offered.
+     *
+     * @return "Other"
+     */
+    public String otherChargePower() {
+        return messages.text(TextKey.CHARGE_POWER_OTHER);
     }
 
     /**
