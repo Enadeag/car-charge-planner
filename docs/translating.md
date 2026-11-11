@@ -58,6 +58,10 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Planning preferences | planning |  | Planning settings, options |
 | App settings | app-instellingen |  | Preferences, interface config |
 | Place search | zoeken (de zoekdienst) |  | Geocoding, location lookup, address search |
+| Chosen place: Utrecht, Netherlands | Gekozen plaats: Utrecht, Nederland | the Location page's top line, in both apps, in set-up and Settings; the name stays as it was chosen, in the language of that moment | Chosen: (the card it replaces) |
+| No place chosen yet | Nog geen plaats gekozen | the same line while the settings hold no place name |  |
+| Search to choose another place | Zoek om een andere plaats te kiezen | under the place search while a place is chosen |  |
+| Coordinates and time zone | Coördinaten en tijdzone | the fold under the place search with the latitude, the longitude and the time zone; the same words title them for a provider without a place search | Advanced, Enter coordinates instead (what it replaces on Android) |
 | Charger phases | fasen |  | Single/three-phase connection (the home connection can have three phases while the charger uses one) |
 | Forecast provider | voorspellingsdienst |  | Weather source, weather service, API |
 | Primary provider | voorspellingsdienst |  | Main provider, default provider |

@@ -23,16 +23,19 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 ### Time zone
 
-- The zone is chosen under **Advanced**, the shared fold row with an arrow, like "More settings" (#448), from the list of zone ids only; "Enter coordinates instead" on the same step stays a check box until #449. A chosen place sets it; typed coordinates put it back to the phone's zone unless the owner chose one by hand. The phone's zone is read when used, not at start (#314).
+- The zone is chosen under **Coordinates and time zone**, the shared fold row, from the list of zone ids only. A chosen place sets it; typed coordinates put it back to the phone's zone unless the owner chose one by hand. The phone's zone is read when used, not at start (#314, #449).
 
 ### Place search
 
 - The search runs on the Search button or the keyboard's Search key, never per keystroke, in the app's language (`place_search_language`, `en` or `nl`), and shows at most 8 places; labels are told apart only among those shown (#314).
 - The typed text is at most 100 characters and survives the system ending the app; the results do not (#314).
-- Results are list rows with dividers, at least 48 dp high, whose labels wrap; a label is cut at 100 characters, so the field, the card and the saved state hold the same text (#343).
-- After a choice the field shows the place's label and stays editable, the coordinates toggle does not open, and a card under the Search button says "Chosen: <place>", "Coordinates: <lat>, <lon>" and "Time zone: <zone>", the form's zone. Dutch separates the coordinates with a semicolon ("Coördinaten: 52,0907; 5,1214"), because a comma is ambiguous next to a decimal comma (#343).
-- The card shows only after a choice in this session, stays while the field is edited and while searching again, and goes, with the field emptied, when typed coordinates forget the place. In Settings it leaves out the coordinates, stays after Save and goes when the page is left (#343).
-- TalkBack's focus moves to the card once per choice, so turning the phone or coming back to the step does not move it again (#343).
+- Results are list rows with dividers, at least 48 dp high, whose labels wrap in full (#343).
+- The step, and Settings' Location page, the same, start with "Chosen place: <place>" or "No place chosen yet", then the search, then the latitude, the longitude and the time zone under the fold **Coordinates and time zone** (#449).
+- After a choice the field is empty, for a new search only, and its hint starts with "Search to choose another place". The place's name is its label as chosen, cut at 100 characters (`PlaceName.fromLabel`); it stays at the top while searching again, and a failed search leaves it and the fold alone (#449).
+- The name holds while the fields show the place's coordinates at their four decimals: typing a digit and putting it back keeps it, a real difference shows "No place chosen yet" at once and is saved without a name. The name and the place's coordinates are kept in the saved state as texts (#449).
+- The fold is closed with a place and open without one; a new choice closes it; a problem in a coordinate opens it and keeps it open, also after the problem is put right, and a press on its row does nothing meanwhile. Its state survives turning the phone (`rememberSaveable`) (#449).
+- Without a place search the page shows the line that the provider has none and only the coordinates and the time zone, unfolded, without the top line (#449).
+- TalkBack's focus moves to the top line once per choice, so turning the phone or coming back to the step does not move it again (#343, #449).
 
 ### Language and words
 

@@ -24,6 +24,8 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 - Settings treats a stored time zone as chosen by hand, so typed coordinates leave it alone; set-up keeps its own rule (#315).
 - The place search uses the stored primary provider, and says so when that provider has none (#315).
+- The page is set-up's Location step, with the stored place name at the top (#449). A save of another page, or of this one with the coordinates left as they show, keeps the name.
+- The list's line under Location is the place name; without one the coordinates with four decimals; the time zone is not on it (#449).
 
 ### Panel arrays
 

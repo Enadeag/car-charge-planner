@@ -13,7 +13,7 @@ Decisions that hold on every screen of the app: the top app bar, buttons, snackb
 ### Drop-downs and folding
 
 - A choice from a fixed list is the shared `ChoiceMenu` (`ui/components/ChoiceMenu.kt`), Material's exposed drop-down menu, which shows "Choose…" until a choice is made; a few choices that all fit on one line may stay radio buttons (`ChoiceRow`) (#448).
-- Settings that are seldom changed fold under the shared `Fold` row (`ui/components/Fold.kt`), "▸ More settings" or "Advanced": one button with an arrow, read as "Collapsed" or "Expanded" (#448).
+- Settings that are seldom changed fold under the shared `Fold` row (`ui/components/Fold.kt`), "▸ More settings" or "Coordinates and time zone": one button with an arrow, read as "Collapsed" or "Expanded" (#448, #449).
 
 ### Snackbars
 
