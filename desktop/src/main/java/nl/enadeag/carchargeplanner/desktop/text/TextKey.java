@@ -650,18 +650,52 @@ public enum TextKey {
     FIELD_PANEL_NAME,
     /** What the name is for. */
     FIELD_PANEL_NAME_HINT,
-    /** The panel array's size. */
-    FIELD_PANEL_SIZE,
-    /** What the size is. */
-    FIELD_PANEL_SIZE_HINT,
-    /** The panel array's tilt. */
-    FIELD_PANEL_TILT,
-    /** What the tilt is. */
-    FIELD_PANEL_TILT_HINT,
+    /** The number of panels in the array. */
+    FIELD_PANEL_COUNT,
     /** The panel array's direction. */
     FIELD_PANEL_DIRECTION,
-    /** What the direction is. */
-    FIELD_PANEL_DIRECTION_HINT,
+    /** The panel array's tilt. */
+    FIELD_PANEL_TILT,
+    /** The year the array's panels were placed. */
+    FIELD_PANEL_YEAR,
+    /** The power of one panel. */
+    FIELD_PANEL_POWER,
+    /** What the power per panel is, while one is typed or no year is. */
+    FIELD_PANEL_POWER_HINT,
+    /** What the power per panel is while it is empty: {0} the typical power in Wp, {1} the year typed. */
+    FIELD_PANEL_POWER_HINT_TYPICAL,
+    /** The peak power the typed panels give together: {0} the kWp, written. */
+    PANELS_TOGETHER,
+    /** An array stored by its peak power, before its panels are entered: {0} the kWp, written. */
+    PANELS_NOW_SET,
+    /** What a drop-down shows before a choice is made. */
+    CHOOSE,
+    /** A choice of direction. */
+    DIRECTION_NORTH,
+    /** A choice of direction. */
+    DIRECTION_NORTH_EAST,
+    /** A choice of direction. */
+    DIRECTION_EAST,
+    /** A choice of direction. */
+    DIRECTION_SOUTH_EAST,
+    /** A choice of direction. */
+    DIRECTION_SOUTH,
+    /** A choice of direction. */
+    DIRECTION_SOUTH_WEST,
+    /** A choice of direction. */
+    DIRECTION_WEST,
+    /** A choice of direction. */
+    DIRECTION_NORTH_WEST,
+    /** A choice of tilt: a flat roof. */
+    TILT_FLAT,
+    /** A choice of tilt: a pitched roof. */
+    TILT_PITCHED,
+    /** A choice of tilt: a steep roof. */
+    TILT_STEEP,
+    /** A choice of tilt: upright. */
+    TILT_UPRIGHT,
+    /** The row that shows or hides the settings that are seldom changed, such as a panel array's losses. */
+    MORE_SETTINGS,
     /** The panel array's losses. */
     FIELD_PANEL_LOSSES,
     /** What the losses are. */
@@ -778,6 +812,16 @@ public enum TextKey {
     PROBLEM_SAME_AS_START,
     /** A time that is not a time. */
     PROBLEM_NOT_A_TIME,
+    /** A number of panels that is not a whole number from 1 to 200. */
+    PROBLEM_PANEL_COUNT,
+    /** A power per panel that is not a whole number from 50 to 1000. */
+    PROBLEM_PANEL_POWER,
+    /** A year placed that is not from 1990 to this year. */
+    PROBLEM_YEAR_PLACED,
+    /** An array with neither the year placed nor the power per panel. */
+    PROBLEM_NO_YEAR_OR_POWER,
+    /** A drop-down without a choice. */
+    PROBLEM_NOT_CHOSEN,
     /** A required provider setting that is empty. */
     PROBLEM_REQUIRED,
     /** A provider's server address that a key may not be sent to. */

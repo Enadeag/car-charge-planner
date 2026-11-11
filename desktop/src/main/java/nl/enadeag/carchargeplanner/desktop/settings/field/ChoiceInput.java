@@ -53,6 +53,18 @@ public final class ChoiceInput<T> implements Input {
     }
 
     /**
+     * Shows no choice, only a prompt such as "Choose…", and remembers that as not edited, as for a new item whose value
+     * the owner has to choose.
+     *
+     * @param prompt what the field shows until a choice is made, in the owner's language
+     */
+    public void loadNone(String prompt) {
+        loaded = null;
+        box.setPromptText(prompt);
+        box.setValue(null);
+    }
+
+    /**
      * Shows a choice as if the owner made it, so it counts as changed when it differs from the loaded one.
      *
      * @param choice one of the choices the field was made with
@@ -64,7 +76,7 @@ public final class ChoiceInput<T> implements Input {
     /**
      * The choice now.
      *
-     * @return the chosen one of the choices
+     * @return the chosen one of the choices; null after {@link #loadNone(String)} until the owner chooses
      */
     public T value() {
         return box.getValue();

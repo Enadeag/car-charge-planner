@@ -6,8 +6,10 @@ import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.config.CompassPoint;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.config.TiltChoice;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import java.time.DayOfWeek;
 import java.time.format.TextStyle;
@@ -95,6 +97,40 @@ public final class ChoiceNames {
      */
     public String phases(Phases phases) {
         return messages.text(phases == Phases.ONE ? TextKey.PHASES_ONE : TextKey.PHASES_THREE);
+    }
+
+    /**
+     * A direction panels face.
+     *
+     * @param point the compass point to name
+     * @return such as "South-east"
+     */
+    public String direction(CompassPoint point) {
+        return messages.text(switch (point) {
+            case NORTH -> TextKey.DIRECTION_NORTH;
+            case NORTH_EAST -> TextKey.DIRECTION_NORTH_EAST;
+            case EAST -> TextKey.DIRECTION_EAST;
+            case SOUTH_EAST -> TextKey.DIRECTION_SOUTH_EAST;
+            case SOUTH -> TextKey.DIRECTION_SOUTH;
+            case SOUTH_WEST -> TextKey.DIRECTION_SOUTH_WEST;
+            case WEST -> TextKey.DIRECTION_WEST;
+            case NORTH_WEST -> TextKey.DIRECTION_NORTH_WEST;
+        });
+    }
+
+    /**
+     * A tilt panels are placed at.
+     *
+     * @param tilt the choice to name
+     * @return such as "Pitched"
+     */
+    public String tilt(TiltChoice tilt) {
+        return messages.text(switch (tilt) {
+            case FLAT -> TextKey.TILT_FLAT;
+            case PITCHED -> TextKey.TILT_PITCHED;
+            case STEEP -> TextKey.TILT_STEEP;
+            case UPRIGHT -> TextKey.TILT_UPRIGHT;
+        });
     }
 
     /**

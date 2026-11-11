@@ -12,6 +12,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
+import java.time.Year;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +35,15 @@ public record SettingsStores(Engine engine, AppSettingsFile appSettings, Optiona
      */
     public List<ProviderInfo> providers() {
         return engine.providers();
+    }
+
+    /**
+     * The current year, which a panel array's year placed may not be after.
+     *
+     * @return this year by the engine's clock
+     */
+    public Year thisYear() {
+        return engine.thisYear();
     }
 
     /**

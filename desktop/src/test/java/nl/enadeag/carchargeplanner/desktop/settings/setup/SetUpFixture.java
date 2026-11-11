@@ -21,9 +21,11 @@ import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.ManualScheduler;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
+import nl.enadeag.carchargeplanner.engine.config.CompassPoint;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.TiltChoice;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastCache;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
@@ -281,6 +283,14 @@ final class SetUpFixture {
     /** Waits until the preview shown shows the plan, or why there is none. */
     void awaitPreview(SetUpView view) throws Exception {
         SettingsFixture.waitFor(() -> !texts(view).contains(messages.text(TextKey.LOADING)));
+    }
+
+    /** Fills the panels step as the owner does: 20 panels facing south, pitched, placed in 2021; on that step. */
+    void fillPanels(SetUpView view) {
+        type(view, TextKey.FIELD_PANEL_COUNT, "20");
+        choose(view, TextKey.FIELD_PANEL_DIRECTION, CompassPoint.SOUTH);
+        choose(view, TextKey.FIELD_PANEL_TILT, TiltChoice.PITCHED);
+        type(view, TextKey.FIELD_PANEL_YEAR, "2021");
     }
 
     /** Searches the place as the owner does and picks the one found; on the location step. */

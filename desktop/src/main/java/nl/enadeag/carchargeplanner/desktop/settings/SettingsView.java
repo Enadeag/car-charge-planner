@@ -202,7 +202,7 @@ final class SettingsView extends BorderPane {
 
     private static SettingsView of(SettingsStores stores, AboutFacts facts, Consumer<URI> openLink, Runnable close,
             Consumer<AppSettings> saved, AppPage app, Background background, Messages messages) {
-        var solar = new SolarPage(messages);
+        var solar = new SolarPage(stores::thisYear, false, messages);
         var location = new LocationPage(
                 (provider, text) -> stores.searchPlaces(provider, text, messages.language().code()),
                 background, messages);

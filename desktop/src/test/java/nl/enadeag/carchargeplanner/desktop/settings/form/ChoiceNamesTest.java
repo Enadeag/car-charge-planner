@@ -7,8 +7,10 @@ import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import nl.enadeag.carchargeplanner.engine.config.CompassPoint;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.config.TiltChoice;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -33,6 +35,18 @@ class ChoiceNamesTest {
                 .containsExactly("Follow the system", "Light", "Dark");
         assertThat(List.of(Units.values()).stream().map(english::units))
                 .containsExactly("Metric (km, kWh/100 km)", "Imperial (miles, mi/kWh)");
+    }
+
+    @Test
+    void thePanelsDirectionsRunClockwiseFromNorthAndTheTiltsFromFlat() {
+        assertThat(List.of(CompassPoint.values()).stream().map(english::direction)).containsExactly("North",
+                "North-east", "East", "South-east", "South", "South-west", "West", "North-west");
+        assertThat(List.of(CompassPoint.values()).stream().map(dutch::direction)).containsExactly("Noord",
+                "Noordoost", "Oost", "Zuidoost", "Zuid", "Zuidwest", "West", "Noordwest");
+        assertThat(List.of(TiltChoice.values()).stream().map(english::tilt))
+                .containsExactly("Flat", "Pitched", "Steep", "Upright");
+        assertThat(List.of(TiltChoice.values()).stream().map(dutch::tilt))
+                .containsExactly("Plat", "Schuin", "Steil", "Rechtop");
     }
 
     @Test

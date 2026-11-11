@@ -605,6 +605,21 @@
     -fx-max-width: 26em;
 }
 
+/* an estimate shown in an empty field, such as the typical power per panel, at the hints' contrast */
+.whole-number-field {
+    -fx-prompt-text-fill: -muted;
+}
+
+.fold-row {
+    -fx-alignment: center-left;
+    -fx-padding: 0.3em 0 0.3em 0;
+    -fx-text-fill: -fg;
+}
+
+.fold-content {
+    -fx-spacing: 0.2em;
+}
+
 .field-problem,
 .status-text.problem {
     -fx-text-fill: -danger-text;
