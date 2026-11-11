@@ -6,12 +6,12 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 /**
  * The home's own use of power.
  *
- * @param baseloadKw the power the house uses on its own in kW, 0 or more: the average over the whole day, night
- *     included, such as its kWh in a month divided by 730, the hours of an average month
+ * @param baseloadKw the power the house uses without charging the car, in kW, 0 or more: the average over the whole
+ *     day, night included, such as its kWh in a day divided by 24
  */
 public record House(double baseloadKw) {
 
-    /** A common household, for an owner who does not know: 0.5 kW. */
+    /** A common household, for an owner who does not know: 0.5 kW, 12 kWh per day. */
     public static final House TYPICAL = new House(0.5);
 
     /**
