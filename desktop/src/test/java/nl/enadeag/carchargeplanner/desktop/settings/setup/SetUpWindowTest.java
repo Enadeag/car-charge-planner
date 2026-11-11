@@ -145,6 +145,32 @@ class SetUpWindowTest {
         assertThat(Fx.call(after::step)).isEqualTo(SetUpStep.APP);
     }
 
+    /** Set-up shows its draft again, so the location step starts afresh: no problem, and a fold the row folds. */
+    @Test
+    void anAppearanceSavedInSettingsAfterNextWithoutAPlaceShowsTheLocationStepWithoutTheProblem() throws Exception {
+        var noPlace = setUp.messages.text(TextKey.PROBLEM_NO_PLACE);
+        var view = open();
+        Fx.run(() -> {
+            view.next();
+            view.next();
+            view.next();
+        });
+        assertThat(Fx.call(() -> setUp.latitudeHelp(view))).startsWith(noPlace);
+        setUp.appSettings.write(new AppSettings(Optional.empty(), Units.METRIC, DisplayMode.AUTOMATIC,
+                Appearance.DARK));
+
+        Fx.run(() -> saved.set(Appearance.DARK));
+        Fx.settle();
+
+        var after = view();
+        assertThat(after).isSameAs(view);
+        assertThat(Fx.call(after::step)).isEqualTo(SetUpStep.LOCATION);
+        assertThat(Fx.call(() -> setUp.latitudeHelp(after))).doesNotContain(noPlace);
+        assertThat(Fx.call(() -> setUp.latitudeShown(after))).isTrue();
+        Fx.run(() -> setUp.foldRow(after).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(after))).isFalse();
+    }
+
     @Test
     void finishClosesTheWindowAndTellsTheApp() throws Exception {
         setUp.withExample();

@@ -173,48 +173,58 @@ class SetUpViewTest {
     void nextWithoutAPlaceOpensTheFoldedCoordinatesWithTheProblemAndTheRowLeavesThemOpen() throws Exception {
         var view = setUp.open();
         next(view, 2);
-        Fx.run(() -> foldRow(view).fire());
-        assertThat(Fx.call(() -> latitudeShown(view))).isFalse();
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isFalse();
 
         next(view, 1);
 
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.LOCATION);
-        assertThat(Fx.call(() -> latitudeShown(view))).isTrue();
-        assertThat(latitudeHelp(view)).startsWith(setUp.messages.text(TextKey.PROBLEM_NO_PLACE));
-        Fx.run(() -> foldRow(view).fire());
-        assertThat(Fx.call(() -> latitudeShown(view))).isTrue();
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isTrue();
+        assertThat(Fx.call(() -> setUp.latitudeHelp(view))).startsWith(noPlace());
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isTrue();
     }
 
-    private String latitudeHelp(SetUpView view) throws Exception {
-        return Fx.call(() -> setUp.control(view, TextKey.FIELD_LATITUDE).getAccessibleHelp());
+    private String noPlace() {
+        return setUp.messages.text(TextKey.PROBLEM_NO_PLACE);
     }
 
     @Test
-    void aProblemAtTheCoordinatesKeepsThemOpenUntilAPlaceIsChosen() throws Exception {
+    void choosingAPlaceTakesTheProblemAwayClosesTheCoordinatesAndLetsTheRowFoldThemAgain() throws Exception {
         var view = setUp.open();
         next(view, 2);
         assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("No place chosen yet");
-        assertThat(Fx.call(() -> latitudeShown(view))).isTrue();
+        next(view, 1);
+
+        setUp.choosePlace(view);
+
+        assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("Chosen place: " + SetUpFixture.PLACE.label());
+        assertThat(Fx.call(() -> setUp.latitudeHelp(view))).doesNotContain(noPlace());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isFalse();
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isTrue();
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isFalse();
+    }
+
+    @Test
+    void typedCoordinatesTakeTheProblemAwayAndLetTheRowFoldThemAgain() throws Exception {
+        var view = setUp.open();
+        next(view, 2);
+        next(view, 1);
+        Fx.run(() -> {
+            setUp.type(view, TextKey.FIELD_LATITUDE, "51.5");
+            setUp.type(view, TextKey.FIELD_LONGITUDE, "4.25");
+        });
 
         next(view, 1);
-        Fx.run(() -> foldRow(view).fire());
+        Fx.run(() -> setUp.button(view, TextKey.SET_UP_BACK).fire());
 
-        assertThat(Fx.call(() -> latitudeShown(view))).isTrue();
-        setUp.choosePlace(view);
-        assertThat(Fx.call(() -> Scenes.visibleTexts(view))).contains("Chosen place: " + SetUpFixture.PLACE.label());
-        assertThat(Fx.call(() -> latitudeShown(view))).isFalse();
-    }
-
-    private boolean latitudeShown(SetUpView view) {
-        return Scenes.reallyVisible(setUp.field(view, TextKey.FIELD_LATITUDE));
-    }
-
-    private Button foldRow(SetUpView view) {
-        var name = setUp.messages.text(TextKey.CARD_COORDINATES);
-        return Scenes.all(view).stream()
-                .filter(node -> node instanceof Button button && button.getText().endsWith(" " + name)
-                        && Scenes.reallyVisible(button))
-                .map(Button.class::cast).findFirst().orElseThrow();
+        assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.LOCATION);
+        assertThat(Fx.call(() -> setUp.latitudeHelp(view))).doesNotContain(noPlace());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isTrue();
+        Fx.run(() -> setUp.foldRow(view).fire());
+        assertThat(Fx.call(() -> setUp.latitudeShown(view))).isFalse();
     }
 
     @Test
