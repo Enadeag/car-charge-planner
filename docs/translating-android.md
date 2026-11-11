@@ -40,7 +40,8 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Finish | Voltooien | set-up's last button, which saves |
 | Step 3 of 7 | Stap 3 van 7 | read with each step's heading |
 | I don't know: use typical values | Weet ik niet: gangbare waarden gebruiken | fills in typical values; not on the panels' step or page |
-| Chosen place: Utrecht, Netherlands | Gekozen plaats: Utrecht, Nederland | the Location page's top line, as on the desktop; "No place chosen yet" ("Nog geen plaats gekozen") without a place name |
+| Chosen place: Utrecht, Netherlands | Gekozen plaats: Utrecht, Nederland | the Location page's top line, as on the desktop |
+| No place chosen yet | Nog geen plaats gekozen | the same line while the settings hold no place name |
 | Search to choose another place | Zoek om een andere plaats te kiezen | under the place search while a place is chosen, above "Searching sends it to Open-Meteo, …" |
 | Coordinates and time zone | Coördinaten en tijdzone | the fold with the latitude, the longitude and "Time zone: Europe/Amsterdam" ("Tijdzone: Europe/Amsterdam") |
 | Check again | Opnieuw controleren | asks the forecast provider once more |

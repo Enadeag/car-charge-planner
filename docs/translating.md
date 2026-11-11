@@ -58,6 +58,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Planning preferences | planning |  | Planning settings, options |
 | App settings | app-instellingen |  | Preferences, interface config |
 | Place search | zoeken (de zoekdienst) |  | Geocoding, location lookup, address search |
+| Place name | plaatsnaam | the name of the place chosen, kept with the coordinates | Address, location name, city |
 | Chosen place: Utrecht, Netherlands | Gekozen plaats: Utrecht, Nederland | the Location page's top line, in both apps, in set-up and Settings; the name stays as it was chosen, in the language of that moment | Chosen: (the card it replaces) |
 | No place chosen yet | Nog geen plaats gekozen | the same line while the settings hold no place name |  |
 | Search to choose another place | Zoek om een andere plaats te kiezen | under the place search while a place is chosen |  |

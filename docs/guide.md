@@ -14,7 +14,7 @@ Set-up takes a few minutes. It starts with what leaves your computer, then asks 
 
 <p>
 <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/setup-welcome-english-dark.png"><img alt="Set-up's welcome step: what the app does, what leaves your computer, and typical values for when you are not sure." src="screenshots/java/setup-welcome-english-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/setup-location-english-dark.png"><img alt="Set-up's location step: search by name, or type the coordinates." src="screenshots/java/setup-location-english-light.png" width="300"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/setup-location-english-dark.png"><img alt="Set-up's location step: the place chosen at the top, a search to choose another, and the coordinates and time zone folded away." src="screenshots/java/setup-location-english-light.png" width="300"></picture>
 <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/setup-preview-english-dark.png"><img alt="Set-up's preview of the dashboard, before Finish." src="screenshots/java/setup-preview-english-light.png" width="300"></picture>
 </p>
 
