@@ -23,7 +23,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 ### Time zone
 
-- The zone is chosen under **Advanced**, a fold row with an arrow like "More settings", no longer a check box (#448), from the list of zone ids only. A chosen place sets it; typed coordinates put it back to the phone's zone unless the owner chose one by hand. The phone's zone is read when used, not at start (#314).
+- The zone is chosen under **Advanced**, the shared fold row with an arrow, like "More settings" (#448), from the list of zone ids only; "Enter coordinates instead" on the same step stays a check box until #449. A chosen place sets it; typed coordinates put it back to the phone's zone unless the owner chose one by hand. The phone's zone is read when used, not at start (#314).
 
 ### Place search
 
