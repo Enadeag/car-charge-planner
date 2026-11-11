@@ -43,6 +43,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.Year;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -518,6 +520,16 @@ public final class Engine {
         var values = found.get().info().settingsFrom(settings, secret);
         return ConnectionCheck.attempt(found.get(), SolarSite.of(system), values, clock.instant(),
                 stored.values());
+    }
+
+    /**
+     * The current year by the engine's clock, in UTC, which a client checks a panel array's year placed against
+     * ({@link nl.enadeag.carchargeplanner.engine.config.PanelSize.Panels#notPlacedAfter(Year)}). Reads nothing.
+     *
+     * @return this year
+     */
+    public Year thisYear() {
+        return Year.from(clock.instant().atOffset(ZoneOffset.UTC));
     }
 
     /**

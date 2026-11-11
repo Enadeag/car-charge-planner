@@ -70,6 +70,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -345,6 +346,13 @@ class EngineTest {
             assertThat(unusable.detail()).contains("system");
         });
         assertThat(main.callCount()).isZero();
+    }
+
+    @Test
+    void thisYearIsTheYearOfTheEnginesClockInUtc() {
+        var newYearsEve = Clock.fixed(Instant.parse("2026-12-31T23:30:00Z"), BRUSSELS);
+
+        assertThat(engine(newYearsEve).thisYear()).isEqualTo(Year.of(2026));
     }
 
     @Test
