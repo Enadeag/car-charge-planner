@@ -6,7 +6,6 @@ import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.app.AppPage;
 import nl.enadeag.carchargeplanner.desktop.settings.away.WeeklyAwayCard;
 import nl.enadeag.carchargeplanner.desktop.settings.car.CarCard;
-import nl.enadeag.carchargeplanner.desktop.settings.car.HouseCard;
 import nl.enadeag.carchargeplanner.desktop.settings.charger.ChargerPage;
 import nl.enadeag.carchargeplanner.desktop.settings.forecast.ForecastPage;
 import nl.enadeag.carchargeplanner.desktop.settings.forecast.ProviderTester;
@@ -166,11 +165,9 @@ final class SetUpView extends BorderPane {
         var system = new AtomicReference<HomeSystem>();
         ProviderTester tester = (provider, settings) -> stores.checkConnection(provider, system.get(), settings);
         var forecast = new ForecastPage(providers, tester, openLink, keysFile, background, messages);
-        var house = new HouseCard(messages);
         var away = new WeeklyAwayCard(messages);
-        var more = new PageView(messages.text(SetUpStep.MORE.title()));
-        more.show(Labels.paragraph(messages.text(TextKey.SET_UP_MORE_HINT), "field-label"), house.view(),
-                away.view());
+        var awayPage = new PageView(messages.text(SetUpStep.AWAY.title()));
+        awayPage.show(Labels.paragraph(messages.text(TextKey.SET_UP_AWAY_HINT), "field-label"), away.view());
         var carPage = new PageView(messages.text(SetUpStep.CAR.title()));
         carPage.show(car.view());
 
@@ -183,7 +180,7 @@ final class SetUpView extends BorderPane {
         pages.put(SetUpStep.CHARGER, SetUpStepPage.of(charger.view()));
         pages.put(SetUpStep.FORECAST,
                 SetUpStepPage.of(forecast.view(), reached -> system.set(reached.config().system())));
-        pages.put(SetUpStep.MORE, SetUpStepPage.of(more));
+        pages.put(SetUpStep.AWAY, SetUpStepPage.of(awayPage));
         pages.put(SetUpStep.CHECK, new SetUpCheck((config, keys) -> {
             var primary = config.forecast().primary();
             var settings = new HashMap<>(config.forecast().settingsOf(primary));
@@ -198,7 +195,7 @@ final class SetUpView extends BorderPane {
         parts.put(SetUpStep.CAR, List.of(car));
         parts.put(SetUpStep.CHARGER, List.of(charger));
         parts.put(SetUpStep.FORECAST, List.of(forecast));
-        parts.put(SetUpStep.MORE, List.of(house, away));
+        parts.put(SetUpStep.AWAY, List.of(away));
         var form = new SetUpForm(new SettingsStorage(stores), parts, location, forecast, app);
         return new SetUpView(form, pages, app, close, finished, background, messages);
     }

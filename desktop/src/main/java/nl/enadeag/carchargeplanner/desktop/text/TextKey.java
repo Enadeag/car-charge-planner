@@ -493,6 +493,8 @@ public enum TextKey {
     PROBLEM_NOT_BELOW_TARGET,
     /** The unit after a number of minutes. */
     UNIT_MINUTES,
+    /** The unit after an amount of energy per day, such as the house's own use. */
+    UNIT_KWH_PER_DAY,
     /** The title of the card with the minimum and target charge levels. */
     CARD_CHARGE_LEVELS,
     /** What the charge levels do. */
@@ -768,14 +770,10 @@ public enum TextKey {
     FIELD_CAR_TRIP_SURCHARGE,
     /** What the trip surcharge is. */
     FIELD_CAR_TRIP_SURCHARGE_HINT,
-    /** The title of the house's card. */
-    CARD_HOUSE,
-    /** What the house's value is for. */
-    CARD_HOUSE_HINT,
-    /** The house's baseload. */
-    FIELD_BASELOAD,
-    /** What the baseload is. */
-    FIELD_BASELOAD_HINT,
+    /** The house's own use, its baseload, which the screen asks for per day. */
+    FIELD_HOUSEHOLD_USE,
+    /** What the house's own use is and where to find it. */
+    FIELD_HOUSEHOLD_USE_HINT,
     /** The title of the charger's card. */
     CARD_CHARGER,
     /** What the charger's values are for. */
@@ -980,10 +978,10 @@ public enum TextKey {
     SET_UP_TYPICAL,
     /** The car step's name. */
     SET_UP_CAR,
-    /** The name of the step with the house and the away periods. */
-    SET_UP_MORE,
+    /** The name of the step with the weekly away periods. */
+    SET_UP_AWAY,
     /** What that step is for. */
-    SET_UP_MORE_HINT,
+    SET_UP_AWAY_HINT,
     /** The name of the step that asks for one forecast. */
     SET_UP_CHECK,
     /** The title of the card with the check. */
