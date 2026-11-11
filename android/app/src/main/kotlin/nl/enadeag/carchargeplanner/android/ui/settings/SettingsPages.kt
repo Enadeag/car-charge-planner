@@ -61,7 +61,7 @@ internal fun summary(page: SettingsPage, config: EngineConfig, session: Settings
     val system = config.system()
     return when (page) {
         SettingsPage.SOLAR -> pluralStringResource(R.plurals.settings_solar_summary, system.panels().size,
-            system.panels().size, numbers.write(system.panels().sumOf { it.kwp() }, 2))
+            system.panels().size, numbers.write(system.panels().sumOf { it.kwp() }, 1))
         SettingsPage.LOCATION -> stringResource(R.string.settings_location_summary,
             numbers.write(system.location().latitude(), 4), numbers.write(system.location().longitude(), 4),
             system.timezone().id)

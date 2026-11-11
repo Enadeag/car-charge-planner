@@ -61,9 +61,11 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.time.Year
 import java.time.ZoneId
 import java.util.Locale
 import java.util.Optional
+import java.util.OptionalInt
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,7 +90,10 @@ import nl.enadeag.carchargeplanner.android.ui.settings.title
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
+import nl.enadeag.carchargeplanner.engine.config.PanelArray
+import nl.enadeag.carchargeplanner.engine.config.PanelSize
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.config.TypicalValues
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
@@ -259,13 +264,23 @@ class SettingsScreenTest {
     fun eachRowSaysWhatThePageHoldsNow() {
         show()
 
-        val kwp = NumberText(Locale.ENGLISH).write(stored.system().panels().single().kwp(), 2)
+        val kwp = NumberText(Locale.ENGLISH).write(stored.system().panels().single().kwp(), 1)
         compose.onNodeWithText(compose.activity.resources.getQuantityString(R.plurals.settings_solar_summary, 1, 1,
             kwp)).assertExists()
         compose.onNodeWithText(text(R.string.settings_location_summary, "52.0907", "5.1214", "Europe/Amsterdam"))
             .assertExists()
         compose.onNodeWithText(text(R.string.settings_forecast_summary_alone, "Open-Meteo")).assertExists()
         compose.onNodeWithText(text(R.string.settings_away_none)).assertExists()
+    }
+
+    @Test
+    fun theSolarRowGivesACountedArraysPeakPowerWithOneDecimal() {
+        val counted = stored.withSystem(stored.system().withPanels(listOf(PanelArray("roof",
+            PanelSize.Panels(10, OptionalInt.empty(), Optional.of(Year.of(2021))), 35.0, 0.0, 0.14))),
+            TypicalValues.NONE)
+        show(session(config = counted))
+
+        compose.onNodeWithText("1 array, 3.6 kWp").assertExists()
     }
 
     @Test
