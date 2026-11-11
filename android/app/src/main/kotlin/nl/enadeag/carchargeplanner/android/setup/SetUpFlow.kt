@@ -69,8 +69,8 @@ class SetUpFlow(private val handle: SavedStateHandle, numbers: NumberText, priva
     /** The car. */
     val car = CarForm(handle, numbers)
 
-    /** The wall charger. */
-    val charger = ChargerForm(handle, numbers)
+    /** The wall charger; the draft's, whose phases and highest current are typical, shows no power chosen yet. */
+    val charger = ChargerForm(handle, numbers, newWhenTypical = true)
 
     /** The weekly away periods. */
     val away = WeeklyAwayForm(handle)

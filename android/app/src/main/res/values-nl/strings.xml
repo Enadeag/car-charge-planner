@@ -96,6 +96,13 @@
   <string name="car_trip_surcharge_hint">Procent dat bij het verbruik komt voor de energie van een rit.</string>
 
   <string name="setup_charger_title">Je laadpaal</string>
+  <string name="charge_power">Laadvermogen thuis</string>
+  <string name="charge_power_hint">Het vermogen waarmee de auto thuis laadt: het laagste van wat de laadpaal en de auto aankunnen.</string>
+  <string name="charge_power_3_7">3,7 kW</string>
+  <string name="charge_power_7_4">7,4 kW</string>
+  <string name="charge_power_11">11 kW</string>
+  <string name="charge_power_22">22 kW</string>
+  <string name="charge_power_other">Anders</string>
   <string name="charger_phases">Fasen</string>
   <string name="charger_phases_hint">Eén of drie: het typeplaatje of de handleiding van de laadpaal zegt het.</string>
   <string name="phases_one">Eén fase</string>
