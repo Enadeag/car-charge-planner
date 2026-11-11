@@ -769,18 +769,34 @@ class SystemPagesTest {
     }
 
     @Test
-    void anUntouchedHouseholdUseIsSavedBackExactlyThoughItShowsRounded() throws Exception {
-        var view = openWithHouse(Language.ENGLISH, 0.123);
+    void anUntouchedHouseholdUseIsSavedBackAsStoredNotRecomputedFromTheShownField() throws Exception {
+        var view = openWithHouse(Language.ENGLISH, 0.35);
         Fx.run(() -> houseFoldRow(view).fire());
-        assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("3.0");
+        assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("8.4");
 
         Fx.call(() -> {
             settings.type(view, TextKey.FIELD_CAR_BATTERY, "75");
             return SettingsFixture.save(view);
         });
 
-        assertThat(stored().system().house()).isEqualTo(new House(0.123));
+        assertThat(stored().system().house()).isEqualTo(new House(0.35));
         assertThat(stored().system().car().usableBatteryKwh()).isEqualTo(75);
+    }
+
+    @Test
+    void savingLoadsThePageAgainSoAnOpenHouseholdUseFoldClosesAfterwards() throws Exception {
+        var view = openWithHouse(Language.ENGLISH, 0.35);
+        Fx.run(() -> houseFoldRow(view).fire());
+        assertThat(Fx.call(() -> houseUseShown(view))).isTrue();
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "75");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().system().car().usableBatteryKwh()).isEqualTo(75);
+        assertThat(Fx.call(() -> houseUseShown(view))).isFalse();
+        assertThat(Fx.call(() -> houseFoldRow(view).getText())).isEqualTo("\u25B8 More settings");
     }
 
     @Test
