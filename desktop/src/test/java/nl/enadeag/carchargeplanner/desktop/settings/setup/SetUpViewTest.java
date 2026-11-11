@@ -170,6 +170,26 @@ class SetUpViewTest {
     }
 
     @Test
+    void nextWithoutAPlaceOpensTheFoldedCoordinatesWithTheProblemAndTheRowLeavesThemOpen() throws Exception {
+        var view = setUp.open();
+        next(view, 2);
+        Fx.run(() -> foldRow(view).fire());
+        assertThat(Fx.call(() -> latitudeShown(view))).isFalse();
+
+        next(view, 1);
+
+        assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.LOCATION);
+        assertThat(Fx.call(() -> latitudeShown(view))).isTrue();
+        assertThat(latitudeHelp(view)).startsWith(setUp.messages.text(TextKey.PROBLEM_NO_PLACE));
+        Fx.run(() -> foldRow(view).fire());
+        assertThat(Fx.call(() -> latitudeShown(view))).isTrue();
+    }
+
+    private String latitudeHelp(SetUpView view) throws Exception {
+        return Fx.call(() -> setUp.control(view, TextKey.FIELD_LATITUDE).getAccessibleHelp());
+    }
+
+    @Test
     void aProblemAtTheCoordinatesKeepsThemOpenUntilAPlaceIsChosen() throws Exception {
         var view = setUp.open();
         next(view, 2);
