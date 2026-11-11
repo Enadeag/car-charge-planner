@@ -8,7 +8,7 @@ A desktop app for Linux and Windows that tells you when to charge your electric 
 
 It is advisory only: it recommends a **charge window** and a **charge power**, and you set the charge current in your charger's app yourself.
 
-It plans from a description of your set-up: your solar panels (the number of panels, their direction and tilt, and the year they were placed or their power per panel), your location, your home charger's charge current limits and your car's battery, entered in set-up and changed in Settings later. Where you do not know a value, the app uses a **typical value** and says so: replace it with yours, or the plan will not fit your home.
+It plans from a description of your set-up: your solar panels (the number of panels, their direction and tilt, and the year they were placed or their power per panel), your location, the power your car charges with at home and your car's battery, entered in set-up and changed in Settings later. Where you do not know a value, the app uses a **typical value** and says so: replace it with yours, or the plan will not fit your home.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/java/charts-dark.png"><img alt="The dashboard three times: today with grid advice, a day with a charge window and the expected solar power, and the battery level being entered." src="docs/screenshots/java/charts-light.png"></picture>
 

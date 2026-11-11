@@ -52,7 +52,8 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Tilt | helling | a panel array's drop-down: Flat, Pitched, Steep, Upright (Plat, Schuin, Steil, Rechtop) |  |
 | Together about 3.6 kWp | Samen ongeveer 3,6 kWp | below a panel array's fields: the size its panels give |  |
 | Now set: 4.2 kWp. Enter the number of panels to replace this. | Nu ingesteld: 4,2 kWp. Vul het aantal panelen in om dit te vervangen. | above the fields of an array entered before as a size in kWp |  |
-| More settings | Meer instellingen | the row that folds the seldom changed settings away, such as a panel array's losses and name, and the household use on the Car and house page |  |
+| More settings | Meer instellingen | the row that folds the seldom changed settings away, such as a panel array's losses and name, the household use on the Car and house page, and the charger's phases, currents, voltage and efficiency |  |
+| Charge power at home | laadvermogen thuis | the Charger page's drop-down: 3.7 kW, 7.4 kW, 11 kW, 22 kW, Other (3,7 kW, 7,4 kW, 11 kW, 22 kW, Anders), each one text of its own; its hint "The power the car charges with at home: the lower of what the charger and the car can take." ("Het vermogen waarmee de auto thuis laadt: het laagste van wat de laadpaal en de auto aankunnen.") |  |
 | Choose… | Kies… | what a drop-down shows before a choice |  |
 | Typical value | gangbare waarde |  | Default, assumed value, guess |
 | Planning preferences | planning |  | Planning settings, options |

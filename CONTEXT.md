@@ -168,6 +168,10 @@ _Avoid_: Address, location name, city
 Whether the charger charges on one phase or three. Each amp delivers three times the power on three phases, and so does the minimum charge current.
 _Avoid_: Single/three-phase connection (the home connection can have three phases while the charger uses one)
 
+**Charge power at home**:
+The power the car charges with at home, the lower of what the charger and the car can take, which the owner chooses from 3.7, 7.4, 11 and 22 kW, or "Other". A choice stands for the charger phases and the highest charge current at 230 V (3.7 kW one phase of 16 A, 7.4 kW one phase of 32 A, 11 kW three phases of 16 A, 22 kW three phases of 32 A); the settings keep those, not the kW. A charger of other values is "Other", never the nearest power.
+_Avoid_: Charger power, charger size, wallbox rating (the car may take less than the charger gives)
+
 ## Forecasts
 
 **Forecast provider**:

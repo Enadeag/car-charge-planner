@@ -14,7 +14,7 @@ The dashboard, Settings and set-up are made to be used with a keyboard only (on 
 
 <p>
 <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/dashboard-200-dark.png"><img alt="The dashboard at 200%, with the focus ring on the battery's Update button." src="screenshots/java/dashboard-200-light.png" width="300"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/settings-200-dark.png"><img alt="Settings at 200%, on the Charger page, with the focus ring on the Phases field." src="screenshots/java/settings-200-light.png" width="500"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/settings-200-dark.png"><img alt="Settings at 200%, on the Charger page, with the focus ring on the Charge power at home field." src="screenshots/java/settings-200-light.png" width="500"></picture>
 </p>
 
 ## Android
