@@ -121,7 +121,6 @@ final class PanelArrayCard {
         showFigures();
     }
 
-    /** Shows a new array: nothing entered or chosen, and the typical losses tagged as such. */
     void loadNew() {
         var shown = PanelArrayEntry.empty();
         storedTilt = OptionalDouble.empty();
@@ -220,7 +219,6 @@ final class PanelArrayCard {
                 losses.value(), Optional.ofNullable(kept));
     }
 
-    /** The note on a stored peak power, the estimate shown in the empty power field, and the sum below. */
     private void showFigures() {
         var entry = entry();
         var keeps = entry.keepsThePeakPower();
@@ -241,7 +239,7 @@ final class PanelArrayCard {
         together.setManaged(sum.isPresent());
     }
 
-    /** One decimal, as the sum shows it, unless the stored peak power has a second one. */
+    /** A second decimal only when the stored peak power has one, so a stored 4.25 kWp does not show as 4.3. */
     private static int decimalsOf(double kwp) {
         return Math.round(kwp * 10) / 10.0 == kwp ? 1 : 2;
     }

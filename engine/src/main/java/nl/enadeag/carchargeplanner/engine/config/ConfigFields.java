@@ -192,7 +192,6 @@ final class ConfigFields {
         }
     }
 
-    /** A problem with this object as a whole, such as two values that do not go together, after its place. */
     FormatProblem problem(String message) {
         return new FormatProblem(prefix() + message);
     }

@@ -129,9 +129,6 @@ internal fun PanelArrayFields(panels: PanelsForm, row: Int, edits: Edits, proble
     }
 }
 
-/**
- * @return the text's resource
- */
 internal fun directionName(point: CompassPoint): Int = when (point) {
     CompassPoint.NORTH -> R.string.direction_north
     CompassPoint.NORTH_EAST -> R.string.direction_north_east
@@ -143,9 +140,6 @@ internal fun directionName(point: CompassPoint): Int = when (point) {
     CompassPoint.NORTH_WEST -> R.string.direction_north_west
 }
 
-/**
- * @return the text's resource
- */
 internal fun tiltName(tilt: TiltChoice): Int = when (tilt) {
     TiltChoice.FLAT -> R.string.tilt_flat
     TiltChoice.PITCHED -> R.string.tilt_pitched

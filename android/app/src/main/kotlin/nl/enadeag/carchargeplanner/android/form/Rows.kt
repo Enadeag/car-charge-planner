@@ -59,11 +59,6 @@ internal class Rows<F : Enum<F>>(private val handle: SavedStateHandle, private v
         if (value == null) handle.remove<Int>("$prefix.$id.$name") else handle["$prefix.$id.$name"] = value
     }
 
-    /**
-     * A decimal number the form keeps with a row, such as the peak power it was stored with.
-     *
-     * @return the number; null when none was kept
-     */
     fun decimal(id: Int, name: String): Double? = handle.get<String>("$prefix.$id.$name")?.toDouble()
 
     /**
