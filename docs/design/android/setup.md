@@ -25,7 +25,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 ### Charger
 
 - The step starts with the charge power at home, a shared exposed drop-down with "Choose…" until chosen and its hint under it; the phases, the currents, the voltage, the efficiency and "I don't know" sit under the shared fold row "More settings", closed until "Other" is chosen or a folded field shows a problem, which opens it and keeps it open as on the Car and house page. Next refuses a step without a choice with "Choose one." at the field. The rule itself is in [engine/decisions.md](../engine/decisions.md#the-charge-power-at-home) (#451).
-- The choice is kept in the saved state as a text (`charger.text.POWER`: empty, `OTHER` or `VALUES`), so a set-up that comes back keeps it; a text this version does not know counts as no choice (#451).
+- The choice is kept in the saved state as a text (`charger.text.POWER`: empty, or the name of the engine's `ChargePowerChoice`, such as `KW_11` or `OTHER`), so a set-up that comes back after the system ended the app keeps it; kept state that no longer fits, such as one left by an older build of the app, counts as no choice (#451).
 
 ### Time zone
 
