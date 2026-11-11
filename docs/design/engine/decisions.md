@@ -10,6 +10,13 @@ Decisions about the engine that both apps share, the desktop app and the Android
 - `announced.json` and the forecast caches `forecast-<id>.json` have no version, so an older app may write over `announced.json` and an announcement may come twice after a restart, which is accepted; `trip-notices.json` has one, so a trip start notice is not repeated that way (#313).
 - A file this version cannot use for any other reason is moved aside to `<name>.damaged-<time>` before a new one is written (#313).
 
+### Panel arrays: count, power per panel and year
+
+- The settings file is version 2. A panel array has either `kwp` or `count` with `wpPerPanel`, `yearPlaced` or both; one with both kinds is refused, and an empty power per panel is not stored. A version 1 file is read as it is, and 0.6.0 refuses a version 2 file as written by a newer version (#448).
+- `PanelArray.size()` is a `PanelSize`, `Peak` or `Panels`; `PanelArray.kwp()` follows from it, so the planner and the providers still get a kWp. The typical power per year placed is `PanelSize.Panels.typicalWattPeak`, one table for both apps (#448).
+- The count is 1 to 200, the power 50 to 1000 Wp, both whole, and the year 1990 or later, each with its own `ConfigSetting` and `InvalidSetting.Rule`. A file is read without a clock, so a later year is refused only where an app enters it: `Panels.notPlacedAfter(Engine.thisYear())`, the year of the engine's clock in UTC (#448).
+- The choices are the engine's `TiltChoice` (13, 35, 50 and 90 degrees) and `CompassPoint` (eight, clockwise from north, which is stored as 180). A stored value shows as the nearest choice, the steeper tilt or the direction furthest from south on a tie, and stays stored until the owner chooses (#448).
+
 ### Setting the settings file aside
 
 - `Engine.setConfigAside()` renames `engine.json` to `engine.json.damaged-<time>` in the same folder (the time in UTC as `yyyyMMdd-HHmmss`, with `-2`, `-3` and so on when that name is taken) and returns the new path, so the message can name it; the engine is then not set up. Only a plain file is moved, never one of a newer version (#313).

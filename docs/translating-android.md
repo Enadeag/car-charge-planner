@@ -39,11 +39,11 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Back | Vorige | set-up's button to the step before |
 | Finish | Voltooien | set-up's last button, which saves |
 | Step 3 of 7 | Stap 3 van 7 | read with each step's heading |
-| I don't know: use typical values | Weet ik niet: gangbare waarden gebruiken | fills in typical values |
+| I don't know: use typical values | Weet ik niet: gangbare waarden gebruiken | fills in typical values; not on the panels' step or page |
 | Enter coordinates instead | Liever de coördinaten invullen | opens the latitude and longitude |
 | Chosen: Utrecht, Netherlands | Gekozen: Utrecht, Nederland | the first line of the card shown after a place is chosen from the search's results |
 | Coordinates: 52.0907, 5.1214 | Coördinaten: 52,0907; 5,1214 | the card's line with what the choice filled in, the numbers as the fields write them; Dutch separates them with a semicolon, as it writes a decimal comma; the card's last line is "Time zone: Europe/Amsterdam" ("Tijdzone: Europe/Amsterdam"), as under Advanced |
-| Advanced | Geavanceerd | opens the time zone |
+| Advanced | Geavanceerd | the fold with the time zone |
 | Check again | Opnieuw controleren | asks the forecast provider once more |
 | Try again | Opnieuw proberen | repeats what failed |
 | Set up again | Opnieuw instellen | for an unusable config |
@@ -157,7 +157,12 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Discard | Weggooien | throws the page's edits, or the typed level, away |
 | Close | Sluiten | closes a save's outcome shown on the home, the notification card's ×, and the close button of a failure or Undo snackbar |
 | Array 2, east roof | Panelengroep 2, oostdak | a panel array's heading, by place and name |
-| Tilt, array 2 | Helling, panelengroep 2 | a panel array's field or button, named with its place |
+| Tilt, array 2 | Helling, panelengroep 2 | a panel array's field or button, named with its place; "More settings, array 2" ("Meer instellingen, panelengroep 2") its fold |
+| Number of panels, Direction, Tilt, Year placed, Power per panel | Aantal panelen, Richting, Helling, Jaar van plaatsing, Vermogen per paneel | a panel array's fields, in this order, in set-up and Settings; the direction and the tilt are drop-downs, with the choices in [translating.md](translating.md#the-words) |
+| Wp, as on the invoice or the panel. You may leave it empty: the app then counts on 360 Wp, usual for 2021. | Wp, staat op de factuur of het paneel. Leeg laten mag: dan rekent de app met 360 Wp, gangbaar voor 2021. | under the power per panel while it is empty and a year is typed; otherwise only its first sentence |
+| Choose… | Kies… | a drop-down before a choice, such as a new array's direction |
+| More settings | Meer instellingen | the fold under an array's fields, with its losses and name |
+| Expanded, Collapsed | Uitgevouwen, Ingevouwen | what TalkBack says of a fold's row, such as More settings and Advanced |
 | Add an array | Panelengroep toevoegen | |
 | A system needs at least one panel array | Een systeem heeft minstens één panelengroep nodig | why the last array's Remove is off |
 | Check connection to Open-Meteo | Verbinding met Open-Meteo testen | asks the provider once, with what was typed |
