@@ -27,13 +27,13 @@ When the app is started hidden at login, set-up does not open by itself; one not
 - **Add** on the Car away card marks the car away on the day you are looking at, all day or from a time to a time; the card lists the coming ones, each with **Remove**. The plan changes at once. Weekly away periods are in Settings, which the footer's **Away** button opens.
 - **Add trip** on the Trips card enters a drive from home and back; each day's tab lists the trips the car is away for that day. [Trips](#trips) says how.
 - Right-click the icon for **Open dashboard**, **Settings…** (**Set up…** until the app is set up), **About…** and **Quit**.
-- A desktop notification comes a few minutes before each charge window (the lead time is a setting, and a lead of 0 tells you at the start, or when the app first sees the window running), once per window; trips have their own [notifications](#notifications-for-trips). Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
+- A desktop notification comes a few minutes before each charge window (the lead time is a setting, and "At the start" tells you at the start, or when the app first sees the window running), once per window; trips have their own [notifications](#notifications-for-trips). Clicking it opens the dashboard. On Linux notifications go straight to the desktop's notification service over D-Bus, so they work with or without a tray; on Windows they come from the tray icon.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/java/dashboard-trip-dark.png"><img alt="Two dashboards on a day with a trip: the advice for the trip, with its solar and grid parts, the start and the charge limit, and the trip with its choices; and a new trip being entered." src="screenshots/java/dashboard-trip-light.png" width="600"></picture>
 
 ## Trips
 
-A **trip** is a drive from home and back that needs more than the battery holds on an ordinary day, such as a day out at 150 km. Enter it, and the plan makes sure the battery is full enough at the **departure**; the short drives you do every day are not trips (see [Other driving and the trip surcharge](#other-driving-and-the-trip-surcharge)).
+A **trip** is a drive from home and back that needs more than the battery holds on an ordinary day, such as a day out at 150 km. Enter it, and the plan makes sure the battery is full enough at the **departure**; the short drives you do every day are not trips (see [Daily distance and the trip surcharge](#daily-distance-and-the-trip-surcharge)).
 
 ### Entering a trip
 
@@ -51,7 +51,7 @@ A trip is kept until a day after its return, then it is dropped. The plan change
 
 ### How the plan treats a trip
 
-- **The trip comes first.** The plan works out the energy the trip needs (the distance, the car's consumption and the [trip surcharge](#other-driving-and-the-trip-surcharge)), adds the other driving of the days it is away and your minimum charge level, and makes sure the battery holds that at the departure.
+- **The trip comes first.** The plan works out the energy the trip needs (the distance, the car's consumption and the [trip surcharge](#daily-distance-and-the-trip-surcharge)), adds the daily distance of the days it is away and your minimum charge level, and makes sure the battery holds that at the departure.
 - **Solar first, the grid for the rest.** The plan charges from solar power before the departure as far as it can, and asks the grid only for what is still missing.
 - **Above the target level for a trip.** Your target charge level (80% by default) holds for every other day, but for a trip the plan charges higher, up to 100%, when the trip needs it. It does so as late as possible, so the battery stays at the higher level for as short a time as it can.
 - **The grid part is done an hour before the departure**, and it starts as late as the [charging hours](#charging-hours) allow, so the battery is not full for long. When there is no stretch left that would bring enough, it says to start now.
@@ -72,12 +72,12 @@ The day card of the day a trip leaves shows the level before and after the trip,
 
 The app does not control your charger or your car. For a grid charge, the advice names a **charge limit**, such as "Set 10 A (2.3 kW), and a charge limit of 94% in the car or the charger": the battery level at which charging should stop, so that it brings the battery to what the plan needs and not further. Set it in the car's charging settings or in your charger's app, whichever you have, and the charge current as well. The notifications name it too.
 
-### Other driving and the trip surcharge
+### Daily distance and the trip surcharge
 
-Two settings on the Car page of Settings (Car and house) belong to trips:
+Two settings on the Car and house page of Settings belong to trips:
 
-- **Other driving per day** is the average distance of the short drives that are not trips, such as shopping. It was called Distance per day. The plan takes it off the battery every day, and trips come on top of it.
-- **Trip surcharge** (15% unless you change it) is added to the car's consumption for the energy of a trip: long drives on motorways, and drives in winter, use more than the average. Raise it when the plan keeps leaving you short, lower it for a car that is frugal on long drives. Set-up does not ask for it.
+- **Daily distance** is how far you drive on a normal day, for example for shopping, school or sport; trips you enter separately do not count. It was called Other driving per day. The plan takes it off the battery every day, and trips come on top of it.
+- **Trip surcharge** (15% unless you change it), under **More settings**, is added to the car's consumption for the energy of a trip: long drives on motorways, and drives in winter, use more than the average. Raise it when the plan keeps leaving you short, lower it for a car that is frugal on long drives. Set-up does not ask for it.
 
 ### Notifications for trips
 
@@ -97,11 +97,11 @@ Open **Settings…** from the tray menu or the dashboard. Settings is a window w
 | --- | --- |
 | Solar panels | The panel arrays: of each the number of panels, direction, tilt, year placed and power per panel, with the peak power they give together, and under **More settings** the losses and the name. The forecast is the sum of the arrays. |
 | Location | The place you chose ("Chosen place: …", or "No place chosen yet"), a place search to choose another, and the latitude, longitude and time zone folded under **Coordinates and time zone**, which opens by itself without a place or when a coordinate has a problem. The place's name is kept with the coordinates and goes when you type other ones. With a forecast provider that has no place search, only the coordinates and the time zone. |
-| Car and house | The car's usable battery capacity, consumption, other driving per day and trip surcharge; under **More settings** the **household use**: what the house uses in kWh per day, without charging the car, as your energy supplier shows it per day (12 kWh, a typical household, until you enter yours). |
+| Car and house | The car's usable battery capacity, consumption and daily distance; under **More settings** the trip surcharge and the **household use**: what the house uses in kWh per day, without charging the car, as your energy supplier shows it per day (12 kWh, a typical household, until you enter yours). |
 | Charger | The **charge power at home**: 3.7 kW, 7.4 kW, 11 kW, 22 kW or **Other**, the lower of what the charger and the car can take. Under **More settings**: one or three phases, minimum and maximum charge current, voltage and charging efficiency, with "I don't know" for the last three. |
 | Forecast | Which forecast provider to use, an optional fallback, and each one's settings (a server address or an API key, if it takes any), with a **Test** button. API keys are kept in the system keychain. |
 | Away | The weekly away periods: when the car is not at home every week. |
-| Planning | Minimum and target charge level, the hours you can start charging, the planning margin, the import tolerance, the minimum charge window length, the notification lead time. |
+| Planning | Minimum and target charge level, the hours you can start charging and the notification lead time, chosen from at the start or 5, 10, 15, 30 or 60 minutes ahead (a lead saved before that is none of these stays as it is until you choose another); under **More settings** the planning margin, the import tolerance and the minimum charge window length. |
 | App | Language, light or dark, units (metric or imperial), whether the app shows a tray icon or a window, and start at login. Set-up can be run again from here. |
 | About | The version, the licence, the source, and where your files are kept. |
 
@@ -116,7 +116,7 @@ A charge power fills in the phases and the maximum charge current at 230 V: 3.7 
 1. Surplus per step = the forecast provider's expected solar power minus the house's own use, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
 2. A step counts only if the surplus covers at least your charger's minimum charge current (6 A by default: about 1.4 kW on a single-phase 230 V charger, about 4.1 kW on a three-phase one).
 3. Within the hours the car is home, it picks the window and power that bring in the most solar for the energy the car needs, up to your target charge level (80% by default).
-4. It projects the battery day by day, subtracting your other driving per day (the short drives that are not trips). If a day would end under your minimum charge level, it adds grid advice. A [trip](#how-the-plan-treats-a-trip) is planned first, with its own energy.
+4. It projects the battery day by day, subtracting your daily distance (what you drive on a normal day, trips apart). If a day would end under your minimum charge level, it adds grid advice. A [trip](#how-the-plan-treats-a-trip) is planned first, with its own energy.
 5. A window you have been notified about is kept as announced while it runs, so the power on screen matches what you set.
 
 ## Limits to know about

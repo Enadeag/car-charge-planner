@@ -22,6 +22,14 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - The step asks one array, empty but for the typical losses: the number of panels, the direction and the tilt (shared exposed drop-downs, "Choose…" until chosen), the year placed and the power per panel, the kWp they give together, and the losses and the name under the shared fold row "More settings", which opens by itself while one of them shows a problem. There is no "I don't know" on this step (#448).
 - A number with decimals is refused as for the amps; an empty count is refused with the count's own sentence. The power's placeholder, the typical power of the year, shows only while the field has the focus, as Material draws a placeholder beside a label; its hint says the same at all times (#448).
 
+### Car
+
+- The step asks the battery, the consumption and the daily distance, with "km" after it, then "I don't know", which fills in those three; the trip surcharge is under the shared fold row "More settings", closed until a problem in it opens it and keeps it open, as on the Car and house page in Settings, which shows the same step with the household use added under the same fold. The daily distance has the keyboard's Done while the fold is closed, the trip surcharge while it is open (#452).
+
+### Away periods
+
+- Each weekly away period's from and until are `TimeButton`s with the time on the phone's 12- or 24-hour clock, each opening Material's time picker with its Keyboard and Clock button, as the one-off away period's (#338); a new period still starts at 08:00–17:00. Next checks them by the engine's rule, an end after the start, and shows the problem under the until button, which carries it and takes the focus. The step and Settings' Away page share this; set-up has no Planning page, so the charging hours are chosen in Settings only (#452).
+
 ### Charger
 
 - The step starts with the charge power at home, a shared exposed drop-down with "Choose…" until chosen and its hint under it; the phases, the currents, the voltage, the efficiency and "I don't know" sit under the shared fold row "More settings", closed until "Other" is chosen or a folded field shows a problem, which opens it and keeps it open as on the Car and house page. Next refuses a step without a choice with "Choose one." at the field. The rule itself is in [engine/decisions.md](../engine/decisions.md#the-charge-power-at-home) (#451).

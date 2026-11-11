@@ -38,6 +38,7 @@ Decisions about the engine that both apps share, the desktop app and the Android
 - Both apps show it as "Household use" in kWh per day: the stored kW times 24, with one decimal (12.0 for the typical value). A field the owner did not change, or changed back to the text it showed, gives the stored kW back exactly, so a save never drifts; a typed value is divided by 24 (#450).
 - The desktop's field keeps 0 to 480 kWh per day (20 kW), bringing a value outside it into the range as its other number fields do. Android refuses only what the engine refuses, a negative use, with the out-of-range text, and keeps a stored use over 20 kW as it was read; the bound both apps share is the open #317's (#450).
 - Neither app's set-up asks for it: set-up saves the typical value, marked as typical. In Settings the field and its "I don't know" sit under the "More settings" fold of the Car and house page, closed when the page loads; on Android a problem in the field opens the fold and holds it open until the next check finds none; the desktop's field keeps every value in its range, so it has no problem to show and its fold never opens by itself. On the desktop the unit "kWh per day" is a text of its own (`UNIT_KWH_PER_DAY`) (#450).
+- The car's trip surcharge shares that fold, before the household use, in both apps' Settings, and on Android also on set-up's Car step; the car's "I don't know" stays outside it, after the daily distance. The desktop's trip surcharge keeps 0 to 100 %, so its fold still never opens by itself; the desktop's set-up does not show the trip surcharge (#452).
 
 ### The charge power at home
 
@@ -47,6 +48,12 @@ Decisions about the engine that both apps share, the desktop app and the Android
 - The phases, the currents, the voltage, the efficiency and "I don't know" are under "More settings", closed on a power and open on "Other" as the page loads, and open while a field under it shows a problem. On the desktop the number fields keep every value in their ranges, so the one problem under the fold is a highest current below the lowest; on Android every engine refusal and unreadable number of those fields is one. "I don't know" fills in the lowest current, the voltage and the efficiency only (#451).
 - In set-up the power starts with "Choose…" while the stored phases and highest current are typical values, and set-up does not go on until one is chosen ("Choose one." at the field, gone as soon as a power or "Other" is chosen), as the phases decide from how much solar power the car can charge; the folded fields start at their typical values, marked so. Only a choice in the drop-down ends "Choose…". A choice takes the typical mark from the phases and the highest current, and from the voltage only when it changed (#451).
 - On the desktop, when set-up is built again from its draft (another language on the App step, or an app setting saved in Settings while set-up is open), a chosen "Other" comes back as "Choose…" while the phases and the highest current are untouched: the draft is the config, which remembers the choice only through the typical marks it took away, and "Other" takes none. A chosen power survives. Android keeps the choice itself in its saved state, so there it comes back (#451).
+
+### The notification lead time
+
+- The settings file keeps the lead as before, `notifyLeadMinutes`, any whole number from 0. Both apps offer it as a drop-down of the engine's `NotifyLeadChoices.STANDARD`: at the start, or 5, 10, 15, 30 or 60 minutes ahead (#452).
+- A stored lead that is none of them, such as 20 minutes, is offered too, in its place by length, while it is the one chosen (`NotifyLeadChoices.offered`), so it shows as "20 minutes ahead" and is saved as it is; once another is chosen, it is no longer offered. Nothing is rounded to the nearest choice (#452).
+- On the desktop the Planning page's other number fields keep every value in their ranges, so the fold with the planning margin, the import tolerance and the minimum charge window never has a problem and never opens by itself; on Android an unreadable number or an engine refusal there opens it (#452).
 
 ### Rounds and the stored forecast
 
