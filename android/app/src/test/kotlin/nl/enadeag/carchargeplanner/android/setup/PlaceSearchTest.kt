@@ -55,7 +55,7 @@ class PlaceSearchTest {
     }
 
     @Test
-    fun aPlaceWithALabelLongerThanAHundredCharactersIsShownAndKeptCutOffThere() = runTest {
+    fun aPlaceWithALongLabelIsShownWhole() = runTest {
         val search = search()
         search.edit("Long")
         search.search()
@@ -64,11 +64,8 @@ class PlaceSearchTest {
         runCurrent()
 
         val found = (search.state.value as PlaceSearch.State.Found).results.single()
-        search.choose(found)
 
-        assertThat(found.label).isEqualTo("a".repeat(100))
-        assertThat(search.chosen.value).isEqualTo("a".repeat(100))
-        assertThat(search.text()).isEqualTo("a".repeat(100))
+        assertThat(found.label).startsWith("a".repeat(120))
     }
 
     @Test
@@ -153,23 +150,37 @@ class PlaceSearchTest {
     }
 
     @Test
-    fun theTextAndThePlaceChosenSurviveTheSystemEndingTheAppButTheResultsDoNot() = runTest {
+    fun theTextSurvivesTheSystemEndingTheAppButTheResultsDoNot() = runTest {
         val search = search()
         search.edit("Utrecht")
         search.search()
         runCurrent()
         access.searches.single().complete(PlaceResults.Found(listOf(place("Utrecht"))))
         runCurrent()
-        val found = (search.state.value as PlaceSearch.State.Found).results.single()
 
-        search.choose(found)
-
-        assertThat(search.state.value).isEqualTo(PlaceSearch.State.Idle)
         val again = PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
             language = { "nl" })
-        assertThat(again.text()).isEqualTo("Utrecht, Netherlands")
-        assertThat(again.chosen.value).isEqualTo("Utrecht, Netherlands")
+
+        assertThat(again.text()).isEqualTo("Utrecht")
         assertThat(again.state.value).isEqualTo(PlaceSearch.State.Idle)
+    }
+
+    @Test
+    fun aChoiceEmptiesTheFieldForANewSearchAndTheResultsGo() = runTest {
+        val search = search()
+        search.edit("Utrecht")
+        search.search()
+        runCurrent()
+        access.searches.single().complete(PlaceResults.Found(listOf(place("Utrecht"))))
+        runCurrent()
+
+        search.chosen()
+
+        assertThat(search.state.value).isEqualTo(PlaceSearch.State.Idle)
+        assertThat(search.text()).isEmpty()
+        val again = PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
+            language = { "nl" })
+        assertThat(again.text()).isEmpty()
     }
 
     @Test
@@ -179,7 +190,7 @@ class PlaceSearchTest {
         search.search()
         runCurrent()
 
-        search.choose(PlaceSearch.Result(place("Utrecht"), "Utrecht, Netherlands"))
+        search.chosen()
         access.searches.single().complete(PlaceResults.Found(listOf(place("Utrecht"))))
         runCurrent()
 
@@ -187,42 +198,14 @@ class PlaceSearchTest {
     }
 
     @Test
-    fun typedCoordinatesForgetThePlaceChosenAndEmptyTheFieldThatNamedIt() = runTest {
-        val search = search()
-        search.choose(PlaceSearch.Result(place("Utrecht"), "Utrecht, Netherlands"))
-
-        search.forgetChosen()
-
-        assertThat(search.chosen.value).isNull()
-        assertThat(search.text()).isEmpty()
-        val again = PlaceSearch(handle.afterTheSystemEndedTheApp(), access, backgroundScope, ProviderId("open-meteo"),
-            language = { "nl" })
-        assertThat(again.chosen.value).isNull()
-        assertThat(again.text()).isEmpty()
-    }
-
-    @Test
-    fun typedCoordinatesWithNoPlaceChosenLeaveTheTypedTextAlone() = runTest {
-        val search = search()
-        search.edit("Utrecht")
-
-        search.forgetChosen()
-
-        assertThat(search.text()).isEqualTo("Utrecht")
-    }
-
-    @Test
-    fun eachChoiceCountsAndAnEditKeepsThePlaceChosen() = runTest {
+    fun eachChoiceCounts() = runTest {
         val search = search()
         assertThat(search.chosenCount.value).isZero()
 
-        search.choose(PlaceSearch.Result(place("Utrecht"), "Utrecht, Netherlands"))
-        search.edit("Amersfoort")
-        assertThat(search.chosen.value).isEqualTo("Utrecht, Netherlands")
-        search.choose(PlaceSearch.Result(place("Amersfoort"), "Amersfoort, Netherlands"))
+        search.chosen()
+        search.chosen()
 
         assertThat(search.chosenCount.value).isEqualTo(2)
-        assertThat(search.chosen.value).isEqualTo("Amersfoort, Netherlands")
     }
 
     @Test

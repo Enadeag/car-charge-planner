@@ -41,7 +41,7 @@ class AppScreenTest {
     private val amsterdam = ZoneId.of("Europe/Amsterdam")
     private val draft = EngineConfig.setUpDraft(amsterdam, ProviderId("open-meteo"))
     private val access = FakeEngineAccess(StartState.Ready(draft.withSystem(
-        draft.system().withLocation(Coordinates(52.0907, 5.1214), amsterdam), draft.typical())))
+        draft.system().withUnnamedLocation(Coordinates(52.0907, 5.1214), amsterdam), draft.typical())))
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     @After

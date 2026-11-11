@@ -462,7 +462,7 @@ class TripAdviceScreenTest {
         val raw = AppEngine.build(folder, { HttpGet.Reply(200, sunnyAnswer()) }, PrivateFiles(FilePrivacy.NONE),
             platform.apiKeys(), Notifier { }, clock)
         val draft = EngineConfig.setUpDraft(lisbon, ProviderId("open-meteo"))
-        raw.saveConfig(draft.withSystem(draft.system().withLocation(Coordinates(38.7, -9.1), lisbon),
+        raw.saveConfig(draft.withSystem(draft.system().withUnnamedLocation(Coordinates(38.7, -9.1), lisbon),
             draft.typical()))
         val engine = EngineOnDispatcher(raw, Dispatchers.IO)
         val trip = Trip(at(today.plusDays(1), "07:00"), at(today.plusDays(1), "21:00"), 450.0, false)

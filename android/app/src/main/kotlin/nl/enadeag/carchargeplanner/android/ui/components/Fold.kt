@@ -25,8 +25,7 @@ import nl.enadeag.carchargeplanner.android.R
 
 /**
  * Settings that are seldom changed, folded under a row with an arrow, such as the panels' "▸ More settings" and the
- * location step's "Advanced"; that step's "Enter coordinates instead" is a check box of its own. The row is one
- * button, at least 48 dp high, whose arrow points to the end while folded and down while open; a screen reader reads
+ * location page's "Coordinates and time zone". The row is one button, at least 48 dp high, whose arrow points to the end while folded and down while open; a screen reader reads
  * its label and "Collapsed" or "Expanded".
  *
  * @param open whether the content shows, kept by the caller so it survives as the caller wants

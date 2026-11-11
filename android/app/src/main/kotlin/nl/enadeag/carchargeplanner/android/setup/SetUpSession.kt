@@ -162,24 +162,23 @@ class SetUpSession(handle: SavedStateHandle, numbers: NumberText, phoneZone: () 
     }
 
     /**
-     * Takes a place the owner chose from the search: its coordinates and time zone go into the location.
+     * Takes a place the owner chose from the search: its name, coordinates and time zone go into the location.
      *
      * @param result the place, as the search showed it
      */
     fun choose(result: PlaceSearch.Result) {
-        flow.location.choose(result.place)
-        places.choose(result)
+        flow.location.choose(result.place, result.label)
+        places.chosen()
     }
 
     /**
-     * Puts a coordinate the owner typed, so no place from the search is chosen any longer.
+     * Puts a coordinate the owner typed; the place's name goes once the coordinates differ from its own.
      *
      * @param field the latitude or the longitude
      * @param text what the field holds now
      */
     fun typeCoordinate(field: LocationForm.Field, text: String) {
         flow.location.edit(field, text)
-        places.forgetChosen()
     }
 
     private fun show(outcome: SaveOutcome) {

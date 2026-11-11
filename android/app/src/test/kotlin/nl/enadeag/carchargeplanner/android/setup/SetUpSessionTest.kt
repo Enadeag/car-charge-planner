@@ -20,6 +20,7 @@ import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.Place
@@ -273,15 +274,17 @@ class SetUpSessionTest {
     }
 
     @Test
-    fun typedCoordinatesForgetThePlaceChosenFromTheSearch() = runTest {
+    fun typedCoordinatesThatDifferDropTheNameOfThePlaceChosen() = runTest {
         val session = session()
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
-        assertThat(session.places.chosen.value).isEqualTo("Utrecht, Netherlands")
+        assertThat(session.flow.location.placeName()).isEqualTo(PlaceName("Utrecht, Netherlands"))
+        assertThat(session.places.chosenCount.value).isEqualTo(1)
 
         session.typeCoordinate(LocationForm.Field.LATITUDE, "52.1")
 
-        assertThat(session.places.chosen.value).isNull()
+        assertThat(session.flow.location.placeName()).isNull()
         assertThat(session.flow.location.text(LocationForm.Field.LATITUDE)).isEqualTo("52.1")
+        assertThat(session.flow.config().system().place()).isEmpty()
     }
 }

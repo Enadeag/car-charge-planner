@@ -92,6 +92,7 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
 import nl.enadeag.carchargeplanner.engine.config.PanelArray
 import nl.enadeag.carchargeplanner.engine.config.PanelSize
+import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
@@ -118,7 +119,7 @@ class SettingsScreenTest {
     private val amsterdam = ZoneId.of("Europe/Amsterdam")
     private val openMeteo = ProviderId("open-meteo")
     private val draft = EngineConfig.setUpDraft(amsterdam, openMeteo)
-    private val stored = draft.withSystem(draft.system().withLocation(Coordinates(52.0907, 5.1214), amsterdam),
+    private val stored = draft.withSystem(draft.system().withUnnamedLocation(Coordinates(52.0907, 5.1214), amsterdam),
         draft.typical())
     private val access = FakeEngineAccess(StartState.Ready(stored))
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -247,7 +248,6 @@ class SettingsScreenTest {
             compose.waitForIdle()
             when (page) {
                 SettingsPage.SOLAR -> click(R.string.panel_add)
-                SettingsPage.LOCATION -> click(R.string.advanced)
                 SettingsPage.AWAY -> click(R.string.away_add)
                 else -> Unit
             }
@@ -267,10 +267,19 @@ class SettingsScreenTest {
         val kwp = NumberText(Locale.ENGLISH).write(stored.system().panels().single().kwp(), 1)
         compose.onNodeWithText(compose.activity.resources.getQuantityString(R.plurals.settings_solar_summary, 1, 1,
             kwp)).assertExists()
-        compose.onNodeWithText(text(R.string.settings_location_summary, "52.0907", "5.1214", "Europe/Amsterdam"))
-            .assertExists()
+        compose.onNodeWithText(text(R.string.settings_location_summary, "52.0907", "5.1214")).assertExists()
+        compose.onNodeWithText("Europe/Amsterdam", substring = true).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.settings_forecast_summary_alone, "Open-Meteo")).assertExists()
         compose.onNodeWithText(text(R.string.settings_away_none)).assertExists()
+    }
+
+    @Test
+    fun theLocationRowGivesThePlaceNameInPlaceOfTheCoordinates() {
+        show(session(config = stored.withSystem(stored.system().withPlace(Coordinates(52.0907, 5.1214), amsterdam,
+            PlaceName("Utrecht, Netherlands")), stored.typical())))
+
+        compose.onNodeWithText("Utrecht, Netherlands").assertExists()
+        compose.onNodeWithText(text(R.string.settings_location_summary, "52.0907", "5.1214")).assertDoesNotExist()
     }
 
     @Test
@@ -617,12 +626,31 @@ class SettingsScreenTest {
         compose.onNodeWithText(text(R.string.settings_no_place_search, "Forecast.Solar")).assertExists()
         field(text(R.string.place_field)).assertDoesNotExist()
         field(text(R.string.latitude)).assertExists()
+        compose.onNodeWithText(text(R.string.time_zone_now, amsterdam.id)).assertExists()
+        compose.onNodeWithText(text(R.string.coordinates_fold)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.place_not_chosen)).assertDoesNotExist()
     }
 
     @Test
-    fun aChosenPlaceShowsOnACardWithItsTimeZoneButNotTheCoordinatesTheFieldsShow() {
+    fun aStoredPlaceShowsAtTheTopWithTheCoordinatesFolded() {
+        show(session(config = stored.withSystem(stored.system().withPlace(Coordinates(52.0907, 5.1214), amsterdam,
+            PlaceName("Utrecht, Netherlands")), stored.typical())))
+
+        open(SettingsPage.LOCATION)
+
+        compose.onNodeWithText(text(R.string.place_chosen, "Utrecht, Netherlands")).assertExists()
+        compose.onNodeWithText(text(R.string.coordinates_fold))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.fold_collapsed)))
+        field(text(R.string.latitude)).assertDoesNotExist()
+        field(text(R.string.place_field)).assert(hasText(text(R.string.place_another), substring = true))
+    }
+
+    @Test
+    fun aChosenPlaceShowsAtTheTopTakesTheFocusAndFoldsTheCoordinatesAway() {
         show()
         open(SettingsPage.LOCATION)
+        compose.onNodeWithText(text(R.string.place_not_chosen)).assertExists()
+        field(text(R.string.latitude)).assertExists()
         field(text(R.string.place_field)).performTextInput("Amersfoort")
         click(R.string.place_search)
         compose.waitForIdle()
@@ -633,18 +661,17 @@ class SettingsScreenTest {
         compose.onNodeWithText("Amersfoort, Utrecht, Netherlands").performScrollTo().performClick()
         compose.waitForIdle()
 
-        val chosen = text(R.string.place_chosen_label, "Amersfoort, Utrecht, Netherlands")
-        val card = compose.onNode(hasText(chosen)).assertIsDisplayed().assertIsFocused().fetchSemanticsNode()
-        assertThat(card.config[SemanticsProperties.Text].map { it.text })
-            .containsExactly(chosen, text(R.string.time_zone_now, amsterdam.id))
+        compose.onNode(hasText(text(R.string.place_chosen, "Amersfoort, Utrecht, Netherlands"))).assertIsDisplayed()
+            .assertIsFocused()
+        field(text(R.string.latitude)).assertDoesNotExist()
+        click(R.string.coordinates_fold)
         field(text(R.string.latitude)).assert(hasText("52.1561"))
     }
 
     @Test
-    fun openingTheLocationPageAgainAfterAChoiceShowsNoCardAndAnEmptyPlaceField() {
+    fun openingTheLocationPageAgainAfterAChoiceThatWasNotSavedShowsNoPlaceAndAnEmptyPlaceField() {
         val session = show()
         open(SettingsPage.LOCATION)
-        compose.onNode(hasText(text(R.string.place_chosen_label, ""), substring = true)).assertDoesNotExist()
         field(text(R.string.place_field)).performTextInput("Amersfoort")
         click(R.string.place_search)
         compose.waitForIdle()
@@ -659,7 +686,8 @@ class SettingsScreenTest {
         compose.waitForIdle()
         open(SettingsPage.LOCATION)
 
-        compose.onNode(hasText(text(R.string.place_chosen_label, ""), substring = true)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.place_not_chosen)).assertExists()
+        compose.onNode(hasText(text(R.string.place_chosen, "Amersfoort, Utrecht, Netherlands"))).assertDoesNotExist()
         field(text(R.string.place_field)).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,
             AnnotatedString("")))
     }
@@ -1205,16 +1233,15 @@ class SettingsScreenTest {
     }
 
     /**
-     * Checks that every row's values, with Location's at their longest (coordinates of the most digits and one of the
-     * longest time zones), show whole at twice the font size: on every line they need, none cut short, within their
+     * Checks that every row's values, with Location's at their longest (a long place name), show whole at twice the font size: on every line they need, none cut short, within their
      * row.
      *
      * @return the number of lines Location's values take
      */
     private fun assertEveryRowsValuesShowWhole(): Int {
-        val zone = ZoneId.of("America/Argentina/Buenos_Aires")
-        show(session(config = stored.withSystem(stored.system().withLocation(Coordinates(-27.1127, -109.3497), zone),
-            stored.typical())), fontScaleTwo = true)
+        val name = PlaceName("Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch, Wales, United Kingdom")
+        show(session(config = stored.withSystem(stored.system().withPlace(Coordinates(53.2225, -4.2032),
+            ZoneId.of("Europe/London"), name), stored.typical())), fontScaleTwo = true)
         return SettingsPage.entries.map { page ->
             val row = row(page)
             val summary = row.config[SemanticsProperties.Text].last().text

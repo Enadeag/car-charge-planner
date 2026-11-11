@@ -279,7 +279,6 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
         savingNow.value = SaveState.Idle
         refusedNow.value = false
         handle.remove<String>("$PLACE.text")
-        handle.remove<String>("$PLACE.chosen")
         forms = newForms()
         places = newPlaces()
         primaryCheck = SetUpCheck(access, scope)

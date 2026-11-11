@@ -6,12 +6,14 @@ import java.io.File
 import java.nio.file.Files
 import java.time.Clock
 import java.time.ZoneId
+import java.util.Optional
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.engine.Engine
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.notify.Notifier
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -57,6 +59,7 @@ class ExampleSettingsOnTheDeviceTest {
         assertTrue("the example is ready, not $state", state is StartState.Ready)
         val system = (state as StartState.Ready).config.system()
         assertEquals(Coordinates(51.0, 5.0), system.location())
+        assertEquals(Optional.of(PlaceName("Zonnedorp, Belgium")), system.place())
         assertEquals(ZoneId.of("Europe/Brussels"), system.timezone())
     }
 }
