@@ -17,7 +17,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import java.time.DayOfWeek
-import java.util.Optional
 import java.time.format.TextStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.enadeag.carchargeplanner.android.R
@@ -39,8 +38,8 @@ import nl.enadeag.carchargeplanner.android.ui.components.TimeField
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice
 import nl.enadeag.carchargeplanner.engine.config.CompassPoint
-import nl.enadeag.carchargeplanner.engine.config.HomeChargePower
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.engine.config.TiltChoice
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
@@ -188,18 +187,19 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
     val typical = edits.shown { charger.typical() }
     val power = edits.shown { charger.power() }
     val problem = (shown.keys - ChargerForm.Field.POWER).isNotEmpty()
-    var folded by rememberSaveable { mutableStateOf(power?.isPresent != false) }
+    var folded by rememberSaveable { mutableStateOf(power != ChargePowerChoice.OTHER) }
     LaunchedEffect(problem) {
         if (problem) {
             folded = false
         }
     }
     val open = !folded || problem
-    ChoiceMenu(stringResource(R.string.charge_power), CHARGE_POWERS, power,
-        { stringResource(it.map { choice -> chargePowerName(choice) }.orElse(R.string.charge_power_other)) },
+    ChoiceMenu(stringResource(R.string.charge_power), ChargePowerChoice.entries, power,
+        { stringResource(chargePowerName(it)) },
         { choice ->
-            if (choice.isPresent) {
-                edits.make { charger.choose(choice.get()) }
+            val chosen = choice.power().orElse(null)
+            if (chosen != null) {
+                edits.make { charger.choose(chosen) }
             } else {
                 edits.make { charger.chooseOther() }
                 folded = false
@@ -231,19 +231,12 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
     }
 }
 
-/** The drop-down's choices in the order listed: the four powers, then "Other". */
-private val CHARGE_POWERS: List<Optional<HomeChargePower>> =
-    HomeChargePower.entries.map { Optional.of(it) } + Optional.empty()
-
-/**
- * @param power a charge power at home
- * @return the text's resource, one per power, such as "3.7 kW"
- */
-internal fun chargePowerName(power: HomeChargePower): Int = when (power) {
-    HomeChargePower.KW_3_7 -> R.string.charge_power_3_7
-    HomeChargePower.KW_7_4 -> R.string.charge_power_7_4
-    HomeChargePower.KW_11 -> R.string.charge_power_11
-    HomeChargePower.KW_22 -> R.string.charge_power_22
+internal fun chargePowerName(choice: ChargePowerChoice): Int = when (choice) {
+    ChargePowerChoice.KW_3_7 -> R.string.charge_power_3_7
+    ChargePowerChoice.KW_7_4 -> R.string.charge_power_7_4
+    ChargePowerChoice.KW_11 -> R.string.charge_power_11
+    ChargePowerChoice.KW_22 -> R.string.charge_power_22
+    ChargePowerChoice.OTHER -> R.string.charge_power_other
 }
 
 /**

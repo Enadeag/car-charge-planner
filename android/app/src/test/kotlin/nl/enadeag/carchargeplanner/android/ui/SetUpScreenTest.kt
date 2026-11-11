@@ -68,6 +68,7 @@ import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.ui.setup.SetUpScreen
 import nl.enadeag.carchargeplanner.engine.config.Charger
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice
 import nl.enadeag.carchargeplanner.engine.config.HomeChargePower
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.engine.config.PlaceName
@@ -399,6 +400,7 @@ class SetUpScreenTest {
         field(R.string.charger_min_current).assertDoesNotExist()
         choose(R.string.charge_power, R.string.charge_power_11)
         powerMenu().assert(hasText(text(R.string.charge_power_11), substring = true))
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Error))
         click(R.string.action_next)
         compose.waitForIdle()
         assertThat(session.flow.step.value).isEqualTo(SetUpStep.AWAY)
@@ -406,11 +408,19 @@ class SetUpScreenTest {
     }
 
     @Test
-    fun otherOnTheChargerStepUnfoldsTheTypicalValuesMarkedAsTypical() {
+    fun otherOnTheChargerStepAfterARefusedNextUnfoldsTheTypicalValuesMarkedAsTypical() {
         val session = show()
         toTheChargerStep(session)
+        click(R.string.action_next)
+        compose.waitForIdle()
 
-        choose(R.string.charge_power, R.string.charge_power_other)
+        powerMenu().performScrollTo().performClick()
+        compose.waitForIdle()
+        // the problem under the field leaves the menu less room, so "Other" is scrolled to first
+        compose.onNodeWithText(text(R.string.charge_power_other)).performScrollTo().performClick()
+        compose.waitForIdle()
+
+        powerMenu().assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Error))
 
         field(R.string.charger_min_current).assert(hasText("6"))
         field(R.string.charger_voltage).assert(hasText("230"))
@@ -432,7 +442,7 @@ class SetUpScreenTest {
         val again = session(handle.afterTheSystemEndedTheApp()).flow
 
         assertThat(again.step.value).isEqualTo(SetUpStep.CHARGER)
-        assertThat(again.charger.power()).contains(HomeChargePower.KW_22)
+        assertThat(again.charger.power()).isEqualTo(ChargePowerChoice.KW_22)
         assertThat(again.next()).isTrue()
     }
 

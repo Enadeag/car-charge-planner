@@ -52,7 +52,7 @@ import nl.enadeag.carchargeplanner.android.ui.setup.LocationFields
 import nl.enadeag.carchargeplanner.android.ui.setup.PanelArrayFields
 import nl.enadeag.carchargeplanner.android.ui.setup.UseTypical
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
-import nl.enadeag.carchargeplanner.engine.config.HomeChargePower
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice
 import nl.enadeag.carchargeplanner.engine.config.Phases
 import nl.enadeag.carchargeplanner.android.ui.components.AppOutlinedButton
 import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
@@ -74,8 +74,8 @@ internal fun summary(page: SettingsPage, config: EngineConfig, session: Settings
             numbers.write(system.car().usableBatteryKwh(), 1))
         SettingsPage.CHARGER -> {
             val charger = system.charger()
-            val power = HomeChargePower.of(charger)
-            if (power.isPresent) stringResource(chargePowerName(power.get()))
+            val power = ChargePowerChoice.of(charger)
+            if (power != ChargePowerChoice.OTHER) stringResource(chargePowerName(power))
             else stringResource(R.string.settings_charger_summary, stringResource(phasesName(charger.phases())),
                 charger.minAmps(), charger.maxAmps())
         }

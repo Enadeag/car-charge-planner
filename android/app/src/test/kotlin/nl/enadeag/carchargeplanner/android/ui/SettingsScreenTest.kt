@@ -406,6 +406,14 @@ class SettingsScreenTest {
     }
 
     @Test
+    @Config(qualifiers = "nl")
+    fun inDutchTheChargerRowGivesThePhasesAndTheCurrentsForOther() {
+        show(session(config = withCharger(Charger(Phases.ONE, 6, 16, 240.0, 0.9))))
+
+        compose.onNodeWithText("Eén fase, 6 tot 16 A").assertExists()
+    }
+
+    @Test
     fun theChargerPageShowsThePowerWithTheRestFoldedAndOtherUnfoldsItChangingNoValue() {
         show()
         open(SettingsPage.CHARGER)

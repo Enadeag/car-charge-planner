@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.android.form
 
 import androidx.lifecycle.SavedStateHandle
-import java.util.Optional
+import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice
 import nl.enadeag.carchargeplanner.engine.config.Charger
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.HomeChargePower
@@ -28,7 +28,7 @@ class ChargerForm(private val handle: SavedStateHandle, numbers: NumberText,
      * @property setting the engine's name for it; null for the power, which is not stored itself
      */
     enum class Field(val setting: ConfigSetting?) {
-        /** Whether a power was chosen: empty before a choice in set-up, else [OTHER] or [VALUES]. */
+        /** The choice the drop-down shows, a [ChargePowerChoice]'s name; empty before a choice in set-up. */
         POWER(null),
         /** The phases, chosen rather than typed: [Phases.ONE] or [Phases.THREE]. */
         PHASES(ConfigSetting.CHARGER_PHASES),
@@ -45,16 +45,10 @@ class ChargerForm(private val handle: SavedStateHandle, numbers: NumberText,
     private companion object {
         val OWN = Field.entries.mapNotNull { it.setting }.toSet()
 
-        /** The power shows "Other" as the owner chose it, until the phases, the current or the voltage change. */
-        const val OTHER = "OTHER"
-
-        /** The power shows what the values stand for. */
-        const val VALUES = "VALUES"
-
         /** The voltage as loaded, written exactly, as its field shows it without decimals. */
         const val LOADED_VOLTS = "charger.loadedVolts"
 
-        /** Kept as true once the app put the voltage in itself, so its text is read as written. */
+        /** True once a choice put the voltage in: from then on its text is read as written, also once typed in. */
         const val VOLTS_SET = "charger.voltsSet"
 
         val POWER_VALUES = setOf(Field.PHASES, Field.MAX_CURRENT, Field.VOLTAGE)
@@ -72,14 +66,11 @@ class ChargerForm(private val handle: SavedStateHandle, numbers: NumberText,
     /**
      * The charge power the drop-down shows.
      *
-     * @return the power the phases, the highest current and the voltage stand for, or empty for "Other"; null before a
-     *     choice in set-up, also for a restored text this version does not know
+     * @return the power the phases, the highest current and the voltage stand for, else [ChargePowerChoice.OTHER],
+     *     which a chosen "Other" also shows until one of them changes; null before a choice in set-up, also when the
+     *     state kept from before the system ended the app no longer fits
      */
-    fun power(): Optional<HomeChargePower>? = when (state.text(Field.POWER)) {
-        OTHER -> Optional.empty()
-        VALUES -> matching()
-        else -> null
-    }
+    fun power(): ChargePowerChoice? = ChargePowerChoice.entries.firstOrNull { it.name == state.text(Field.POWER) }
 
     /**
      * Chooses the phases, as the owner did: their typical mark goes.
@@ -100,17 +91,14 @@ class ChargerForm(private val handle: SavedStateHandle, numbers: NumberText,
         if (volts() != HomeChargePower.VOLTS) {
             setVolts(HomeChargePower.VOLTS) { field, text -> state.edit(field, text) }
         }
-        state.fill(Field.POWER, VALUES)
+        state.choose(Field.POWER, ChargePowerChoice.of(power).name)
     }
 
     /** Chooses "Other", as the owner did: no value changes, and the power shows "Other" until one does. */
-    fun chooseOther() = state.fill(Field.POWER, OTHER)
+    fun chooseOther() = state.choose(Field.POWER, ChargePowerChoice.OTHER.name)
 
     override fun edit(field: Field, text: String) {
         super.edit(field, text)
-        if (field == Field.VOLTAGE) {
-            handle[VOLTS_SET] = false
-        }
         if (field in POWER_VALUES) {
             followValues()
         }
@@ -124,7 +112,7 @@ class ChargerForm(private val handle: SavedStateHandle, numbers: NumberText,
         handle[VOLTS_SET] = false
         val notChosen = newWhenTypical && ConfigSetting.CHARGER_PHASES in typical &&
             ConfigSetting.CHARGER_MAX_CURRENT in typical
-        state.fill(Field.POWER, if (notChosen) "" else VALUES)
+        state.fill(Field.POWER, if (notChosen) "" else ChargePowerChoice.of(charger).name)
         state.markTypical(Field.entries.filter { field -> field.setting?.let { it in typical } == true }.toSet())
     }
 
@@ -133,11 +121,14 @@ class ChargerForm(private val handle: SavedStateHandle, numbers: NumberText,
      * the owner asked; the phases and the highest current stay as they are.
      */
     fun useTypical() {
+        val volts = volts()
         state.replace(Field.MIN_CURRENT, Charger.TYPICAL.minAmps().toString())
         setVolts(Charger.TYPICAL.volts(), state::replace)
         state.replace(Field.EFFICIENCY, numbers.write(Charger.TYPICAL.efficiency() * 100, 0))
         state.markTypical(state.typical() + FILLED_BY_TYPICAL)
-        followValues()
+        if (volts() != volts) {
+            followValues()
+        }
     }
 
     override fun readInto(config: EngineConfig, reader: FieldReader<Field>): EngineConfig? {
@@ -158,19 +149,18 @@ class ChargerForm(private val handle: SavedStateHandle, numbers: NumberText,
         return config.withSystem(config.system().withCharger(charger), config.typical().withSystem(OWN, marked))
     }
 
-    /** A chosen "Other" gives way to what the values stand for once one of them changes. */
     private fun followValues() {
-        if (state.text(Field.POWER) == OTHER) {
-            state.fill(Field.POWER, VALUES)
+        if (power() != null) {
+            state.fill(Field.POWER, matching().name)
         }
     }
 
-    private fun matching(): Optional<HomeChargePower> {
-        val phases = phases() ?: return Optional.empty()
+    private fun matching(): ChargePowerChoice {
+        val phases = phases() ?: return ChargePowerChoice.OTHER
         val maxAmps = (numbers.readWhole(state.text(Field.MAX_CURRENT).trim()) as? NumberText.WholeNumber.Read)?.value
-            ?: return Optional.empty()
-        val volts = volts() ?: return Optional.empty()
-        return HomeChargePower.matching(phases, maxAmps, volts)
+            ?: return ChargePowerChoice.OTHER
+        val volts = volts() ?: return ChargePowerChoice.OTHER
+        return ChargePowerChoice.matching(phases, maxAmps, volts)
     }
 
     /** The voltage as Save would read it: the loaded one exactly while its text is how that is written. */
