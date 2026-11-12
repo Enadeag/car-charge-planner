@@ -170,8 +170,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * What a day holds, from why it has no charge window when it has none.
-     *
      * @return "Charge window", "Grid charge needed", "Charging not needed" or "No charge window"
      */
     fun heading(day: DashboardDay): String = text(when (day.noWindow().orElse(null)) {
