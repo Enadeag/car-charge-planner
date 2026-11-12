@@ -1,55 +1,36 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalDouble;
 
 /**
- * One day's expected solar power as the solar chart draws it. Times are hours from the start of the day in real time,
- * so a day with a clock change is 23 or 25 hours long; the ticks carry the clock times.
+ * One day's solar chart as the desktop draws it: the engine's chart with the words the desktop shows and speaks.
  *
- * @param fromHour the first hour the chart shows, 0 or more
- * @param toHour the last hour the chart shows, after {@code fromHour}
- * @param scaleKw the power at the top of the chart in kW, more than 0
+ * @param chart the engine's chart of the day, whose hours, power, steps, windows and "now" are drawn
  * @param scaleText the power at the top of the chart in words, such as "4 kW"
- * @param steps the forecast steps within the hours shown, in time order; may be empty
- * @param houseKw the power the house uses on its own in kW, 0 or more
- * @param windows the charge windows of the day, in time order; may be empty
- * @param madeAtHour the hour the plan was made, which the chart marks as now, when it lies within the hours shown;
- *     empty on other days
- * @param ticks the hours marked on the time axis, in time order
+ * @param readouts each step of {@code chart} in words, in the same order, such as "13:00: 4.2 kW solar · 0.4 kW house"
+ * @param ticks the hours of {@code chart} that the time axis labels, in time order; the desktop labels only some
  * @param spoken the chart in words, for screen readers
  */
 public record SolarChartModel(
-        double fromHour,
-        double toHour,
-        double scaleKw,
+        DayChart chart,
         String scaleText,
-        List<Step> steps,
-        double houseKw,
-        List<WindowSpan> windows,
-        OptionalDouble madeAtHour,
-        List<Tick> ticks,
+        List<String> readouts,
+        List<TickLabel> ticks,
         String spoken) {
 
     /**
-     * Checks the ranges and keeps copies of the lists.
+     * Checks that every step has its readout and keeps copies of the lists.
      *
-     * @throws IllegalArgumentException when the hours are not in order, or the scale or the house's use is out of
-     *     range
+     * @throws IllegalArgumentException when there is not exactly one readout per step of the chart
      */
     public SolarChartModel {
-        if (!(fromHour >= 0 && toHour > fromHour)) {
-            throw new IllegalArgumentException("the hours shown must run forwards from 0 or later");
+        if (readouts.size() != chart.steps().size()) {
+            throw new IllegalArgumentException("each of the " + chart.steps().size()
+                    + " steps needs one readout, not " + readouts.size());
         }
-        if (!(scaleKw > 0)) {
-            throw new IllegalArgumentException("the scale must be more than 0 kW, not " + scaleKw);
-        }
-        if (!(houseKw >= 0)) {
-            throw new IllegalArgumentException("the house's use must not be negative, not " + houseKw);
-        }
-        steps = List.copyOf(steps);
-        windows = List.copyOf(windows);
+        readouts = List.copyOf(readouts);
         ticks = List.copyOf(ticks);
     }
 
@@ -59,7 +40,8 @@ public record SolarChartModel(
      * @param hour the hour from the start of the day; outside the steps, the nearest step is taken
      * @return the step that holds the hour, the nearest one, or empty when there are no steps
      */
-    Optional<Step> stepAt(double hour) {
+    Optional<DayChart.Step> stepAt(double hour) {
+        var steps = chart.steps();
         if (steps.isEmpty()) {
             return Optional.empty();
         }
@@ -72,65 +54,31 @@ public record SolarChartModel(
     }
 
     /**
-     * A forecast step.
+     * The words of a step.
      *
-     * @param startHour the hour the step starts
-     * @param endHour the hour the step ends, after {@code startHour}
-     * @param kw the expected solar power in kW, 0 or more
-     * @param readout the step in words, such as "13:00: 4.2 kW solar · 0.4 kW house"
+     * @param step must be one of the chart's steps
+     * @return the step's readout
      */
-    public record Step(double startHour, double endHour, double kw, String readout) {
-
-        /**
-         * Checks the values.
-         *
-         * @throws IllegalArgumentException when the step does not run forwards or its power is negative
-         */
-        public Step {
-            if (!(endHour > startHour)) {
-                throw new IllegalArgumentException("a step must end after it starts");
-            }
-            if (!(kw >= 0)) {
-                throw new IllegalArgumentException("a step's power must not be negative, not " + kw);
-            }
-        }
-
-        /**
-         * The middle of the step, where the curve passes through its power.
-         *
-         * @return the hour halfway between start and end
-         */
-        double midHour() {
-            return (startHour + endHour) / 2;
-        }
+    String readout(DayChart.Step step) {
+        return readouts.get(chart.steps().indexOf(step));
     }
 
     /**
-     * A charge window.
+     * The middle of a step, where the curve passes through its power.
      *
-     * @param startHour the hour the window starts
-     * @param endHour the hour the window ends, after {@code startHour}
+     * @param step a forecast step
+     * @return the hour halfway between its start and end
      */
-    public record WindowSpan(double startHour, double endHour) {
-
-        /**
-         * Checks the order.
-         *
-         * @throws IllegalArgumentException when the window does not run forwards
-         */
-        public WindowSpan {
-            if (!(endHour > startHour)) {
-                throw new IllegalArgumentException("a window must end after it starts");
-            }
-        }
+    static double midHour(DayChart.Step step) {
+        return (step.startHour() + step.endHour()) / 2;
     }
 
     /**
-     * A mark on the time axis.
+     * A labelled mark on the time axis.
      *
-     * @param hour the hour from the start of the day
+     * @param tick the engine's whole clock hour the mark is at
      * @param label the clock time, such as "09"
      */
-    public record Tick(double hour, String label) {
+    public record TickLabel(DayChart.Tick tick, String label) {
     }
 }

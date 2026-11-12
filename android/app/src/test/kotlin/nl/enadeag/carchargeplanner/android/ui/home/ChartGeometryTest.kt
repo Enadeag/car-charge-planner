@@ -183,7 +183,7 @@ class ChartGeometryTest {
     }
 
     @Test
-    fun theDrawingIsTheGridTheWindowsTheCurveTheHouseAndNowInTheChartsColours() {
+    fun theDrawingIsTheGridTheWindowsTheCurveTheBaseloadAndNowInTheChartsColours() {
         val drawing = drawing(busy)
 
         val curve = listOf(Point(50f, 55f), Point(55f, 30f), Point(60f, 55f))

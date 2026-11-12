@@ -29,7 +29,7 @@ public enum TextKey {
     CHART_SOLAR,
     /** The legend's name for the expected solar power. */
     CHART_SOLAR_LEGEND,
-    /** The legend's name for the house's own use. */
+    /** The legend's name for the baseload. */
     CHART_HOUSE_LEGEND,
     /** The legend's name for the charge windows. */
     CHART_WINDOW_LEGEND,
@@ -37,9 +37,9 @@ public enum TextKey {
     CHART_NOW,
     /** The top of the power axis: {0} the power in kW. */
     CHART_SCALE,
-    /** One step's values on hover: {0} its start time, {1} the solar power in kW, {2} the house's use in kW. */
+    /** One step's values on hover: {0} its start time, {1} the solar power in kW, {2} the baseload in kW. */
     CHART_READOUT,
-    /** The solar chart in words: {0} the day, {1} the peak power in kW, {2} the peak's time, {3} the house's use in kW. */
+    /** The solar chart in words: {0} the day, {1} the peak power in kW, {2} the peak's time, {3} the baseload in kW. */
     CHART_SPOKEN,
     /** The solar chart in words on a day without solar power: {0} the day. */
     CHART_SPOKEN_NO_SOLAR,

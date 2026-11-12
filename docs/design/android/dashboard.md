@@ -16,7 +16,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 - The rules of the day card, the battery bar, the trip advice, the footer, the coming away periods and the trips list are the engine's `engine.dashboard` ([engine/decisions.md](../engine/decisions.md)); the app keeps only the words and the drawing (#401).
 - `Dashboard` makes the engine's view once from the plan with all stored away periods and trips, so the view cannot disagree with the plan. After a trip or away change the view is made again at once from the plan shown, then the plan is made again with the shown plan kept in view (#404).
-- `AppArchitectureTest` keeps `home/Dashboard.kt` free of Android, AndroidX and Compose (#404).
+- `home/Dashboard.kt` stays as Android's adapter around the engine's view and holds no rule of the dashboard's, so `AppArchitectureTest` no longer keeps it free of Android, AndroidX and Compose: the `DASHBOARD_MODELS` rule, its lists of files and its tests are gone (#405).
 
 ### Chart and battery bar
 

@@ -513,7 +513,7 @@ class OutlookMapperTest {
     void theDayModelsCarryTheirCharts() {
         var plan = (DashboardModel.Plan) MAPPER.map(PlannedDays.TWO_DAYS);
 
-        assertThat(plan.days()).extracting(day -> day.curve().madeAtHour().isPresent()).containsExactly(true, false);
+        assertThat(plan.days()).extracting(day -> day.curve().chart().now().isPresent()).containsExactly(true, false);
         assertThat(plan.days()).extracting(day -> day.battery().editable()).containsExactly(true, false);
     }
 }

@@ -32,7 +32,7 @@ public final class SolarCard extends VBox {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         var header = new HBox(line(messages.text(TextKey.CHART_SOLAR), "card-label"), spacer,
                 entry(area(), messages.text(TextKey.CHART_SOLAR_LEGEND)),
-                entry(houseLine(), messages.text(TextKey.CHART_HOUSE_LEGEND)),
+                entry(baseloadLine(), messages.text(TextKey.CHART_HOUSE_LEGEND)),
                 entry(window(), messages.text(TextKey.CHART_WINDOW_LEGEND)));
         header.getStyleClass().add("chart-header");
         getChildren().setAll(header, chart);
@@ -69,9 +69,9 @@ public final class SolarCard extends VBox {
         return swatch;
     }
 
-    private static Node houseLine() {
+    private static Node baseloadLine() {
         var swatch = new Line(0, 0, SWATCH + 4, 0);
-        swatch.getStyleClass().addAll("house-line", "chart-stroke");
+        swatch.getStyleClass().addAll("baseload-line", "chart-stroke");
         return swatch;
     }
 

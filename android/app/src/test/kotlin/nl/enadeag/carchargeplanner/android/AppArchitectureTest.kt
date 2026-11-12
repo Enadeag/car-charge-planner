@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.android
 
-import androidx.lifecycle.SavedStateHandle
 import com.tngtech.archunit.base.DescribedPredicate
 import com.tngtech.archunit.core.domain.AccessTarget
 import com.tngtech.archunit.core.domain.JavaAccess
@@ -237,27 +236,6 @@ class AppArchitectureTest {
 
         /** The class Kotlin makes for [ScreenThatPlansARound.planInALambda]'s lambda. */
         val SCREENS_LAMBDA = ScreenThatPlansARound::class.java.name + "\$planInALambda\$1"
-
-        /** The files of the dashboard's models, which hold its rules and know nothing of Android. */
-        val MODEL_FILES = setOf("Dashboard.kt")
-
-        /** The other files in the dashboard's package: entries, notices and the like, which may use Android. */
-        val NOT_MODEL_FILES = setOf("AwayEntry.kt", "BatteryEntry.kt", "TripEntry.kt", "ChangeQueue.kt", "EntryFlow.kt",
-            "SaveState.kt", "TripChoice.kt", "TripDraft.kt", "TripDraftKept.kt",
-            "HomeNotice.kt", "HomeOutlook.kt", "NotificationCard.kt")
-
-        val DASHBOARD_MODELS = DescribedPredicate.describe<JavaClass>(
-            "are the dashboard's models in $APP.home (${MODEL_FILES.sorted().joinToString()})") { type ->
-            type.packageName == "$APP.home" && type.source.flatMap { it.fileName }.orElse("") in MODEL_FILES
-        }
-
-        // the Compose compiler marks every class of the module with this annotation, which nothing reads but Compose
-        const val COMPOSE_STABILITY = "androidx.compose.runtime.internal.StabilityInferred"
-
-        val ANDROID = DescribedPredicate.describe<JavaClass>("are Android's, AndroidX's or Compose's") { type ->
-            (type.packageName.startsWith("android.") || type.packageName.startsWith("androidx."))
-                && type.name != COMPOSE_STABILITY
-        }
 
         val ONLY_THE_BACKGROUND_WORK_MAKES_A_ROUND =
             noClasses().should().callMethodWhere(MAKE_A_ROUND_OUT_OF_PLACE)
@@ -826,23 +804,6 @@ class AppArchitectureTest {
     }
 
     @Test
-    fun theDashboardModelsRuleSeesTheModelsButNotTheEntries() {
-        assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.Dashboard\$Companion")))
-            .`as`("a class inside one").isTrue()
-        assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.Dashboard"))).`as`("the dashboard").isTrue()
-        assertThat(DASHBOARD_MODELS.test(APP_CLASSES.get("$APP.home.BatteryEntry"))).`as`("an entry").isFalse()
-    }
-
-    @Test
-    fun everyFileOfTheDashboardsPackageIsNamedAModelOrNot() {
-        val files = APP_CLASSES.filter { it.packageName == "$APP.home" }
-            .mapNotNull { type -> type.source.flatMap { it.fileName }.orElse(null) }.toSet()
-
-        assertThat(files).`as`("a new file in home/ goes on MODEL_FILES or NOT_MODEL_FILES")
-            .isEqualTo(MODEL_FILES + NOT_MODEL_FILES)
-    }
-
-    @Test
     fun onlyWaitingSleepsInTheTests() {
         assertThat(TEST_CLASSES.map { it.name }).`as`("the tests are imported").contains("$APP.Waiting")
 
@@ -855,22 +816,5 @@ class AppArchitectureTest {
                 + "is long and flaky when it is short (CONTRIBUTING.md, ADR 0005, as the desktop's rule has it); the "
                 + "instrumented tests, which run on a device, are not in this rule")
             .check(TEST_CLASSES)
-    }
-
-    @Test
-    fun theAndroidRuleSeesAndroidXButNotTheComposeCompilersMark() {
-        val importer = ClassFileImporter()
-
-        assertThat(ANDROID.test(importer.importClass(SavedStateHandle::class.java))).`as`("AndroidX").isTrue()
-        assertThat(ANDROID.test(importer.importClass(Class.forName(COMPOSE_STABILITY)))).`as`("the mark").isFalse()
-    }
-
-    @Test
-    fun theDashboardModelsKnowNothingOfAndroid() {
-        noClasses().that(DASHBOARD_MODELS)
-            .should().dependOnClassesThat(ANDROID)
-            .because("they hold the dashboard's rules, which the desktop may share (#341); the words and the drawing "
-                + "are the screens'")
-            .check(APP_CLASSES)
     }
 }

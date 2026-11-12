@@ -25,7 +25,7 @@ internal data class SourceColours(val solar: Pair, val grid: Pair, val car: Pair
      *
      * @property ground what the chart and the bar are drawn on, the whole card
      * @property text the card's heading, the line under the chart, "now" and its line, the battery bar's marks
-     * @property muted the axis, the legend's words, the house's line, the marks' words and the empty track's outline
+     * @property muted the axis, the legend's words, the baseload's line, the marks' words and the empty track's outline
      * @property gridLine the chart's grid and the battery bar's empty track
      * @property solar the solar curve's line and its legend's sign
      * @property solarArea the solar curve's fill, see-through
@@ -95,7 +95,7 @@ internal enum class ChartInk {
     /** "Now" and its line, and the battery bar's marks. */
     TEXT,
 
-    /** The house's line and the empty track's outline. */
+    /** The baseload's line and the empty track's outline. */
     MUTED,
 
     /** The chart's grid and the battery bar's empty track. */

@@ -11,6 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.Models;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import java.util.List;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -86,7 +87,7 @@ class SolarChartTest {
         var start = (MoveTo) elements.getFirst();
         assertThat(new Point2D(start.getX(), start.getY())).isEqualTo(new Point2D(plot.x(7), plot.y(0)));
         var peak = (LineTo) elements.get(7); // the step from 13:00 to 14:00
-        var step = TODAY.steps().get(6);
+        var step = TODAY.chart().steps().get(6);
         assertThat(peak.getX()).isCloseTo(plot.x(13.5), within(1e-9));
         assertThat(peak.getY()).isCloseTo(plot.y(step.kw()), within(1e-9));
         assertThat(peak.getY()).isLessThan(plot.y(2)); // above the middle of the 4 kW scale
@@ -122,14 +123,14 @@ class SolarChartTest {
     }
 
     @Test
-    void theHouseIsALineAtItsPower() throws Exception {
+    void theBaseloadIsALineAtItsPower() throws Exception {
         show(TODAY);
         var plot = plot();
 
-        var house = part("house-line", Line.class);
+        var baseload = part("baseload-line", Line.class);
 
-        assertThat(house.getStartY()).isEqualTo(plot.y(0.4));
-        assertThat(List.of(house.getStartX(), house.getEndX())).containsExactly(plot.left(), plot.right());
+        assertThat(baseload.getStartY()).isEqualTo(plot.y(0.4));
+        assertThat(List.of(baseload.getStartX(), baseload.getEndX())).containsExactly(plot.left(), plot.right());
     }
 
     @Test
@@ -154,7 +155,7 @@ class SolarChartTest {
         return Fx.call(() -> {
             chart.fireEvent(event);
             stage.getScene().getRoot().layout();
-            return new Readout(chart.selected().map(SolarChartModel.Step::startHour).orElse(-1.0),
+            return new Readout(chart.selected().map(DayChart.Step::startHour).orElse(-1.0),
                     ((Label) chart.lookup(".chart-readout-text")).getText(), chart.lookup(".chart-readout").isVisible());
         });
     }
@@ -166,7 +167,7 @@ class SolarChartTest {
 
         var pointed = after(Fx.call(() -> mouse(MouseEvent.MOUSE_MOVED, x)));
 
-        assertThat(pointed).isEqualTo(new Readout(13, TODAY.steps().get(6).readout(), true));
+        assertThat(pointed).isEqualTo(new Readout(13, TODAY.readouts().get(6), true));
         assertThat(after(Fx.call(() -> mouse(MouseEvent.MOUSE_EXITED, x))).visible()).isFalse();
     }
 
@@ -197,7 +198,7 @@ class SolarChartTest {
         key(KeyCode.RIGHT);
         key(KeyCode.RIGHT);
 
-        assertThat(Fx.call(() -> AccessibleNames.of(chart))).isEqualTo(TODAY.steps().get(1).readout());
+        assertThat(Fx.call(() -> AccessibleNames.of(chart))).isEqualTo(TODAY.readouts().get(1));
         assertThat(Fx.call(() -> AccessibleNames.help(chart)))
                 .isEqualTo(new Messages(Language.ENGLISH).text(TextKey.CHART_KEYS));
     }
@@ -227,7 +228,7 @@ class SolarChartTest {
 
         Fx.run(() -> chart.show(TOMORROW));
 
-        assertThat(Fx.call(chart::shownPoints)).isEqualTo(CurvePoints.of(TOMORROW.steps(), 6, 20));
+        assertThat(Fx.call(chart::shownPoints)).isEqualTo(CurvePoints.of(TOMORROW.chart().steps(), 6, 20));
     }
 
     @Test
@@ -236,7 +237,7 @@ class SolarChartTest {
         show(TODAY, motion);
         Fx.run(() -> chart.tween().finish());
 
-        var target = CurvePoints.of(TOMORROW.steps(), 6, 20);
+        var target = CurvePoints.of(TOMORROW.chart().steps(), 6, 20);
         var moving = Fx.call(() -> {
             chart.show(TOMORROW);
             return chart.shownPoints();
@@ -258,7 +259,34 @@ class SolarChartTest {
             chart.show(TOMORROW);
         });
 
-        assertThat(Fx.call(chart::shownPoints)).isEqualTo(CurvePoints.of(TOMORROW.steps(), 6, 20));
+        assertThat(Fx.call(chart::shownPoints)).isEqualTo(CurvePoints.of(TOMORROW.chart().steps(), 6, 20));
+    }
+
+    @Test
+    void aTimeLabelIsCentredOnItsHour() throws Exception {
+        show(TODAY);
+        var plot = plot();
+        var tick = TODAY.ticks().get(TODAY.ticks().size() / 2);
+
+        var label = Fx.call(() -> (Label) chart.lookupAll(".chart-axis").stream()
+                .filter(node -> node instanceof Label shown && shown.getText().equals(tick.label()))
+                .findFirst().orElseThrow());
+
+        double middle = Fx.call(() -> label.getLayoutX() + label.getWidth() / 2);
+        assertThat(middle).isCloseTo(plot.x(tick.tick().hour()), within(1e-6));
+    }
+
+    @Test
+    void thePointerLineStandsInTheMiddleOfTheSelectedStep() throws Exception {
+        show(TODAY);
+        key(KeyCode.RIGHT);
+        key(KeyCode.RIGHT);
+        relayout();
+
+        var pointer = part("pointer-line", Line.class);
+
+        var step = Fx.call(() -> chart.selected().orElseThrow());
+        assertThat(pointer.getStartX()).isCloseTo(plot().x(step.startHour() + 0.5), within(1e-6));
     }
 
     private String readout() throws Exception {

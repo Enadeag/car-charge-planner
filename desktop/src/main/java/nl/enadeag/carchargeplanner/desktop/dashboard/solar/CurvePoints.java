@@ -1,6 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.geometry.Point2D;
@@ -24,14 +24,14 @@ final class CurvePoints {
      * @return points as (hour, kW), in hour order: 0 at the first step's start, each step's middle, 0 at the last
      *     step's end; without steps a flat line at 0 over the hours shown
      */
-    static List<Point2D> of(List<Step> steps, double fromHour, double toHour) {
+    static List<Point2D> of(List<DayChart.Step> steps, double fromHour, double toHour) {
         if (steps.isEmpty()) {
             return List.of(new Point2D(fromHour, 0), new Point2D(toHour, 0));
         }
         var points = new ArrayList<Point2D>();
         points.add(new Point2D(Math.max(fromHour, steps.getFirst().startHour()), 0));
         for (var step : steps) {
-            points.add(new Point2D(Math.clamp(step.midHour(), fromHour, toHour), step.kw()));
+            points.add(new Point2D(Math.clamp(SolarChartModel.midHour(step), fromHour, toHour), step.kw()));
         }
         points.add(new Point2D(Math.min(toHour, steps.getLast().endHour()), 0));
         return points;

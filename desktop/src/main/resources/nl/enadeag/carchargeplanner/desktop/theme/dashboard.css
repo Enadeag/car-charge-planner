@@ -29,7 +29,7 @@
     -solar-area: rgba(184, 115, 0, 0.22);
     -car-area: rgba(31, 143, 92, 0.14);
     -car-after: #8fd1b2;
-    -house: -muted;
+    -baseload: -muted;
 
     -danger-text: #b42318;
 
@@ -59,7 +59,7 @@
     -solar-area: rgba(242, 179, 61, 0.26);
     -car-area: rgba(76, 199, 140, 0.16);
     -car-after: #2a6b4c;
-    -house: -muted;
+    -baseload: -muted;
 
     -danger-text: #ff9b8f;
 }
@@ -261,8 +261,8 @@
     -fx-fill: -solar;
 }
 
-.house-line {
-    -fx-stroke: -house;
+.baseload-line {
+    -fx-stroke: -baseload;
     -fx-stroke-width: 1.4;
     -fx-stroke-dash-array: 4 2;
 }
