@@ -57,6 +57,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | API key and server | API-sleutel en server | on the Forecast page, the fold of a provider's optional server address and API key; a provider with only an optional API key names its fold "API key" ("API-sleutel"), the same text as the field |  |
 | Charge power at home | laadvermogen thuis | the Charger page's drop-down: 3.7 kW, 7.4 kW, 11 kW, 22 kW, Other (3,7 kW, 7,4 kW, 11 kW, 22 kW, Anders), each one text of its own; its hint "The power the car charges with at home: the lower of what the charger and the car can take." ("Het vermogen waarmee de auto thuis laadt: het laagste van wat de laadpaal en de auto aankunnen.") | Charger power, charger size, wallbox rating |
 | Choose… | Kies… | what a drop-down shows before a choice |  |
+| Charging not needed | Laden niet nodig | a day card's heading, in both apps, when the day has no charge window and the car needs no charging; nothing stands under it but, on today, the note of an assumed battery level |  |
 | Typical value | gangbare waarde | what I don't know: use typical values (Weet ik niet: gangbare waarden gebruiken) fills in; no field says that its value is typical | Default, assumed value, guess |
 | Planning preferences | planning |  | Planning settings, options |
 | App settings | app-instellingen |  | Preferences, interface config |

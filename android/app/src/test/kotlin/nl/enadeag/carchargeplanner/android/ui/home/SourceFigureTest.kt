@@ -7,7 +7,9 @@ import nl.enadeag.carchargeplanner.android.home.Plans
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource
+import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason
 import nl.enadeag.carchargeplanner.engine.plan.Window
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -39,11 +41,26 @@ class SourceFigureTest {
         assertThat(SourceFigure.of(day).filterIsInstance<SourceFigure.FromGrid>().map { it.kwh }).containsExactly(0.69)
     }
 
-    @Test
-    fun aDayWithoutAWindowShowsOnlyItsBattery() {
-        val day = day(listOf())
+    /** A day without a charge window, for a reason. */
+    private fun withoutWindow(why: NoWindowReason) = DashboardDay(DayName.Tomorrow(today.plusDays(1)), Optional.empty(),
+        listOf(), Optional.of(why), BatteryLevels(Percent(40.0), Percent(40.0), Optional.empty()), Optional.empty(),
+        day(listOf()).chart())
 
-        assertThat(SourceFigure.of(day)).containsExactly(SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(40.0), Optional.empty())))
+    @Test
+    fun aDayWithoutAWindowForTheGridAdviceADepartureATripOrAGridChargeThatStartsShowsOnlyItsBattery() {
+        val battery = SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(40.0), Optional.empty()))
+
+        for (why in listOf(NoWindowReason.GRID, NoWindowReason.DEPARTURE, NoWindowReason.AWAY,
+            NoWindowReason.GRID_CHARGE_STARTS)) {
+            assertThat(SourceFigure.of(withoutWindow(why))).`as`(why.name).containsExactly(battery)
+        }
+    }
+
+    @Test
+    fun aDayThatNeedsNoChargingOrHasTooLittleSolarPowerShowsNoFigure() {
+        assertThat(SourceFigure.of(withoutWindow(NoWindowReason.NOT_NEEDED))).isEmpty()
+        assertThat(SourceFigure.of(withoutWindow(NoWindowReason.TOO_LITTLE_SOLAR))).isEmpty()
+        assertThat(SourceFigure.of(day(listOf()))).isEmpty()
     }
 
     @Test

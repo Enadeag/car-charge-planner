@@ -61,9 +61,9 @@ public final class Models {
             List.of(), Optional.empty(), List.of());
 
     public static final DayModel CLOUDY_TOMORROW = new DayModel(TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.NONE, "No charge window", "",
-            List.of(), List.of(new ChipModel(EnergySource.CAR, "Battery 62 → 62 %")),
-            "The car needs no charging, or there is too little sun for it.",
-            "Tomorrow: no charge window. The car needs no charging, or there is too little sun for it.",
+            List.of(), List.of(),
+            "There is too little solar power while the car is home.",
+            "Tomorrow: no charge window. There is too little solar power while the car is home.",
             curve(0.9, List.of(), OptionalDouble.empty()),
             new BatteryModel(62, 62, 30, 80, "62 → 62 %", "min 30", "target 80", false,
                     "Car battery 62 % at the start of tomorrow, 62 % after charging; minimum 30 %, target 80 %."),

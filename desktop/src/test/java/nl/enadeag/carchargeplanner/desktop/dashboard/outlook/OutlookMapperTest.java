@@ -24,6 +24,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.nio.file.Path;
@@ -53,13 +54,20 @@ class OutlookMapperTest {
     }
 
     private static DayPlan day(LocalDate date, Window... windows) {
-        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(62), 12, List.of());
+        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(80), new Percent(62), 12,
+                List.of());
     }
 
     /** Fetched at 07:45 from the primary provider, Open-Meteo. */
     private static ForecastSource fresh() {
         return new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", CREDIT, at(TODAY, 7, 45), Freshness.FRESH,
                 ProviderRole.PRIMARY, "", Optional.empty(), List.of());
+    }
+
+    /** A day without a window that starts at a level while the plan charges up to another; the target is 80 %. */
+    private static DayPlan withoutWindow(LocalDate date, double startPct, double chargeToPct) {
+        return new DayPlan(date, new Percent(startPct), List.of(), new Percent(startPct), new Percent(chargeToPct),
+                new Percent(startPct), 12, List.of());
     }
 
     private static Outlook.Planned planned(boolean batteryAssumed, DayPlan... days) {
@@ -275,14 +283,14 @@ class OutlookMapperTest {
     /** Today with a window, Saturday the trip leaves after charging or not, Sunday to Tuesday without windows. */
     private static DashboardModel.Plan withTrip(Messages messages, double saturdayAfterPct) {
         var saturday = new DayPlan(TODAY.plusDays(1), new Percent(94), List.of(), new Percent(saturdayAfterPct),
-                new Percent(32), 70, List.of());
+                new Percent(94), new Percent(32), 70, List.of());
         var days = List.of(day(TODAY, window(TODAY, 11, 14, 0)), saturday,
-                new DayPlan(TODAY.plusDays(2), new Percent(32), List.of(), new Percent(32), new Percent(32), 0,
-                        List.of()),
-                new DayPlan(TODAY.plusDays(3), new Percent(32), List.of(), new Percent(32), new Percent(32), 0,
-                        List.of()),
-                new DayPlan(TODAY.plusDays(4), new Percent(32), List.of(), new Percent(32), new Percent(20), 12,
-                        List.of()));
+                new DayPlan(TODAY.plusDays(2), new Percent(32), List.of(), new Percent(32), new Percent(80),
+                        new Percent(32), 0, List.of()),
+                new DayPlan(TODAY.plusDays(3), new Percent(32), List.of(), new Percent(32), new Percent(80),
+                        new Percent(32), 0, List.of()),
+                new DayPlan(TODAY.plusDays(4), new Percent(32), List.of(), new Percent(32), new Percent(80),
+                        new Percent(20), 12, List.of()));
         var advice = new TripAdvice(LONG_TRIP, new Percent(94), List.of(), new Percent(94), Optional.empty(),
                 new Percent(94), 0, new Percent(42));
         var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, days, new Percent(50), false, Optional.empty(),
@@ -317,7 +325,7 @@ class OutlookMapperTest {
     }
 
     @Test
-    void theDaysTheCarIsAwayOnATripSaySoAndATripWithoutThisCarDoesNot() {
+    void theDaysTheCarIsAwayOnATripSaySoWithTheirBatteryChipAndATripWithoutThisCarDoesNot() {
         var english = withTrip(new Messages(Language.ENGLISH), 94).days();
         var dutch = withTrip(new Messages(Language.DUTCH), 94).days();
 
@@ -325,10 +333,83 @@ class OutlookMapperTest {
                 "The car is away on a trip, or there is too little solar power while it is home.");
         assertThat(dutch.get(2).note())
                 .isEqualTo("De auto is weg voor een rit, of er is te weinig zonnestroom terwijl hij thuis is.");
-        assertThat(english.get(4).note()).isEqualTo("The car needs no charging, or there is too little solar power "
-                + "for it.");
-        assertThat(english.get(4).chips()).extracting(ChipModel::text).containsExactly("Battery 32 → 32%");
+        assertThat(english.subList(2, 4)).extracting(DayModel::chips).allSatisfy(chips ->
+                assertThat(chips).extracting(ChipModel::text).containsExactly("Battery 32 → 32%"));
+        assertThat(english.get(4).heading()).isEqualTo("No charge window");
+        assertThat(english.get(4).note()).isEqualTo("There is too little solar power while the car is home.");
+        assertThat(english.get(4).chips()).isEmpty();
         assertThat(english.get(0).chips()).extracting(ChipModel::text).contains("Battery 50 → 74%");
+    }
+
+    @Test
+    void aDayThatNeedsNoChargingSaysOnlySoWithoutABatteryChip() {
+        var english = plan(day(TODAY), withoutWindow(TODAY.plusDays(1), 79.6, 80)).days().get(1);
+        var dutch = ((DashboardModel.Plan) DUTCH.map(planned(false, day(TODAY), withoutWindow(TODAY.plusDays(1), 80,
+                80)))).days().get(1);
+
+        assertThat(english.heading()).isEqualTo("Charging not needed");
+        assertThat(english.chips()).isEmpty();
+        assertThat(english.note()).isEmpty();
+        assertThat(english.spoken()).isEqualTo("Tomorrow: charging not needed.");
+        assertThat(english.kind()).isEqualTo(DayKind.NONE);
+        assertThat(english.battery().levels()).isEqualTo("80 → 80%");
+        assertThat(dutch.heading()).isEqualTo("Laden niet nodig");
+        assertThat(dutch.spoken()).isEqualTo("Morgen: laden niet nodig.");
+    }
+
+    @Test
+    void aDayThatCouldUseAChargeWithoutAWindowSaysThereIsTooLittleSolarPowerWithoutABatteryChip() {
+        var english = plan(day(TODAY), withoutWindow(TODAY.plusDays(1), 79.4, 80)).days().get(1);
+        var dutch = ((DashboardModel.Plan) DUTCH.map(planned(false, day(TODAY), withoutWindow(TODAY.plusDays(1), 85,
+                92.1)))).days().get(1);
+
+        assertThat(english.heading()).isEqualTo("No charge window");
+        assertThat(english.chips()).isEmpty();
+        assertThat(english.note()).isEqualTo("There is too little solar power while the car is home.");
+        assertThat(english.spoken())
+                .isEqualTo("Tomorrow: no charge window. There is too little solar power while the car is home.");
+        assertThat(english.kind()).isEqualTo(DayKind.NONE);
+        assertThat(english.battery().levels()).isEqualTo("79 → 79%");
+        assertThat(dutch.heading()).isEqualTo("Geen laadvenster");
+        assertThat(dutch.note()).isEqualTo("Er is te weinig zonnestroom terwijl de auto thuis is.");
+    }
+
+    /** Today without a window at the target, with the grid charge for Saturday's trip starting this evening. */
+    private static DashboardModel.Plan gridChargeToday(Messages messages) {
+        var today = new DayPlan(TODAY, new Percent(80), List.of(), new Percent(94), new Percent(80), new Percent(94), 0,
+                List.of());
+        var saturday = new DayPlan(TODAY.plusDays(1), new Percent(94), List.of(), new Percent(94), new Percent(94),
+                new Percent(32), 70, List.of());
+        var grid = new TripGridCharge(window(TODAY, 20, 22, 14.6), TripGridCharge.Start.PLANNED);
+        var advice = new TripAdvice(LONG_TRIP, new Percent(94), List.of(), new Percent(80), Optional.of(grid),
+                new Percent(94), 0, new Percent(42));
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(today, saturday), new Percent(80), false,
+                Optional.empty(), List.of(advice), fresh(), 0.4, new Percent(30), new Percent(80));
+        return (DashboardModel.Plan) new OutlookMapper(messages).map(planned, List.of(), List.of(LONG_TRIP),
+                Units.METRIC);
+    }
+
+    @Test
+    void theDayATripsGridChargeStartsOnSaysOnlyThatThereIsNoChargeWindowWithItsBatteryChip() {
+        var english = gridChargeToday(new Messages(Language.ENGLISH)).days().getFirst();
+        var dutch = gridChargeToday(new Messages(Language.DUTCH)).days().getFirst();
+
+        assertThat(english.heading()).isEqualTo("No charge window");
+        assertThat(english.note()).isEmpty();
+        assertThat(english.chips()).extracting(ChipModel::text).containsExactly("Battery 80 → 94%");
+        assertThat(english.spoken()).isEqualTo("Today: no charge window.");
+        assertThat(english.kind()).isEqualTo(DayKind.NONE);
+        assertThat(dutch.heading()).isEqualTo("Geen laadvenster");
+        assertThat(dutch.note()).isEmpty();
+        assertThat(dutch.spoken()).isEqualTo("Vandaag: geen laadvenster.");
+    }
+
+    @Test
+    void todayThatNeedsNoChargingStillNotesTheAssumedLevel() {
+        var today = ((DashboardModel.Plan) MAPPER.map(planned(true, withoutWindow(TODAY, 80, 80)))).days().getFirst();
+
+        assertThat(today.heading()).isEqualTo("Charging not needed");
+        assertThat(today.note()).contains("assumes the battery is at 50%").doesNotContain("solar");
     }
 
     @Test

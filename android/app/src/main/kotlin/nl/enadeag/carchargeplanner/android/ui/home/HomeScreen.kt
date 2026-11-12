@@ -389,10 +389,13 @@ private fun DayCard(day: DashboardDay, words: DashboardWords) {
                     Text(stringResource(R.string.day_energy, words.decimal(window.energyKwh())))
                 }
             }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SourceFigure.of(day).forEach {
-                    SourceChip(words.figure(it), sources.of(it), spoken = words.spokenFigure(it))
+            val figures = SourceFigure.of(day)
+            if (figures.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    figures.forEach {
+                        SourceChip(words.figure(it), sources.of(it), spoken = words.spokenFigure(it))
+                    }
                 }
             }
             val note = words.note(day)

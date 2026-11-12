@@ -359,7 +359,7 @@ class TripAdviceScreenTest {
 
         tab("Tomorrow")
 
-        compose.onNodeWithText(text(R.string.day_none_why)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.day_too_little_solar)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.day_none_trip)).assertDoesNotExist()
         compose.onNode(hasContentDescription("Battery 40%, 25% after the trip")).assertExists()
         compose.onNodeWithText("Battery 40 → 25% after the trip", useUnmergedTree = true).assertExists()
@@ -418,13 +418,13 @@ class TripAdviceScreenTest {
     }
 
     @Test
-    fun aDayAwayOnATripSaysSoAndNotThatTheCarNeedsNoCharging() {
+    fun aDayAwayOnATripSaysSoWithItsBatteryChip() {
         show()
 
         tab("Wednesday")
 
         compose.onNodeWithText(text(R.string.day_none_trip)).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.day_none_why)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.day_too_little_solar)).assertDoesNotExist()
         compose.onNodeWithText("Battery 40 → 40%", useUnmergedTree = true).assertExists()
     }
 
@@ -438,7 +438,7 @@ class TripAdviceScreenTest {
                 "18:00"), text(R.string.trip_distance, "300"))))).performScrollTo().performClick()
         compose.waitForIdle()
 
-        compose.onNodeWithText(text(R.string.day_none_why)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.day_too_little_solar)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_none_trip)).assertDoesNotExist()
     }
 

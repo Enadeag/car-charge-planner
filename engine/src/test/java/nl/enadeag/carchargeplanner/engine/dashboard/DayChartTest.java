@@ -46,7 +46,8 @@ class DayChartTest {
     }
 
     private static DayPlan day(LocalDate date, List<Window> windows, List<ForecastStep> forecast) {
-        return new DayPlan(date, new Percent(40), windows, new Percent(50), new Percent(50), 0, forecast);
+        return new DayPlan(date, new Percent(40), windows, new Percent(50), new Percent(80), new Percent(50), 0,
+                forecast);
     }
 
     /** Days from today on, each with the power of {@code kw} for its date. */

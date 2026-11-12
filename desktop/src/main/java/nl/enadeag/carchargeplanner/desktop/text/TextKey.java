@@ -301,10 +301,12 @@ public enum TextKey {
     DAY_GRID,
     /** Why that day has no window. */
     DAY_GRID_WHY,
-    /** The heading of a day without a charge window. */
+    /** The heading of a day without a charge window that is not one of the others. */
     DAY_NONE,
-    /** Why a day has no window. */
-    DAY_NONE_WHY,
+    /** The heading of a day without a charge window on which the car needs no charging. */
+    DAY_NOT_NEEDED,
+    /** Why a day on which the car could use a charge has no window. */
+    DAY_TOO_LITTLE_SOLAR,
     /** Why a day the car is away on a trip, but does not leave on one, has no window. */
     DAY_NONE_TRIP,
     /** The battery chip: {0} the level at the start of the day, {1} after charging, both in %. */

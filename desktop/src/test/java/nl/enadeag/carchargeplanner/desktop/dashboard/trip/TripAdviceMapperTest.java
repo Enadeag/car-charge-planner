@@ -60,7 +60,7 @@ class TripAdviceMapperTest {
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data", MADE_AT,
                 Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty(), List.of());
         var days = List.of(TODAY, TOMORROW, TODAY.plusDays(2)).stream()
-                .map(date -> new DayPlan(date, new Percent(45), List.of(), new Percent(45), new Percent(45), 0,
+                .map(date -> new DayPlan(date, new Percent(45), List.of(), new Percent(45), new Percent(80), new Percent(45), 0,
                         List.of()))
                 .toList();
         return new Outlook.Planned(MADE_AT, BRUSSELS, days, new Percent(45), assumed, Optional.empty(),

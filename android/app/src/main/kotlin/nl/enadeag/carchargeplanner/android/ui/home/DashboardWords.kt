@@ -24,7 +24,6 @@ import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
-import nl.enadeag.carchargeplanner.engine.dashboard.DayKind
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import nl.enadeag.carchargeplanner.engine.dashboard.Footer
 import nl.enadeag.carchargeplanner.engine.dashboard.GridAdviceView
@@ -171,29 +170,32 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * @return "Charge window", "Grid charge needed" or "No charge window"
+     * @return "Charge window", "Grid charge needed", "Charging not needed" or "No charge window"
      */
-    fun heading(day: DashboardDay): String = text(when (day.kind()) {
-        DayKind.SOLAR -> R.string.day_window
-        DayKind.GRID -> R.string.day_grid
-        DayKind.NONE -> R.string.day_none
+    fun heading(day: DashboardDay): String = text(when (day.noWindow().orElse(null)) {
+        null -> R.string.day_window
+        NoWindowReason.GRID -> R.string.day_grid
+        NoWindowReason.NOT_NEEDED -> R.string.day_not_needed
+        NoWindowReason.DEPARTURE, NoWindowReason.AWAY, NoWindowReason.GRID_CHARGE_STARTS,
+        NoWindowReason.TOO_LITTLE_SOLAR -> R.string.day_none
     })
 
     /**
      * A day's note: its later charge windows, why it has none, and the battery level the plan assumed with how to
      * enter the one the car shows.
      *
-     * @param day the day, with why it has no charge window; the day a trip leaves says nothing of that
+     * @param day the day, with why it has no charge window; the day a trip leaves, a day a grid charge starts on and a
+     *     day that needs no charging say nothing of that
      * @return the sentences, joined; empty when there are none
      */
     fun note(day: DashboardDay): String {
         val later = if (day.later().isEmpty()) "" else text(R.string.day_later_windows,
             day.later().joinToString(", ") { text(R.string.day_later_window, span(it), it.amps()) })
         val because = when (day.noWindow().orElse(null)) {
-            null, NoWindowReason.DEPARTURE -> ""
+            null, NoWindowReason.DEPARTURE, NoWindowReason.GRID_CHARGE_STARTS, NoWindowReason.NOT_NEEDED -> ""
             NoWindowReason.GRID -> text(R.string.day_grid_why)
             NoWindowReason.AWAY -> text(R.string.day_none_trip)
-            NoWindowReason.NOT_NEEDED -> text(R.string.day_none_why)
+            NoWindowReason.TOO_LITTLE_SOLAR -> text(R.string.day_too_little_solar)
         }
         val assumed = day.assumedLevel().orElse(null)?.let { text(R.string.day_battery_assumed, whole(it.value())) }
             .orEmpty()

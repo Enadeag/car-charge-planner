@@ -333,7 +333,7 @@ public final class Planner {
      * One day, in parts cut at its departures. Each part charges on solar power up to the target level, or up to what
      * the next trip needs from its first day of charging above the target. A trip's grid charge on its departure day is
      * counted before the departure; one on an earlier day after that day's driving, as it runs in the evening or the
-     * night.
+     * night. The day's solar charging aims at the highest of its parts' levels.
      */
     private DayPlan planDay(LocalDate date, double startPct, Input input, List<TripCharge> charges,
             List<Departure> departures) {
@@ -344,6 +344,7 @@ public final class Planner {
         double removedPct = 0;
         double tripsPct = 0;
         double laterGridPct = 0;
+        double chargeToPct = 0;
         var partStart = date.atStartOfDay(zone).toInstant();
         for (var charge : charges) {
             if (gridDate(charge).filter(date::equals).isPresent()
@@ -354,7 +355,9 @@ public final class Planner {
             if (!departure.atZone(zone).toLocalDate().equals(date)) {
                 continue;
             }
-            level = chargePart(date, partStart, departure, level, runs, input.running(), charges, windows);
+            double capPct = capPct(date, departure, charges);
+            chargeToPct = Math.max(chargeToPct, capPct);
+            level = chargePart(partStart, departure, level, capPct, runs, input.running(), windows);
             if (gridDate(charge).filter(date::equals).isPresent()) {
                 level = Math.min(100, level + gridPct(charge));
             }
@@ -365,24 +368,25 @@ public final class Planner {
             level = returned;
             partStart = departure;
         }
-        level = chargePart(date, partStart, dayEnd, level, runs, input.running(), charges, windows);
+        double capPct = capPct(date, dayEnd, charges);
+        chargeToPct = Math.max(chargeToPct, capPct);
+        level = chargePart(partStart, dayEnd, level, capPct, runs, input.running(), windows);
 
         double otherPct = otherDrivingPct(date, input.now());
         double after = Math.min(100, level + removedPct + laterGridPct);
         double end = Math.min(100, Math.max(0, level - otherPct) + laterGridPct);
-        return new DayPlan(date, new Percent(startPct), windows, new Percent(after), new Percent(end),
-                otherPct + tripsPct, input.stepsByDay().getOrDefault(date, List.of()));
+        return new DayPlan(date, new Percent(startPct), windows, new Percent(after), new Percent(chargeToPct),
+                new Percent(end), otherPct + tripsPct, input.stepsByDay().getOrDefault(date, List.of()));
     }
 
     /**
-     * Charges on solar power in one part of a day; the windows go to {@code windows} in time order, the level after
-     * comes back.
+     * Charges on solar power in one part of a day, up to {@code capPct}; the windows go to {@code windows} in time
+     * order, the level after comes back.
      */
-    private double chargePart(LocalDate date, Instant from, Instant to, double levelPct, List<SurplusRun> dayRuns,
-            List<Window> running, List<TripCharge> charges, List<Window> windows) {
+    private double chargePart(Instant from, Instant to, double levelPct, double capPct, List<SurplusRun> dayRuns,
+            List<Window> running, List<Window> windows) {
         var kept = running.stream().filter(window -> within(window.start(), from, to)).toList();
         var runs = dayRuns.stream().filter(run -> within(run.start(), from, to)).toList();
-        double capPct = capPct(date, to, charges);
         double neededKwh = Math.max(0, energyToReachKwh(capPct, levelPct) - solarKwh(kept));
         var chosen = new ArrayList<>(kept);
         chosen.addAll(finder.windows(runs, neededKwh));

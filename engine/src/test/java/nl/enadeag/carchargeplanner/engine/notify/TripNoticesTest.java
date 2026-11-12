@@ -473,7 +473,7 @@ class TripNoticesTest {
         var advice = withGrid(SATURDAY_EVENING, TripGridCharge.Start.PLANNED);
         var window = new Window(at(SATURDAY, 13, 0), at(SATURDAY, 15, 0), 8, 1.8, 3.6, 0);
         var day = new DayPlan(SATURDAY, new Percent(40), List.of(window),
-                new Percent(55), new Percent(40), 12, List.of());
+                new Percent(55), new Percent(80), new Percent(40), 12, List.of());
         var now = at(SATURDAY, 8, 0);
         var source = forecast(now, Freshness.FRESH);
 

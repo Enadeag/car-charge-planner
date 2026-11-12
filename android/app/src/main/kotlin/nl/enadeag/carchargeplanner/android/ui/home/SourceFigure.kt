@@ -44,12 +44,13 @@ sealed interface SourceFigure {
          * A day's figures by source, each shown in its source's colours.
          *
          * @param day the day
-         * @return the main window's solar share, the battery, and what the main window takes from the grid when the
-         *     day shows it; only the battery on a day without a window
+         * @return the main window's solar share, the battery when the day shows it (`DashboardDay.showsBattery`), and
+         *     what the main window takes from the grid when the day shows it
          */
         fun of(day: DashboardDay): List<SourceFigure> {
             val main = day.main().orElse(null)
-            return listOfNotNull(main?.let { SolarShare(it.window().solarSharePct()) }, Battery(day.battery()),
+            return listOfNotNull(main?.let { SolarShare(it.window().solarSharePct()) },
+                Battery(day.battery()).takeIf { day.showsBattery() },
                 main?.gridKwh()?.takeIf { it.isPresent }?.let { FromGrid(it.asDouble) })
         }
     }

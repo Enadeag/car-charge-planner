@@ -92,6 +92,13 @@ class TripPlanningTest {
         return forecast;
     }
 
+    /** The level each day charges up to, to a millionth of a point, so 92.1 matches whatever the sums leave behind. */
+    private static List<Double> chargeTo(Planned planned) {
+        return planned.plan().days().stream()
+                .map(day -> Math.round(day.chargeToPct().value() * 1e6) / 1e6)
+                .toList();
+    }
+
     private static Trip trip(LocalDate day, int departureHour, int returnHour, double km) {
         return new Trip(at(day, departureHour), at(day, returnHour), km, false);
     }
@@ -531,6 +538,52 @@ class TripPlanningTest {
         assertThat(window.start()).isEqualTo(at(FRI, 12));
         assertThat(window.solarKwh()).isCloseTo(0.85 * hours, CLOSE);
         assertThat(window.importKwh()).isCloseTo((7.36 - 0.85) * hours, CLOSE);
+    }
+
+    @Test
+    void withoutATripEveryDayChargesUpToTheTargetAlsoWhenItStartsAboveIt() {
+        var planned = plan(days(List.of(SUNNY, Map.of(), SUNNY)), 90, at(THU, 0));
+        assertThat(chargeTo(planned)).containsExactly(80.0, 80.0, 80.0);
+    }
+
+    @Test
+    void aTripThatNeedsLessThanTheTargetLeavesEveryDayChargingUpToTheTarget() {
+        var planned = plan(days(List.of(SUNNY, Map.of(), Map.of())), 50, at(THU, 0), trip(SAT, 8, 18, 100));
+        assertThat(chargeTo(planned)).containsExactly(80.0, 80.0, 80.0);
+    }
+
+    @Test
+    void theDaysThatChargeAboveTheTargetForATripChargeUpToWhatItNeedsAndTheDayAfterItToTheTargetAgain() {
+        // Friday's sun alone reaches the 92.1 %, so Thursday charges only to the target; on Saturday the part before
+        // the departure charges up to 92.1 % and the part after it to the target
+        var planned = plan(days(List.of(SUNNY, SUNNY, Map.of(), Map.of())), 50, at(THU, 0), trip(SAT, 8, 18, 300));
+        assertThat(chargeTo(planned)).containsExactly(80.0, 92.1, 92.1, 80.0);
+    }
+
+    @Test
+    void theDayATripsGridChargeStartsOnKeepsItsSolarChargingAtTheTargetThoughTheGridChargeBringsItHigher() {
+        // no sun, so the trip charges above the target only from its departure day; the grid charge starts on Friday
+        // evening and brings Friday's level after charging to 92.1 % without a window
+        var planned = plan(dark(4), 50, at(FRI, 0), trip(SAT, 8, 18, 300));
+        var friday = planned.day(FRI);
+        assertThat(planned.grid().start().atZone(TZ).toLocalDate()).isEqualTo(FRI);
+        assertThat(friday.windows()).isEmpty();
+        assertThat(friday.levelAfterChargingPct().value()).isCloseTo(92.1, CLOSE);
+        assertThat(friday.chargeToPct().value()).isCloseTo(80, CLOSE);
+        assertThat(planned.day(SAT).chargeToPct().value()).isCloseTo(92.1, CLOSE);
+        assertThat(planned.day(SUN).chargeToPct().value()).isCloseTo(80, CLOSE);
+    }
+
+    @Test
+    void aTripThatChargesForTheNextOneChargesUpToWhatBothNeedFromItsDepartureDayOn() {
+        // no sun, so Friday's solar charging stays at the target though the first trip's grid charge starts on it
+        var first = new Trip(at(SAT, 8), at(SUN, 7, 30), 150, false);
+        var second = new Trip(at(SUN, 8), at(SUN, 18), 150, false);
+        var planned = plan(dark(4), 50, at(FRI, 0), first, second);
+        double both = 61.05 + 31.05 - 3.312;
+        assertThat(planned.grid().start().atZone(TZ).toLocalDate()).isEqualTo(FRI);
+        assertThat(planned.day(FRI).chargeToPct().value()).isCloseTo(80, CLOSE);
+        assertThat(planned.day(SAT).chargeToPct().value()).isCloseTo(both, CLOSE);
     }
 
     @Test
