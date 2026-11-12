@@ -278,6 +278,31 @@ class HomeScreenTest {
     }
 
     @Test
+    fun aDayThatCouldUseAChargeWithoutAWindowSaysThereIsTooLittleSolarPowerWithoutABatteryChip() {
+        show(lisbonWeek())
+
+        tab("Tomorrow").performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(text(R.string.day_none)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.day_too_little_solar)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.day_battery, "40", "40"), useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.battery_heading)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun aDayThatNeedsNoChargingSaysOnlySoAndTodayStillNotesTheAssumedLevel() {
+        show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf(), listOf()), chargeToPct = { 40.0 }))
+
+        compose.onNodeWithText(text(R.string.day_not_needed)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.day_battery_assumed, "40"), substring = true).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.day_too_little_solar)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.day_none)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.day_battery, "40", "40"), useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.battery_heading)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun aTabsClickShowsItsDayAndASwipeMovesTheTab() {
         clock("24")
         show(lisbonWeek())
@@ -287,7 +312,7 @@ class HomeScreenTest {
         tab("Tomorrow").assertIsSelected()
         compose.onNode(isHeading() and hasText("Tomorrow"), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_none)).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.day_none_why)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.day_too_little_solar)).assertIsDisplayed()
 
         compose.onNode(page).performTouchInput { swipeLeft() }
         compose.waitForIdle()

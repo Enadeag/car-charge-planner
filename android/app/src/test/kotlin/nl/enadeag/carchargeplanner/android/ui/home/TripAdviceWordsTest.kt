@@ -455,9 +455,45 @@ class TripAdviceWordsTest {
 
         assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.AWAY)))
             .isEqualTo("The car is away on a trip, or there is too little solar power while it is home.")
-        assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.NOT_NEEDED)))
-            .isEqualTo("The car needs no charging, or there is too little solar power for it.")
+        assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.TOO_LITTLE_SOLAR)))
+            .isEqualTo("There is too little solar power while the car is home.")
+        assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.NOT_NEEDED))).isEmpty()
         assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.DEPARTURE))).isEmpty()
+    }
+
+    @Test
+    fun aDaysHeadingComesFromWhyItHasNoWindow() {
+        val words = words()
+        val levels = BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty())
+
+        assertThat(NoWindowReason.values().associateWith { words.heading(day(DayName.Tomorrow(TOMORROW), levels, it)) })
+            .containsExactlyInAnyOrderEntriesOf(mapOf(
+                NoWindowReason.GRID to "Grid charge needed",
+                NoWindowReason.DEPARTURE to "No charge window",
+                NoWindowReason.AWAY to "No charge window",
+                NoWindowReason.NOT_NEEDED to "Charging not needed",
+                NoWindowReason.TOO_LITTLE_SOLAR to "No charge window"))
+    }
+
+    @Test
+    fun todayThatNeedsNoChargingNotesOnlyTheAssumedLevel() {
+        val today = day(DayName.Today(TODAY), BatteryLevels(Percent(80.0), Percent(80.0), Optional.empty()),
+            NoWindowReason.NOT_NEEDED, assumed = Percent(80.0))
+
+        assertThat(words().note(today)).isEqualTo(
+            "The plan assumes the battery is at 80%. Use Update battery level under Car battery.")
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun theTwoNewDaysWithoutAWindowInDutch() {
+        val words = words(Locale.forLanguageTag("nl"))
+        val levels = BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty())
+
+        assertThat(words.heading(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.NOT_NEEDED)))
+            .isEqualTo("Laden niet nodig")
+        assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.TOO_LITTLE_SOLAR)))
+            .isEqualTo("Er is te weinig zonnestroom terwijl de auto thuis is.")
     }
 
     @Test

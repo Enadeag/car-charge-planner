@@ -222,6 +222,8 @@
   <string name="day_window">Charge window</string>
   <string name="day_grid">Grid charge needed</string>
   <string name="day_none">No charge window</string>
+  <!-- a day without a charge window on which the car needs no charging -->
+  <string name="day_not_needed">Charging not needed</string>
   <!-- %1$s a start time, such as 11:15; %2$s an end time, such as 14:30 -->
   <string name="time_span">%1$s – %2$s</string>
   <!-- the same span as a screen reader reads it; %1$s the start time, %2$s the end time -->
@@ -250,7 +252,8 @@
   <string name="day_battery_charge_trip_spoken">Battery from %1$s%% to %2$s%%, %3$s%% after the trip</string>
   <!-- a day's note, after its later windows: why a day has no charge window; "Today" names today's tab, day_today -->
   <string name="day_grid_why">Solar power is not enough to stay above the minimum: see the grid advice on Today.</string>
-  <string name="day_none_why">The car needs no charging, or there is too little solar power for it.</string>
+  <!-- why a day without a charge window has none, on a day the car could use a charge -->
+  <string name="day_too_little_solar">There is too little solar power while the car is home.</string>
   <!-- why a day without a charge window has none, on a day the car is away on a trip -->
   <string name="day_none_trip">The car is away on a trip, or there is too little solar power while it is home.</string>
   <!-- %1$s the later charge windows, each a day_later_window, joined by commas -->

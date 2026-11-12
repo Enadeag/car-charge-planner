@@ -182,6 +182,7 @@
   <string name="day_window">Laadvenster</string>
   <string name="day_grid">Laden uit het net nodig</string>
   <string name="day_none">Geen laadvenster</string>
+  <string name="day_not_needed">Laden niet nodig</string>
   <string name="time_span">%1$s – %2$s</string>
   <string name="time_span_spoken">%1$s tot %2$s</string>
   <string name="day_set">Stel %1$d A in (%2$s kW)</string>
@@ -195,7 +196,7 @@
   <string name="day_battery_charge_trip">Accu %1$s → %2$s%%, %3$s%% na de rit</string>
   <string name="day_battery_charge_trip_spoken">Accu van %1$s%% naar %2$s%%, %3$s%% na de rit</string>
   <string name="day_grid_why">Zonnestroom is niet genoeg om boven het minimum te blijven: zie het advies over laden uit het net bij Vandaag.</string>
-  <string name="day_none_why">De auto hoeft niet te laden, of er is te weinig zonnestroom voor.</string>
+  <string name="day_too_little_solar">Er is te weinig zonnestroom terwijl de auto thuis is.</string>
   <string name="day_none_trip">De auto is weg voor een rit, of er is te weinig zonnestroom terwijl hij thuis is.</string>
   <string name="day_later_windows">Ook %1$s.</string>
   <string name="day_later_window">%1$s met %2$d A</string>

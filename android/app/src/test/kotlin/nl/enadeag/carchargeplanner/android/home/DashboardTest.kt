@@ -148,8 +148,8 @@ class DashboardTest {
         val removed = shown.withTrips(listOf())
 
         assertThat(shown.days[1].noWindow()).contains(NoWindowReason.AWAY)
-        assertThat(ticked.days[1].noWindow()).contains(NoWindowReason.NOT_NEEDED)
-        assertThat(removed.days[1].noWindow()).contains(NoWindowReason.NOT_NEEDED)
+        assertThat(ticked.days[1].noWindow()).contains(NoWindowReason.TOO_LITTLE_SOLAR)
+        assertThat(removed.days[1].noWindow()).contains(NoWindowReason.TOO_LITTLE_SOLAR)
     }
 
     @Test

@@ -78,17 +78,20 @@ internal object Plans {
      * @param target the target charge level in percent
      * @param tripAdvice the advice per trip, in order of departure
      * @param endPct each day's level at its end, by its date; the level after its charging by default
+     * @param chargeToPct the level each day charges up to, by its date; the target by default, so a day without a
+     *     window has too little solar power, and 40 or less makes it need no charging
      */
     fun planned(madeAt: ZonedDateTime, days: List<List<Window>>, assumed: Boolean = true,
         gridAdvice: GridAdvice? = null, source: ForecastSource = source(madeAt.toInstant()),
         forecast: (LocalDate) -> List<ForecastStep> = { listOf() }, baseloadKw: Double = 0.3, minimum: Double = 20.0,
         target: Double = 80.0, tripAdvice: List<TripAdvice> = listOf(),
-        endPct: (LocalDate) -> Double? = { null }): Outlook.Planned {
+        endPct: (LocalDate) -> Double? = { null }, chargeToPct: (LocalDate) -> Double = { target }): Outlook.Planned {
         val level = Percent(40.0)
         val plans = days.mapIndexed { index, windows ->
             val after = Percent(40.0 + 10.0 * windows.size)
             val date = madeAt.toLocalDate().plusDays(index.toLong())
-            DayPlan(date, level, windows, after, endPct(date)?.let { Percent(it) } ?: after, 0.0, forecast(date))
+            DayPlan(date, level, windows, after, Percent(chargeToPct(date)), endPct(date)?.let { Percent(it) } ?: after,
+                0.0, forecast(date))
         }
         return Outlook.Planned(madeAt.toInstant(), madeAt.zone, plans, level, assumed, Optional.ofNullable(gridAdvice),
             tripAdvice, source, baseloadKw, Percent(minimum), Percent(target))

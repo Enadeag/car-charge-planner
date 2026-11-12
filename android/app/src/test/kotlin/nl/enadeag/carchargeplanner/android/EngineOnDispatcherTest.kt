@@ -208,7 +208,7 @@ class EngineOnDispatcherTest {
         val window = Window(start, start.plus(Duration.ofHours(2)), 7, 1.6, 3.2, 0.0)
         val zone = draft.system().timezone()
         val day = DayPlan(LocalDate.ofInstant(start, zone), Percent(40.0), listOf(window), Percent(55.0),
-            Percent(40.0), 12.0, listOf())
+            Percent(80.0), Percent(40.0), 12.0, listOf())
         val source = ForecastSource(ProviderId("open-meteo"), "Open-Meteo", "Weather data by Open-Meteo.com", now,
             Freshness.FRESH, ProviderRole.PRIMARY, "", Optional.empty(), listOf())
         val planned = Outlook.Planned(now, zone, listOf(day), Percent(50.0), true, Optional.empty(), listOf(), source,
