@@ -57,7 +57,7 @@ public final class PlannedDays {
     }
 
     public static DayPlan day(LocalDate date, double start, double after, List<ForecastStep> forecast, Window... windows) {
-        return new DayPlan(date, new Percent(start), List.of(windows), new Percent(after), new Percent(start), 12, forecast);
+        return new DayPlan(date, new Percent(start), List.of(windows), new Percent(after), new Percent(80), new Percent(start), 12, forecast);
     }
 
     /** A plan with a minimum of 30 % and a target of 80 %. */

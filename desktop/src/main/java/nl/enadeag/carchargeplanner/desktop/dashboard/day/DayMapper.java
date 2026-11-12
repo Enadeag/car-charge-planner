@@ -11,7 +11,6 @@ import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
 import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
 import nl.enadeag.carchargeplanner.engine.dashboard.MainCharge;
-import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -77,21 +76,33 @@ public final class DayMapper {
                 batteries.map(day, levels), tripAdvice, Optional.empty(), List.of());
     }
 
-    /** The day a trip leaves says nothing, as the trip's advice on its tab tells what the battery needs. */
+    /**
+     * The heading and the why come from the reason. The day a trip leaves says nothing, as the trip's advice on its tab
+     * tells what the battery needs; a day that needs no charging or has too little solar power shows no battery chip,
+     * as the Car battery card beside it has the levels.
+     */
     private DayModel withoutWindow(DashboardDay day, List<TripAdviceModel> tripAdvice) {
         var reason = day.noWindow().orElseThrow();
-        var heading = messages.text(reason == NoWindowReason.GRID ? TextKey.DAY_GRID : TextKey.DAY_NONE);
+        var heading = messages.text(switch (reason) {
+            case GRID -> TextKey.DAY_GRID;
+            case NOT_NEEDED -> TextKey.DAY_NOT_NEEDED;
+            case DEPARTURE, AWAY, TOO_LITTLE_SOLAR -> TextKey.DAY_NONE;
+        });
         var why = switch (reason) {
             case GRID -> messages.text(TextKey.DAY_GRID_WHY);
-            case DEPARTURE -> "";
+            case DEPARTURE, NOT_NEEDED -> "";
             case AWAY -> messages.text(TextKey.DAY_NONE_TRIP);
-            case NOT_NEEDED -> messages.text(TextKey.DAY_NONE_WHY);
+            case TOO_LITTLE_SOLAR -> messages.text(TextKey.DAY_TOO_LITTLE_SOLAR);
+        };
+        var chips = switch (reason) {
+            case GRID, DEPARTURE, AWAY -> List.of(batteryChip(day.battery()));
+            case NOT_NEEDED, TOO_LITTLE_SOLAR -> List.<ChipModel>of();
         };
         var title = messages.title(day.name());
         var spoken = sentences(title + ": " + heading.toLowerCase(messages.locale()) + ".", why);
         return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(), heading, "", List.of(),
-                List.of(batteryChip(day.battery())), sentences(why, assumedNote(day)), spoken, charts.map(day),
-                batteries.map(day, levels), tripAdvice, Optional.empty(), List.of());
+                chips, sentences(why, assumedNote(day)), spoken, charts.map(day), batteries.map(day, levels),
+                tripAdvice, Optional.empty(), List.of());
     }
 
     /**

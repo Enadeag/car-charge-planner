@@ -28,10 +28,12 @@ public final class DayCard extends VBox {
             facts.getStyleClass().add("figures");
             getChildren().add(facts);
         }
-        var chips = new FlowPane();
-        day.chips().forEach(chip -> chips.getChildren().add(new Chip(chip)));
-        chips.getStyleClass().add("chips");
-        getChildren().add(chips);
+        if (!day.chips().isEmpty()) {
+            var chips = new FlowPane();
+            day.chips().forEach(chip -> chips.getChildren().add(new Chip(chip)));
+            chips.getStyleClass().add("chips");
+            getChildren().add(chips);
+        }
         if (!day.note().isEmpty()) {
             getChildren().add(paragraph(day.note(), "note"));
         }

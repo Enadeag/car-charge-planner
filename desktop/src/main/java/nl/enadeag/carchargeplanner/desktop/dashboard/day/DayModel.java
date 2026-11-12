@@ -18,7 +18,7 @@ import java.util.Optional;
  * @param tab the day's short name: "Today", "Fri"
  * @param title the day's name: "Today", "Tomorrow" or the weekday
  * @param kind where the day's charge comes from
- * @param heading what the day holds: "Charge window", "No charge window", "Grid charge needed"
+ * @param heading what the day holds: "Charge window", "No charge window", "Charging not needed", "Grid charge needed"
  * @param hero the charge window, such as "11:15 – 14:30"; empty when there is none
  * @param facts what to set and how much it brings: "Set 10 A (2.3 kW)", "about 7.9 kWh"; may be empty
  * @param chips the day's figures by source; may be empty
