@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
@@ -131,6 +132,15 @@ class LockedKeychainTest {
         assertThat(Fx.call(() -> Scenes.all(view).stream().filter(TextField.class::isInstance)
                 .map(field -> ((TextField) field).getText()).toList()))
                 .contains(settings.messages.text(TextKey.ABOUT_KEYS_LOCKED));
+    }
+
+    @Test
+    void aLockedKeyCountsAsStoredSoItsFoldIsOpen() throws Exception {
+        var view = open();
+
+        assertThat(Fx.call(() -> view.pages().stream().filter(page -> page.category() == Category.FORECAST)
+                .flatMap(page -> Scenes.all(page.view()).stream()).filter(Fold.class::isInstance)
+                .map(fold -> ((Fold) fold).isOpen()).toList())).containsExactly(true, true);
     }
 
     @Test

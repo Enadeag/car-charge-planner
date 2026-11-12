@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStorage;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
@@ -14,11 +15,13 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.WeeklyAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
+import nl.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.FakeProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
+import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -224,6 +227,119 @@ class ForecastAwayPagesTest {
         SettingsFixture.waitFor(() -> Scenes.visibleTexts(view).stream()
                 .anyMatch(text -> text.startsWith(settings.messages.text(TextKey.PROVIDER_WORKS, 3).substring(0, 5))));
         assertThat(settings.engine.storedApiKeys().of(OPEN_METEO)).as("nothing saved").isEmpty();
+    }
+
+    /** The folds on the Forecast page, in the order of the cards shown. */
+    private static List<Fold> folds(SettingsView view) {
+        return view.pages().stream().filter(page -> page.category() == Category.FORECAST)
+                .flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(Fold.class::isInstance).map(Fold.class::cast).toList();
+    }
+
+    private static Button row(Fold fold) {
+        return Scenes.all(fold).stream().filter(Button.class::isInstance).map(Button.class::cast).findFirst()
+                .orElseThrow();
+    }
+
+    private static List<Boolean> open(List<Fold> folds) {
+        return folds.stream().map(Fold::isOpen).toList();
+    }
+
+    private static FakeProvider withAddressAndKey() {
+        return new FakeProvider(FakeProvider.info("open-meteo", "Open-Meteo", List.of(
+                        new SettingSpec("base_url", "Server address", "", true, false, SettingFormat.SERVER_ADDRESS),
+                        new SettingSpec("api_key", "API key", "", true, true))),
+                FakeProvider.steps(SunnyDays.days(LocalDate.now(SunnyDays.TZ), 3, 4.0)));
+    }
+
+    @Test
+    void theKeysFoldAwayClosedWhileNothingIsStoredWithTheTestOutsideAndTwoOfOneNameAreReadWithTheirProvider()
+            throws Exception {
+        var view = open();
+        Fx.run(() -> view.show(Category.FORECAST));
+        var key = SettingsFixture.field(view, settings.messages.text(TextKey.IN_GROUP, "API key", "Open-Meteo"));
+
+        var folds = Fx.call(() -> folds(view));
+
+        assertThat(Fx.call(() -> open(folds))).containsExactly(false, false);
+        assertThat(Fx.call(() -> Scenes.reallyVisible(key))).isFalse();
+        assertThat(Fx.call(() -> all(view, Button.class).stream()
+                .filter(button -> button.getText().equals(settings.messages.text(TextKey.PROVIDER_TEST)))
+                .filter(Scenes::reallyVisible).count())).isEqualTo(2);
+        assertThat(Fx.call(() -> folds.stream().map(Fold::name).toList())).containsExactly("API key", "API key");
+        assertThat(Fx.call(() -> folds.stream().map(fold -> row(fold).getAccessibleText()).toList()))
+                .containsExactly("API key (Open-Meteo)", "API key (Forecast.Solar)");
+
+        Fx.run(() -> row(folds.getFirst()).fire());
+        assertThat(Fx.call(() -> Scenes.reallyVisible(key))).isTrue();
+
+        Fx.run(() -> settings.choose(view, TextKey.FIELD_FALLBACK, Optional.empty()));
+        assertThat(Fx.call(() -> folds(view).stream().map(fold -> row(fold).getAccessibleText()).toList()))
+                .as("one fold of its name").containsExactly("API key");
+    }
+
+    @Test
+    void aStoredKeyOrServerAddressOpensItsFoldAndAFoldTheOwnerClosedKeepsThemOnSaveAndStaysClosed()
+            throws Exception {
+        settings = new SettingsFixture(folder, Language.ENGLISH,
+                List.of(withAddressAndKey(), provider("forecast-solar", "Forecast.Solar")));
+        var ownServer = Map.of(OPEN_METEO, Map.of("base_url", "https://forecast.example.org"));
+        settings.engine.saveConfig(stored().withForecast(
+                new ForecastSelection(OPEN_METEO, Optional.of(FORECAST_SOLAR), ownServer)));
+        settings.engine.saveApiKeys(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OMSTORED"),
+                FORECAST_SOLAR, Map.of("api_key", "FSSTORED"))));
+        var view = settings.open();
+        Fx.run(() -> view.show(Category.FORECAST));
+        var folds = Fx.call(() -> folds(view));
+        assertThat(Fx.call(() -> folds.stream().map(Fold::name).toList()))
+                .containsExactly("API key and server", "API key");
+        assertThat(Fx.call(() -> open(folds))).containsExactly(true, true);
+
+        boolean saved = Fx.call(() -> {
+            folds.forEach(fold -> row(fold).fire());
+            settings.choose(view, TextKey.FIELD_PRIMARY, FORECAST_SOLAR);
+            settings.choose(view, TextKey.FIELD_FALLBACK, Optional.of(OPEN_METEO));
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(saved).isTrue();
+        assertThat(stored().forecast().primary()).isEqualTo(FORECAST_SOLAR);
+        assertThat(stored().forecast().settingsOf(OPEN_METEO))
+                .isEqualTo(Map.of("base_url", "https://forecast.example.org"));
+        assertThat(settings.engine.storedApiKeys().of(OPEN_METEO)).isEqualTo(Map.of("api_key", "OMSTORED"));
+        assertThat(settings.engine.storedApiKeys().of(FORECAST_SOLAR)).isEqualTo(Map.of("api_key", "FSSTORED"));
+        assertThat(Fx.call(() -> open(folds))).as("closed by the owner, also after the save").containsExactly(false,
+                false);
+    }
+
+    @Test
+    void aServerAddressInTheWrongFormOpensItsFoldAndHoldsItOpenWhileTheProblemShows() throws Exception {
+        settings = new SettingsFixture(folder, Language.ENGLISH,
+                List.of(withAddressAndKey(), provider("forecast-solar", "Forecast.Solar")));
+        var view = settings.open();
+        Fx.run(() -> view.show(Category.FORECAST));
+        var address = (TextInputControl) SettingsFixture.field(view, "Server address");
+        var fold = Fx.call(() -> folds(view).getFirst());
+        assertThat(Fx.call(fold::isOpen)).isFalse();
+
+        boolean saved = Fx.call(() -> {
+            address.setText("http://localhost@evil.example");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(saved).isFalse();
+        assertThat(Fx.call(() -> Scenes.reallyVisible(address))).isTrue();
+        Fx.run(() -> row(fold).fire());
+        assertThat(Fx.call(fold::isOpen)).as("held open while the problem shows").isTrue();
+
+        boolean savedAfterwards = Fx.call(() -> {
+            address.setText("https://forecast.example.org");
+            var result = SettingsFixture.save(view);
+            row(fold).fire();
+            return result;
+        });
+        assertThat(savedAfterwards).isTrue();
+        assertThat(Fx.call(fold::isOpen)).as("no longer held open").isFalse();
     }
 
     @Test

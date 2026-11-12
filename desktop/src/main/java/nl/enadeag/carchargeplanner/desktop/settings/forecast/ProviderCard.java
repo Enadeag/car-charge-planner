@@ -8,16 +8,19 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.TextInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ProviderEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ProviderTexts;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javafx.scene.Node;
@@ -35,7 +38,9 @@ final class ProviderCard {
     private final Map<String, FieldRow> rows = new LinkedHashMap<>();
     private final Label result = Labels.paragraph("", "note");
     private final Button test;
+    private final Fold fold;
     private final CardView card;
+    private boolean loaded;
 
     /**
      * Makes the card, with empty settings until {@link #load(Map, Map, boolean)}.
@@ -57,16 +62,23 @@ final class ProviderCard {
                 Labels.paragraph(messages.text(TextKey.PROVIDER_LIMITS, info.minRefresh().toMinutes(),
                         Math.max(1, info.horizon().toDays())), "note"),
                 terms));
+        var folded = new ArrayList<Node>();
         for (var setting : info.settings()) {
             Input input = setting.secret() ? new SecretInput(messages) : new TextInput();
             var row = new FieldRow(texts.label(setting), texts.hint(info, setting), input);
             row.setSpokenName(messages.text(TextKey.IN_GROUP, row.name(), info.name()));
-            if (!setting.optional()) {
+            if (setting.optional()) {
+                folded.add(row);
+            } else {
                 row.showTag(messages.text(TextKey.PROVIDER_REQUIRED));
+                content.add(row);
             }
             inputs.put(setting.name(), input);
             rows.put(setting.name(), row);
-            content.add(row);
+        }
+        fold = new Fold(texts.foldName(info), folded.toArray(Node[]::new));
+        if (!folded.isEmpty()) {
+            content.add(fold);
         }
         test = new Button(messages.text(TextKey.PROVIDER_TEST));
         test.setOnAction(_ -> test(tester));
@@ -78,12 +90,18 @@ final class ProviderCard {
     }
 
     /**
+     * Fills the fields with what is stored. At the first load the fold opens when one of its settings holds a value,
+     * a locked key counting as one, and stays closed otherwise; a later load, such as after a Save, leaves it as the
+     * owner left it.
+     *
      * @param keysLocked true when the stored secret settings could not be read as the keychain is locked: a secret
      *     field without a value then shows as locked, so it never empties a stored one
      */
     void load(Map<String, String> plain, Map<String, String> secret, boolean keysLocked) {
+        var filled = false;
         for (var setting : info.settings()) {
             var stored = (setting.secret() ? secret : plain).getOrDefault(setting.name(), "");
+            filled |= setting.optional() && (!stored.isEmpty() || setting.secret() && keysLocked);
             switch (inputs.get(setting.name())) {
                 case SecretInput field when keysLocked && stored.isEmpty() -> field.showLocked();
                 case SecretInput field -> field.load(stored);
@@ -92,6 +110,11 @@ final class ProviderCard {
             }
         }
         rows.values().forEach(FieldRow::clearProblem);
+        fold.holdOpen(false);
+        if (!loaded) {
+            fold.setOpen(filled);
+            loaded = true;
+        }
         result.setText("");
     }
 
@@ -120,6 +143,8 @@ final class ProviderCard {
         rows.values().forEach(FieldRow::clearProblem);
         var problems = problems();
         problems.forEach((key, problem) -> rows.get(key).showProblem(problem));
+        fold.holdOpen(info.settings().stream()
+                .anyMatch(setting -> setting.optional() && problems.containsKey(setting.name())));
         return !problems.isEmpty();
     }
 
@@ -140,6 +165,24 @@ final class ProviderCard {
      */
     void onChange(Runnable action) {
         inputs.values().forEach(input -> input.onChange(action));
+    }
+
+    /**
+     * The name of the fold with the provider's optional settings.
+     *
+     * @return such as "API key"; empty when the provider has no optional settings, so no fold shows
+     */
+    Optional<String> foldName() {
+        return info.settings().stream().anyMatch(SettingSpec::optional) ? Optional.of(fold.name()) : Optional.empty();
+    }
+
+    /**
+     * Has a screen reader read the fold's name with the provider's, for a page where another fold has the same name.
+     *
+     * @param withProvider true to read such as "API key (Open-Meteo)"; false for the name alone
+     */
+    void nameFoldWithProvider(boolean withProvider) {
+        fold.setSpokenName(withProvider ? messages.text(TextKey.IN_GROUP, fold.name(), info.name()) : fold.name());
     }
 
     /**

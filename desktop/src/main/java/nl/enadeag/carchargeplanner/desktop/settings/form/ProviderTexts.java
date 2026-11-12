@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.form;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import java.util.Optional;
 
@@ -79,6 +80,27 @@ public final class ProviderTexts {
             case "forecast-solar/api_key" -> TextKey.PROVIDER_FORECAST_SOLAR_API_KEY_HINT;
             default -> null;
         }).orElse(setting.hint());
+    }
+
+    /**
+     * The name of the fold with a provider's optional settings, by what is in it.
+     *
+     * @param info what the provider tells about itself; one without optional settings has no fold
+     * @return "API key and server" for an API key and a server address, "API key" for an API key alone, "More
+     *     settings" for any other optional settings
+     */
+    public String foldName(ProviderInfo info) {
+        var optional = info.settings().stream().filter(SettingSpec::optional).toList();
+        var keys = optional.stream().filter(SettingSpec::secret).count();
+        var servers = optional.stream()
+                .filter(setting -> !setting.secret() && setting.format() == SettingFormat.SERVER_ADDRESS).count();
+        if (keys == 1 && servers == 1 && optional.size() == 2) {
+            return messages.text(TextKey.PROVIDER_FOLD_KEY_AND_SERVER);
+        }
+        if (keys == 1 && optional.size() == 1) {
+            return messages.text(TextKey.PROVIDER_API_KEY);
+        }
+        return messages.text(TextKey.MORE_SETTINGS);
     }
 
     private Optional<String> text(TextKey key) {

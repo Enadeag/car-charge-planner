@@ -27,6 +27,7 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,8 @@ import javafx.scene.layout.Region;
 
 /**
  * The forecast providers: the primary one, the fallback asked only when the primary has no usable forecast, each with
- * its settings, and where their API keys are kept. Plain settings go to the config file, secret ones to the keychain.
+ * its settings, the optional ones folded away, and where their API keys are kept. Plain settings go to the config file,
+ * secret ones to the keychain.
  */
 public final class ForecastPage implements ConfigPage {
 
@@ -216,14 +218,21 @@ public final class ForecastPage implements ConfigPage {
         return new ForecastEntry(primary.value(), fallback.value());
     }
 
-    /** Each provider's card under the role it is chosen for; one chosen for both shows once. */
+    /**
+     * Each provider's card under the role it is chosen for; one chosen for both shows once. Two folds of the same name
+     * are read with their provider's.
+     */
     private void showChosenCards() {
         if (stored == null) {
             return;
         }
         var nodes = new ArrayList<Node>();
         nodes.add(choice);
-        entry().chosen().stream().filter(cards::containsKey).forEach(id -> nodes.add(cards.get(id).view()));
+        var shown = entry().chosen().stream().filter(cards::containsKey).map(cards::get).toList();
+        shown.forEach(card -> nodes.add(card.view()));
+        var foldNames = shown.stream().flatMap(card -> card.foldName().stream()).toList();
+        shown.forEach(card -> card.nameFoldWithProvider(
+                card.foldName().filter(name -> Collections.frequency(foldNames, name) > 1).isPresent()));
         nodes.add(keysCard);
         view.show(nodes.toArray(Node[]::new));
     }

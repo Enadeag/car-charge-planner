@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import java.time.Duration;
 import java.util.List;
@@ -39,6 +40,30 @@ class ProviderTextsTest {
         assertThat(texts.label(REGION)).isEqualTo("Region");
         assertThat(texts.hint(provider("elsewhere"), API_KEY)).isEqualTo("Engine's hint");
         assertThat(texts.hint(provider("open-meteo"), REGION)).isEqualTo("Where you are.");
+    }
+
+    private static ProviderInfo provider(SettingSpec... settings) {
+        return new ProviderInfo(new ProviderId("elsewhere"), "Elsewhere", "", "", "", "", Duration.ofHours(1),
+                Duration.ofDays(2), Duration.ofHours(6), List.of(settings));
+    }
+
+    @Test
+    void theFoldIsNamedByTheOptionalSettingsInIt() {
+        var server = new SettingSpec("base_url", "URL", "", true, false, SettingFormat.SERVER_ADDRESS);
+        var requiredServer = new SettingSpec("base_url", "URL", "", false, false, SettingFormat.SERVER_ADDRESS);
+        var requiredRegion = new SettingSpec("region", "Region", "", false, false);
+        var dutch = new ProviderTexts(new Messages(Language.DUTCH));
+
+        assertThat(texts.foldName(provider(server, API_KEY))).isEqualTo("API key and server");
+        assertThat(dutch.foldName(provider(server, API_KEY))).isEqualTo("API-sleutel en server");
+        assertThat(texts.foldName(provider(requiredServer, API_KEY))).as("a required address stays out").isEqualTo(
+                "API key");
+        assertThat(dutch.foldName(provider(requiredRegion, API_KEY))).isEqualTo("API-sleutel");
+        assertThat(texts.foldName(provider(server))).isEqualTo("More settings");
+        assertThat(texts.foldName(provider(REGION, API_KEY))).isEqualTo("More settings");
+        assertThat(dutch.foldName(provider(server, API_KEY, REGION))).isEqualTo("Meer instellingen");
+        assertThat(texts.foldName(provider(BASE_URL, API_KEY))).as("an address in another form").isEqualTo(
+                "More settings");
     }
 
     @Test
