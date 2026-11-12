@@ -262,6 +262,33 @@ class SolarChartTest {
         assertThat(Fx.call(chart::shownPoints)).isEqualTo(CurvePoints.of(TOMORROW.chart().steps(), 6, 20));
     }
 
+    @Test
+    void aTimeLabelIsCentredOnItsHour() throws Exception {
+        show(TODAY);
+        var plot = plot();
+        var tick = TODAY.ticks().get(TODAY.ticks().size() / 2);
+
+        var label = Fx.call(() -> (Label) chart.lookupAll(".chart-axis").stream()
+                .filter(node -> node instanceof Label shown && shown.getText().equals(tick.label()))
+                .findFirst().orElseThrow());
+
+        double middle = Fx.call(() -> label.getLayoutX() + label.getWidth() / 2);
+        assertThat(middle).isCloseTo(plot.x(tick.tick().hour()), within(1e-6));
+    }
+
+    @Test
+    void thePointerLineStandsInTheMiddleOfTheSelectedStep() throws Exception {
+        show(TODAY);
+        key(KeyCode.RIGHT);
+        key(KeyCode.RIGHT);
+        relayout();
+
+        var pointer = part("pointer-line", Line.class);
+
+        var step = Fx.call(() -> chart.selected().orElseThrow());
+        assertThat(pointer.getStartX()).isCloseTo(plot().x(step.startHour() + 0.5), within(1e-6));
+    }
+
     private String readout() throws Exception {
         return Fx.call(() -> ((Label) chart.lookup(".chart-readout-text")).getText());
     }

@@ -28,6 +28,7 @@ final class ListBuilder {
      * @return one per stored trip, with its days, in the stored order
      */
     static List<ListedTrip> trips(PlanParts parts) {
-        return parts.trips().stream().map(trip -> ListedTrip.of(trip, parts.zone(), parts.today())).toList();
+        var today = parts.today();
+        return parts.trips().stream().map(trip -> ListedTrip.of(trip, parts.zone(), today)).toList();
     }
 }

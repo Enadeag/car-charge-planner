@@ -229,7 +229,8 @@ final class SolarChart extends Region {
         for (int i = 0; i < ticks.size(); i++) {
             var label = ticks.get(i);
             double width = label.prefWidth(-1);
-            double x = Math.clamp(plot.x(model.ticks().get(i).tick().hour()) - width / 2, plot.left(), plot.right() - width);
+            var tick = model.ticks().get(i).tick();
+            double x = Math.clamp(plot.x(tick.hour()) - width / 2, plot.left(), plot.right() - width);
             label.resizeRelocate(x, plot.bottom() + GAP, width, labelHeight);
         }
     }

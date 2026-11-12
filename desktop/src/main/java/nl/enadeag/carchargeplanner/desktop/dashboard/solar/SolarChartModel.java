@@ -56,7 +56,7 @@ public record SolarChartModel(
     /**
      * The words of a step.
      *
-     * @param step one of the chart's steps
+     * @param step must be one of the chart's steps
      * @return the step's readout
      */
     String readout(DayChart.Step step) {
