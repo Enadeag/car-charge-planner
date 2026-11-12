@@ -31,6 +31,7 @@ final class DayBuilder {
     /** The day the grid advice is about; null when the plan gives none. */
     private final LocalDate gridDay;
     private final Set<LocalDate> departures;
+    /** The days a grid charge starts on, a trip's or the grid advice's, by the start of its window in the home's time zone. */
     private final Set<LocalDate> gridStartDays;
     /** The trips made with this car, which keep it away on the days from their departure to their return. */
     private final List<Trip> trips;

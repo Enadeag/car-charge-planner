@@ -56,7 +56,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Today, Tomorrow | Vandaag, Morgen | a day's tab and title; the other days by their weekday |
 | Refresh | Vernieuwen | makes the plan again; the top app bar's action |
 | Charge window, No charge window | Laadvenster, Geen laadvenster | what a day holds, under its name |
-| Charging not needed | Laden niet nodig | what a day without a window holds when the car needs no charging, with no sentence under it |
+| Charging not needed | Laden niet nodig | what a day without a window holds when the car needs no charging; nothing stands under it but, on today, the note of an assumed battery level |
 | Grid charge needed | Laden uit het net nodig | a day without a window that the grid advice is about |
 | Set 10 A (2.3 kW) | Stel 10 A in (2,3 kW) | what to set for a day's charge window |
 | about 7.9 kWh | ongeveer 7,9 kWh | what the window charges |
