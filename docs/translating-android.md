@@ -56,6 +56,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Today, Tomorrow | Vandaag, Morgen | a day's tab and title; the other days by their weekday |
 | Refresh | Vernieuwen | makes the plan again; the top app bar's action |
 | Charge window, No charge window | Laadvenster, Geen laadvenster | what a day holds, under its name |
+| Charging not needed | Laden niet nodig | what a day without a window holds when the car needs no charging, with no sentence under it |
 | Grid charge needed | Laden uit het net nodig | a day without a window that the grid advice is about |
 | Set 10 A (2.3 kW) | Stel 10 A in (2,3 kW) | what to set for a day's charge window |
 | about 7.9 kWh | ongeveer 7,9 kWh | what the window charges |
@@ -63,7 +64,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Battery 50 → 74% | Accu 50 → 74% | the battery level at the start of the day and after charging; TalkBack reads "Battery from 50% to 74%" |
 | 11:15 to 14:30 | 11:15 tot 14:30 | what TalkBack reads for a charge window's 11:15 – 14:30 |
 | Solar power is not enough to stay above the minimum: see the grid advice on Today. | Zonnestroom is niet genoeg om boven het minimum te blijven: zie het advies over laden uit het net bij Vandaag. | why a day the grid advice is about has no charge window; "Today" is today's tab |
-| The car needs no charging, or there is too little solar power for it. | De auto hoeft niet te laden, of er is te weinig zonnestroom voor. | why a day has no charge window |
+| There is too little solar power while the car is home. | Er is te weinig zonnestroom terwijl de auto thuis is. | why a day has no charge window when the car could use a charge |
 | Also 16:00 – 17:00 at 6 A, 18:00 – 19:00 at 8 A. | Ook 16:00 – 17:00 met 6 A, 18:00 – 19:00 met 8 A. | a day's later charge windows, in its note |
 | Grid advice | Advies: laden uit het net | the heading of today's grid advice |
 | Charge 8.4 kWh from the grid: Sunday 09:00 – 15:10. | Laad 8,4 kWh uit het net: zondag 09:00 – 15:10. | the grid advice's title; "before Sunday" when no day has room |

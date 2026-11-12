@@ -23,6 +23,7 @@ When the app is started hidden at login, set-up does not open by itself; one not
 ## The tray icon and the dashboard
 
 - The tray icon's dot shows the state of the plan, with the plan in its tooltip. Click it for the **dashboard**: a tab per day with that day's charge window, grid advice, the expected solar power against the house's use, and the car battery. The dashboard also opens in a window of its own.
+- A day without a charge window says why. **Charging not needed**: the battery already shows the level the plan charges to, your target charge level or more before a trip. **No charge window** with "There is too little solar power while the car is home.": the car could use a charge, but the sun is gone for the day, the car is away in the sunny hours, no stretch is long or strong enough for the charger, or the forecast is weak. The Car battery card below shows the levels on every day.
 - **Update** on the battery card is where you enter the level the car shows. Until you do, the plan assumes 50% and says so.
 - **Add** on the Car away card marks the car away on the day you are looking at, all day or from a time to a time; the card lists the coming ones, each with **Remove**. The plan changes at once. Weekly away periods are in Settings, which the footer's **Away** button opens.
 - **Add trip** on the Trips card enters a drive from home and back; each day's tab lists the trips the car is away for that day. [Trips](#trips) says how.
@@ -62,7 +63,7 @@ A trip is kept until a day after its return, then it is dropped. The plan change
 
 Each trip with something to do has a **trip advice** card below the day card, on today's tab and always on the day of the departure. It names the trip ("Trip Sunday at 08:30, 150 km there and back"), the level to charge to, the solar part and the grid part with the time to start, and the charge limit to set. It says which battery level it assumes, with an **Adjust** button that opens the entry of today's battery level: a trip is where a wrong level costs most, so enter the one the car shows. When the plan already charges enough, the card says so.
 
-The day card of the day a trip leaves shows the level before and after the trip, and on the days the car is away on a trip it says that the car is away, instead of that it needs no charging.
+The day card of the day a trip leaves shows the level before and after the trip, and on the days the car is away on a trip it says that the car is away. A day before a trip on which the plan charges above the target, or charges from the grid for the trip, says **No charge window** when no solar window comes, as the battery is below what the trip needs.
 
 ### Charging hours
 
