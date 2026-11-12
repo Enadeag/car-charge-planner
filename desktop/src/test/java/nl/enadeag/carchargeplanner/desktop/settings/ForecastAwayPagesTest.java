@@ -18,6 +18,7 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.FakeProvider;
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import nl.enadeag.carchargeplanner.engine.forecast.SunnyDays;
@@ -34,6 +35,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import org.junit.jupiter.api.AfterEach;
@@ -340,6 +342,69 @@ class ForecastAwayPagesTest {
         });
         assertThat(savedAfterwards).isTrue();
         assertThat(Fx.call(fold::isOpen)).as("no longer held open").isFalse();
+    }
+
+    private static FakeProvider required(String id, String name, FakeProvider.Answer answer,
+            SettingSpec... settings) {
+        return new FakeProvider(FakeProvider.info(id, name, List.of(settings)), answer);
+    }
+
+    @Test
+    void aProviderWithOnlyARequiredSettingShowsNoFold() throws Exception {
+        var answer = FakeProvider.steps(SunnyDays.days(LocalDate.now(SunnyDays.TZ), 3, 4.0));
+        var region = new SettingSpec("region", "Region", "", false, false);
+        settings = new SettingsFixture(folder, Language.ENGLISH, List.of(
+                required("open-meteo", "Open-Meteo", answer, region),
+                required("forecast-solar", "Forecast.Solar", answer, region)));
+        var view = settings.open();
+        Fx.run(() -> view.show(Category.FORECAST));
+
+        assertThat(Fx.call(() -> folds(view))).isEmpty();
+        assertThat(Fx.call(() -> Scenes.reallyVisible(SettingsFixture.field(view,
+                settings.messages.text(TextKey.IN_GROUP, "Region", "Open-Meteo"))))).isTrue();
+    }
+
+    @Test
+    void aRequiredSettingStaysVisibleAndAValueInItAloneLeavesTheFoldClosed() throws Exception {
+        var answer = FakeProvider.steps(SunnyDays.days(LocalDate.now(SunnyDays.TZ), 3, 4.0));
+        var region = new SettingSpec("region", "Region", "", false, false);
+        var key = new SettingSpec("api_key", "API key", "", true, true);
+        settings = new SettingsFixture(folder, Language.ENGLISH, List.of(
+                required("open-meteo", "Open-Meteo", answer, region, key), provider("forecast-solar", "Forecast.Solar")));
+        settings.engine.saveConfig(stored().withForecast(new ForecastSelection(OPEN_METEO,
+                Optional.of(FORECAST_SOLAR), Map.of(OPEN_METEO, Map.of("region", "north")))));
+        var view = settings.open();
+        Fx.run(() -> view.show(Category.FORECAST));
+        var region1 = SettingsFixture.field(view, settings.messages.text(TextKey.IN_GROUP, "Region", "Open-Meteo"));
+        var key1 = SettingsFixture.field(view, settings.messages.text(TextKey.IN_GROUP, "API key", "Open-Meteo"));
+
+        var folds = Fx.call(() -> folds(view));
+
+        assertThat(folds).hasSize(2);
+        assertThat(Fx.call(() -> open(folds))).containsExactly(false, false);
+        assertThat(Fx.call(() -> Scenes.reallyVisible(region1))).isTrue();
+        assertThat(Fx.call(() -> ((TextInputControl) region1).getText())).isEqualTo("north");
+        assertThat(Fx.call(() -> Scenes.reallyVisible(key1))).isFalse();
+    }
+
+    @Test
+    void aTestThatDidNotWorkLeavesTheFoldClosedAndShowsItsResultOutsideIt() throws Exception {
+        var key = new SettingSpec("api_key", "API key", "", true, true);
+        var broken = required("open-meteo", "Open-Meteo",
+                FakeProvider.error(new ProviderError.Unavailable("no connection")), key);
+        settings = new SettingsFixture(folder, Language.ENGLISH, List.of(broken));
+        var view = settings.open();
+        Fx.run(() -> view.show(Category.FORECAST));
+        var fold = Fx.call(() -> folds(view).getFirst());
+
+        Fx.run(() -> button(view, TextKey.PROVIDER_TEST).fire());
+
+        var failed = settings.messages.text(TextKey.PROVIDER_FAILED, "").trim();
+        SettingsFixture.waitFor(() -> Scenes.visibleTexts(view).stream().anyMatch(text -> text.startsWith(failed)));
+        assertThat(Fx.call(fold::isOpen)).isFalse();
+        assertThat(Fx.call(() -> Scenes.all(fold).stream().filter(Label.class::isInstance)
+                .map(Label.class::cast).map(Label::getText)
+                .anyMatch(text -> text.startsWith(failed)))).as("the result is not inside the fold").isFalse();
     }
 
     @Test

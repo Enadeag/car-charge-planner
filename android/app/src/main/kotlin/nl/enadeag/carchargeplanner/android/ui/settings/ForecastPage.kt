@@ -107,7 +107,8 @@ internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: Prob
     }
     val foldNames = providers.map { foldName(it) }
     val shownSettings = providers.flatMapIndexed { index, info ->
-        info.settings().filter { !it.optional() || folds[index].open }
+        val (required, optional) = info.settings().partition { !it.optional() }
+        (required + if (folds[index].open) optional else emptyList())
             .map { ForecastForm.Target.Setting(info.id(), it.name()) }
     }
     providers.forEachIndexed { index, info ->

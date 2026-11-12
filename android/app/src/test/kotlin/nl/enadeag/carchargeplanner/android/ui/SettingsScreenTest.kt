@@ -1328,6 +1328,20 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun anOpenFoldsLastFieldGetsTheKeyboardsDoneAndTheRequiredOneAboveItDoesNot() {
+        val key = SettingSpec("api_key", "API key", "", true, true)
+        val region = SettingSpec("region", "Region", "Where the panels are.", false, false)
+        access.offered = listOf(provider("open-meteo", "Open-Meteo", listOf(key, region)))
+        access.keys = Secrets(mapOf(openMeteo to mapOf("api_key" to "OM1")))
+        show()
+
+        open(SettingsPage.FORECAST)
+
+        providerFoldIs(text(R.string.provider_api_key), R.string.fold_expanded)
+        compose.assertOnlyTheLastFieldIsDone()
+    }
+
+    @Test
     fun aKeyShownComesBackMaskedAfterTurningThePhoneAndAfterTheSystemEndedTheApp() {
         access.keys = Secrets(mapOf(openMeteo to mapOf("api_key" to "STORED1")))
         val restoration = StateRestorationTester(compose)
