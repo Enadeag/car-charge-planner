@@ -30,7 +30,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 ### Day card
 
 - A day with a window is unchanged by trips. Without one: the grid advice's day says so; the day a trip with advice leaves says "No charge window" without a why-line; a day the car is away on a stored trip says "The car is away on a trip, or there is too little solar power while it is home."; there is no partly-away wording (#377).
-- Any other day without a window says one of two things, by the engine's reason: "Charging not needed" ("Laden niet nodig") alone, without a sentence; or "No charge window" with "There is too little solar power while the car is home." ("Er is te weinig zonnestroom terwijl de auto thuis is."). Neither has a battery chip in the day card; the Car battery card stays on every day, and today's note on an assumed level stays, also under "Charging not needed". The heading comes from the reason (`DashboardWords.heading`), as on the desktop (`DayMapper`), and the card with no figure has no empty row of chips (#460).
+- Any other day without a window says one of two things, by the engine's reason: "Charging not needed" ("Laden niet nodig") alone, without a sentence; or "No charge window" with "There is too little solar power while the car is home." ("Er is te weinig zonnestroom terwijl de auto thuis is."). Neither has a battery chip in the day card, by the engine's `DashboardDay.showsBattery`; the Car battery card stays on every day, and today's note on an assumed level stays, also under "Charging not needed". The heading comes from the reason (`DashboardWords.heading`), as on the desktop (`DayMapper`), and the card with no figure has no empty row of chips (#460).
 
 ### Battery level
 

@@ -63,7 +63,7 @@ A trip is kept until a day after its return, then it is dropped. The plan change
 
 Each trip with something to do has a **trip advice** card below the day card, on today's tab and always on the day of the departure. It names the trip ("Trip Sunday at 08:30, 150 km there and back"), the level to charge to, the solar part and the grid part with the time to start, and the charge limit to set. It says which battery level it assumes, with an **Adjust** button that opens the entry of today's battery level: a trip is where a wrong level costs most, so enter the one the car shows. When the plan already charges enough, the card says so.
 
-The day card of the day a trip leaves shows the level before and after the trip, and on the days the car is away on a trip it says that the car is away. A day before a trip on which the plan charges above the target, or charges from the grid for the trip, says **No charge window** when no solar window comes, as the battery is below what the trip needs.
+The day card of the day a trip leaves shows the level before and after the trip, and on the days the car is away on a trip it says that the car is away. A day before a trip on which the plan charges above the target says **No charge window** when no solar window comes and the battery is below what the trip needs. A day on which the trip's grid charge starts always says **No charge window**, never **Charging not needed**, also when the battery already shows what the trip needs: the day's own driving takes it below that before the charge.
 
 ### Charging hours
 

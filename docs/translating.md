@@ -14,7 +14,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Feed-in | teruglevering |  | Return, export |
 | Self-consumption | eigen verbruik |  | Own use, direct use |
 | Charge window | laadvenster | never a bare venster | Slot, charge time, window (on its own) |
-| Charging not needed | laden niet nodig | the heading of a day without a charge window when the car needs no charging, alone; a day that could use a charge is "No charge window" ("Geen laadvenster") with "There is too little solar power while the car is home." ("Er is te weinig zonnestroom terwijl de auto thuis is.") | No charging needed, nothing to charge |
+| Charging not needed | Laden niet nodig | a day card's heading when the car needs no charging that day, with nothing under it; a day that could use a charge but has no window says No charge window (Geen laadvenster) with "There is too little solar power while the car is home." ("Er is te weinig zonnestroom terwijl de auto thuis is.") |  |
 | Charge current | laadstroom |  | Amps, charge speed |
 | Charge power | laadvermogen |  | Charge speed, charge rate |
 | Surplus | overschot |  | Excess, spare solar |
