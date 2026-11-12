@@ -14,7 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 /**
- * WCAG AA in set-up, light and dark, in both languages: every step with typical values tagged, the check and the
+ * WCAG AA in set-up, light and dark, in both languages: every step with typical values, the check and the
  * dashboard's preview answered, a refused value and the question before leaving.
  */
 @FxTest

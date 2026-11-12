@@ -598,7 +598,7 @@ class EngineTest {
     }
 
     @Test
-    void theFirstRunConfigHasTypicalValuesTaggedAndNoPlaceYet() {
+    void theFirstRunConfigHasTypicalValuesListedAndNoPlaceYet() {
         var draft = EngineConfig.setUpDraft(BRUSSELS, new ProviderId("open-meteo"));
 
         assertThat(draft.system().location().isChosen()).isFalse();

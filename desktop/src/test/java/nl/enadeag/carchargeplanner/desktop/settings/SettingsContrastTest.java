@@ -6,15 +6,10 @@ import nl.enadeag.carchargeplanner.desktop.Contrast;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
-import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
-import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
-import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.List;
 import javafx.application.ColorScheme;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
@@ -22,13 +17,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 /**
- * WCAG AA in Settings, light and dark: every category, with typical values tagged, a refused value, its marked
- * category and the question.
+ * WCAG AA in Settings, light and dark: every category, a refused value, its marked category and the question.
  */
 @FxTest
 class SettingsContrastTest {
-
-    private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     @TempDir
     Path folder;
@@ -44,10 +36,6 @@ class SettingsContrastTest {
     @EnumSource(ColorScheme.class)
     void everyTextStandsOutEnough(ColorScheme scheme) throws Exception {
         settings = new SettingsFixture(folder, Language.ENGLISH, SettingsFixture.realProviders());
-        var file = new ConfigFile(settings.configPath, FILES);
-        var example = file.read();
-        file.write(example.withSystem(example.system(),
-                new TypicalValues(TypicalValues.SYSTEM_SETTINGS, List.of(TypicalValues.PANEL_SETTINGS))));
         var view = settings.open(true, scheme);
 
         var problems = Fx.call(() -> {

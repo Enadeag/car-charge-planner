@@ -9,7 +9,7 @@ import java.util.function.Function;
 import javafx.scene.Node;
 
 /**
- * Walks through every step of set-up as the owner sees it, with every value tagged as typical, two panel arrays, an
+ * Walks through every step of set-up as the owner sees it, with every value typical, two panel arrays, an
  * away period, the check and the preview answered, then a refused value and the question before leaving; and checks
  * each screen once it is laid out.
  */

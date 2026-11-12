@@ -633,8 +633,6 @@ public enum TextKey {
     CATEGORY_CHARGER,
     /** A highest current below the lowest. */
     PROBLEM_BELOW_MINIMUM_CURRENT,
-    /** The tag on a value that is a typical value. */
-    TYPICAL_TAG,
     /** The button that fills a card with typical values. */
     USE_TYPICAL,
     /**

@@ -7,7 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.UnitInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.Quantity;
-import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
+import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ProblemRows;
@@ -28,7 +28,7 @@ import javafx.scene.Node;
 /**
  * The car: its usable battery, its consumption and its daily distance, with typical values on request, and in Settings
  * the trip surcharge, which the page folds away ({@link #folded()}). Distances and consumption show in the units the
- * owner chose, also before they are saved; a typical value stays tagged in other units. Set-up leaves the trip
+ * owner chose, also before they are saved; a typical value stays typical in other units. Set-up leaves the trip
  * surcharge out, and the card then keeps the one stored.
  */
 public final class CarCard implements ConfigPart {
@@ -41,7 +41,7 @@ public final class CarCard implements ConfigPart {
     private final boolean showsSurcharge;
     private final FieldRow surchargeRow;
     private final ProblemRows problems;
-    private final TypicalTags typical;
+    private final TypicalMarks typical;
     private final CardView card;
 
     /**
@@ -58,8 +58,8 @@ public final class CarCard implements ConfigPart {
         distance = new UnitInput(Quantity.DISTANCE, messages);
         surcharge = new NumberInput(new NumberRange(0, 100, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
-        typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
-        // no typical value, so no tag, and no problem row: the range keeps the value valid
+        typical = new TypicalMarks();
+        // no typical value and no problem row: the range keeps the value valid
         surchargeRow = FieldRow.of(messages, TextKey.FIELD_CAR_TRIP_SURCHARGE, TextKey.FIELD_CAR_TRIP_SURCHARGE_HINT,
                 surcharge);
         card = new CardView(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
@@ -77,7 +77,7 @@ public final class CarCard implements ConfigPart {
      * @param units the units to show them in
      */
     public void showIn(Units units) {
-        typical.keepTagsWhile(() -> {
+        typical.keepMarksWhile(() -> {
             consumption.showIn(units);
             distance.showIn(units);
         });
@@ -176,7 +176,7 @@ public final class CarCard implements ConfigPart {
 
     private FieldRow row(ConfigSetting setting, TextKey name, TextKey hint, Input input) {
         var row = problems.add(setting, FieldRow.of(messages, name, hint, input));
-        typical.follow(setting, row::showTag);
+        typical.follow(setting);
         input.onChange(() -> typical.edited(setting));
         return row;
     }

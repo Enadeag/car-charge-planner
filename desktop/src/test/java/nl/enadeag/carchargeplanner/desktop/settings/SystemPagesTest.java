@@ -318,7 +318,7 @@ class SystemPagesTest {
     }
 
     @Test
-    void enteringAValueOfOnesOwnTakesItsTypicalTagAway() throws Exception {
+    void enteringAValueOfOnesOwnTakesItsTypicalMarkAway() throws Exception {
         var view = openWith(config -> config.withSystem(config.system(),
                 new TypicalValues(Set.of(ConfigSetting.CAR_BATTERY, ConfigSetting.CAR_CONSUMPTION), List.of())));
 
@@ -561,7 +561,7 @@ class SystemPagesTest {
     }
 
     @Test
-    void iDontKnowInsideTheFoldSetsTheMinimumTheVoltageAndTheEfficiencyOnlyTaggedAsTypical() throws Exception {
+    void iDontKnowInsideTheFoldSetsTheMinimumTheVoltageAndTheEfficiencyOnlyMarkedAsTypical() throws Exception {
         var view = openWithCharger(new Charger(Phases.THREE, 8, 32, 400, 0.95));
         var typical = settings.messages.text(TextKey.IN_GROUP, settings.messages.text(TextKey.USE_TYPICAL),
                 settings.messages.text(TextKey.CARD_CHARGER));
@@ -572,10 +572,6 @@ class SystemPagesTest {
 
         Fx.run(button::fire);
         assertThat(Fx.call(() -> powerShown(view))).containsExactly("22 kW");
-        var tag = settings.messages.text(TextKey.TYPICAL_TAG);
-        for (var field : List.of(TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_VOLTAGE, TextKey.FIELD_EFFICIENCY)) {
-            assertThat(Fx.call(() -> settings.control(view, field).getAccessibleHelp())).as("%s", field).contains(tag);
-        }
         Fx.call(() -> SettingsFixture.save(view));
 
         assertThat(stored().system().charger()).isEqualTo(new Charger(Phases.THREE, 6, 32, 230, 0.9));
@@ -914,15 +910,28 @@ class SystemPagesTest {
     }
 
     @Test
-    void typicalValuesAreTaggedNextToTheirFields() throws Exception {
+    void retypingATypicalValueChangesNothingShownButMakesItTheOwnersSoClosingAsksFirst() throws Exception {
         var view = openWith(config -> config.withSystem(config.system(),
-                new TypicalValues(Set.of(ConfigSetting.HOUSE_BASELOAD), List.of())));
-        Fx.run(() -> view.show(Category.CAR_HOUSE));
+                new TypicalValues(Set.of(ConfigSetting.CAR_BATTERY, ConfigSetting.CAR_CONSUMPTION), List.of())));
+        var car = stored().system().car();
+        var value = Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_CAR_BATTERY)).getText());
+        var before = texts(view);
+        var help = Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp());
 
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_HOUSEHOLD_USE).getAccessibleHelp()))
-                .contains(settings.messages.text(TextKey.TYPICAL_TAG));
+        Fx.run(() -> {
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "");
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, value);
+        });
+
+        assertThat(texts(view)).isEqualTo(before);
         assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
-                .doesNotContain(settings.messages.text(TextKey.TYPICAL_TAG));
+                .isEqualTo(help);
+        assertThat(Fx.call(view::isChanged)).isTrue();
+        assertThat(Fx.call(() -> settings.button(view, TextKey.SETTINGS_CANCEL).getText()))
+                .isEqualTo(settings.messages.text(TextKey.SETTINGS_CANCEL));
+        Fx.call(() -> SettingsFixture.save(view));
+        assertThat(stored().system().car()).isEqualTo(car);
+        assertThat(stored().typical().system()).containsExactly(ConfigSetting.CAR_CONSUMPTION);
     }
 
     /** The example config with this house's use, nothing typical, written back before Settings opens. */
@@ -1078,17 +1087,21 @@ class SystemPagesTest {
     }
 
     @Test
-    void typicalValuesStayTaggedInImperialUnits() throws Exception {
+    void typicalValuesStayMarkedInImperialUnits() throws Exception {
         settings = new SettingsFixture(folder, Language.ENGLISH);
         var file = new ConfigFile(settings.configPath, FILES);
         var example = file.read();
         file.write(example.withSystem(example.system(), new TypicalValues(Set.of(ConfigSetting.CAR_CONSUMPTION), List.of())));
         settings.appSettings.write(new AppSettings(Optional.empty(), Units.IMPERIAL, DisplayMode.AUTOMATIC, Appearance.SYSTEM));
         var view = settings.open();
-
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_CONSUMPTION).getAccessibleHelp()))
-                .contains(settings.messages.text(TextKey.TYPICAL_TAG));
         assertThat(Fx.call(view::isChanged)).isFalse();
+
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "75");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(stored().typical().system()).containsExactly(ConfigSetting.CAR_CONSUMPTION);
     }
 
     /** A provider with only a place search, which answers as the test says. */

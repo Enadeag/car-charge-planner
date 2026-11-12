@@ -33,7 +33,7 @@ public record EngineConfig(HomeSystem system, PlanningPreferences planning, Fore
 
     /**
      * The config set-up starts from when there is none yet: one panel array, a house, a car and a charger with
-     * typical values, all tagged as such; no place chosen yet; the recommended planning preferences; one forecast
+     * typical values, all listed as typical; no place chosen yet; the recommended planning preferences; one forecast
      * provider without a fallback; and no away periods.
      *
      * @param timezone the time zone the home is assumed to be in until the owner chooses a place, such as the
