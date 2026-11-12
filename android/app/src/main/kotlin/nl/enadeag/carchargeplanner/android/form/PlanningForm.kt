@@ -1,6 +1,8 @@
 package nl.enadeag.carchargeplanner.android.form
 
 import androidx.lifecycle.SavedStateHandle
+import java.time.Duration
+import java.time.LocalTime
 import nl.enadeag.carchargeplanner.engine.config.ChargingHours
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences
@@ -8,8 +10,8 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
 
 /**
  * The planning preferences: the minimum and target charge levels and the margin in %, the grid energy a window may
- * take in kWh, the shortest window and the notification's lead in whole minutes, and the charging hours as times.
- * They are choices, never typical values.
+ * take in kWh and the shortest window in whole minutes, all typed; the notification's lead, chosen from the engine's
+ * `NotifyLeadChoices`; and the charging hours, chosen on a picker. They are choices, never typical values.
  *
  * @param handle where the fields' texts are kept
  * @param numbers how the screen's language writes numbers
@@ -33,9 +35,9 @@ class PlanningForm(handle: SavedStateHandle, numbers: NumberText) :
         IMPORT_TOLERANCE(ConfigSetting.IMPORT_TOLERANCE),
         /** The shortest charge window, in whole minutes. */
         MINIMUM_WINDOW(ConfigSetting.MINIMUM_WINDOW),
-        /** How long before a window the owner is told, in whole minutes. */
+        /** How long before a window the owner is told, in whole minutes, chosen rather than typed. */
         NOTIFY_LEAD(ConfigSetting.NOTIFY_LEAD),
-        /** The start of the charging hours, such as 07:00. */
+        /** The start of the charging hours, such as 07:00, chosen rather than typed. */
         CHARGING_START(ConfigSetting.CHARGING_HOURS),
         /** The end of the charging hours, which shows the problems of the hours as a whole. */
         CHARGING_END(ConfigSetting.CHARGING_HOURS),
@@ -44,6 +46,40 @@ class PlanningForm(handle: SavedStateHandle, numbers: NumberText) :
     private companion object {
         const val IMPORT_DECIMALS = 2
     }
+
+    /**
+     * The notification's lead chosen now.
+     *
+     * @return the lead; null when the kept text is no whole number of minutes from 0 up, as only an older version of
+     *     the app can leave
+     */
+    fun lead(): Duration? = state.text(Field.NOTIFY_LEAD).trim().toLongOrNull()?.takeIf { it >= 0 }
+        ?.let { Duration.ofMinutes(it) }
+
+    /**
+     * Chooses the notification's lead; choosing the one shown changes nothing.
+     *
+     * @param lead the lead, in whole minutes, 0 or more
+     */
+    fun choose(lead: Duration) = chosen(Field.NOTIFY_LEAD, lead.toMinutes().toString())
+
+    /**
+     * A time of the charging hours as it shows and is saved.
+     *
+     * @param field [Field.CHARGING_START] or [Field.CHARGING_END]
+     * @return the time chosen; the standard hours' when the kept text is no time, as only an older version of the app
+     *     can leave
+     */
+    fun time(field: Field): LocalTime = TimeText.read(state.text(field))
+        ?: if (field == Field.CHARGING_START) ChargingHours.STANDARD.start() else ChargingHours.STANDARD.end()
+
+    /**
+     * Chooses a time of the charging hours; choosing the one shown changes nothing.
+     *
+     * @param field [Field.CHARGING_START] or [Field.CHARGING_END]
+     * @param time the time, to the minute
+     */
+    fun choose(field: Field, time: LocalTime) = chosen(field, TimeText.write(time))
 
     override fun load(config: EngineConfig) {
         val planning = config.planning()
@@ -65,12 +101,18 @@ class PlanningForm(handle: SavedStateHandle, numbers: NumberText) :
         val tolerance = reader.number(Field.IMPORT_TOLERANCE, stored.importToleranceKwh(), IMPORT_DECIMALS)
         val window = reader.minutes(Field.MINIMUM_WINDOW, stored.minWindow())
         val lead = reader.minutes(Field.NOTIFY_LEAD, stored.notifyLead())
-        val start = reader.time(Field.CHARGING_START, stored.chargingHours().start())
-        val end = reader.time(Field.CHARGING_END, stored.chargingHours().end())
+        val start = time(Field.CHARGING_START)
+        val end = time(Field.CHARGING_END)
         val planning = reader.records({ setting -> fieldOf(setting) }) {
             PlanningPreferences(minimum, target, margin, tolerance, window, lead, ChargingHours(start, end))
         } ?: return null
         return config.withPlanning(planning)
+    }
+
+    private fun chosen(field: Field, text: String) {
+        if (state.text(field) != text) {
+            state.edit(field, text)
+        }
     }
 
     private fun fieldOf(setting: ConfigSetting) = if (setting == ConfigSetting.CHARGING_HOURS) Field.CHARGING_END

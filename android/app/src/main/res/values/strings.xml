@@ -117,8 +117,8 @@
   <string name="car_battery_hint">kWh, usually 40 to 100.</string>
   <string name="car_consumption">Consumption</string>
   <string name="car_consumption_hint">kWh per 100 km, usually 14 to 22.</string>
-  <string name="car_other_driving">Other driving per day</string>
-  <string name="car_other_driving_hint">km a day of the short drives that are not trips.</string>
+  <string name="car_daily_distance">Daily distance</string>
+  <string name="car_daily_distance_hint">How far you drive on a normal day, for example for shopping, school or sport. Trips you enter separately do not count.</string>
   <string name="car_trip_surcharge">Trip surcharge</string>
   <string name="car_trip_surcharge_hint">Percent added to the consumption for a trip\'s energy.</string>
 
@@ -161,7 +161,6 @@
   <string name="away_from">Away from, period %1$d</string>
   <!-- %1$d the period's place in the list, from 1 -->
   <string name="away_until">Away until, period %1$d</string>
-  <string name="time_hint">Hours and minutes, such as 08:00.</string>
 
   <string name="setup_check_title">Check the forecast</string>
   <string name="setup_check_intro">The app asks for one forecast with what you entered, so you know it works before you finish. Nothing is saved yet.</string>
@@ -185,7 +184,6 @@
   <string name="problem_same_as_start">Choose two different times.</string>
   <string name="problem_not_a_number">Type a number.</string>
   <string name="problem_not_a_whole_number">Type a whole number, without decimals.</string>
-  <string name="problem_not_a_time">Type the time as hours and minutes, such as 07:30.</string>
   <string name="problem_required">Required: this provider cannot be asked without it.</string>
   <string name="problem_server_address">Use an address that starts with https://, or http:// for a server on this phone (localhost, 127.0.0.1 or [::1]), without a user name, ? or #.</string>
   <string name="problem_letters_and_digits">Use only letters and digits, at most 64: that is what the provider\'s API keys look like.</string>
@@ -637,7 +635,14 @@
   <string name="planning_min_window">Minimum charge window</string>
   <string name="planning_min_window_hint">Minutes; shorter charge windows are dropped.</string>
   <string name="planning_lead">Notification lead time</string>
-  <string name="planning_lead_hint">Minutes before a charge window starts; 0 tells you at the start.</string>
+  <string name="planning_lead_hint">How long before a charge window starts you are told.</string>
+  <!-- the notification lead time's choices: a lead of 0, and any other, which may be one stored that is none of 5,
+       10, 15, 30 and 60; %1$d the minutes, a whole number above 0 -->
+  <string name="planning_lead_at_start">At the start</string>
+  <plurals name="planning_lead_ahead">
+    <item quantity="one">%1$d minute ahead</item>
+    <item quantity="other">%1$d minutes ahead</item>
+  </plurals>
   <string name="planning_hours_heading">Charging hours</string>
   <string name="planning_hours_intro">A grid charge starts within these hours, and may run on after them.</string>
   <string name="planning_hours_from">Start charging from</string>

@@ -72,9 +72,9 @@ public final class Planner {
      *
      * <p>Driving is taken off at the end of each day, so a day's charging starts from the level the day before left.
      * Today only loses the part of a day's driving that is still ahead. A trip's energy is taken off at its departure,
-     * on top of the other driving.
+     * on top of the daily distance.
      *
-     * <p>At a departure the battery must hold the trip's energy, the other driving of the days the trip lasts, and the
+     * <p>At a departure the battery must hold the trip's energy, the daily distance of the days the trip lasts, and the
      * minimum charge level. Solar power before the departure comes first, above the target level when the trip needs
      * it, from the latest days that give the most; only the shortfall comes from the grid, starting within the charging
      * hours as late as possible and done an hour before the departure, or at once when there is less time. When the
@@ -444,7 +444,7 @@ public final class Planner {
         return car.consumptionKwhPer100km() / 100 * (1 + car.tripSurcharge().value() / 100);
     }
 
-    /** The other driving of the days a trip lasts, from the day of its departure to the day of its return. */
+    /** The daily distance of the days a trip lasts, from the day of its departure to the day of its return. */
     private double otherDrivingPct(Trip trip, Instant now) {
         double pct = 0;
         for (var date = trip.firstDay(zone); trip.covers(date, zone);
@@ -454,7 +454,7 @@ public final class Planner {
         return pct;
     }
 
-    /** The other driving of a day; today only the share still to come. */
+    /** The daily distance of a day; today only the share still to come. */
     private double otherDrivingPct(LocalDate date, Instant now) {
         return dailyDrivingPct() * (date.equals(today(now)) ? shareOfDayLeft(now) : 1);
     }

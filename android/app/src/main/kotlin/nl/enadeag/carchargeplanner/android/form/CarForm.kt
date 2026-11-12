@@ -6,7 +6,7 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
 
 /**
- * The car: its battery in kWh, its use per 100 km, the distance of a typical day in km and the trip surcharge in %.
+ * The car: its battery in kWh, its use per 100 km, its daily distance in km and the trip surcharge in %.
  * The first three may hold typical values.
  *
  * @param handle where the fields' texts are kept
@@ -26,7 +26,7 @@ class CarForm(handle: SavedStateHandle, numbers: NumberText) :
         BATTERY(ConfigSetting.CAR_BATTERY, 1),
         /** The energy used per 100 km, in kWh. */
         CONSUMPTION(ConfigSetting.CAR_CONSUMPTION, 1),
-        /** The distance of the short drives on a typical day, in km. */
+        /** How far the car is driven on a normal day, trips apart, in km. */
         DAILY_DISTANCE(ConfigSetting.CAR_DAILY_DISTANCE, 0),
         /** The share added for a trip's energy, in %. */
         TRIP_SURCHARGE(null, 0),

@@ -79,13 +79,15 @@ class MessagesBundleTest {
     @EnumSource(Language.class)
     void theCarsDrivingSettingsUseTheTermsOfTheGlossary(Language language) throws IOException {
         var texts = file(language);
-        var otherDriving = language == Language.DUTCH ? "Overige rijafstand per dag" : "Other driving per day";
+        var dailyDistance = language == Language.DUTCH ? "Dagelijkse afstand" : "Daily distance";
         var surcharge = language == Language.DUTCH ? "Ritopslag" : "Trip surcharge";
         var shopping = language == Language.DUTCH ? "boodschappen" : "shopping";
+        var tripsApart = language == Language.DUTCH ? "Ritten die je apart invoert, tellen niet mee."
+                : "Trips you enter separately do not count.";
         var motorways = language == Language.DUTCH ? "snelweg" : "motorways";
 
-        assertThat(texts.getProperty("FIELD_CAR_OTHER_DRIVING")).isEqualTo(otherDriving);
-        assertThat(texts.getProperty("FIELD_CAR_OTHER_DRIVING_HINT")).contains(shopping);
+        assertThat(texts.getProperty("FIELD_CAR_DAILY_DISTANCE")).isEqualTo(dailyDistance);
+        assertThat(texts.getProperty("FIELD_CAR_DAILY_DISTANCE_HINT")).contains(shopping, tripsApart);
         assertThat(texts.getProperty("FIELD_CAR_TRIP_SURCHARGE")).isEqualTo(surcharge);
         assertThat(texts.getProperty("FIELD_CAR_TRIP_SURCHARGE_HINT")).contains(motorways);
     }

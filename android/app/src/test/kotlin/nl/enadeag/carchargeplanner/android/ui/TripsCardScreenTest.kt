@@ -68,7 +68,7 @@ import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.testPlatform
 import nl.enadeag.carchargeplanner.android.ui.home.HomeScreen
-import nl.enadeag.carchargeplanner.android.ui.home.clockOf
+import nl.enadeag.carchargeplanner.android.ui.components.clockOf
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ProviderId

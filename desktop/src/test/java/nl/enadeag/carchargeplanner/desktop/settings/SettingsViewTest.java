@@ -30,7 +30,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.TextInputControl;
 import org.junit.jupiter.api.AfterEach;
@@ -113,13 +115,115 @@ class SettingsViewTest {
         var view = settings.open();
 
         Fx.call(() -> {
-            settings.type(view, TextKey.FIELD_NOTIFY_LEAD, "30");
+            settings.choose(view, TextKey.FIELD_NOTIFY_LEAD, Duration.ofMinutes(30));
             return SettingsFixture.save(view);
         });
 
         assertThat(storedPlanning().margin()).isEqualTo(0.8571428);
         assertThat(storedPlanning().importToleranceKwh()).isEqualTo(0.123456);
         assertThat(storedPlanning().notifyLead()).isEqualTo(Duration.ofMinutes(30));
+    }
+
+    @SuppressWarnings("unchecked")
+    private ComboBox<Duration> leadField(SettingsView view) {
+        return (ComboBox<Duration>) settings.field(view, TextKey.FIELD_NOTIFY_LEAD);
+    }
+
+    private List<String> leadsOffered(SettingsView view) {
+        var field = leadField(view);
+        return field.getItems().stream().map(field.getConverter()::toString).toList();
+    }
+
+    @Test
+    void theLeadIsChosenFromTheStartToAnHourAheadAndShowsTheStoredOne() throws Exception {
+        var view = settings.open();
+
+        assertThat(Fx.call(() -> leadsOffered(view))).containsExactly("At the start", "5 minutes ahead",
+                "10 minutes ahead", "15 minutes ahead", "30 minutes ahead", "60 minutes ahead");
+        assertThat(Fx.call(() -> leadField(view).getValue())).isEqualTo(Duration.ofMinutes(15));
+        Fx.call(() -> {
+            settings.choose(view, TextKey.FIELD_NOTIFY_LEAD, Duration.ZERO);
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(storedPlanning().notifyLead()).isZero();
+    }
+
+    @Test
+    void choosingAnotherLeadIsAnEditThatClosingAsksAbout() throws Exception {
+        var view = settings.open();
+
+        Fx.run(() -> settings.choose(view, TextKey.FIELD_NOTIFY_LEAD, Duration.ofMinutes(30)));
+
+        assertThat(Fx.call(view::isChanged)).isTrue();
+        assertThat(Fx.call(() -> settings.button(view, TextKey.SETTINGS_CANCEL).getText()))
+                .isEqualTo(settings.messages.text(TextKey.SETTINGS_CANCEL));
+        Fx.run(view::cancel);
+        assertThat(settings.closed).as("asks before throwing the lead away").isZero();
+    }
+
+    @Test
+    void choosingTheStoredLeadAgainLeavesNothingToSave() throws Exception {
+        var view = settings.open();
+
+        Fx.run(() -> {
+            settings.choose(view, TextKey.FIELD_NOTIFY_LEAD, Duration.ofMinutes(30));
+            settings.choose(view, TextKey.FIELD_NOTIFY_LEAD, Duration.ofMinutes(15));
+        });
+
+        assertThat(Fx.call(view::isChanged)).isFalse();
+        assertThat(Fx.call(() -> settings.button(view, TextKey.SETTINGS_CLOSE).getText()))
+                .isEqualTo(settings.messages.text(TextKey.SETTINGS_CLOSE));
+        Fx.run(view::cancel);
+        assertThat(settings.closed).isEqualTo(1);
+    }
+
+    @Test
+    void aStoredLeadThatIsNoneOfTheChoicesShowsAsARowOfItsOwnUntilAnotherIsChosen() throws Exception {
+        Files.writeString(settings.configPath, Files.readString(settings.configPath)
+                .replace("\"notifyLeadMinutes\": 15", "\"notifyLeadMinutes\": 20"));
+        var view = settings.open();
+
+        assertThat(Fx.call(() -> leadsOffered(view))).containsExactly("At the start", "5 minutes ahead",
+                "10 minutes ahead", "15 minutes ahead", "20 minutes ahead", "30 minutes ahead", "60 minutes ahead");
+        assertThat(Fx.call(() -> leadField(view).getValue())).isEqualTo(Duration.ofMinutes(20));
+        assertThat(Fx.call(view::isChanged)).isFalse();
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_TARGET_CHARGE, "90");
+            return SettingsFixture.save(view);
+        });
+        assertThat(storedPlanning().notifyLead()).as("kept, never rounded").isEqualTo(Duration.ofMinutes(20));
+
+        Fx.run(() -> settings.choose(view, TextKey.FIELD_NOTIFY_LEAD, Duration.ofMinutes(30)));
+
+        assertThat(Fx.call(() -> leadsOffered(view))).doesNotContain("20 minutes ahead").hasSize(6);
+        assertThat(Fx.call(() -> leadField(view).getValue())).isEqualTo(Duration.ofMinutes(30));
+    }
+
+    @Test
+    void theMarginTheImportToleranceAndTheShortestWindowAreFoldedUnderMoreSettingsUntilItsRowIsPressed()
+            throws Exception {
+        var view = settings.open();
+        Fx.run(() -> view.show(Category.PLANNING));
+        var margin = settings.control(view, TextKey.FIELD_MARGIN);
+        var row = Fx.call(() -> Scenes.all(view).stream()
+                .filter(node -> node instanceof Button button && button.getText().endsWith(" More settings"))
+                .map(Button.class::cast).findFirst().orElseThrow());
+
+        assertThat(Fx.call(() -> List.of(TextKey.FIELD_MARGIN, TextKey.FIELD_IMPORT_TOLERANCE,
+                TextKey.FIELD_MIN_WINDOW).stream().noneMatch(key -> Scenes.reallyVisible(settings.control(view, key)))))
+                .isTrue();
+        assertThat(Fx.call(() -> List.of(TextKey.FIELD_MINIMUM_CHARGE, TextKey.FIELD_TARGET_CHARGE,
+                TextKey.FIELD_CHARGING_HOURS, TextKey.FIELD_NOTIFY_LEAD).stream()
+                .allMatch(key -> Scenes.reallyVisible(settings.control(view, key))))).isTrue();
+        Fx.run(row::fire);
+
+        assertThat(Fx.call(() -> Scenes.reallyVisible(margin))).isTrue();
+        Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_TARGET_CHARGE, "90");
+            return SettingsFixture.save(view);
+        });
+        assertThat(Fx.call(() -> Scenes.reallyVisible(margin))).as("closed again as the page loads").isFalse();
     }
 
     @Test

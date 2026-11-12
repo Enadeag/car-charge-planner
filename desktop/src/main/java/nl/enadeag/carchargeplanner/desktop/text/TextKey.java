@@ -507,10 +507,6 @@ public enum TextKey {
     FIELD_TARGET_CHARGE,
     /** What the target charge level does. */
     FIELD_TARGET_CHARGE_HINT,
-    /** The title of the card with the margin, import tolerance and window length. */
-    CARD_PLAN,
-    /** What the card's settings do. */
-    CARD_PLAN_HINT,
     /** The planning margin's name. */
     FIELD_MARGIN,
     /** What the planning margin does. */
@@ -523,6 +519,8 @@ public enum TextKey {
     FIELD_MIN_WINDOW,
     /** What the minimum window length does. */
     FIELD_MIN_WINDOW_HINT,
+    /** The title of the card with the charging hours. */
+    CARD_CHARGING_HOURS,
     /** The charging hours' name, which their first time completes. */
     FIELD_CHARGING_HOURS,
     /** What the charging hours do. */
@@ -539,6 +537,10 @@ public enum TextKey {
     FIELD_NOTIFY_LEAD,
     /** What the notification lead time does. */
     FIELD_NOTIFY_LEAD_HINT,
+    /** The notification lead time of 0: told at the window's start. */
+    NOTIFY_LEAD_AT_START,
+    /** A notification lead time above 0; {0} the minutes, a whole number. */
+    NOTIFY_LEAD_AHEAD,
     /** The title of the card with the display mode and the language. */
     CARD_DISPLAY,
     /** When the card's settings apply. */
@@ -762,10 +764,10 @@ public enum TextKey {
     FIELD_CAR_CONSUMPTION,
     /** What the consumption is. */
     FIELD_CAR_CONSUMPTION_HINT,
-    /** The distance a day of the other driving. */
-    FIELD_CAR_OTHER_DRIVING,
-    /** What the other driving is. */
-    FIELD_CAR_OTHER_DRIVING_HINT,
+    /** The daily distance: how far the car is driven on a normal day, trips apart. */
+    FIELD_CAR_DAILY_DISTANCE,
+    /** What the daily distance is. */
+    FIELD_CAR_DAILY_DISTANCE_HINT,
     /** The trip surcharge. */
     FIELD_CAR_TRIP_SURCHARGE,
     /** What the trip surcharge is. */

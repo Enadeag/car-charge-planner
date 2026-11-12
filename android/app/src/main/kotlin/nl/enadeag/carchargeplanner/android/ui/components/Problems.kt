@@ -27,7 +27,6 @@ internal fun problemText(problem: FieldProblem): String = stringResource(when (p
     FieldProblem.NotANumber -> R.string.problem_not_a_number
     FieldProblem.NotAWholeNumber -> R.string.problem_not_a_whole_number
     FieldProblem.NotFrom0To100 -> R.string.problem_level_out_of_range
-    FieldProblem.NotATime -> R.string.problem_not_a_time
     FieldProblem.Required -> R.string.problem_required
     FieldProblem.ServerAddress -> R.string.problem_server_address
     FieldProblem.LettersAndDigits -> R.string.problem_letters_and_digits

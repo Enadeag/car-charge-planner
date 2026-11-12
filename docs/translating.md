@@ -24,8 +24,9 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Trip | rit |  | Journey, ride, away period (which has no distance) |
 | Departure | vertrek |  | Deadline, start |
 | Trip surcharge | ritopslag |  | Margin, buffer |
-| Other driving | overige rijafstand |  | Distance per day, daily distance, average distance |
+| Daily distance | dagelijkse afstand | the car's field, without a unit in its name, as the desktop can show miles; its hint "How far you drive on a normal day, for example for shopping, school or sport. Trips you enter separately do not count." ("Hoeveel je op een gewone dag rijdt, bijvoorbeeld voor boodschappen, school of sport. Ritten die je apart invoert, tellen niet mee.") | Other driving, distance per day, average distance |
 | Charging hours | laaduren |  | Awake hours, charge times |
+| Notification lead time | melding vooraf | the Planning page's drop-down: At the start, 5 minutes ahead, 10, 15, 30 or 60 minutes ahead (Bij het begin, 5 minuten ervoor, …); a stored lead that is none of them is a choice of its own as long as it is chosen, such as "20 minutes ahead" ("20 minuten ervoor"); its hint "How long before a charge window starts you are told." ("Hoe lang voordat een laadvenster begint je een melding krijgt.") |  |
 | Charge limit | laadlimiet |  | Target, maximum (the target charge level is the app's setting) |
 | Battery level | accuniveau |  | State of charge, SoC, charge |
 | Assumed battery level | aangenomen accuniveau |  | Default level, estimated level, state of charge |
@@ -52,7 +53,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Tilt | helling | a panel array's drop-down: Flat, Pitched, Steep, Upright (Plat, Schuin, Steil, Rechtop) |  |
 | Together about 3.6 kWp | Samen ongeveer 3,6 kWp | below a panel array's fields: the size its panels give |  |
 | Now set: 4.2 kWp. Enter the number of panels to replace this. | Nu ingesteld: 4,2 kWp. Vul het aantal panelen in om dit te vervangen. | above the fields of an array entered before as a size in kWp |  |
-| More settings | Meer instellingen | the row that folds the seldom changed settings away, such as a panel array's losses and name, the household use on the Car and house page, and the charger's phases, currents, voltage and efficiency |  |
+| More settings | Meer instellingen | the row that folds the seldom changed settings away, such as a panel array's losses and name, the trip surcharge and the household use on the Car and house page, the charger's phases, currents, voltage and efficiency, and the planning margin, the import tolerance and the minimum charge window length on the Planning page |  |
 | Charge power at home | laadvermogen thuis | the Charger page's drop-down: 3.7 kW, 7.4 kW, 11 kW, 22 kW, Other (3,7 kW, 7,4 kW, 11 kW, 22 kW, Anders), each one text of its own; its hint "The power the car charges with at home: the lower of what the charger and the car can take." ("Het vermogen waarmee de auto thuis laadt: het laagste van wat de laadpaal en de auto aankunnen.") | Charger power, charger size, wallbox rating |
 | Choose… | Kies… | what a drop-down shows before a choice |  |
 | Typical value | gangbare waarde |  | Default, assumed value, guess |

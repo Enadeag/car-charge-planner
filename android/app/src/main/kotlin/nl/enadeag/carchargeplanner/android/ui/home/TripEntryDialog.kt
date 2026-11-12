@@ -50,15 +50,13 @@ import nl.enadeag.carchargeplanner.android.home.TripEntry
 import nl.enadeag.carchargeplanner.android.ui.components.BarPage
 import nl.enadeag.carchargeplanner.android.ui.components.DateDialog
 import nl.enadeag.carchargeplanner.android.ui.components.DiscardChangesDialog
+import nl.enadeag.carchargeplanner.android.ui.components.DISTANCE_UNIT
 import nl.enadeag.carchargeplanner.android.ui.components.FocusOnWindow
 import nl.enadeag.carchargeplanner.android.ui.components.SaveAction
 import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 import nl.enadeag.carchargeplanner.android.ui.components.TimeButton
 import nl.enadeag.carchargeplanner.android.ui.components.TimeDialog
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
-
-/** The unit of a trip's distance, after it in the entry; kilometres only until #311. */
-internal const val DISTANCE_UNIT = "km"
 
 /** Where the focus is in the entry, so it comes back there when a picker or the question over the entry closes. */
 private enum class Spot {

@@ -24,7 +24,7 @@ class WeeklyAwayFormTest {
 
         val row = form.rowIds.value.single()
         assertThat(form.text(row, WeeklyAwayForm.Field.WEEKDAY)).isEqualTo("THURSDAY")
-        assertThat(form.text(row, WeeklyAwayForm.Field.START)).isEqualTo("06:00")
+        assertThat(form.time(row, WeeklyAwayForm.Field.START)).isEqualTo(LocalTime.of(6, 0))
         assertThat(form.read(stored)).isEqualTo(stored)
         assertThat(form.isEdited()).isFalse()
     }
@@ -35,26 +35,39 @@ class WeeklyAwayFormTest {
 
         val row = form.add()
         form.choose(row, DayOfWeek.FRIDAY)
-        form.edit(row, WeeklyAwayForm.Field.END, "16:30")
+        form.choose(row, WeeklyAwayForm.Field.END, LocalTime.of(16, 30))
 
         assertThat(form.read(DRAFT)!!.away().weekly())
             .containsExactly(WeeklyAwayPeriod(DayOfWeek.FRIDAY, LocalTime.of(8, 0), LocalTime.of(16, 30)))
     }
 
     @Test
-    fun aPeriodThatDoesNotEndAfterItStartsShowsAtItsEndAndATextThatIsNoTimeAtItsField() {
+    fun aPeriodThatDoesNotEndAfterItStartsShowsAtItsEndUntilTheEndIsChosenAgain() {
         form.load(stored)
         val row = form.rowIds.value.single()
-        form.edit(row, WeeklyAwayForm.Field.END, "05:00")
+        form.choose(row, WeeklyAwayForm.Field.END, LocalTime.of(5, 0))
 
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems(row).value).containsExactlyEntriesOf(mapOf(
             WeeklyAwayForm.Field.END to FieldProblem.Refused(InvalidSetting.Rule.NOT_AFTER_START)))
 
-        form.edit(row, WeeklyAwayForm.Field.START, "six")
-        assertThat(form.check(stored)).isNull()
-        assertThat(form.problems(row).value).containsExactlyEntriesOf(mapOf(
-            WeeklyAwayForm.Field.START to FieldProblem.NotATime))
+        form.choose(row, WeeklyAwayForm.Field.END, LocalTime.of(7, 0))
+        assertThat(form.problems(row).value).isEmpty()
+        assertThat(form.check(stored)).isNotNull()
+    }
+
+    @Test
+    fun choosingTheTimeShownIsNoEditAndAKeptTextThatIsNoTimeIsANewPeriodsTime() {
+        form.load(stored)
+        val row = form.rowIds.value.single()
+
+        form.choose(row, WeeklyAwayForm.Field.START, LocalTime.of(6, 0))
+        assertThat(form.isEdited()).isFalse()
+
+        handle["away.$row.text.START"] = "six"
+        handle["away.$row.text.END"] = "seven"
+        assertThat(form.time(row, WeeklyAwayForm.Field.START)).isEqualTo(LocalTime.of(8, 0))
+        assertThat(form.time(row, WeeklyAwayForm.Field.END)).isEqualTo(LocalTime.of(17, 0))
     }
 
     @Test
@@ -72,13 +85,13 @@ class WeeklyAwayFormTest {
         form.load(stored)
         val added = form.add()
         form.choose(added, DayOfWeek.SATURDAY)
-        form.edit(added, WeeklyAwayForm.Field.START, "09:30")
+        form.choose(added, WeeklyAwayForm.Field.START, LocalTime.of(9, 30))
         form.remove(form.rowIds.value.first())
 
         val again = WeeklyAwayForm(handle.afterTheSystemEndedTheApp())
 
         assertThat(again.rowIds.value).containsExactly(added)
-        assertThat(again.text(added, WeeklyAwayForm.Field.START)).isEqualTo("09:30")
+        assertThat(again.time(added, WeeklyAwayForm.Field.START)).isEqualTo(LocalTime.of(9, 30))
         assertThat(again.isEdited()).isTrue()
         assertThat(again.read(stored)!!.away().weekly())
             .containsExactly(WeeklyAwayPeriod(DayOfWeek.SATURDAY, LocalTime.of(9, 30), LocalTime.of(17, 0)))

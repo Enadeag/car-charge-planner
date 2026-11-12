@@ -35,7 +35,7 @@ class TripPlanningTest {
     private static final LocalDate SAT = FRI.plusDays(1);
     private static final LocalDate SUN = SAT.plusDays(1);
     private static final Offset<Double> CLOSE = within(1e-6);
-    /** Without other driving, so only the trips take energy. */
+    /** Without a daily distance, so only the trips take energy. */
     private static final HomeSystem CAR = system(0);
     /** 8 kW from 09:00 to 17:00: 6.29 kW usable, 27 A on one phase. */
     private static final Map<Integer, Double> SUNNY = Map.of(9, 8.0, 10, 8.0, 11, 8.0, 12, 8.0, 13, 8.0, 14, 8.0,
@@ -324,7 +324,7 @@ class TripPlanningTest {
 
     @Test
     void otherDrivingStillCountsEveryDayAndTripsComeOnTop() {
-        // 50 km a day is 9 %; a trip of two days needs both days' other driving on top of its 41.4 %
+        // 50 km a day is 9 %; a trip of two days needs both days' daily distance on top of its 41.4 %
         var trip = new Trip(at(SAT, 8), at(SUN, 18), 200, false);
         var planned = plan(system(50), dark(4), 95, at(FRI, 0), trip);
         assertThat(planned.trip().neededPct().value()).isCloseTo(30 + 41.4 + 18, CLOSE);
@@ -488,7 +488,7 @@ class TripPlanningTest {
 
     @Test
     void whenNoDayReachesWhatTheTripNeedsTheLatestDayThatGivesTheMostChargesAboveTheTarget() {
-        // 250 km is 51.75 %, with Saturday's 9 % of other driving 90.75 %; Friday's driving takes 9 % after its sun,
+        // 250 km is 51.75 %, with Saturday's 9 % of daily distance 90.75 %; Friday's driving takes 9 % after its sun,
         // so neither sunny day is enough, and Thursday charges only to the target
         var planned = plan(system(50), days(List.of(SUNNY, SUNNY, Map.of(), Map.of())), 50, at(THU, 0),
                 trip(SAT, 8, 18, 250));

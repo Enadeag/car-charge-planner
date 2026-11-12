@@ -62,9 +62,9 @@ _Avoid_: Deadline, start
 The share added to the average consumption for the energy of a trip, as long drives use more (15% unless the owner changes it).
 _Avoid_: Margin, buffer
 
-**Other driving**:
-The short drives that are not trips, such as shopping, as a distance per day; trips come on top of it.
-_Avoid_: Distance per day, daily distance, average distance
+**Daily distance**:
+How far the car is driven on a normal day, such as for shopping, school or sport; the trips the owner enters come on top of it.
+_Avoid_: Other driving, distance per day, average distance
 
 **Charging hours**:
 The hours in which the owner can start a charge (07:00–22:00 unless the owner changes it), both ends included; they may span midnight, such as 20:00–02:00. A grid charge starts within them and may run on after them.

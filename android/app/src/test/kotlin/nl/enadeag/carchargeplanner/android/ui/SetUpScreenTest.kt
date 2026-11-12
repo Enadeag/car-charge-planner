@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -24,6 +25,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -36,6 +38,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.text.AnnotatedString
@@ -43,6 +46,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.time.DayOfWeek
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
@@ -65,6 +69,7 @@ import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.SaveOutcome
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
+import nl.enadeag.carchargeplanner.android.ui.components.clockOf
 import nl.enadeag.carchargeplanner.android.ui.setup.SetUpScreen
 import nl.enadeag.carchargeplanner.engine.config.Charger
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
@@ -240,6 +245,12 @@ class SetUpScreenTest {
             }
             if (step == SetUpStep.PANELS) {
                 fillPanels()
+            }
+            if (step == SetUpStep.CAR) {
+                click(R.string.more_settings)
+                compose.waitForIdle()
+                compose.assertScrolls()
+                compose.assertEveryControlIsNamedAndLargeEnough()
             }
             if (step == SetUpStep.CHARGER) {
                 click(R.string.more_settings)
@@ -631,7 +642,8 @@ class SetUpScreenTest {
         click(R.string.away_add)
         click(R.string.away_add)
 
-        awayField(R.string.away_until, 2).performTextReplacement("07:00")
+        val away = session.flow.away
+        away.choose(away.rowIds.value[1], WeeklyAwayForm.Field.END, LocalTime.of(7, 0))
         click(R.string.action_next)
         compose.waitForIdle()
 
@@ -649,13 +661,14 @@ class SetUpScreenTest {
         toTheAwayStep(session)
         click(R.string.away_add)
         click(R.string.away_add)
-        awayField(R.string.away_until, 2).performTextReplacement("07:00")
-        awayField(R.string.away_from, 1).performTextReplacement("eight")
+        val away = session.flow.away
+        away.choose(away.rowIds.value[1], WeeklyAwayForm.Field.END, LocalTime.of(7, 0))
+        away.choose(away.rowIds.value[0], WeeklyAwayForm.Field.START, LocalTime.of(18, 0))
 
         click(R.string.action_next)
         compose.waitForIdle()
 
-        awayField(R.string.away_from, 1).assertIsFocused()
+        awayField(R.string.away_until, 1).assertIsFocused()
         awayField(R.string.away_until, 2).assertIsNotFocused()
             .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
     }
@@ -1082,6 +1095,11 @@ class SetUpScreenTest {
         repeat(3) {
             session.next()
             compose.waitForIdle()
+            if (session.flow.step.value == SetUpStep.CAR) {
+                compose.assertOnlyTheLastFieldIsDone()
+                click(R.string.more_settings)
+                compose.waitForIdle()
+            }
             if (session.flow.step.value == SetUpStep.CHARGER) {
                 click(R.string.more_settings)
                 compose.waitForIdle()
@@ -1095,7 +1113,8 @@ class SetUpScreenTest {
         repeat(2) { click(R.string.away_add) }
         compose.waitForIdle()
 
-        compose.assertOnlyTheLastFieldIsDone()
+        // the away periods' times are chosen on the picker, not typed
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
     }
 
     /** Goes from the welcome to the step with the away periods, Utrecht chosen. */
@@ -1109,7 +1128,54 @@ class SetUpScreenTest {
     }
 
     private fun awayField(label: Int, period: Int) =
-        compose.onNode(hasSetTextAction() and hasText(text(label, period), substring = true))
+        compose.onNode(hasText(text(label, period), substring = true) and hasClickAction()
+            and SemanticsMatcher.keyIsDefined(SemanticsProperties.Role))
+
+    @Test
+    fun anAwayPeriodsTimeIsAButtonThatOpensTheTimePickerAndKeepsTheChosenTime() {
+        android.provider.Settings.System.putString(compose.activity.contentResolver,
+            android.provider.Settings.System.TIME_12_24, "24")
+        val session = show()
+        toTheAwayStep(session)
+        click(R.string.away_add)
+        awayField(R.string.away_from, 1).assert(hasText(clockOf(true, Locale.ENGLISH).format(LocalTime.of(8, 0)),
+            substring = true))
+
+        awayField(R.string.away_from, 1).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNode(hasContentDescription("10 hours") and hasClickAction())
+            .performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onNodeWithText(text(R.string.action_ok)).performClick()
+        compose.waitForIdle()
+
+        val away = session.flow.away
+        assertThat(away.time(away.rowIds.value.single(), WeeklyAwayForm.Field.START)).isEqualTo(LocalTime.of(10, 0))
+        awayField(R.string.away_from, 1).assertIsFocused()
+    }
+
+    @Test
+    fun theTripSurchargeIsFoldedOnTheCarStepAndAProblemInItOpensTheFoldAndTakesTheFocus() {
+        val session = show()
+        session.next()
+        session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
+        session.flow.panels.fillIn()
+        repeat(2) { session.next() }
+        compose.waitForIdle()
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.CAR)
+        field(R.string.car_daily_distance).assertExists()
+        field(R.string.car_trip_surcharge).assertDoesNotExist()
+        session.flow.car.edit(CarForm.Field.TRIP_SURCHARGE, "-1")
+
+        click(R.string.action_next)
+        compose.waitForIdle()
+
+        assertThat(session.flow.step.value).isEqualTo(SetUpStep.CAR)
+        compose.onNodeWithText(text(R.string.more_settings))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.fold_expanded)))
+        field(R.string.car_trip_surcharge).assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_out_of_range)))
+    }
 
     /** The text is on screen inside a live region of that mode, which a screen reader reads when it changes. */
     private fun assertInLiveRegion(shown: String, mode: LiveRegionMode) {

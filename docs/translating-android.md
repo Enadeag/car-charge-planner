@@ -51,7 +51,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Set up again | Opnieuw instellen | for an unusable config |
 | Update the app | Werk de app bij | for a settings file of a newer version |
 | Settings file cannot be used | Niet ingesteld | the heading of the screen for an unusable config |
-| Away until, period 2 | Afwezig tot, afwezigheid 2 | a weekly away period's field, named with the period's number |
+| Away until, period 2 | Afwezig tot, afwezigheid 2 | a weekly away period's time, named with the period's number: a button with the time under it, which opens the time picker, and the picker's title |
 | Add period | Afwezigheid toevoegen | adds a weekly away period |
 | Today, Tomorrow | Vandaag, Morgen | a day's tab and title; the other days by their weekday |
 | Refresh | Vernieuwen | makes the plan again; the top app bar's action |
@@ -93,7 +93,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | All day, Part of the day | Hele dag, Deel van de dag | the entry's choice |
 | Away from, Away until | Afwezig vanaf, Afwezig tot | part of the day's two times, each a button that opens the time picker, and the picker's title |
 | OK | OK | confirms the time picker's time |
-| Keyboard, Clock | Toetsenbord, Klok | the time picker's button under the dial or the typed time, named for what it switches to: typing the time, or the dial |
+| Keyboard, Clock | Toetsenbord, Klok | the time picker's button under the dial or the typed time, named for what it switches to: typing the time, or the dial; the same on every time picker of the app, also those of the weekly away periods and the charging hours |
 | The end must be after the start. | Het einde moet na het begin liggen. | under the end time after Save |
 | That time has passed already. | Die tijd is al voorbij. | under the end time, or the choice for all day, after Save |
 | Saved: Tomorrow, all day. | Opgeslagen: Morgen, hele dag. | in a snackbar after the entry's Save or Undo |
@@ -163,8 +163,11 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Number of panels, Direction, Tilt, Year placed, Power per panel | Aantal panelen, Richting, Helling, Jaar van plaatsing, Vermogen per paneel | a panel array's fields, in this order, in set-up and Settings; the direction and the tilt are drop-downs, with the choices in [translating.md](translating.md#the-words) |
 | Wp, as on the invoice or the panel. You may leave it empty: the app then counts on 360 Wp, usual for 2021. | Wp, staat op de factuur of het paneel. Leeg laten mag: dan rekent de app met 360 Wp, gangbaar voor 2021. | under the power per panel while it is empty and a year is typed; otherwise only its first sentence |
 | Choose… | Kies… | a drop-down before a choice, such as a new array's direction |
-| More settings | Meer instellingen | the fold under an array's fields, with its losses and name; on the Car and house page the fold with the household use; on the Charger page the fold with the phases, the currents, the voltage, the efficiency and I don't know |
+| More settings | Meer instellingen | the fold under an array's fields, with its losses and name; on the Car step the fold with the trip surcharge, on the Car and house page with the trip surcharge and the household use; on the Charger page the fold with the phases, the currents, the voltage, the efficiency and I don't know; on the Planning page the fold with the planning margin, the import tolerance and the minimum charge window |
 | Charge power at home | Laadvermogen thuis | the Charger step's and page's drop-down, "Choose…" in set-up until chosen: 3.7 kW, 7.4 kW, 11 kW, 22 kW, Other (3,7 kW, 7,4 kW, 11 kW, 22 kW, Anders), each one text of its own; its hint "The power the car charges with at home: the lower of what the charger and the car can take." ("Het vermogen waarmee de auto thuis laadt: het laagste van wat de laadpaal en de auto aankunnen."); the line under Charger in Settings is the power, such as "11 kW", and for Other "One phase, 6 to 16 A" ("Eén fase, 6 tot 16 A") |
+| Daily distance | Dagelijkse afstand | the car's field, with "km" after what is typed; its hint as in [translating.md](translating.md#the-words), without a unit |
+| Start charging from, Start charging no later than | Laden starten vanaf, Laden starten uiterlijk om | the charging hours on the Planning page: each a button with its time under it, which opens the time picker, and the picker's title |
+| Notification lead time | Melding vooraf | the Planning page's drop-down: At the start, 5 minutes ahead, … 60 minutes ahead (Bij het begin, 5 minuten ervoor, … 60 minuten ervoor), a plural per number of minutes, also for a stored lead that is none of them, such as "20 minutes ahead" |
 | Household use | Verbruik van het huis | the baseload's field, under More settings on the Car and house page; its hint "kWh per day, without charging the car. Your energy supplier shows your use per day." ("kWh per dag, zonder het laden van de auto. Je energieleverancier laat je verbruik per dag zien."); never "basisverbruik" |
 | Battery 60.0 kWh | Accu 60,0 kWh | the line under Car and house in Settings: the battery only |
 | Expanded, Collapsed | Uitgevouwen, Ingevouwen | what TalkBack says of a fold's row, such as More settings and Coordinates and time zone |

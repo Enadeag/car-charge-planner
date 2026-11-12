@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +26,7 @@ import nl.enadeag.carchargeplanner.android.form.PanelsForm
 import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
 import nl.enadeag.carchargeplanner.android.ui.components.ChoiceMenu
 import nl.enadeag.carchargeplanner.android.ui.components.ChoiceRow
+import nl.enadeag.carchargeplanner.android.ui.components.DISTANCE_UNIT
 import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
 import nl.enadeag.carchargeplanner.android.ui.components.Fold
@@ -34,10 +34,11 @@ import nl.enadeag.carchargeplanner.android.ui.components.NoneLine
 import nl.enadeag.carchargeplanner.android.ui.components.NumberField
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.SectionHeading
-import nl.enadeag.carchargeplanner.android.ui.components.TimeField
+import nl.enadeag.carchargeplanner.android.ui.components.TimeChoice
 import nl.enadeag.carchargeplanner.android.ui.components.RowFocus
 import nl.enadeag.carchargeplanner.android.ui.components.RowHeading
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
+import nl.enadeag.carchargeplanner.android.ui.components.rememberProblemFold
 import nl.enadeag.carchargeplanner.engine.config.ChargePowerChoice
 import nl.enadeag.carchargeplanner.engine.config.CompassPoint
 import nl.enadeag.carchargeplanner.engine.config.Phases
@@ -149,27 +150,41 @@ internal fun tiltName(tilt: TiltChoice): Int = when (tilt) {
 }
 
 /**
- * The car: its usable battery, consumption, other driving and trip surcharge, and "I don't know".
+ * The car, the same in set-up and Settings: its usable battery, consumption and daily distance with "I don't know",
+ * which fills in those three, then the trip surcharge folded under "More settings", with what the page adds there. The
+ * fold starts closed; a problem in one of its fields opens it and keeps it open, also after the problem is put right,
+ * while a press on its row does nothing meanwhile. Only the page's last field has the keyboard's Done: the daily
+ * distance while the fold is closed, else the fold's last field.
  *
- * @param problems the step's fields in order, for the focus after Next
- * @param lastAction the keyboard's action key on the trip surcharge: Done when it is the page's last field
+ * @param problems the page's fields in order, for the focus after Next or Save
+ * @param foldedProblem whether a field that [more] adds shows a problem
+ * @param more what the page adds under the fold after the trip surcharge, ending in the page's last field; null for
+ *     nothing
  */
 @Composable
-internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, lastAction: ImeAction = ImeAction.Done) {
+internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, foldedProblem: Boolean = false,
+    more: (@Composable () -> Unit)? = null) {
     val shown by car.problems.collectAsStateWithLifecycle()
     val typical = edits.shown { car.typical() }
-    listOf(
-        CarForm.Field.BATTERY to (R.string.car_battery to R.string.car_battery_hint),
-        CarForm.Field.CONSUMPTION to (R.string.car_consumption to R.string.car_consumption_hint),
-        CarForm.Field.DAILY_DISTANCE to (R.string.car_other_driving to R.string.car_other_driving_hint),
-        CarForm.Field.TRIP_SURCHARGE to (R.string.car_trip_surcharge to R.string.car_trip_surcharge_hint),
-    ).forEachIndexed { order, (field, texts) ->
-        NumberField(stringResource(texts.first), stringResource(texts.second), edits.shown { car.text(field) },
+    val problem = CarForm.Field.TRIP_SURCHARGE in shown || foldedProblem
+    val fold = rememberProblemFold(problem)
+    val open = fold.open
+    @Composable
+    fun typed(field: CarForm.Field, label: Int, hint: Int, order: Int, imeAction: ImeAction, suffix: String? = null) {
+        NumberField(stringResource(label), stringResource(hint), edits.shown { car.text(field) },
             { text -> edits.make { car.edit(field, text) } }, FieldKind.DECIMAL, shown[field], field in typical,
-            rememberFieldFocus(problems, order, field in shown),
-            if (field == CarForm.Field.TRIP_SURCHARGE) lastAction else ImeAction.Next)
+            rememberFieldFocus(problems, order, field in shown), imeAction, suffix)
     }
+    typed(CarForm.Field.BATTERY, R.string.car_battery, R.string.car_battery_hint, 0, ImeAction.Next)
+    typed(CarForm.Field.CONSUMPTION, R.string.car_consumption, R.string.car_consumption_hint, 1, ImeAction.Next)
+    typed(CarForm.Field.DAILY_DISTANCE, R.string.car_daily_distance, R.string.car_daily_distance_hint, 2,
+        if (open) ImeAction.Next else ImeAction.Done, DISTANCE_UNIT)
     UseTypical { edits.make { car.useTypical() } }
+    Fold(stringResource(R.string.more_settings), fold) {
+        typed(CarForm.Field.TRIP_SURCHARGE, R.string.car_trip_surcharge, R.string.car_trip_surcharge_hint, 3,
+            if (more == null) ImeAction.Done else ImeAction.Next)
+        more?.invoke()
+    }
 }
 
 /**
@@ -187,13 +202,7 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
     val typical = edits.shown { charger.typical() }
     val power = edits.shown { charger.power() }
     val problem = (shown.keys - ChargerForm.Field.POWER).isNotEmpty()
-    var folded by rememberSaveable { mutableStateOf(power != ChargePowerChoice.OTHER) }
-    LaunchedEffect(problem) {
-        if (problem) {
-            folded = false
-        }
-    }
-    val open = !folded || problem
+    val fold = rememberProblemFold(problem, startFolded = power != ChargePowerChoice.OTHER)
     ChoiceMenu(stringResource(R.string.charge_power), ChargePowerChoice.entries, power,
         { stringResource(chargePowerName(it)) },
         { choice ->
@@ -202,12 +211,12 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
                 edits.make { charger.choose(chosen) }
             } else {
                 edits.make { charger.chooseOther() }
-                folded = false
+                fold.unfold()
             }
         }, shown[ChargerForm.Field.POWER],
         rememberFieldFocus(problems, 0, ChargerForm.Field.POWER in shown),
         hint = stringResource(R.string.charge_power_hint))
-    Fold(stringResource(R.string.more_settings), open, { opened -> if (!problem) folded = !opened }) {
+    Fold(stringResource(R.string.more_settings), fold) {
         ChoiceRow(stringResource(R.string.charger_phases), stringResource(R.string.charger_phases_hint),
             Phases.entries, edits.shown { charger.phases() },
             { stringResource(if (it == Phases.ONE) R.string.phases_one else R.string.phases_three) },
@@ -252,10 +261,9 @@ internal fun AwayStep(away: WeeklyAwayForm, edits: Edits, problems: ProblemFocus
 }
 
 /**
- * The weekly away periods, each with its controls named by its number, "None" when there are none, and Add. They
- * end the page, so the last period's end time has the keyboard's Done. After Add the focus goes to the new period's
- * heading, after Remove to the one before, to the next when the first went, or to the line that says there are none
- * when none is left.
+ * The weekly away periods, each with its controls named by its number, "None" when there are none, and Add. After Add
+ * the focus goes to the new period's heading, after Remove to the one before, to the next when the first went, or to
+ * the line that says there are none when none is left.
  *
  * @param problems the page's fields in order, for the focus after Next or Save
  */
@@ -277,15 +285,14 @@ internal fun AwayPeriods(away: WeeklyAwayForm, edits: Edits, problems: ProblemFo
 }
 
 /**
- * One weekly away period: its place in the list as a heading, the weekday, the times, and Remove. The weekday group,
- * each time field and Remove are named with the period's number, so a screen reader that lands on one, as on a problem
- * after Next, says which period; the weekday's radio buttons are named by the day, inside that group. Only the last
- * period's end time has the keyboard's Done.
+ * One weekly away period: its place in the list as a heading, the weekday, the times, each chosen on the time picker,
+ * and Remove. The weekday group, each time's button and Remove are named with the period's number, so a screen reader
+ * that lands on one, as on a problem after Next, says which period; the weekday's radio buttons are named by the day,
+ * inside that group.
  */
 @Composable
 private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, rows: List<Int>, edits: Edits,
     problems: ProblemFocus, focus: RowFocus<Int>) {
-    val last = index == rows.lastIndex
     val shown by away.problems(row).collectAsStateWithLifecycle()
     val locale = LocalConfiguration.current.locales[0]
     val number = index + 1
@@ -296,10 +303,10 @@ private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, rows: List<In
             { it.getDisplayName(TextStyle.FULL, locale) }, { day -> edits.make { away.choose(row, day) } })
         listOf(WeeklyAwayForm.Field.START to R.string.away_from, WeeklyAwayForm.Field.END to R.string.away_until)
             .forEachIndexed { place, (field, label) ->
-                TimeField(stringResource(label, number), edits.shown { away.text(row, field) },
-                    { text -> edits.make { away.edit(row, field, text) } }, shown[field],
-                    rememberFieldFocus(problems, 100 + 2 * index + place, field in shown),
-                    if (field == WeeklyAwayForm.Field.END && last) ImeAction.Done else ImeAction.Next)
+                TimeChoice(stringResource(label, number), edits.shown { away.time(row, field) }, shown[field],
+                    rememberFieldFocus(problems, 100 + 2 * index + place, field in shown)) { time ->
+                    edits.make { away.choose(row, field, time) }
+                }
             }
         AppTextButton(onClick = {
             edits.make {

@@ -8,8 +8,7 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
  *
  * @param usableBatteryKwh the usable capacity of the battery in kWh, more than 0
  * @param consumptionKwhPer100km the energy the car uses per 100 km in kWh, more than 0
- * @param kmPerDay the distance of the other driving, the short drives that are not trips, on a typical day in km, 0 or
- *     more
+ * @param kmPerDay the daily distance, how far the car is driven on a normal day besides the trips, in km, 0 or more
  * @param tripSurcharge the share added to the consumption for the energy of a trip
  */
 public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double kmPerDay, Percent tripSurcharge) {
@@ -45,7 +44,7 @@ public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double
      *
      * @param usableBatteryKwh the usable capacity of the battery in kWh, more than 0
      * @param consumptionKwhPer100km the energy the car uses per 100 km in kWh, more than 0
-     * @param kmPerDay the distance of the other driving on a typical day in km, 0 or more
+     * @param kmPerDay the daily distance, besides the trips, in km, 0 or more
      * @throws InvalidSetting when a value is outside the range given for it
      */
     public Car(double usableBatteryKwh, double consumptionKwhPer100km, double kmPerDay) {

@@ -36,7 +36,7 @@ class ChargingHoursPlanningTest {
     private static final LocalDate FRI = THU.plusDays(1);
     private static final LocalDate SAT = FRI.plusDays(1);
     private static final Offset<Double> CLOSE = within(1e-6);
-    /** Without other driving, so only the trips take energy. */
+    /** Without a daily distance, so only the trips take energy. */
     private static final HomeSystem CAR = Forecasts.withCar(new Car(100, 18, 0), Phases.ONE);
 
     /** Days without sun from Thursday on. */

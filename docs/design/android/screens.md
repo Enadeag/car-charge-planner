@@ -15,6 +15,10 @@ Decisions that hold on every screen of the app: the top app bar, buttons, snackb
 - A choice from a fixed list is the shared `ChoiceMenu` (`ui/components/ChoiceMenu.kt`), Material's exposed drop-down menu, which shows "Choose…" until a choice is made; a few choices that all fit on one line may stay radio buttons (`ChoiceRow`) (#448).
 - Settings that are seldom changed fold under the shared `Fold` row (`ui/components/Fold.kt`), "▸ More settings" or "Coordinates and time zone": one button with an arrow, read as "Collapsed" or "Expanded" (#448, #449).
 
+### Times
+
+- Every time the owner sets is chosen on Material's time picker (`TimeDialog`, from #338), on the phone's 12- or 24-hour clock, with a text button under it that switches between the dial and typing ("Keyboard", "Clock"): in the one-off away period's entry, the trip entry, the weekly away periods and the charging hours. On a page a time is a `TimeButton` with its name and the time, written by the same formatter as the dashboard's times (`clockOf`), and its problem under it (`TimeChoice`); the focus comes back to the button when the picker closes (#338, #452).
+
 ### Snackbars
 
 - `AppSnackbar` draws the app's own **Close** (`action_close`) on every snackbar that asks for a close button, the Undo one too, never Material's "Dismiss"; `BarScaffold` pads the page's bottom by the shown snackbar's height, so the last row and the footer scroll above it (#338).

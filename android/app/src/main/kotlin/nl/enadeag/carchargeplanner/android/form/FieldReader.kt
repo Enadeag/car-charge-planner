@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.android.form
 
 import java.time.Duration
-import java.time.LocalTime
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
@@ -91,16 +90,6 @@ class FieldReader<F : Enum<F>>(private val state: FormState<F>, private val numb
         val whole = whole(field, Math.toIntExact(stored.toMinutes()))
         return if (whole.toLong() == stored.toMinutes()) stored else Duration.ofMinutes(whole.toLong())
     }
-
-    /**
-     * A time field's value.
-     *
-     * @param field the field
-     * @param stored the time to give back when the text is not a time
-     * @return the time
-     */
-    fun time(field: F, stored: LocalTime): LocalTime = TimeText.read(state.text(field))
-        ?: stored.also { problems[field] = FieldProblem.NotATime }
 
     /**
      * Has the engine's records check the values read, once every field could be read.

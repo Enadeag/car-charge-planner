@@ -29,10 +29,17 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 ### Car and house
 
-- The page keeps its title "Car and house". After the car, with its own "I don't know", the household use and its "I don't know" sit under the shared fold row "More settings", without a "House" heading. The fold is closed each time the page opens, also when the value is not the typical one; a problem in the field opens it, and it stays open also after the problem is put right, while a press on its row does nothing meanwhile, as the Location page's fold (#449, #450). Its state survives turning the phone (`rememberSaveable`).
-- The car's trip surcharge has the keyboard's Done while the fold is closed, the household use while it is open (#450).
+- The page keeps its title "Car and house". It is set-up's Car step: the battery, the consumption and the daily distance, with "km" after it, then the car's "I don't know", which stays after them and fills in those three only; then the shared fold row "More settings" with the trip surcharge, and after it the household use and its own "I don't know", without a "House" heading: one fold for the page. The fold is closed each time the page opens, also when a value is not the typical one; a problem in the trip surcharge or the household use opens it, and it stays open also after the problem is put right, while a press on its row does nothing meanwhile, as the Location page's fold (#449, #450, #452). Its state survives turning the phone (`rememberSaveable`).
+- The daily distance has the keyboard's Done while the fold is closed, the household use while it is open (#450, #452).
 - The field and the conversion are in [engine/decisions.md](../engine/decisions.md#the-houses-use) (#450).
 - The list's line under Car and house is the battery only, such as "Battery 60.0 kWh" (#450).
+
+### Planning
+
+- The page starts with what everyone needs: the minimum and the target charge level, then under the heading "Charging hours" the two times, each a `TimeButton` with the time on the phone's 12- or 24-hour clock that opens Material's time picker with its Keyboard and Clock button (#338), then the notification lead time. The planning margin, the import tolerance and the minimum charge window are under the shared fold row "More settings", closed each time the page opens; a problem in one of them opens it and keeps it open as on the Car and house page. The target has the keyboard's Done while the fold is closed, the minimum charge window while it is open (#452).
+- The lead is a `ChoiceMenu` of the engine's `NotifyLeadChoices`: "At the start", or 5, 10, 15, 30 or 60 minutes ahead. A stored lead that is none of them, such as 20 minutes, is a choice of its own and the chosen one, saved as it is, until another is chosen; then it is no longer offered. Nothing is rounded (#452).
+- The times are checked on Save by the engine's rules, as before: charge hours may pass midnight but not start and end at the same time. The problem shows under the "Start charging no later than" button, which carries it for TalkBack and takes the focus. No time is typed, so there is no "type the time" problem or hint; a text an older version of the app kept that is no time shows and saves the standard hours (#452).
+- The list's line under Planning does not change (#452).
 
 ### Charger
 

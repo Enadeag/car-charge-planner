@@ -132,8 +132,8 @@ class SetUpViewTest {
         });
         next(view, 1);
         Fx.run(() -> setUp.type(view, TextKey.FIELD_CAR_BATTERY, "75"));
-        assertThat(Fx.call(() -> SetUpFixture.field(view, setUp.messages.text(TextKey.FIELD_CAR_OTHER_DRIVING))))
-                .as("set-up asks for the other driving").isNotNull();
+        assertThat(Fx.call(() -> SetUpFixture.field(view, setUp.messages.text(TextKey.FIELD_CAR_DAILY_DISTANCE))))
+                .as("set-up asks for the daily distance").isNotNull();
         assertThatThrownBy(() -> Fx.call(() -> setUp.field(view, TextKey.FIELD_CAR_TRIP_SURCHARGE)))
                 .as("set-up keeps the standard trip surcharge").hasMessageContaining("no field");
         next(view, 1);

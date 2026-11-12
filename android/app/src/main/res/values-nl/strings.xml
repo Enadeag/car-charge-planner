@@ -90,8 +90,8 @@
   <string name="car_battery_hint">kWh, meestal 40 tot 100.</string>
   <string name="car_consumption">Verbruik</string>
   <string name="car_consumption_hint">kWh per 100 km, meestal 14 tot 22.</string>
-  <string name="car_other_driving">Overige rijafstand per dag</string>
-  <string name="car_other_driving_hint">km per dag aan korte ritjes die geen rit zijn.</string>
+  <string name="car_daily_distance">Dagelijkse afstand</string>
+  <string name="car_daily_distance_hint">Hoeveel je op een gewone dag rijdt, bijvoorbeeld voor boodschappen, school of sport. Ritten die je apart invoert, tellen niet mee.</string>
   <string name="car_trip_surcharge">Ritopslag</string>
   <string name="car_trip_surcharge_hint">Procent dat bij het verbruik komt voor de energie van een rit.</string>
 
@@ -128,7 +128,6 @@
   <string name="away_weekday">Weekdag, afwezigheid %1$d</string>
   <string name="away_from">Afwezig vanaf, afwezigheid %1$d</string>
   <string name="away_until">Afwezig tot, afwezigheid %1$d</string>
-  <string name="time_hint">Uren en minuten, zoals 08:00.</string>
 
   <string name="setup_check_title">Voorspelling controleren</string>
   <string name="setup_check_intro">Er wordt één voorspelling opgevraagd met wat je hebt ingevuld, zodat je weet dat het werkt voordat je klaar bent. Er is nog niets opgeslagen.</string>
@@ -150,7 +149,6 @@
   <string name="problem_same_as_start">Kies twee verschillende tijden.</string>
   <string name="problem_not_a_number">Typ een getal.</string>
   <string name="problem_not_a_whole_number">Typ een heel getal, zonder decimalen.</string>
-  <string name="problem_not_a_time">Typ de tijd als uren en minuten, zoals 07:30.</string>
   <string name="problem_required">Verplicht: zonder dit kan de dienst niet geraadpleegd worden.</string>
   <string name="problem_server_address">Gebruik een adres dat begint met https://, of http:// voor een server op deze telefoon (localhost, 127.0.0.1 of [::1]), zonder gebruikersnaam, ? of #.</string>
   <string name="problem_letters_and_digits">Gebruik alleen letters en cijfers, hoogstens 64: zo zien de API-sleutels van de dienst eruit.</string>
@@ -429,7 +427,12 @@
   <string name="planning_min_window">Minimale duur laadvenster</string>
   <string name="planning_min_window_hint">Minuten; kortere laadvensters vallen weg.</string>
   <string name="planning_lead">Melding vooraf</string>
-  <string name="planning_lead_hint">Minuten voordat een laadvenster begint; bij 0 krijg je de melding bij het begin.</string>
+  <string name="planning_lead_hint">Hoe lang voordat een laadvenster begint je een melding krijgt.</string>
+  <string name="planning_lead_at_start">Bij het begin</string>
+  <plurals name="planning_lead_ahead">
+    <item quantity="one">%1$d minuut ervoor</item>
+    <item quantity="other">%1$d minuten ervoor</item>
+  </plurals>
   <string name="planning_hours_heading">Laaduren</string>
   <string name="planning_hours_intro">Laden uit het net begint binnen deze tijden, en mag daarna doorlopen.</string>
   <string name="planning_hours_from">Laden starten vanaf</string>
