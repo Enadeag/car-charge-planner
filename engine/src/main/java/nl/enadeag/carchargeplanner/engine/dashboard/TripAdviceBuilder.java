@@ -29,7 +29,7 @@ final class TripAdviceBuilder {
     TripAdviceBuilder(PlanParts parts) {
         this.zone = parts.zone();
         this.madeAt = parts.madeAt();
-        this.today = madeAt.atZone(zone).toLocalDate();
+        this.today = parts.today();
         this.targetPct = parts.targetPct().value();
     }
 

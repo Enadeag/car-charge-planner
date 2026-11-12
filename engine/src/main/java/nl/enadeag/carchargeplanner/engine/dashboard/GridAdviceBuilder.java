@@ -13,7 +13,7 @@ final class GridAdviceBuilder {
 
     static Optional<GridAdviceView> advice(PlanParts parts) {
         var zone = parts.zone();
-        var today = parts.madeAt().atZone(zone).toLocalDate();
+        var today = parts.today();
         return parts.gridAdvice().map(advice -> new GridAdviceView(DayName.of(advice.day(), today),
                 advice.energyKwh(), advice.endLevelPct(), window(advice, zone, today)));
     }

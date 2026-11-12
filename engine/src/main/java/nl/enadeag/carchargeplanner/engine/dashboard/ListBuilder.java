@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.engine.dashboard;
 
-import java.time.LocalDate;
 import java.util.List;
 
 final class ListBuilder {
@@ -15,7 +14,7 @@ final class ListBuilder {
      * @return those of the stored periods that end after the plan was made, by kind, in the stored order
      */
     static List<ComingAway> away(PlanParts parts) {
-        var today = today(parts);
+        var today = parts.today();
         return parts.away().stream()
                 .filter(period -> period.end().isAfter(parts.madeAt()))
                 .map(period -> ComingAway.describe(period, parts.zone(), today))
@@ -29,11 +28,6 @@ final class ListBuilder {
      * @return one per stored trip, with its days, in the stored order
      */
     static List<ListedTrip> trips(PlanParts parts) {
-        var today = today(parts);
-        return parts.trips().stream().map(trip -> ListedTrip.of(trip, parts.zone(), today)).toList();
-    }
-
-    private static LocalDate today(PlanParts parts) {
-        return parts.madeAt().atZone(parts.zone()).toLocalDate();
+        return parts.trips().stream().map(trip -> ListedTrip.of(trip, parts.zone(), parts.today())).toList();
     }
 }

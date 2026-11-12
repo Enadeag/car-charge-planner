@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -52,5 +53,15 @@ public record PlanParts(
         tripAdvice = List.copyOf(tripAdvice);
         away = List.copyOf(away);
         trips = List.copyOf(trips);
+    }
+
+    /**
+     * Today in the home's time zone: the day of {@code madeAt} in {@code zone}. The dashboard names its days, cards and
+     * windows against this day, so every part of it agrees on which day is today, also around midnight in UTC.
+     *
+     * @return the day the plan was made on in the home's time zone, never null
+     */
+    public LocalDate today() {
+        return madeAt.atZone(zone).toLocalDate();
     }
 }

@@ -38,7 +38,7 @@ final class DayBuilder {
 
     DayBuilder(PlanParts parts) {
         this.zone = parts.zone();
-        this.today = parts.madeAt().atZone(zone).toLocalDate();
+        this.today = parts.today();
         this.assumed = parts.batteryAssumed() ? parts.batteryLevelPct() : null;
         this.gridDay = parts.gridAdvice().map(GridAdvice::day).orElse(null);
         this.departures = parts.tripAdvice().stream()

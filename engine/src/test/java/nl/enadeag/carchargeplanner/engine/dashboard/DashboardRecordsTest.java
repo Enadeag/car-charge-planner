@@ -233,6 +233,13 @@ class DashboardRecordsTest {
         assertThat(parts.tripAdvice()).hasSize(1);
     }
 
+    @ParameterizedTest
+    @CsvSource({"2026-06-01T23:30:00Z, Europe/Amsterdam, 2026-06-02",
+        "2026-06-02T02:30:00Z, America/New_York, 2026-06-01", "2026-06-01T12:00:00Z, UTC, 2026-06-01"})
+    void todayIsTheDayThePlanWasMadeOnInTheHomesTimeZone(Instant madeAt, ZoneId zone, LocalDate today) {
+        assertThat(Parts.of(madeAt, zone, List.of(), 0.3).today()).isEqualTo(today);
+    }
+
     private static GridAdviceView gridAdvice(double energyKwh, double endLevelPct) {
         return new GridAdviceView(new DayName.Tomorrow(DAY.plusDays(1)), energyKwh, endLevelPct, Optional.empty());
     }

@@ -42,7 +42,7 @@ final class ChartBuilder {
     ChartBuilder(PlanParts parts) {
         this.zone = parts.zone();
         this.madeAt = parts.madeAt();
-        this.today = madeAt.atZone(zone).toLocalDate();
+        this.today = parts.today();
         this.baseloadKw = parts.baseloadKw();
         double peak = parts.days().stream().flatMap(day -> day.forecast().stream())
                 .mapToDouble(ForecastStep::powerKw).max().orElse(0);
