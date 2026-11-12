@@ -176,22 +176,23 @@ internal class DashboardWords(private val resources: Resources, private val loca
         null -> R.string.day_window
         NoWindowReason.GRID -> R.string.day_grid
         NoWindowReason.NOT_NEEDED -> R.string.day_not_needed
-        NoWindowReason.DEPARTURE, NoWindowReason.AWAY, NoWindowReason.TOO_LITTLE_SOLAR -> R.string.day_none
+        NoWindowReason.DEPARTURE, NoWindowReason.AWAY, NoWindowReason.GRID_CHARGE_STARTS,
+        NoWindowReason.TOO_LITTLE_SOLAR -> R.string.day_none
     })
 
     /**
      * A day's note: its later charge windows, why it has none, and the battery level the plan assumed with how to
      * enter the one the car shows.
      *
-     * @param day the day, with why it has no charge window; the day a trip leaves and a day that needs no charging say
-     *     nothing of that
+     * @param day the day, with why it has no charge window; the day a trip leaves, a day a grid charge starts on and a
+     *     day that needs no charging say nothing of that
      * @return the sentences, joined; empty when there are none
      */
     fun note(day: DashboardDay): String {
         val later = if (day.later().isEmpty()) "" else text(R.string.day_later_windows,
             day.later().joinToString(", ") { text(R.string.day_later_window, span(it), it.amps()) })
         val because = when (day.noWindow().orElse(null)) {
-            null, NoWindowReason.DEPARTURE, NoWindowReason.NOT_NEEDED -> ""
+            null, NoWindowReason.DEPARTURE, NoWindowReason.GRID_CHARGE_STARTS, NoWindowReason.NOT_NEEDED -> ""
             NoWindowReason.GRID -> text(R.string.day_grid_why)
             NoWindowReason.AWAY -> text(R.string.day_none_trip)
             NoWindowReason.TOO_LITTLE_SOLAR -> text(R.string.day_too_little_solar)

@@ -47,10 +47,11 @@ class SourceFigureTest {
         day(listOf()).chart())
 
     @Test
-    fun aDayWithoutAWindowForTheGridAdviceADepartureOrATripShowsOnlyItsBattery() {
+    fun aDayWithoutAWindowForTheGridAdviceADepartureATripOrAGridChargeThatStartsShowsOnlyItsBattery() {
         val battery = SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(40.0), Optional.empty()))
 
-        for (why in listOf(NoWindowReason.GRID, NoWindowReason.DEPARTURE, NoWindowReason.AWAY)) {
+        for (why in listOf(NoWindowReason.GRID, NoWindowReason.DEPARTURE, NoWindowReason.AWAY,
+            NoWindowReason.GRID_CHARGE_STARTS)) {
             assertThat(SourceFigure.of(withoutWindow(why))).`as`(why.name).containsExactly(battery)
         }
     }

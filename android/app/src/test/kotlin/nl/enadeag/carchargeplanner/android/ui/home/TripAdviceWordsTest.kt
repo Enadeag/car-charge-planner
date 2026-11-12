@@ -459,6 +459,7 @@ class TripAdviceWordsTest {
             .isEqualTo("There is too little solar power while the car is home.")
         assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.NOT_NEEDED))).isEmpty()
         assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.DEPARTURE))).isEmpty()
+        assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.GRID_CHARGE_STARTS))).isEmpty()
     }
 
     @Test
@@ -471,6 +472,7 @@ class TripAdviceWordsTest {
                 NoWindowReason.GRID to "Grid charge needed",
                 NoWindowReason.DEPARTURE to "No charge window",
                 NoWindowReason.AWAY to "No charge window",
+                NoWindowReason.GRID_CHARGE_STARTS to "No charge window",
                 NoWindowReason.NOT_NEEDED to "Charging not needed",
                 NoWindowReason.TOO_LITTLE_SOLAR to "No charge window"))
     }
@@ -494,6 +496,30 @@ class TripAdviceWordsTest {
             .isEqualTo("Laden niet nodig")
         assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.TOO_LITTLE_SOLAR)))
             .isEqualTo("Er is te weinig zonnestroom terwijl de auto thuis is.")
+    }
+
+    @Test
+    fun aDayAGridChargeStartsOnSaysOnlyThatThereIsNoChargeWindowAndShowsItsBattery() {
+        val words = words()
+        val day = day(DayName.Today(TODAY), BatteryLevels(Percent(80.0), Percent(94.0), Optional.empty()),
+            NoWindowReason.GRID_CHARGE_STARTS)
+        val figures = SourceFigure.of(day)
+
+        assertThat(words.heading(day)).isEqualTo("No charge window")
+        assertThat(words.note(day)).isEmpty()
+        assertThat(figures.map { words.figure(it) }).containsExactly("Battery 80 → 94%")
+        assertThat(figures.map { words.spokenFigure(it) }).containsExactly("Battery from 80% to 94%")
+    }
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun aDayAGridChargeStartsOnInDutch() {
+        val words = words(Locale.forLanguageTag("nl"))
+        val day = day(DayName.Today(TODAY), BatteryLevels(Percent(80.0), Percent(94.0), Optional.empty()),
+            NoWindowReason.GRID_CHARGE_STARTS)
+
+        assertThat(words.heading(day)).isEqualTo("Geen laadvenster")
+        assertThat(words.note(day)).isEmpty()
     }
 
     @Test
