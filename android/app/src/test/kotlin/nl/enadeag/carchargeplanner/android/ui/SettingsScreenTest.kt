@@ -110,6 +110,8 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
+import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
@@ -215,6 +217,20 @@ class SettingsScreenTest {
 
     private val baseUrl get() = field(text(R.string.provider_setting_of, text(R.string.provider_base_url), "Open-Meteo"))
 
+    private val keyAndServer get() = text(R.string.provider_fold_key_and_server)
+
+    /** A provider's fold on the Forecast page, by the name its row shows. */
+    private fun providerFold(name: String) = compose.onNode(hasClickAction() and hasText(name))
+
+    private fun providerFoldIs(name: String, state: Int) =
+        providerFold(name).assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(state)))
+
+    /** Presses a provider's fold row, by default Open-Meteo's, with its server address and API key. */
+    private fun pressProviderFold(name: String = keyAndServer) {
+        providerFold(name).performScrollTo().performClick()
+        compose.waitForIdle()
+    }
+
     /** Opens every page from the list and goes back, each checked as it comes in the language the test runs in. */
     private fun walkEveryPage() {
         val englishOnly = englishOnlyTexts()
@@ -261,6 +277,10 @@ class SettingsScreenTest {
             when (page) {
                 SettingsPage.SOLAR -> click(R.string.panel_add)
                 SettingsPage.CHARGER, SettingsPage.CAR_AND_HOUSE, SettingsPage.PLANNING -> click(R.string.more_settings)
+                SettingsPage.FORECAST -> {
+                    pressProviderFold()
+                    pressProviderFold(text(R.string.provider_api_key))
+                }
                 SettingsPage.AWAY -> click(R.string.away_add)
                 else -> Unit
             }
@@ -806,6 +826,7 @@ class SettingsScreenTest {
     fun keysThatCouldNotBeStoredFromTheBottomOfThePageScrollBackToTheirReason() {
         show(fontScaleTwo = true)
         open(SettingsPage.FORECAST)
+        pressProviderFold()
         apiKey.performTextInput("K1")
         access.keysFail = true
         baseUrl.performScrollTo()
@@ -940,6 +961,8 @@ class SettingsScreenTest {
         open(SettingsPage.FORECAST)
 
         compose.onNodeWithText(text(R.string.keys_unreadable)).assertExists()
+        providerFoldIs(keyAndServer, R.string.fold_collapsed)
+        pressProviderFold()
         field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo")).assertIsEnabled()
     }
 
@@ -947,6 +970,7 @@ class SettingsScreenTest {
     fun keysThatCouldNotBeStoredSaySoInALiveRegion() {
         show()
         open(SettingsPage.FORECAST)
+        pressProviderFold()
         field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo"))
             .performTextInput("K1")
         access.keysFail = true
@@ -962,6 +986,7 @@ class SettingsScreenTest {
     fun checkConnectionShowsTheEnginesEnglishDetailsForAServerOnThisPhone() {
         show()
         open(SettingsPage.FORECAST)
+        pressProviderFold()
         field(text(R.string.provider_setting_of, text(R.string.provider_base_url), "Open-Meteo"))
             .performTextInput("http://localhost:8080")
 
@@ -1142,6 +1167,7 @@ class SettingsScreenTest {
             }
         }
         open(SettingsPage.FORECAST)
+        pressProviderFold()
         val key = field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo"))
         key.performTextInput("TYPED2")
         field(text(R.string.provider_setting_of, text(R.string.provider_base_url), "Open-Meteo"))
@@ -1158,18 +1184,147 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun aKeyReadAfterThePageShowedFillsItsMaskedField() {
+    fun aKeyReadAfterThePageShowedOpensItsFoldAndFillsItsMaskedField() {
         access.keys = Secrets(mapOf(openMeteo to mapOf("api_key" to "STORED1")))
         val keys = CompletableDeferred<Unit>()
         access.keysGate = keys
         show()
         open(SettingsPage.FORECAST)
         compose.onNodeWithText(text(R.string.keys_reading)).assertExists()
+        providerFoldIs(keyAndServer, R.string.fold_collapsed)
 
         keys.complete(Unit)
         compose.waitForIdle()
 
+        providerFoldIs(keyAndServer, R.string.fold_expanded)
         assertThat(drawn(apiKey)).isNotEqualTo("STORED1").hasSize("STORED1".length)
+    }
+
+    private val forecastSolar = ProviderId("forecast-solar")
+
+    private val forecastSolarKey
+        get() = field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Forecast.Solar"))
+
+    /** The stored settings with a server address of the owner's own for Open-Meteo, also in the fake's file. */
+    private fun withOwnServer(): EngineConfig {
+        val own = stored.withForecast(ForecastSelection(openMeteo, Optional.empty(),
+            mapOf(openMeteo to mapOf("base_url" to "https://forecast.example.org"))))
+        access.settings = StartState.Ready(own)
+        return own
+    }
+
+    @Test
+    fun theServerAddressAndTheApiKeysFoldAwayClosedWhileNothingIsStoredAndAFailedCheckLeavesThemSo() {
+        show()
+        open(SettingsPage.FORECAST)
+
+        providerFoldIs(keyAndServer, R.string.fold_collapsed)
+        providerFoldIs(text(R.string.provider_api_key), R.string.fold_collapsed)
+        apiKey.assertDoesNotExist()
+        baseUrl.assertDoesNotExist()
+        forecastSolarKey.assertDoesNotExist()
+        click(R.string.forecast_check, "Open-Meteo")
+        compose.waitForIdle()
+        access.checks.single().complete(ConnectionResult(false, 0,
+            "Open-Meteo refused the request (status 401): check the API key"))
+        compose.waitForIdle()
+        assertInLiveRegion(text(R.string.forecast_check_failed))
+        providerFoldIs(keyAndServer, R.string.fold_collapsed)
+
+        pressProviderFold()
+
+        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        baseUrl.assertExists()
+        apiKey.assertExists()
+        forecastSolarKey.assertDoesNotExist()
+    }
+
+    @Test
+    fun aStoredKeyOrAServerAddressOfTheOwnersOwnOpensItsProvidersFold() {
+        access.keys = Secrets(mapOf(forecastSolar to mapOf("api_key" to "FS1")))
+        show(session(config = withOwnServer()))
+
+        open(SettingsPage.FORECAST)
+
+        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        providerFoldIs(text(R.string.provider_api_key), R.string.fold_expanded)
+        baseUrl.assert(hasText("https://forecast.example.org"))
+        assertThat(drawn(forecastSolarKey)).hasSize("FS1".length)
+    }
+
+    @Test
+    fun aFoldTheOwnerClosedKeepsItsStoredKeyAndAddressOnSaveAndStaysClosed() {
+        access.keys = Secrets(mapOf(openMeteo to mapOf("api_key" to "STORED1")))
+        show(session(config = withOwnServer()))
+        open(SettingsPage.FORECAST)
+        pressProviderFold()
+        providerFoldIs(keyAndServer, R.string.fold_collapsed)
+        val fallback = SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,
+            listOf(text(R.string.forecast_fallback)))
+        compose.onNode(hasText("Forecast.Solar") and hasAnyAncestor(fallback)).performScrollTo().performClick()
+        pressProviderFold(text(R.string.provider_api_key))
+        forecastSolarKey.performTextInput("FS1")
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        assertThat(access.written).contains("keys", "settings")
+        val saved = (access.settings as StartState.Ready).config.forecast()
+        assertThat(saved.fallback()).contains(forecastSolar)
+        assertThat(saved.settingsOf(openMeteo)).containsEntry("base_url", "https://forecast.example.org")
+        assertThat(access.keys.of(openMeteo)).containsEntry("api_key", "STORED1")
+        assertThat(access.keys.of(forecastSolar)).containsEntry("api_key", "FS1")
+        providerFoldIs(keyAndServer, R.string.fold_collapsed)
+    }
+
+    @Test
+    fun aServerAddressInTheWrongFormOpensItsFoldHoldsItOpenAndTakesTheFocus() {
+        show()
+        open(SettingsPage.FORECAST)
+        pressProviderFold()
+        baseUrl.performTextInput("http://localhost@evil.example")
+        pressProviderFold()
+        baseUrl.assertDoesNotExist()
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        baseUrl.assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_server_address)))
+        pressProviderFold()
+        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        assertThat(access.written).isEmpty()
+    }
+
+    private fun provider(id: String, name: String, settings: List<SettingSpec>) = ProviderInfo(ProviderId(id), name,
+        "A test provider.", "", "", "nothing", Duration.ofHours(1), Duration.ofDays(2), Duration.ofHours(6), settings)
+
+    @Test
+    fun foldsOfTheSameNameAreReadWithTheirProviderAndARequiredSettingStaysAboveItsFold() {
+        val key = SettingSpec("api_key", "API key", "", true, true)
+        val region = SettingSpec("region", "Region", "Where the panels are.", false, false)
+        val station = SettingSpec("station", "Station", "The nearest station.", true, false)
+        access.offered = listOf(provider("open-meteo", "Open-Meteo", listOf(region, key)),
+            provider("forecast-solar", "Forecast.Solar", listOf(key)),
+            provider("elsewhere", "Elsewhere", listOf(station, key)))
+        show()
+
+        open(SettingsPage.FORECAST)
+
+        val apiKeyName = text(R.string.provider_api_key)
+        compose.onAllNodes(hasClickAction() and hasText(apiKeyName)).assertCountEquals(2)
+        listOf("Open-Meteo", "Forecast.Solar").forEach { name ->
+            compose.onNode(hasClickAction() and hasText(apiKeyName)
+                and hasContentDescription(text(R.string.provider_setting_of, apiKeyName, name)))
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,
+                    text(R.string.fold_collapsed)))
+        }
+        providerFold(text(R.string.more_settings))
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+        field(text(R.string.provider_setting_of, "Region", "Open-Meteo")).assertExists()
+        field(text(R.string.provider_setting_of, "Station", "Elsewhere")).assertDoesNotExist()
+        apiKey.assertDoesNotExist()
     }
 
     @Test
@@ -1811,6 +1966,11 @@ class SettingsScreenTest {
             when (page) {
                 SettingsPage.SOLAR -> click(R.string.panel_add)
                 SettingsPage.CHARGER -> click(R.string.more_settings)
+                SettingsPage.FORECAST -> {
+                    pressProviderFold()
+                    compose.assertOnlyTheLastFieldIsDone()
+                    pressProviderFold(text(R.string.provider_api_key))
+                }
                 SettingsPage.CAR_AND_HOUSE, SettingsPage.PLANNING -> {
                     compose.assertOnlyTheLastFieldIsDone()
                     click(R.string.more_settings)
@@ -1835,6 +1995,7 @@ class SettingsScreenTest {
     fun theApiKeysKeyboardIsForAPasswordWithoutCorrections() {
         show()
         open(SettingsPage.FORECAST)
+        pressProviderFold()
 
         apiKey.performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus)
         compose.waitForIdle()
@@ -1857,6 +2018,7 @@ class SettingsScreenTest {
         keys.complete(Unit)
         compose.waitForIdle()
         compose.onNodeWithText(text(R.string.action_save)).assertIsEnabled()
+        pressProviderFold()
         baseUrl.performTextInput("https://example.org")
         access.readGate = CompletableDeferred()
         click(R.string.action_save)
@@ -1892,6 +2054,7 @@ class SettingsScreenTest {
     fun backAndDiscardFromTheForecastPageEndItsProtection() {
         show()
         open(SettingsPage.FORECAST)
+        pressProviderFold()
         baseUrl.performTextInput("https://example.org")
         compose.activity.onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
@@ -1933,6 +2096,7 @@ class SettingsScreenTest {
         show()
 
         open(SettingsPage.FORECAST)
+        pressProviderFold()
 
         val hint = text(R.string.provider_open_meteo_base_url_hint)
         assertThat(hint).contains("https://")

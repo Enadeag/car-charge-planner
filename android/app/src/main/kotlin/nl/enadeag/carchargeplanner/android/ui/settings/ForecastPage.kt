@@ -14,6 +14,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,10 +46,12 @@ import nl.enadeag.carchargeplanner.android.ui.components.ChoiceRow
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
 import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
+import nl.enadeag.carchargeplanner.android.ui.components.Fold
 import nl.enadeag.carchargeplanner.android.ui.components.ProblemFocus
 import nl.enadeag.carchargeplanner.android.ui.components.SectionHeading
 import nl.enadeag.carchargeplanner.android.ui.components.problemText
 import nl.enadeag.carchargeplanner.android.ui.components.rememberFieldFocus
+import nl.enadeag.carchargeplanner.android.ui.components.rememberProblemFold
 import nl.enadeag.carchargeplanner.android.ui.setup.Edits
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
@@ -59,9 +62,11 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 
 /**
  * The forecast providers: the primary, the fallback or none, each with Check connection on the values as typed, and a
- * section per provider with its settings. An API key is masked, with Show and Hide, filled with the stored key; when
- * the stored keys could not be read, a note says so and a key left empty stays as stored. Last, the "Wi-Fi only"
- * switch of the hourly update while the app is closed, which applies at once, outside the page's Save.
+ * section per provider with its settings, the optional ones folded away. A provider's fold is open when one of them
+ * holds a value as the stored keys are read, else closed; a problem in one of them opens it, as [rememberProblemFold]
+ * says. An API key is masked, with Show and Hide, filled with the stored key; when the stored keys could not be read,
+ * a note says so and a key left empty stays as stored. Last, the "Wi-Fi only" switch of the hourly update while the
+ * app is closed, which applies at once, outside the page's Save.
  *
  * @param problems the page's fields in order, for the focus after Save
  */
@@ -91,17 +96,60 @@ internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: Prob
         !forecast.keysReadable() -> Text(stringResource(R.string.keys_unreadable),
             color = MaterialTheme.colorScheme.error)
     }
+    val folds = providers.map { info ->
+        key(info.id().value()) {
+            val folded = info.settings().filter { it.optional() }
+            rememberProblemFold(
+                problem = folded.any { ForecastForm.Target.Setting(info.id(), it.name()) in shown },
+                startFolded = folded.all { edits.shown { forecast.text(info.id(), it.name()) }.isEmpty() },
+                known = keys != null)
+        }
+    }
+    val foldNames = providers.map { foldName(it) }
+    val shownSettings = providers.flatMapIndexed { index, info ->
+        info.settings().filter { !it.optional() || folds[index].open }
+            .map { ForecastForm.Target.Setting(info.id(), it.name()) }
+    }
     providers.forEachIndexed { index, info ->
         SectionHeading(info.name())
-        info.settings().forEachIndexed { place, setting ->
-            ProviderSetting(forecast, info, setting, keys != null, edits,
-                rememberFieldFocus(problems, 10 * (index + 1) + place,
-                    ForecastForm.Target.Setting(info.id(), setting.name()) in shown),
-                shown[ForecastForm.Target.Setting(info.id(), setting.name())],
-                last = index == providers.lastIndex && place == info.settings().lastIndex)
+        @Composable
+        fun setting(place: Int, spec: SettingSpec) {
+            val target = ForecastForm.Target.Setting(info.id(), spec.name())
+            ProviderSetting(forecast, info, spec, keys != null, edits,
+                rememberFieldFocus(problems, 10 * (index + 1) + place, target in shown), shown[target],
+                last = target == shownSettings.lastOrNull())
+        }
+        val (required, optional) = info.settings().partition { !it.optional() }
+        required.forEachIndexed { place, spec -> setting(place, spec) }
+        val name = foldNames[index]
+        if (name != null) {
+            Fold(name, folds[index],
+                spoken = if (foldNames.count { it == name } > 1) stringResource(R.string.provider_setting_of, name,
+                    info.name()) else null) {
+                optional.forEachIndexed { place, spec -> setting(required.size + place, spec) }
+            }
         }
     }
     WifiOnlyRow(wifiOnly)
+}
+
+/**
+ * The name of the fold with a provider's optional settings, by what is in it: "API key and server" for an API key and
+ * a server address, "API key" for an API key alone, "More settings" for anything else.
+ *
+ * @return null for a provider without optional settings, which has no fold
+ */
+@Composable
+private fun foldName(info: ProviderInfo): String? {
+    val optional = info.settings().filter { it.optional() }
+    val keys = optional.count { it.secret() }
+    val servers = optional.count { !it.secret() && it.format() == SettingFormat.SERVER_ADDRESS }
+    return when {
+        optional.isEmpty() -> null
+        keys == 1 && servers == 1 && optional.size == 2 -> stringResource(R.string.provider_fold_key_and_server)
+        keys == 1 && optional.size == 1 -> stringResource(R.string.provider_api_key)
+        else -> stringResource(R.string.more_settings)
+    }
 }
 
 /**
