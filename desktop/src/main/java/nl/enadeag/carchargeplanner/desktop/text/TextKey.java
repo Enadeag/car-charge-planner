@@ -890,6 +890,11 @@ public enum TextKey {
     PROVIDER_API_KEY,
     /** The name of a provider's server address. */
     PROVIDER_BASE_URL,
+    /**
+     * The fold with a provider's server address and API key; a provider with only an API key names its fold
+     * {@link #PROVIDER_API_KEY}.
+     */
+    PROVIDER_FOLD_KEY_AND_SERVER,
     /** What Open-Meteo's key is for. */
     PROVIDER_OPEN_METEO_API_KEY_HINT,
     /** What Open-Meteo's server address is for. */

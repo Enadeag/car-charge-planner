@@ -227,6 +227,7 @@ final class SetUpFixture {
         view.applyCss(); // a page shown since the last pulse has its controls' skins only then
         return Scenes.all(view).stream()
                 .filter(node -> SettingsFixture.named(node, name))
+                .filter(SettingsFixture::isNoFoldRow)
                 .map(node -> node instanceof Spinner<?> spinner ? spinner.getEditor() : node)
                 .findFirst().orElseThrow(() -> new AssertionError("no field " + name));
     }

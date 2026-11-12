@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Appearance;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
+import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
@@ -249,6 +250,7 @@ public final class SettingsFixture {
         // a page not shown yet has no skins, so a spinner's text field is found through the spinner
         return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
                 .filter(node -> named(node, name))
+                .filter(SettingsFixture::isNoFoldRow)
                 .map(node -> node instanceof Spinner<?> spinner ? spinner.getEditor() : node)
                 .findFirst().orElseThrow(() -> new AssertionError("no field " + name));
     }
@@ -261,6 +263,11 @@ public final class SettingsFixture {
         var text = node.getAccessibleText();
         // a field's label can carry the longer name too: it names the field, and is no field itself
         return !(node instanceof Label) && text != null && (text.equals(name) || text.startsWith(name + " ("));
+    }
+
+    /** A fold's row can be named as the field under it, such as a provider's "API key": it is no field. */
+    public static boolean isNoFoldRow(Node node) {
+        return !(node.getParent() instanceof Fold);
     }
 
     Node field(SettingsView view, TextKey name) {

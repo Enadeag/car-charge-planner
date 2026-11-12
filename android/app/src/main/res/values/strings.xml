@@ -607,6 +607,8 @@
   <string name="provider_setting_of">%1$s, %2$s</string>
   <string name="provider_api_key">API key</string>
   <string name="provider_base_url">Server address</string>
+  <!-- the fold under a provider with its server address and API key; a provider with only a key has "API key" -->
+  <string name="provider_fold_key_and_server">API key and server</string>
   <string name="provider_open_meteo_api_key_hint">Only for a paid plan (commercial use). Free use needs none.</string>
   <string name="provider_open_meteo_base_url_hint">Leave empty for the free public service. A paid plan or your own server has its own address, starting with https://.</string>
   <string name="provider_forecast_solar_api_key_hint">Only for a paid plan, which adds more days and finer steps. The free plan needs none.</string>

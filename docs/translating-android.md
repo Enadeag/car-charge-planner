@@ -175,6 +175,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | A system needs at least one panel array | Een systeem heeft minstens één panelengroep nodig | why the last array's Remove is off |
 | Check connection to Open-Meteo | Verbinding met Open-Meteo testen | asks the provider once, with what was typed |
 | Show, Hide | Tonen, Verbergen | an API key's mask |
+| API key and server, API key | API-sleutel en server, API-sleutel | on the Forecast page, the fold under a provider with its optional server address and API key, or with its optional API key alone (the same text as the field); "More settings" for other optional settings. Where two folds have the same name, TalkBack reads it with the provider, as a field: "API key, Forecast.Solar" ("API-sleutel, Forecast.Solar") |
 | None | Geen | no fallback provider; no weekly away period |
 | Notifications | Meldingen | Settings' row before the licences', "Opens Android's settings for this app" ("Opent de instellingen van Android voor deze app"); a notification is a "melding" everywhere, as the announcement is |
 | Wi-Fi only | Alleen wifi | the Forecast page's switch for the hourly update while the app is closed; Dutch writes "wifi" in lower case, as the Groene Boekje does, and the hint says "or another network without a data limit" ("of een ander netwerk zonder datalimiet") |

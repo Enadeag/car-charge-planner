@@ -402,6 +402,7 @@
   <string name="provider_setting_of">%1$s, %2$s</string>
   <string name="provider_api_key">API-sleutel</string>
   <string name="provider_base_url">Serveradres</string>
+  <string name="provider_fold_key_and_server">API-sleutel en server</string>
   <string name="provider_open_meteo_api_key_hint">Alleen voor een betaald abonnement (commercieel gebruik). Gratis gebruik heeft er geen nodig.</string>
   <string name="provider_open_meteo_base_url_hint">Laat leeg voor de gratis openbare dienst. Een betaald abonnement of een eigen server heeft een eigen adres, dat begint met https://.</string>
   <string name="provider_forecast_solar_api_key_hint">Alleen voor een betaald abonnement, dat meer dagen en kleinere stappen geeft. Het gratis abonnement heeft er geen nodig.</string>
