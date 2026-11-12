@@ -1068,7 +1068,7 @@ class SystemPagesTest {
     }
 
     @Test
-    void theTypicalHouseholdUseInsideTheFoldPutsTwelveKwhPerDayBackTagged() throws Exception {
+    void theTypicalHouseholdUseInsideTheFoldPutsTwelveKwhPerDayBackMarked() throws Exception {
         var view = openWithHouse(Language.ENGLISH, 0.35);
         Fx.run(() -> houseFoldRow(view).fire());
         var typical = settings.messages.text(TextKey.IN_GROUP, settings.messages.text(TextKey.USE_TYPICAL),

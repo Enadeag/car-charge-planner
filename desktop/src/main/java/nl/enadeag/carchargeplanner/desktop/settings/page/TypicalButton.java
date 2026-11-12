@@ -14,7 +14,7 @@ public final class TypicalButton {
     /**
      * Makes the line with its button.
      *
-     * @param action fills the card's fields with typical values and tags them, on the JavaFX thread
+     * @param action fills the card's fields with typical values and marks them as typical, on the JavaFX thread
      * @param cardTitle the card's title, which a screen reader reads with the button: a page can have more than one
      * @param messages the texts, in the owner's language
      * @return the line, to put on a card
