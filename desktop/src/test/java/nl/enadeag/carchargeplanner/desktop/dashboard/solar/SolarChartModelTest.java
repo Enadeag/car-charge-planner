@@ -22,6 +22,7 @@ class SolarChartModelTest {
         var today = Models.curve(3.6, List.of(), OptionalDouble.empty());
 
         assertThat(today.stepAt(13.4).orElseThrow().startHour()).isEqualTo(13);
+        assertThat(today.stepAt(14).orElseThrow().startHour()).as("the end of a step is the next one's").isEqualTo(14);
     }
 
     @Test
