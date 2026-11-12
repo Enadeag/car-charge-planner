@@ -52,7 +52,7 @@ final class DayBuilder {
         var assumedToday = Optional.ofNullable(date.equals(today) ? assumed : null);
         var windows = day.windows();
         if (windows.isEmpty()) {
-            var reason = noWindow(date);
+            var reason = noWindow(day);
             return new DashboardDay(name, Optional.empty(), List.of(), Optional.of(reason), battery(day), assumedToday,
                     chart);
         }
@@ -65,8 +65,13 @@ final class DayBuilder {
         return new MainCharge(window, grid >= NO_GRID_KWH ? OptionalDouble.of(grid) : OptionalDouble.empty());
     }
 
-    /** The grid advice's day says so whatever the trips; the departure comes before being away on the trip. */
-    private NoWindowReason noWindow(LocalDate date) {
+    /**
+     * The grid advice's day says so whatever the trips; the departure comes before being away on the trip. Any other
+     * day needs no charging when the level it starts from, rounded half up as it is shown, reaches the level the plan
+     * charges up to, so the card never contradicts the number the owner sees.
+     */
+    private NoWindowReason noWindow(DayPlan day) {
+        var date = day.date();
         if (date.equals(gridDay)) {
             return NoWindowReason.GRID;
         }
@@ -76,7 +81,10 @@ final class DayBuilder {
         if (trips.stream().anyMatch(trip -> trip.covers(date, zone))) {
             return NoWindowReason.AWAY;
         }
-        return NoWindowReason.NOT_NEEDED;
+        if (Math.round(day.startLevelPct().value()) >= day.wholeChargeToPct().value()) {
+            return NoWindowReason.NOT_NEEDED;
+        }
+        return NoWindowReason.TOO_LITTLE_SOLAR;
     }
 
     private BatteryLevels battery(DayPlan day) {

@@ -65,8 +65,8 @@ class DashboardTripAdviceTest {
             List<TripAdvice> advice) {
         var first = madeAt.atZone(BRUSSELS).toLocalDate();
         var days = Stream.of(first, first.plusDays(1), first.plusDays(2))
-                .map(date -> new DayPlan(date, new Percent(45), List.of(), new Percent(45), new Percent(45), 0,
-                        List.of()))
+                .map(date -> new DayPlan(date, new Percent(45), List.of(), new Percent(45), new Percent(80),
+                        new Percent(45), 0, List.of()))
                 .toList();
         return DashboardView.of(new PlanParts(madeAt, BRUSSELS, days, 0.3, new Percent(45), assumed, gridAdvice,
                 advice, new Percent(30), new Percent(80), List.of(), List.of(), Parts.source(madeAt)));

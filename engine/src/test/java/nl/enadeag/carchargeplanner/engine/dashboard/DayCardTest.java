@@ -35,12 +35,20 @@ class DayCardTest {
         return new Window(at(day, from, 0), at(day, until, 0), 10, 2.3, 2.3 * (until - from), importKwh);
     }
 
+    /** A day that starts at 40 %, the level the plan charges up to that day. */
     private static DayPlan day(LocalDate date, List<Window> windows) {
         return levels(date, windows, 40, 60, 55);
     }
 
     private static DayPlan levels(LocalDate date, List<Window> windows, double start, double after, double end) {
-        return new DayPlan(date, new Percent(start), windows, new Percent(after), new Percent(end), 0, List.of());
+        return new DayPlan(date, new Percent(start), windows, new Percent(after), new Percent(40), new Percent(end), 0,
+                List.of());
+    }
+
+    /** A day without a window that starts at one level while the plan charges up to another. */
+    private static DayPlan chargingTo(LocalDate date, double start, double chargeTo) {
+        return new DayPlan(date, new Percent(start), List.of(), new Percent(start), new Percent(chargeTo),
+                new Percent(start), 0, List.of());
     }
 
     private static List<DayPlan> threeDaysWithoutWindows() {
@@ -158,12 +166,59 @@ class DayCardTest {
     }
 
     @Test
-    void aDayWithoutAWindowNeedsNone() {
+    void aDayWithoutAWindowThatStartsAtWhatThePlanChargesUpToNeedsNone() {
         var shown = days(threeDaysWithoutWindows(), Optional.empty(), List.of(), List.of());
 
         assertThat(shown).extracting(DashboardDay::kind).containsOnly(DayKind.NONE);
         assertThat(reasons(shown)).containsOnly(Optional.of(NoWindowReason.NOT_NEEDED));
         assertThat(shown).extracting(DashboardDay::main).containsOnly(Optional.empty());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"80, 80, NOT_NEEDED", "90, 80, NOT_NEEDED", "79.6, 80, NOT_NEEDED", "79.5, 80, NOT_NEEDED",
+        "79.4999, 80, TOO_LITTLE_SOLAR", "40, 80, TOO_LITTLE_SOLAR", "80, 80.0000001, NOT_NEEDED",
+        "85, 92.1, TOO_LITTLE_SOLAR", "92.4, 92.1, TOO_LITTLE_SOLAR", "92.5, 92.1, NOT_NEEDED",
+        "100, 100, NOT_NEEDED", "99.4, 100, TOO_LITTLE_SOLAR", "0, 0, NOT_NEEDED"})
+    void aDayWithoutAWindowNeedsNoChargingWhenItsLevelAsShownReachesWhatThePlanChargesUpTo(double start,
+            double chargeTo, NoWindowReason reason) {
+        // a level is shown rounded half up and a level to charge to rounded up, as the trip advice shows it
+        var shown = days(List.of(chargingTo(TODAY, start, chargeTo)), Optional.empty(), List.of(), List.of()).get(0);
+
+        assertThat(shown.noWindow()).contains(reason);
+        assertThat(shown.kind()).isEqualTo(DayKind.NONE);
+    }
+
+    @Test
+    void eachDayIsJudgedByTheLevelItStartsFromNotTheLevelAfterTheGridCharge() {
+        // the evening before a trip: its grid charge brings the level after charging up to what the trip needs
+        var evening = new DayPlan(TODAY, new Percent(85), List.of(), new Percent(92.1), new Percent(92.1),
+                new Percent(92.1), 0, List.of());
+
+        var shown = days(List.of(evening), Optional.empty(), List.of(), List.of()).get(0);
+
+        assertThat(shown.noWindow()).contains(NoWindowReason.TOO_LITTLE_SOLAR);
+    }
+
+    @Test
+    void theGridAdviceTheDepartureAndBeingAwayComeBeforeTooLittleSolarPower() {
+        var leaving = trip(TOMORROW, 7, DAY_AFTER, 18);
+        var plan = List.of(chargingTo(TODAY, 40, 80), chargingTo(TOMORROW, 40, 80), chargingTo(DAY_AFTER, 40, 80));
+
+        var shown = days(plan, Optional.of(grid(TODAY)), List.of(advice(leaving)), List.of(leaving));
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.GRID),
+                Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.AWAY));
+    }
+
+    @Test
+    void theAssumedLevelIsNotedOnTodayAlsoWhenItNeedsNoCharging() {
+        var plan = List.of(chargingTo(TODAY, 40, 40), chargingTo(TOMORROW, 40, 80));
+
+        var shown = view(MADE_AT, plan, true, Optional.empty(), List.of(), List.of()).days();
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.NOT_NEEDED),
+                Optional.of(NoWindowReason.TOO_LITTLE_SOLAR));
+        assertThat(shown.get(0).assumedLevel()).contains(new Percent(40));
     }
 
     @Test

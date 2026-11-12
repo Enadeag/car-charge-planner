@@ -36,8 +36,8 @@ class PlannedDashboardTest {
 
     private static Outlook.Planned planned(double baseloadKw) {
         var days = List.of(TODAY, TODAY.plusDays(1), TODAY.plusDays(2)).stream()
-                .map(date -> new DayPlan(date, new Percent(40), List.of(), new Percent(40), new Percent(40), 0,
-                        SunnyDays.day(date, 3.4)))
+                .map(date -> new DayPlan(date, new Percent(40), List.of(), new Percent(40), new Percent(80),
+                        new Percent(40), 0, SunnyDays.day(date, 3.4)))
                 .toList();
         var source = new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", MADE_AT, Freshness.FRESH,
                 ProviderRole.PRIMARY, "", Optional.empty(), List.of());
