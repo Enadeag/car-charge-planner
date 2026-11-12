@@ -7,7 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChargerEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
-import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
+import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
@@ -55,7 +55,7 @@ public final class ChargerPage implements ConfigPage {
     private final NumberInput volts;
     private final NumberInput efficiency;
     private final ProblemRows problems;
-    private final TypicalTags typical;
+    private final TypicalMarks typical;
     private final Fold more;
     private final CardView card;
     private double loadedEfficiency;
@@ -82,7 +82,7 @@ public final class ChargerPage implements ConfigPage {
         volts = new NumberInput(new NumberRange(100, 400, 1, 0), "V", messages);
         efficiency = new NumberInput(new NumberRange(1, 100, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
-        typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
+        typical = new TypicalMarks();
         powerRow = FieldRow.of(messages, TextKey.FIELD_CHARGE_POWER, TextKey.FIELD_CHARGE_POWER_HINT, power);
         more = new Fold(messages.text(TextKey.MORE_SETTINGS),
                 row(ConfigSetting.CHARGER_PHASES, TextKey.FIELD_PHASES, TextKey.FIELD_PHASES_HINT, phases),
@@ -261,7 +261,7 @@ public final class ChargerPage implements ConfigPage {
 
     private FieldRow row(ConfigSetting setting, TextKey name, TextKey hint, Input input) {
         var row = problems.add(setting, FieldRow.of(messages, name, hint, input));
-        typical.follow(setting, row::showTag);
+        typical.follow(setting);
         input.onChange(() -> typical.edited(setting));
         return row;
     }

@@ -89,10 +89,10 @@ public final class FieldRow extends VBox {
     }
 
     /**
-     * Tags the value, such as a typical value or a required setting, or takes the tag away. The tag stands before the
-     * control, and a screen reader reads it with the explanation.
+     * Tags the value, such as a required setting, or takes the tag away. The tag stands before the control, and a
+     * screen reader reads it with the explanation.
      *
-     * @param text the tag, such as "Typical value" in the owner's language; empty to take it away
+     * @param text the tag, such as "Required" in the owner's language; empty to take it away
      */
     public void showTag(String text) {
         tag.setText(text);

@@ -9,7 +9,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.WholeNumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.PanelArrayEntry;
-import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
+import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;
@@ -57,7 +57,7 @@ final class PanelArrayCard {
     private final FieldRow powerRow;
     private final Fold more;
     private final ProblemRows problems;
-    private final TypicalTags typical;
+    private final TypicalMarks typical;
     private final Button remove;
     private final List<FieldRow> rows = new ArrayList<>();
     private final CardView card;
@@ -80,7 +80,7 @@ final class PanelArrayCard {
         tilt = new ChoiceInput<>(List.of(TiltChoice.values()), names::tilt);
         losses = new NumberInput(new NumberRange(0, 99, 1, 0), "%", messages);
         problems = new ProblemRows(messages);
-        typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
+        typical = new TypicalMarks();
         this.remove = new Button(messages.text(TextKey.PANELS_REMOVE));
         this.remove.setOnAction(_ -> remove.accept(this));
         this.remove.setMinWidth(Region.USE_PREF_SIZE);
@@ -98,7 +98,7 @@ final class PanelArrayCard {
                 row(ConfigSetting.PANEL_YEAR, TextKey.FIELD_PANEL_YEAR, year),
                 powerRow, together, more, buttons);
         // the count stands for the stored peak power, so entering one ends a typical size too
-        typical.follow(ConfigSetting.PANEL_SIZE, _ -> { });
+        typical.follow(ConfigSetting.PANEL_SIZE);
         count.onChange(() -> typical.edited(ConfigSetting.PANEL_SIZE));
         List.of(count, year, power).forEach(input -> input.onChange(this::showFigures));
     }
@@ -187,7 +187,7 @@ final class PanelArrayCard {
     }
 
     Set<ConfigSetting> typical() {
-        return typical.tagged();
+        return typical.marked();
     }
 
     /** Showing the nearest choice for stored degrees is no change: only a choice of the owner's is. */
@@ -255,15 +255,15 @@ final class PanelArrayCard {
     }
 
     private FieldRow row(ConfigSetting setting, TextKey label, Input input) {
-        return tagged(setting, listed(problems.add(setting, new FieldRow(messages.text(label), "", input))), input);
+        return followed(setting, listed(problems.add(setting, new FieldRow(messages.text(label), "", input))), input);
     }
 
     private FieldRow row(ConfigSetting setting, TextKey label, TextKey hint, Input input) {
-        return tagged(setting, listed(problems.add(setting, FieldRow.of(messages, label, hint, input))), input);
+        return followed(setting, listed(problems.add(setting, FieldRow.of(messages, label, hint, input))), input);
     }
 
-    private FieldRow tagged(ConfigSetting setting, FieldRow row, Input input) {
-        typical.follow(setting, row::showTag);
+    private FieldRow followed(ConfigSetting setting, FieldRow row, Input input) {
+        typical.follow(setting);
         input.onChange(() -> typical.edited(setting));
         return row;
     }

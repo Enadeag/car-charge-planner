@@ -192,8 +192,7 @@ internal fun CarAndHousePage(car: CarForm, house: HouseForm, edits: Edits, probl
     CarStep(car, edits, problems, problem) {
         NumberField(stringResource(R.string.household_use), stringResource(R.string.household_use_hint),
             edits.shown { house.text(baseload) }, { text -> edits.make { house.edit(baseload, text) } },
-            FieldKind.DECIMAL, shown[baseload], baseload in edits.shown { house.typical() },
-            rememberFieldFocus(problems, 10, problem), ImeAction.Done)
+            FieldKind.DECIMAL, shown[baseload], rememberFieldFocus(problems, 10, problem), ImeAction.Done)
         UseTypical { edits.make { house.useTypical() } }
     }
 }

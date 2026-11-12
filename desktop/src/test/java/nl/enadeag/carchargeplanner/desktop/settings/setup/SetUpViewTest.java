@@ -108,12 +108,22 @@ class SetUpViewTest {
         return view;
     }
 
+    /** Goes from any step to the away periods, through the preview, and finishes; what set-up saved. */
+    private EngineConfig finish(SetUpView view) throws Exception {
+        Fx.run(() -> view.show(SetUpStep.AWAY));
+        next(view, 1);
+        setUp.preview(view);
+        next(view, 1);
+        assertThat(setUp.finished).isEqualTo(1);
+        return stored();
+    }
+
     private void waitForText(SetUpView view, String text) throws Exception {
         SettingsFixture.waitFor(() -> SetUpFixture.texts(view).stream().anyMatch(shown -> shown.contains(text)));
     }
 
     @Test
-    void theFirstRunGoesStepByStepAndFinishSavesWhatWasEnteredWithTheTypicalValuesTagged() throws Exception {
+    void theFirstRunGoesStepByStepAndFinishSavesWhatWasEnteredWithTheTypicalValuesMarked() throws Exception {
         var view = setUp.open();
         next(view, 1);
         Fx.run(() -> setUp.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL));
@@ -292,19 +302,18 @@ class SetUpViewTest {
     }
 
     @Test
-    void iDontKnowFillsInTypicalValuesAgainAndTagsThem() throws Exception {
+    void iDontKnowFillsInTypicalValuesAgainAndMarksThem() throws Exception {
         var view = atSolar();
         next(view, 1);
         Fx.run(() -> setUp.type(view, TextKey.FIELD_CAR_BATTERY, "75"));
-        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
-                .doesNotContain(setUp.messages.text(TextKey.TYPICAL_TAG));
 
         Fx.run(() -> setUp.button(view, TextKey.USE_TYPICAL).fire());
 
         assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_CAR_BATTERY)).getText()))
                 .isEqualTo(setUp.messages.number(Car.TYPICAL.usableBatteryKwh(), 1));
-        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
-                .contains(setUp.messages.text(TextKey.TYPICAL_TAG));
+        var config = finish(view);
+        assertThat(config.system().car().usableBatteryKwh()).isEqualTo(Car.TYPICAL.usableBatteryKwh());
+        assertThat(config.typical().system()).contains(ConfigSetting.CAR_BATTERY);
     }
 
     /** The charger step's "More settings" row; on that step. */
@@ -347,25 +356,30 @@ class SetUpViewTest {
     }
 
     @Test
-    void theFoldedChargerFieldsStartAtTheirTypicalValuesTaggedAndIDontKnowNoLongerChoosesAPower() throws Exception {
+    void theFoldedChargerFieldsStartAtTheirTypicalValuesMarkedAndIDontKnowNoLongerChoosesAPower() throws Exception {
         var view = setUp.open();
-        Fx.run(() -> view.show(SetUpStep.CHARGER));
-        Fx.run(() -> moreRow(view).fire());
+        next(view, 2);
+        setUp.choosePlace(view);
+        next(view, 1);
+        Fx.run(() -> {
+            setUp.fillPanels(view);
+            view.show(SetUpStep.CHARGER);
+            moreRow(view).fire();
+        });
 
-        var typicalTag = setUp.messages.text(TextKey.TYPICAL_TAG);
         assertThat(Fx.call(() -> List.of(TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_VOLTAGE, TextKey.FIELD_EFFICIENCY)
                 .stream().map(field -> ((TextField) setUp.field(view, field)).getText()).toList()))
                 .containsExactly("6", "230", "90");
-        for (var field : List.of(TextKey.FIELD_MIN_CURRENT, TextKey.FIELD_VOLTAGE, TextKey.FIELD_EFFICIENCY)) {
-            assertThat(Fx.call(() -> help(view, field))).as("%s", field).contains(typicalTag);
-        }
         Fx.run(() -> setUp.button(view, TextKey.USE_TYPICAL).fire());
         assertThat(Fx.call(() -> shown(view, TextKey.FIELD_CHARGE_POWER)))
                 .containsExactly(setUp.messages.text(TextKey.CHOOSE));
         Fx.run(() -> setUp.choose(view, TextKey.FIELD_CHARGE_POWER, ChargePowerChoice.KW_3_7));
-        assertThat(Fx.call(() -> help(view, TextKey.FIELD_MAX_CURRENT))).doesNotContain(typicalTag);
-        assertThat(Fx.call(() -> help(view, TextKey.FIELD_PHASES))).doesNotContain(typicalTag);
-        assertThat(Fx.call(() -> help(view, TextKey.FIELD_VOLTAGE))).as("still 230 V").contains(typicalTag);
+
+        var config = finish(view);
+        assertThat(config.system().charger()).isEqualTo(new Charger(Phases.ONE, 6, 16, 230, 0.9));
+        assertThat(config.typical().system()).as("230 V stays typical").contains(ConfigSetting.CHARGER_MIN_CURRENT,
+                ConfigSetting.CHARGER_VOLTAGE, ConfigSetting.CHARGER_EFFICIENCY)
+                .doesNotContain(ConfigSetting.CHARGER_PHASES, ConfigSetting.CHARGER_MAX_CURRENT);
     }
 
     @Test
@@ -591,7 +605,7 @@ class SetUpViewTest {
     }
 
     @Test
-    void noStepAsksForTheHousesUseAndFinishSavesTheTypicalOneTagged() throws Exception {
+    void noStepAsksForTheHousesUseAndFinishSavesTheTypicalOneMarked() throws Exception {
         var view = atSolar();
         // the check and the preview ask for a forecast as they show, and ask for no value
         for (var step : List.of(SetUpStep.values()).subList(0, SetUpStep.CHECK.ordinal())) {

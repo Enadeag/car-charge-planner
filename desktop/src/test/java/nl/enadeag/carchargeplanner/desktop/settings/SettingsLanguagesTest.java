@@ -29,9 +29,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * In every language Settings shows each text whole and on its own, at the size it opens with and with the system's
- * text at 150 and 200 %: on every category, with every value
- * tagged as typical and two panel arrays, with a problem next to a field, with the question before discarding, and
- * without a config file.
+ * text at 150 and 200 %: on every category, with two panel arrays, with a problem next to a field, with the question
+ * before discarding, and without a config file.
  */
 @FxTest
 class SettingsLanguagesTest {
@@ -67,7 +66,7 @@ class SettingsLanguagesTest {
         var file = new ConfigFile(settings.configPath, FILES);
         var example = file.read();
         file.write(example.withSystem(example.system().withPanels(List.of(PanelArray.TYPICAL, PanelArray.TYPICAL)),
-                new TypicalValues(TypicalValues.SYSTEM_SETTINGS, List.of(TypicalValues.PANEL_SETTINGS))));
+                TypicalValues.NONE));
         var view = settings.open(false);
 
         var problems = Fx.call(() -> {
@@ -95,7 +94,7 @@ class SettingsLanguagesTest {
         var file = new ConfigFile(settings.configPath, FILES);
         var example = file.read();
         file.write(example.withSystem(example.system().withPanels(List.of(PanelArray.TYPICAL, PanelArray.TYPICAL)),
-                new TypicalValues(TypicalValues.SYSTEM_SETTINGS, List.of(TypicalValues.PANEL_SETTINGS))));
+                TypicalValues.NONE));
         var view = settings.open(scale);
 
         var problems = Fx.call(() -> {

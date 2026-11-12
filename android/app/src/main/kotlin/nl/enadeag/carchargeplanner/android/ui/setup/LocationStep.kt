@@ -103,7 +103,7 @@ internal fun LocationFields(location: LocationForm, places: PlaceSearch, provide
     EntryField(stringResource(R.string.place_field),
         if (name == null) hint else stringResource(R.string.place_another) + "\n" + hint,
         edits.shown { places.text() }, { text -> edits.make { places.edit(text) } }, FieldKind.TEXT,
-        shown[LocationForm.Field.PLACE], false, rememberFieldFocus(problems, 0, LocationForm.Field.PLACE in shown),
+        shown[LocationForm.Field.PLACE], rememberFieldFocus(problems, 0, LocationForm.Field.PLACE in shown),
         imeAction = ImeAction.Search, onAction = { places.search() })
     AppButton(onClick = { places.search() }) {
         Text(stringResource(R.string.place_search))

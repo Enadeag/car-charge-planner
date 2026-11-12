@@ -201,7 +201,6 @@ class BatteryEntryScreenTest {
         field.assertIsFocused().assert(hasText(""))
         compose.onNodeWithText(text(R.string.battery_entry_text)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.battery_entry_hint), substring = true).assertIsDisplayed()
-        compose.onNode(hasContentDescription(text(R.string.typical_mark_description))).assertDoesNotExist()
     }
 
     @Test

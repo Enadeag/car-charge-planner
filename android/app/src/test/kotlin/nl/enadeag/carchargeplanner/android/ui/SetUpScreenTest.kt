@@ -80,6 +80,7 @@ import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
 import nl.enadeag.carchargeplanner.engine.forecast.Place
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceResults
+import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Rule
@@ -364,7 +365,7 @@ class SetUpScreenTest {
     }
 
     @Test
-    fun typicalValuesAreMarkedWithAWordAndASentenceForTheScreenReader() {
+    fun typingOnTheCarStepTakesTheTypicalMarkOfThatFieldOnlyAndChangesNothingElseShown() {
         val session = show()
         session.next()
         session.choose(PlaceSearch.Result(utrecht, "Utrecht, Netherlands"))
@@ -372,13 +373,21 @@ class SetUpScreenTest {
         session.flow.charger.choose(HomeChargePower.KW_11)
         repeat(2) { session.next() }
         compose.waitForIdle()
+        val before = shownWords()
 
-        val marks = compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,
-            listOf(text(R.string.typical_mark_description)))).fetchSemanticsNodes()
-        assertThat(marks).hasSize(3)
         field(R.string.car_battery).performTextReplacement("75")
-        assertThat(compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,
-            listOf(text(R.string.typical_mark_description)))).fetchSemanticsNodes()).hasSize(2)
+        compose.waitForIdle()
+
+        assertThat(session.flow.config().typical().system()).contains(ConfigSetting.CAR_CONSUMPTION,
+            ConfigSetting.CAR_DAILY_DISTANCE).doesNotContain(ConfigSetting.CAR_BATTERY)
+        assertThat(shownWords()).isEqualTo(before)
+    }
+
+    /** Every text and spoken description on the screen, without what the fields hold. */
+    private fun shownWords(): List<String> = compose.onAllNodes(SemanticsMatcher("any node") { true },
+        useUnmergedTree = true).fetchSemanticsNodes().flatMap { node ->
+        node.config.getOrElse(SemanticsProperties.Text) { emptyList() }.map { it.text } +
+            node.config.getOrElse(SemanticsProperties.ContentDescription) { emptyList() }
     }
 
     private fun powerMenu() = compose.onNode(hasText(text(R.string.charge_power), substring = true)
@@ -436,12 +445,13 @@ class SetUpScreenTest {
         field(R.string.charger_min_current).assert(hasText("6"))
         field(R.string.charger_voltage).assert(hasText("230"))
         field(R.string.charger_efficiency).assert(hasText("90"))
-        assertThat(compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,
-            listOf(text(R.string.typical_mark_description)))).fetchSemanticsNodes()).hasSize(5)
         powerMenu().assert(hasText(text(R.string.charge_power_other), substring = true))
         click(R.string.action_next)
         compose.waitForIdle()
         assertThat(session.flow.step.value).isEqualTo(SetUpStep.AWAY)
+        assertThat(session.flow.config().typical().system()).containsAll(listOf(ConfigSetting.CHARGER_PHASES,
+            ConfigSetting.CHARGER_MIN_CURRENT, ConfigSetting.CHARGER_MAX_CURRENT, ConfigSetting.CHARGER_VOLTAGE,
+            ConfigSetting.CHARGER_EFFICIENCY))
     }
 
     @Test

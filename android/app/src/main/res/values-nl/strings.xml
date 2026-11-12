@@ -11,8 +11,6 @@
   <string name="action_cancel">Annuleren</string>
   <string name="details_in_english">Details (in het Engels): %1$s</string>
 
-  <string name="typical_mark">Gangbare waarde</string>
-  <string name="typical_mark_description">Gangbare waarde, niet door jou ingevuld: pas hem aan als je je eigen waarde weet</string>
   <string name="use_typical">Weet ik niet: gangbare waarden gebruiken</string>
   <string name="sign_toggle">Wisselen tussen plus en min</string>
 
@@ -27,7 +25,7 @@
   <string name="setup_welcome_nothing_else">Verder verlaat niets je telefoon. Er is geen account en je wordt niet gevolgd.</string>
   <string name="setup_welcome_settings">Andere voorspellingsdiensten en API-sleutels staan bij Instellingen.</string>
   <string name="setup_welcome_typical_title">Weet je een waarde niet?</string>
-  <string name="setup_welcome_typical">Druk op “Weet ik niet: gangbare waarden gebruiken”. De app neemt dan een gangbare waarde en markeert die, tot je je eigen waarde invult, hier of later bij Instellingen.</string>
+  <string name="setup_welcome_typical">Druk op “Weet ik niet: gangbare waarden gebruiken”. De app neemt dan een gangbare waarde, die je hier of later bij Instellingen kunt aanpassen.</string>
 
   <string name="setup_location_title">Waar staat je huis?</string>
   <string name="place_field">Plaats of postcode</string>

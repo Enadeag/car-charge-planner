@@ -3,7 +3,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.car;
 import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
-import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalTags;
+import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPart;
 import nl.enadeag.carchargeplanner.desktop.settings.page.TypicalButton;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
@@ -26,7 +26,7 @@ public final class HouseCard implements ConfigPart {
     private static final double HOURS_PER_DAY = 24;
 
     private final NumberInput perDay;
-    private final TypicalTags typical;
+    private final TypicalMarks typical;
     private final List<Node> rows;
 
     /**
@@ -36,9 +36,9 @@ public final class HouseCard implements ConfigPart {
      */
     public HouseCard(Messages messages) {
         perDay = new NumberInput(new NumberRange(0, 480, 1, 1), messages.text(TextKey.UNIT_KWH_PER_DAY), messages);
-        typical = new TypicalTags(messages.text(TextKey.TYPICAL_TAG));
+        typical = new TypicalMarks();
         var row = FieldRow.of(messages, TextKey.FIELD_HOUSEHOLD_USE, TextKey.FIELD_HOUSEHOLD_USE_HINT, perDay);
-        typical.follow(ConfigSetting.HOUSE_BASELOAD, row::showTag);
+        typical.follow(ConfigSetting.HOUSE_BASELOAD);
         perDay.onChange(() -> typical.edited(ConfigSetting.HOUSE_BASELOAD));
         // named by its field, as the car's button is by its own
         rows = List.of(row,

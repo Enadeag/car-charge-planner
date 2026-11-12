@@ -648,7 +648,7 @@
     -fx-text-fill: -muted;
 }
 
-/* a value set-up or Settings filled in because the owner did not know it, until the owner enters their own */
+/* a field's tag before its control, such as a setting a provider requires */
 .field-tag {
     -fx-background-color: -solar-soft;
     -fx-background-radius: 999;
