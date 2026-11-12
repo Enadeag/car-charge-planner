@@ -77,19 +77,20 @@ public final class DayMapper {
     }
 
     /**
-     * The heading and the why come from the reason. The day a trip leaves says nothing, as the trip's advice on its tab
-     * tells what the battery needs; the battery chip is there when the engine's day shows its battery.
+     * The heading and the why come from the reason. The day a trip leaves or a grid charge starts says nothing more, as
+     * the advice beside it tells what the battery needs; the battery chip is there when the engine's day shows its
+     * battery.
      */
     private DayModel withoutWindow(DashboardDay day, List<TripAdviceModel> tripAdvice) {
         var reason = day.noWindow().orElseThrow();
         var heading = messages.text(switch (reason) {
             case GRID -> TextKey.DAY_GRID;
             case NOT_NEEDED -> TextKey.DAY_NOT_NEEDED;
-            case DEPARTURE, AWAY, TOO_LITTLE_SOLAR -> TextKey.DAY_NONE;
+            case DEPARTURE, AWAY, GRID_CHARGE_STARTS, TOO_LITTLE_SOLAR -> TextKey.DAY_NONE;
         });
         var why = switch (reason) {
             case GRID -> messages.text(TextKey.DAY_GRID_WHY);
-            case DEPARTURE, NOT_NEEDED -> "";
+            case DEPARTURE, GRID_CHARGE_STARTS, NOT_NEEDED -> "";
             case AWAY -> messages.text(TextKey.DAY_NONE_TRIP);
             case TOO_LITTLE_SOLAR -> messages.text(TextKey.DAY_TOO_LITTLE_SOLAR);
         };

@@ -24,6 +24,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.nio.file.Path;
@@ -371,6 +372,36 @@ class OutlookMapperTest {
         assertThat(english.battery().levels()).isEqualTo("79 → 79%");
         assertThat(dutch.heading()).isEqualTo("Geen laadvenster");
         assertThat(dutch.note()).isEqualTo("Er is te weinig zonnestroom terwijl de auto thuis is.");
+    }
+
+    /** Today without a window at the target, with the grid charge for Saturday's trip starting this evening. */
+    private static DashboardModel.Plan gridChargeToday(Messages messages) {
+        var today = new DayPlan(TODAY, new Percent(80), List.of(), new Percent(94), new Percent(80), new Percent(94), 0,
+                List.of());
+        var saturday = new DayPlan(TODAY.plusDays(1), new Percent(94), List.of(), new Percent(94), new Percent(94),
+                new Percent(32), 70, List.of());
+        var grid = new TripGridCharge(window(TODAY, 20, 22, 14.6), TripGridCharge.Start.PLANNED);
+        var advice = new TripAdvice(LONG_TRIP, new Percent(94), List.of(), new Percent(80), Optional.of(grid),
+                new Percent(94), 0, new Percent(42));
+        var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(today, saturday), new Percent(80), false,
+                Optional.empty(), List.of(advice), fresh(), 0.4, new Percent(30), new Percent(80));
+        return (DashboardModel.Plan) new OutlookMapper(messages).map(planned, List.of(), List.of(LONG_TRIP),
+                Units.METRIC);
+    }
+
+    @Test
+    void theDayATripsGridChargeStartsOnSaysOnlyThatThereIsNoChargeWindowWithItsBatteryChip() {
+        var english = gridChargeToday(new Messages(Language.ENGLISH)).days().getFirst();
+        var dutch = gridChargeToday(new Messages(Language.DUTCH)).days().getFirst();
+
+        assertThat(english.heading()).isEqualTo("No charge window");
+        assertThat(english.note()).isEmpty();
+        assertThat(english.chips()).extracting(ChipModel::text).containsExactly("Battery 80 → 94%");
+        assertThat(english.spoken()).isEqualTo("Today: no charge window.");
+        assertThat(english.kind()).isEqualTo(DayKind.NONE);
+        assertThat(dutch.heading()).isEqualTo("Geen laadvenster");
+        assertThat(dutch.note()).isEmpty();
+        assertThat(dutch.spoken()).isEqualTo("Vandaag: geen laadvenster.");
     }
 
     @Test
