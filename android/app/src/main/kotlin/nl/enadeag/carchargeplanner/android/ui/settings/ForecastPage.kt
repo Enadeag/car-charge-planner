@@ -162,7 +162,7 @@ private fun ProviderSetting(forecast: ForecastForm, info: ProviderInfo, setting:
     } else {
         EntryField(label, hint, text, onEdit,
             if (setting.format() == SettingFormat.SERVER_ADDRESS) FieldKind.ADDRESS else FieldKind.TEXT, problem,
-            false, focus, imeAction = imeAction)
+            focus, imeAction = imeAction)
     }
 }
 

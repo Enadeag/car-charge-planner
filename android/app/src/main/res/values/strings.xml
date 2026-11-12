@@ -18,9 +18,6 @@
   <!-- %1$s the engine's own words about a problem, which stay English -->
   <string name="details_in_english">Details (in English): %1$s</string>
 
-  <!-- the mark beside a field that holds a typical value, and what a screen reader says for it -->
-  <string name="typical_mark">Typical value</string>
-  <string name="typical_mark_description">Typical value, not one you entered: change it when you know your own</string>
   <string name="use_typical">I don\'t know: use typical values</string>
   <!-- the button in a signed number field that puts a minus before the number or takes it away -->
   <string name="sign_toggle">Switch between plus and minus</string>
@@ -40,7 +37,7 @@
   <string name="setup_welcome_nothing_else">Nothing else leaves your phone. There is no account and no tracking.</string>
   <string name="setup_welcome_settings">Other forecast providers and API keys are in Settings.</string>
   <string name="setup_welcome_typical_title">Not sure of a value?</string>
-  <string name="setup_welcome_typical">Press “I don\'t know: use typical values”. The app then uses a typical value and marks it, until you enter your own, here or later in Settings.</string>
+  <string name="setup_welcome_typical">Press “I don\'t know: use typical values”. The app then uses a typical value, which you can change here or later in Settings.</string>
 
   <string name="setup_location_title">Where is your home?</string>
   <string name="place_field">Place or postcode</string>

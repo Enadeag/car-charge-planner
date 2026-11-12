@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.android.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -21,7 +20,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
 
@@ -41,51 +39,45 @@ import nl.enadeag.carchargeplanner.android.form.FieldProblem
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun <T> ChoiceMenu(label: String, options: List<T>, chosen: T?, name: @Composable (T) -> String,
-    onChoose: (T) -> Unit, problem: FieldProblem?, focus: FocusRequester, typical: Boolean = false,
-    hint: String? = null) {
+    onChoose: (T) -> Unit, problem: FieldProblem?, focus: FocusRequester, hint: String? = null) {
     var open by rememberSaveable { mutableStateOf(false) }
     val problemSentence = problem?.let { problemText(it) }
     val names = options.map { name(it) }
-    Column(modifier = Modifier.fillMaxWidth()) {
-        ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }) {
-            OutlinedTextField(
-                value = chosen?.let { names[options.indexOf(it)] } ?: stringResource(R.string.choose),
-                onValueChange = { },
-                readOnly = true,
-                singleLine = false,
-                label = { Text(label) },
-                isError = problem != null,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
-                supportingText = if (problemSentence == null && hint == null) null else {
-                    {
-                        Column {
-                            problemSentence?.let { Text(it) }
-                            hint?.let { Text(it) }
-                        }
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = chosen?.let { names[options.indexOf(it)] } ?: stringResource(R.string.choose),
+            onValueChange = { },
+            readOnly = true,
+            singleLine = false,
+            label = { Text(label) },
+            isError = problem != null,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
+            supportingText = if (problemSentence == null && hint == null) null else {
+                {
+                    Column {
+                        problemSentence?.let { Text(it) }
+                        hint?.let { Text(it) }
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().focusRequester(focus)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .semantics {
+                    if (problemSentence != null) {
+                        error(problemSentence)
                     }
                 },
-                modifier = Modifier.fillMaxWidth().focusRequester(focus)
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                    .semantics {
-                        if (problemSentence != null) {
-                            error(problemSentence)
-                        }
+        )
+        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEachIndexed { index, option ->
+                DropdownMenuItem(
+                    text = { Text(names[index]) },
+                    onClick = {
+                        onChoose(option)
+                        open = false
                     },
-            )
-            ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                options.forEachIndexed { index, option ->
-                    DropdownMenuItem(
-                        text = { Text(names[index]) },
-                        onClick = {
-                            onChoose(option)
-                            open = false
-                        },
-                    )
-                }
+                )
             }
-        }
-        if (typical) {
-            TypicalMark(Modifier.padding(start = 16.dp))
         }
     }
 }

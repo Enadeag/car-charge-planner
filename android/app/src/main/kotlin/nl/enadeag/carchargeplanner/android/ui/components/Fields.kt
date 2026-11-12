@@ -18,7 +18,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -111,9 +110,9 @@ internal const val DISTANCE_UNIT = "km"
  */
 @Composable
 internal fun NumberField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
-    problem: FieldProblem?, typical: Boolean = false, focus: FocusRequester = remember { FocusRequester() },
+    problem: FieldProblem?, focus: FocusRequester = remember { FocusRequester() },
     imeAction: ImeAction = ImeAction.Next, suffix: String? = null) {
-    EntryField(label, hint, text, onEdit, kind, problem, typical, focus, imeAction = imeAction, suffix = suffix)
+    EntryField(label, hint, text, onEdit, kind, problem, focus, imeAction = imeAction, suffix = suffix)
 }
 
 /**
@@ -125,52 +124,47 @@ internal fun NumberField(label: String, hint: String, text: String, onEdit: (Str
  */
 @Composable
 internal fun EntryField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
-    problem: FieldProblem?, typical: Boolean, focus: FocusRequester, modifier: Modifier = Modifier,
+    problem: FieldProblem?, focus: FocusRequester, modifier: Modifier = Modifier,
     imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null, announceProblem: Boolean = false,
     readOnly: Boolean = false, placeholder: String? = null, suffix: String? = null) {
     val problemSentence = problem?.let { problemText(it) }
-    Column(modifier = modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = onEdit,
-            label = { Text(label) },
-            placeholder = placeholder?.let { shown -> { Text(shown) } },
-            suffix = suffix?.let { unit -> { Text(unit) } },
-            singleLine = true,
-            readOnly = readOnly,
-            isError = problem != null,
-            keyboardOptions = KeyboardOptions(keyboardType = kind.keyboard, imeAction = imeAction),
-            keyboardActions = if (onAction == null) KeyboardActions.Default
-                else KeyboardActions(onAny = { onAction() }),
-            trailingIcon = if (kind == FieldKind.SIGNED) {
-                { SignKey(text, onEdit) }
-            } else null,
-            supportingText = {
-                Column {
-                    if (announceProblem) {
-                        // a node of its own, outside the field's, which stays while empty, so a problem that comes in
-                        // is read while the focus stays in the field
-                        Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
-                            problemSentence?.let { Text(it) }
-                        }
-                    } else if (problemSentence != null) {
-                        Text(problemSentence)
+    OutlinedTextField(
+        value = text,
+        onValueChange = onEdit,
+        label = { Text(label) },
+        placeholder = placeholder?.let { shown -> { Text(shown) } },
+        suffix = suffix?.let { unit -> { Text(unit) } },
+        singleLine = true,
+        readOnly = readOnly,
+        isError = problem != null,
+        keyboardOptions = KeyboardOptions(keyboardType = kind.keyboard, imeAction = imeAction),
+        keyboardActions = if (onAction == null) KeyboardActions.Default
+            else KeyboardActions(onAny = { onAction() }),
+        trailingIcon = if (kind == FieldKind.SIGNED) {
+            { SignKey(text, onEdit) }
+        } else null,
+        supportingText = {
+            Column {
+                if (announceProblem) {
+                    // a node of its own, outside the field's, which stays while empty, so a problem that comes in
+                    // is read while the focus stays in the field
+                    Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+                        problemSentence?.let { Text(it) }
                     }
-                    if (hint.isNotEmpty()) {
-                        Text(hint)
-                    }
+                } else if (problemSentence != null) {
+                    Text(problemSentence)
                 }
-            },
-            modifier = Modifier.fillMaxWidth().focusRequester(focus).semantics {
-                if (problemSentence != null) {
-                    error(problemSentence)
+                if (hint.isNotEmpty()) {
+                    Text(hint)
                 }
-            },
-        )
-        if (typical) {
-            TypicalMark(Modifier.padding(start = 16.dp))
-        }
-    }
+            }
+        },
+        modifier = modifier.fillMaxWidth().focusRequester(focus).semantics {
+            if (problemSentence != null) {
+                error(problemSentence)
+            }
+        },
+    )
 }
 
 /** The key that puts a minus before the number, or takes it away. */
@@ -186,20 +180,6 @@ private fun SignKey(text: String, onEdit: (String) -> Unit) {
     }
 }
 
-/** The mark of a typical value: a word, never a colour alone, with a sentence for a screen reader. */
-@Composable
-internal fun TypicalMark(modifier: Modifier = Modifier) {
-    val description = stringResource(R.string.typical_mark_description)
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = modifier.padding(top = 4.dp).clearAndSetSemantics { contentDescription = description },
-    ) {
-        Text(stringResource(R.string.typical_mark), style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-    }
-}
-
 /**
  * A choice of one from a few, as radio buttons a screen reader reads as a group.
  *
@@ -211,8 +191,7 @@ internal fun TypicalMark(modifier: Modifier = Modifier) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chosen: T?, name: @Composable (T) -> String,
-    onChoose: (T) -> Unit, typical: Boolean = false, problem: FieldProblem? = null,
-    focus: FocusRequester? = null) {
+    onChoose: (T) -> Unit, problem: FieldProblem? = null, focus: FocusRequester? = null) {
     val problemSentence = problem?.let { problemText(it) }
     val focused = if (focus == null) Modifier else Modifier.focusRequester(focus).focusable()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -243,9 +222,6 @@ internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chose
         }
         if (hint != null) {
             Text(hint, style = MaterialTheme.typography.bodySmall)
-        }
-        if (typical) {
-            TypicalMark()
         }
     }
 }

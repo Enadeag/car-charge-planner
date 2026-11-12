@@ -35,6 +35,18 @@ class HouseFormTest {
     }
 
     @Test
+    fun typingTheTypicalUseAsItShowsIsAnEditThatMakesTheSameUseTheOwners() {
+        form.load(DRAFT)
+
+        form.edit(HouseForm.Field.BASELOAD, "12.0")
+
+        assertThat(form.isEdited()).isTrue()
+        val read = form.check(DRAFT)!!
+        assertThat(read.system().house()).isEqualTo(House.TYPICAL)
+        assertThat(read.typical().system()).doesNotContain(ConfigSetting.HOUSE_BASELOAD)
+    }
+
+    @Test
     fun anUntouchedFieldWritesBackTheExactStoredUseThoughItShowsItRounded() {
         val own = withHouse(0.123)
         form.load(own)

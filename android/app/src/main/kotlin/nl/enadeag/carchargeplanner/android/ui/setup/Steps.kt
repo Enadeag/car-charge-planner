@@ -87,7 +87,6 @@ internal fun PanelsStep(panels: PanelsForm, edits: Edits, problems: ProblemFocus
 internal fun PanelArrayFields(panels: PanelsForm, row: Int, edits: Edits, problems: ProblemFocus, order: Int,
     last: Boolean, named: @Composable (String) -> String) {
     val shown by panels.problems(row).collectAsStateWithLifecycle()
-    val typical = edits.shown { panels.typical(row) }
     val numbers = NumberText(LocalConfiguration.current.locales[0])
     var folded by rememberSaveable(row) { mutableStateOf(true) }
     val open = !folded || PanelsForm.Field.LOSSES in shown
@@ -98,7 +97,7 @@ internal fun PanelArrayFields(panels: PanelsForm, row: Int, edits: Edits, proble
     fun typed(field: PanelsForm.Field, label: Int, hint: String, place: Int, imeAction: ImeAction = ImeAction.Next,
         kind: FieldKind = FieldKind.WHOLE, placeholder: String? = null) {
         EntryField(named(stringResource(label)), hint, edits.shown { panels.text(row, field) },
-            { text -> edits.make { panels.edit(row, field, text) } }, kind, shown[field], field in typical,
+            { text -> edits.make { panels.edit(row, field, text) } }, kind, shown[field],
             rememberFieldFocus(problems, order + place, field in shown), imeAction = imeAction,
             placeholder = placeholder)
     }
@@ -106,12 +105,10 @@ internal fun PanelArrayFields(panels: PanelsForm, row: Int, edits: Edits, proble
     ChoiceMenu(named(stringResource(R.string.panel_direction)), CompassPoint.entries,
         edits.shown { panels.direction(row) }, { stringResource(directionName(it)) },
         { point -> edits.make { panels.choose(row, point) } }, shown[PanelsForm.Field.DIRECTION],
-        rememberFieldFocus(problems, order + 1, PanelsForm.Field.DIRECTION in shown),
-        PanelsForm.Field.DIRECTION in typical)
+        rememberFieldFocus(problems, order + 1, PanelsForm.Field.DIRECTION in shown))
     ChoiceMenu(named(stringResource(R.string.panel_tilt)), TiltChoice.entries, edits.shown { panels.tilt(row) },
         { stringResource(tiltName(it)) }, { tilt -> edits.make { panels.choose(row, tilt) } },
-        shown[PanelsForm.Field.TILT], rememberFieldFocus(problems, order + 2, PanelsForm.Field.TILT in shown),
-        PanelsForm.Field.TILT in typical)
+        shown[PanelsForm.Field.TILT], rememberFieldFocus(problems, order + 2, PanelsForm.Field.TILT in shown))
     typed(PanelsForm.Field.YEAR, R.string.panel_year, "", 3)
     val estimate = edits.shown { panels.typicalWattPeak(row) }
     val powerEmpty = edits.shown { panels.text(row, PanelsForm.Field.POWER) }.isBlank()
@@ -165,14 +162,13 @@ internal fun tiltName(tilt: TiltChoice): Int = when (tilt) {
 internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, foldedProblem: Boolean = false,
     more: (@Composable () -> Unit)? = null) {
     val shown by car.problems.collectAsStateWithLifecycle()
-    val typical = edits.shown { car.typical() }
     val problem = CarForm.Field.TRIP_SURCHARGE in shown || foldedProblem
     val fold = rememberProblemFold(problem)
     val open = fold.open
     @Composable
     fun typed(field: CarForm.Field, label: Int, hint: Int, order: Int, imeAction: ImeAction, suffix: String? = null) {
         NumberField(stringResource(label), stringResource(hint), edits.shown { car.text(field) },
-            { text -> edits.make { car.edit(field, text) } }, FieldKind.DECIMAL, shown[field], field in typical,
+            { text -> edits.make { car.edit(field, text) } }, FieldKind.DECIMAL, shown[field],
             rememberFieldFocus(problems, order, field in shown), imeAction, suffix)
     }
     typed(CarForm.Field.BATTERY, R.string.car_battery, R.string.car_battery_hint, 0, ImeAction.Next)
@@ -199,7 +195,6 @@ internal fun CarStep(car: CarForm, edits: Edits, problems: ProblemFocus, foldedP
 @Composable
 internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFocus) {
     val shown by charger.problems.collectAsStateWithLifecycle()
-    val typical = edits.shown { charger.typical() }
     val power = edits.shown { charger.power() }
     val problem = (shown.keys - ChargerForm.Field.POWER).isNotEmpty()
     val fold = rememberProblemFold(problem, startFolded = power != ChargePowerChoice.OTHER)
@@ -220,7 +215,7 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
         ChoiceRow(stringResource(R.string.charger_phases), stringResource(R.string.charger_phases_hint),
             Phases.entries, edits.shown { charger.phases() },
             { stringResource(if (it == Phases.ONE) R.string.phases_one else R.string.phases_three) },
-            { phases -> edits.make { charger.choose(phases) } }, ChargerForm.Field.PHASES in typical)
+            { phases -> edits.make { charger.choose(phases) } })
         listOf(
             Triple(ChargerForm.Field.MIN_CURRENT, R.string.charger_min_current to R.string.charger_min_current_hint,
                 FieldKind.WHOLE),
@@ -232,7 +227,7 @@ internal fun ChargerStep(charger: ChargerForm, edits: Edits, problems: ProblemFo
                 FieldKind.DECIMAL),
         ).forEachIndexed { order, (field, texts, kind) ->
             NumberField(stringResource(texts.first), stringResource(texts.second), edits.shown { charger.text(field) },
-                { text -> edits.make { charger.edit(field, text) } }, kind, shown[field], field in typical,
+                { text -> edits.make { charger.edit(field, text) } }, kind, shown[field],
                 rememberFieldFocus(problems, order + 1, field in shown),
                 if (field == ChargerForm.Field.EFFICIENCY) ImeAction.Done else ImeAction.Next)
         }
@@ -320,7 +315,7 @@ private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, rows: List<In
 }
 
 /**
- * "I don't know": fills in the typical values and marks them.
+ * "I don't know": fills in the typical values.
  *
  * @param name the button's text; the plain "I don't know" unless several on a page need telling apart
  */
