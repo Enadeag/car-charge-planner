@@ -73,7 +73,7 @@ private var SemanticsPropertyReceiver.axisLabels by AxisLabels
 private val MIN_CHART_HEIGHT = 160.dp
 
 /**
- * A day's solar chart, as the desktop's: the expected solar power as an amber area, the house's use as a dashed line,
+ * A day's solar chart, as the desktop's: the expected solar power as an amber area, the baseload as a dashed line,
  * the charge windows as green bands with a mark on the axis, and "now" on today; a legend in words above it and the
  * same facts in a sentence under it. It takes the column's width, half as high but never lower than a minimum. A
  * screen reader reads the chart as one part, that sentence; the drawing, the legend and the line under it are not

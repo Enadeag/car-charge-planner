@@ -297,7 +297,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
     fun scale(kw: Double): String = text(R.string.chart_scale, whole(kw))
 
     /**
-     * A day's chart in words, as the desktop's: its peak and the house's use, its charge windows and, today, now.
+     * A day's chart in words, as the desktop's: its peak and the baseload, its charge windows and, today, now.
      * A screen reader reads it for the chart, and it shows under the chart.
      *
      * @return such as "Today, expected solar power: peak 4.2 kW around 13:00; the house uses about 0.4 kW. Charging:

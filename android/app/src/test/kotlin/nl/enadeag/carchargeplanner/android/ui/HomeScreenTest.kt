@@ -1109,7 +1109,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun theLegendNamesTheSolarCurveTheHouseAndTheChargeWindowsInWords() {
+    fun theLegendNamesTheSolarCurveTheBaseloadAndTheChargeWindowsInWords() {
         show(sunnyDays())
         // on a day without a window, as today's card says "Charge window" too, to be read
         tab("Tomorrow").performClick()

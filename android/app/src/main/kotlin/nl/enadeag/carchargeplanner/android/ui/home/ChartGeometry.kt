@@ -171,7 +171,7 @@ internal sealed interface Shape {
 }
 
 /**
- * The solar chart's drawing, as the desktop's: the grid, the charge windows, the solar curve, the house's line and
+ * The solar chart's drawing, as the desktop's: the grid, the charge windows, the solar curve, the baseload's line and
  * "now", in the order they are drawn, and where its words go.
  *
  * @property shapes what is drawn, in order, under the words
@@ -189,7 +189,7 @@ internal data class SolarDrawing(val plot: PlotArea, val shapes: List<Shape>, va
 
         private const val WINDOW_MARK_DP = 4f
 
-        /** The width of the dashed lines: the house's use and now. */
+        /** The width of the dashed lines: the baseload and now. */
         private const val DASHED_DP = 1.5f
 
         /** The width of the grid's lines, in pixels: a hairline. */

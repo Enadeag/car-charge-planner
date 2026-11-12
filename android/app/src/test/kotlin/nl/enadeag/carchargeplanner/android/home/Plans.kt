@@ -73,7 +73,7 @@ internal object Plans {
      * @param gridAdvice the grid advice, if any
      * @param source where the forecast came from; fetched when the plan was made by default
      * @param forecast each day's forecast steps, by its date; none by default
-     * @param baseloadKw the house's use
+     * @param baseloadKw the baseload in kW
      * @param minimum the minimum charge level in percent
      * @param target the target charge level in percent
      * @param tripAdvice the advice per trip, in order of departure

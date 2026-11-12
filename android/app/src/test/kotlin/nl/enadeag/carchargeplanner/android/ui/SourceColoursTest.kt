@@ -77,7 +77,7 @@ class SourceColoursTest {
         val texts = mapOf("text" to chart.of(ChartInk.TEXT), "muted" to chart.of(ChartInk.MUTED),
             "battery levels" to chart.carText)
         val marks = mapOf("solar line" to ChartInk.SOLAR, "window mark and battery level" to ChartInk.CAR,
-            "house line and the track's outline" to ChartInk.MUTED, "now line and battery marks" to ChartInk.TEXT)
+            "baseload line and the track's outline" to ChartInk.MUTED, "now line and battery marks" to ChartInk.TEXT)
         val ground = chart.of(ChartInk.GROUND)
 
         texts.forEach { (name, colour) ->
