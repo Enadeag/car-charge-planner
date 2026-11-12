@@ -4,7 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
+import java.time.Instant;
 import java.util.List;
 import javafx.geometry.Point2D;
 import org.junit.jupiter.api.Test;
@@ -15,8 +16,8 @@ class ChartGeometryTest {
     /** 200 by 100 pixels at (20, 10), from 06:00 to 20:00 and 0 to 4 kW. */
     private static final PlotArea PLOT = new PlotArea(20, 10, 200, 100, 6, 20, 4);
 
-    private static Step step(double start, double kw) {
-        return new Step(start, start + 1, kw, "");
+    private static DayChart.Step step(double start, double kw) {
+        return new DayChart.Step(start, start + 1, kw, Instant.EPOCH);
     }
 
     @Test

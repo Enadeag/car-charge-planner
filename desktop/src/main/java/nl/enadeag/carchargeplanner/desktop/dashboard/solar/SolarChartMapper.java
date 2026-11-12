@@ -1,8 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.TickLabel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
@@ -10,7 +8,6 @@ import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
-import java.util.OptionalDouble;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -38,32 +35,26 @@ public final class SolarChartMapper {
     }
 
     /**
-     * A day's expected solar power, the house's use and the charge windows.
+     * A day's chart of expected solar power, the baseload and the charge windows, in words.
      *
      * @param day one of the dashboard's days, with its name and its chart
-     * @return the chart's data, as the engine's chart has it, with every third clock hour on the time axis and the
-     *     words
+     * @return the engine's chart with its scale, a readout per step, every third clock hour on the time axis and the
+     *     spoken sentence
      */
     public SolarChartModel map(DashboardDay day) {
         var chart = day.chart();
-        var steps = chart.steps().stream()
-                .map(step -> new Step(step.startHour(), step.endHour(), step.kw(),
-                        messages.text(TextKey.CHART_READOUT, messages.time(step.start(), zone),
-                                messages.decimal(step.kw()), messages.decimal(chart.baseloadKw()))))
+        var readouts = chart.steps().stream()
+                .map(step -> messages.text(TextKey.CHART_READOUT, messages.time(step.start(), zone),
+                        messages.decimal(step.kw()), messages.decimal(chart.baseloadKw())))
                 .toList();
-        var windows = chart.windows().stream()
-                .map(window -> new WindowSpan(window.startHour(), window.endHour()))
-                .toList();
-        var madeAtHour = chart.now().map(now -> OptionalDouble.of(now.hour())).orElse(OptionalDouble.empty());
-        return new SolarChartModel(chart.fromHour(), chart.toHour(), chart.scaleKw(),
-                messages.text(TextKey.CHART_SCALE, messages.whole(chart.scaleKw())), steps, chart.baseloadKw(), windows,
-                madeAtHour, ticks(chart), spoken(day));
+        return new SolarChartModel(chart, messages.text(TextKey.CHART_SCALE, messages.whole(chart.scaleKw())),
+                readouts, ticks(chart), spoken(day));
     }
 
-    private static List<Tick> ticks(DayChart chart) {
+    private static List<TickLabel> ticks(DayChart chart) {
         return chart.ticks().stream()
                 .filter(tick -> tick.clockHour() % TICK_HOURS == 0)
-                .map(tick -> new Tick(tick.hour(), String.format(Locale.ROOT, "%02d", tick.clockHour())))
+                .map(tick -> new TickLabel(tick, String.format(Locale.ROOT, "%02d", tick.clockHour())))
                 .toList();
     }
 

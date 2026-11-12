@@ -8,21 +8,23 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
+import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.TickLabel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripOrigin;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayKind;
 import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -55,7 +57,7 @@ public final class Models {
             List.of(new ChipModel(EnergySource.SOLAR, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
                     new ChipModel(EnergySource.GRID, "0.6 kWh from the grid")),
             "The plan assumes the battery is at 50 %.", "Today: charge window 11:15 to 14:30, 10 A, 92 % sun.",
-            curve(3.6, List.of(new WindowSpan(11.25, 14.5)), OptionalDouble.of(8.2)),
+            curve(3.6, List.of(window(11.25, 14.5)), OptionalDouble.of(8.2)),
             new BatteryModel(50, 74, 30, 80, "50 → 74 %", "min 30", "target 80", true,
                     "Car battery 50 % now, 74 % after charging; minimum 30 %, target 80 %."),
             List.of(), Optional.empty(), List.of());
@@ -120,17 +122,45 @@ public final class Models {
     private Models() {
     }
 
-    /** A bell of sun from 07:00 to 19:00 in hourly steps, peaking at 13:00, with the house at 0.4 kW. */
-    public static SolarChartModel curve(double peakKw, List<WindowSpan> windows, OptionalDouble now) {
-        var steps = new ArrayList<Step>();
+    /**
+     * A bell of sun from 07:00 to 19:00 in hourly steps, peaking at 13:00, with a baseload of 0.4 kW, shown from 06:00
+     * to 20:00 up to 4 kW, with every third clock hour on the time axis.
+     */
+    public static SolarChartModel curve(double peakKw, List<DayChart.WindowBand> windows, OptionalDouble now) {
+        var steps = new ArrayList<DayChart.Step>();
+        var readouts = new ArrayList<String>();
         for (int hour = 7; hour < 19; hour++) {
             double kw = peakKw * Math.max(0, Math.sin(Math.PI * (hour + 0.5 - 7) / 12));
-            steps.add(new Step(hour, hour + 1, kw, "%02d:00 – %.1f kW sun · 0.4 kW house".formatted(hour, kw)));
+            steps.add(new DayChart.Step(hour, hour + 1, kw, at(hour)));
+            readouts.add("%02d:00 – %.1f kW sun · 0.4 kW house".formatted(hour, kw));
         }
-        var ticks = List.of(new Tick(6, "06"), new Tick(9, "09"), new Tick(12, "12"), new Tick(15, "15"),
-                new Tick(18, "18"));
-        return new SolarChartModel(6, 20, 4, "4 kW", steps, 0.4, windows, now, ticks,
+        var ticks = new ArrayList<DayChart.Tick>();
+        var labels = new ArrayList<TickLabel>();
+        for (int hour = 6; hour <= 20; hour++) {
+            var tick = new DayChart.Tick(hour, hour, at(hour));
+            ticks.add(tick);
+            if (hour % 3 == 0) {
+                labels.add(new TickLabel(tick, "%02d".formatted(hour)));
+            }
+        }
+        var moment = now.isPresent()
+                ? Optional.of(new DayChart.Moment(now.getAsDouble(), at(now.getAsDouble())))
+                : Optional.<DayChart.Moment>empty();
+        var peak = steps.stream().filter(step -> step.kw() > 0).max(Comparator.comparingDouble(DayChart.Step::kw))
+                .map(step -> new DayChart.Peak(step.kw(), step.start()));
+        var chart = new DayChart(6, 20, 4, steps, 0.4, windows, moment, ticks, peak);
+        return new SolarChartModel(chart, "4 kW", readouts, labels,
                 "Expected sun: peak %.1f kW around 13:00.".formatted(peakKw));
+    }
+
+    /** A charge window today, from and to an hour from the start of the day. */
+    public static DayChart.WindowBand window(double startHour, double endHour) {
+        return new DayChart.WindowBand(startHour, endHour, at(startHour), at(endHour));
+    }
+
+    /** The moment an hour after the start of today in Brussels. */
+    private static Instant at(double hour) {
+        return TODAY.atStartOfDay(BRUSSELS).toInstant().plus(Duration.ofSeconds(Math.round(hour * 3600)));
     }
 
     /** The day with this advice on its tab instead of its own. */

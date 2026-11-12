@@ -2,8 +2,8 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Tween;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +26,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Rectangle;
 
 /**
- * A day's expected solar power as an amber area, the house's use as a dashed line, the charge windows in green and a
+ * A day's expected solar power as an amber area, the baseload as a dashed line, the charge windows in green and a
  * line at "now". Pointing at the chart, tapping it or moving along it with the arrow keys reads out one step's values.
  * A new day or plan morphs the curve into its new shape. Colours come from dashboard.css.
  *
@@ -39,7 +39,7 @@ final class SolarChart extends Region {
     private static final double READOUT_GAP = 6;
 
     private final Path area = shape(new Path(), "solar-area", "chart-stroke");
-    private final Line house = shape(new Line(), "house-line", "chart-stroke");
+    private final Line baseload = shape(new Line(), "baseload-line", "chart-stroke");
     private final Line now = shape(new Line(), "now-line", "chart-stroke");
     private final Line pointer = shape(new Line(), "pointer-line");
     private final Line top = shape(new Line(), "chart-grid");
@@ -60,7 +60,7 @@ final class SolarChart extends Region {
     private List<Point2D> target = List.of();
     private List<Point2D> shown = List.of();
     /** The step read out; null while none is. */
-    private Step selected;
+    private DayChart.Step selected;
     /** Whether the pointer chose the step read out, rather than the arrow keys. */
     private boolean pointed;
     private PlotArea plot;
@@ -107,12 +107,13 @@ final class SolarChart extends Region {
      */
     void show(SolarChartModel day) {
         this.model = day;
+        var chart = day.chart();
         scale.setText(day.scaleText());
-        nowLabel.setVisible(day.madeAtHour().isPresent());
-        now.setVisible(day.madeAtHour().isPresent());
+        nowLabel.setVisible(chart.now().isPresent());
+        now.setVisible(chart.now().isPresent());
         bands.clear();
         marks.clear();
-        day.windows().forEach(window -> {
+        chart.windows().forEach(window -> {
             bands.add(shape(new Rectangle(), "window-band"));
             marks.add(shape(new Line(), "window-mark", "chart-stroke"));
         });
@@ -120,14 +121,14 @@ final class SolarChart extends Region {
         day.ticks().forEach(tick -> ticks.add(Labels.line(tick.label(), "chart-axis")));
         var children = new ArrayList<Node>(List.of(top, middle, baseline));
         children.addAll(bands);
-        children.addAll(List.of(area, house));
+        children.addAll(List.of(area, baseload));
         children.addAll(marks);
         children.addAll(List.of(now, nowLabel, scale, zero, pointer));
         children.addAll(ticks);
         children.add(readout);
         getChildren().setAll(children);
         before = shown;
-        target = CurvePoints.of(day.steps(), day.fromHour(), day.toHour());
+        target = CurvePoints.of(chart.steps(), chart.fromHour(), chart.toHour());
         clearSelection();
         tween.play();
     }
@@ -137,7 +138,7 @@ final class SolarChart extends Region {
      *
      * @return the step pointed at or chosen with the arrow keys; empty when none is
      */
-    Optional<Step> selected() {
+    Optional<DayChart.Step> selected() {
         return Optional.ofNullable(selected);
     }
 
@@ -178,17 +179,18 @@ final class SolarChart extends Region {
         if (model == null) {
             return;
         }
+        var chart = model.chart();
         double labelHeight = zero.prefHeight(-1);
         double left = Math.max(scale.prefWidth(-1), zero.prefWidth(-1)) + GAP;
         double topEdge = labelHeight / 2;
         double width = Math.max(0, getWidth() - left - GAP);
         double height = Math.max(0, getHeight() - topEdge - labelHeight - GAP);
-        plot = new PlotArea(left, topEdge, width, height, model.fromHour(), model.toHour(), model.scaleKw());
+        plot = new PlotArea(left, topEdge, width, height, chart.fromHour(), chart.toHour(), chart.scaleKw());
         placeGrid(labelHeight);
         placeWindows();
         area.getElements().setAll(outline(plot, shown));
-        placeHorizontal(house, plot, plot.y(model.houseKw()));
-        model.madeAtHour().ifPresent(hour -> {
+        placeHorizontal(baseload, plot, plot.y(chart.baseloadKw()));
+        chart.now().map(DayChart.Moment::hour).ifPresent(hour -> {
             placeVertical(now, plot.x(hour), plot.top(), plot.bottom());
             nowLabel.resizeRelocate(Math.min(plot.x(hour) + GAP / 2, plot.right() - nowLabel.prefWidth(-1)),
                     plot.top(), nowLabel.prefWidth(-1), labelHeight);
@@ -198,8 +200,8 @@ final class SolarChart extends Region {
     }
 
     private void placeGrid(double labelHeight) {
-        placeHorizontal(top, plot, plot.y(model.scaleKw()));
-        placeHorizontal(middle, plot, plot.y(model.scaleKw() / 2));
+        placeHorizontal(top, plot, plot.y(model.chart().scaleKw()));
+        placeHorizontal(middle, plot, plot.y(model.chart().scaleKw() / 2));
         placeHorizontal(baseline, plot, plot.bottom());
         scale.resizeRelocate(0, plot.top() - labelHeight / 2, scale.prefWidth(-1), labelHeight);
         zero.resizeRelocate(0, plot.bottom() - labelHeight / 2, zero.prefWidth(-1), labelHeight);
@@ -207,7 +209,7 @@ final class SolarChart extends Region {
 
     private void placeWindows() {
         for (int i = 0; i < bands.size(); i++) {
-            var window = model.windows().get(i);
+            var window = model.chart().windows().get(i);
             double start = plot.x(window.startHour());
             double end = plot.x(window.endHour());
             var band = bands.get(i);
@@ -227,7 +229,7 @@ final class SolarChart extends Region {
         for (int i = 0; i < ticks.size(); i++) {
             var label = ticks.get(i);
             double width = label.prefWidth(-1);
-            double x = Math.clamp(plot.x(model.ticks().get(i).hour()) - width / 2, plot.left(), plot.right() - width);
+            double x = Math.clamp(plot.x(model.ticks().get(i).tick().hour()) - width / 2, plot.left(), plot.right() - width);
             label.resizeRelocate(x, plot.bottom() + GAP, width, labelHeight);
         }
     }
@@ -236,7 +238,7 @@ final class SolarChart extends Region {
         readout.setVisible(selected != null);
         pointer.setVisible(selected != null);
         if (selected != null) {
-            double x = plot.x(selected.midHour());
+            double x = plot.x(SolarChartModel.midHour(selected));
             placeVertical(pointer, x, plot.top(), plot.bottom());
             double width = readout.prefWidth(-1);
             double height = readout.prefHeight(width);
@@ -277,14 +279,14 @@ final class SolarChart extends Region {
     }
 
     private void stepWithArrowKey(KeyEvent event) {
-        if (model == null || model.steps().isEmpty()) {
+        if (model == null || model.chart().steps().isEmpty()) {
             return;
         }
         int direction = event.getCode() == KeyCode.RIGHT ? 1 : event.getCode() == KeyCode.LEFT ? -1 : 0;
         if (direction == 0) {
             return;
         }
-        var steps = model.steps();
+        var steps = model.chart().steps();
         int index = selected == null ? -1 : steps.indexOf(selected);
         int next = index < 0 ? (direction > 0 ? 0 : steps.size() - 1) : Math.clamp(index + direction, 0, steps.size() - 1);
         select(steps.get(next), false);
@@ -292,14 +294,14 @@ final class SolarChart extends Region {
     }
 
     /** Reads out a step of the day shown; a step chosen by keyboard is read to the screen reader too. */
-    private void select(Step step, boolean byPointer) {
+    private void select(DayChart.Step step, boolean byPointer) {
         selected = step;
         pointed = byPointer;
-        readoutText.setText(step.readout());
+        readoutText.setText(model.readout(step));
         if (byPointer) {
             setAccessibleText(model.spoken());
         } else {
-            setAccessibleText(step.readout());
+            setAccessibleText(model.readout(step));
             ScreenReader.readAgain(this);
         }
         requestLayout();

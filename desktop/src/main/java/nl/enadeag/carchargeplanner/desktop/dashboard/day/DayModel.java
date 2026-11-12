@@ -24,7 +24,7 @@ import java.util.Optional;
  * @param chips the day's figures by source; may be empty
  * @param note a sentence about the day; may be empty
  * @param spoken the day's charge in one sentence: "Today: charge window 11:15 to 14:30, 10 A, 92% solar."
- * @param curve the day's expected solar power, house use and charge windows, as the solar chart draws them
+ * @param curve the day's expected solar power, baseload and charge windows, as the solar chart draws them
  * @param battery the day's battery levels, as the battery bar draws them
  * @param tripAdvice the advice of the trips the day's tab shows, in its words, in order of departure; may be empty
  * @param gridAdvice the grid advice the day's tab shows; empty on a day that shows none

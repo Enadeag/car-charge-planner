@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.IntToDoubleFunction;
 
-/** The engine's plans as the chart and battery mappers get them, in Brussels, with the house at 0.4 kW. */
+/** The engine's plans as the chart and battery mappers get them, in Brussels, with a baseload of 0.4 kW. */
 public final class PlannedDays {
 
     public static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");

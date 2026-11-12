@@ -23,7 +23,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 /**
  * WCAG AA on the rendered dashboard, in light and in dark: every text reaches 4.5:1 against what it sits on, every
- * glyph and every mark of the charts (the curve's edge, the house line, the windows, "now", the battery and its marks)
+ * glyph and every mark of the charts (the curve's edge, the baseload line, the windows, "now", the battery and its marks)
  * 3:1. The charts' readout and the away entry with its problem are open, so their texts are checked too. Controls that are switched off are exempt, as WCAG
  * allows.
  */

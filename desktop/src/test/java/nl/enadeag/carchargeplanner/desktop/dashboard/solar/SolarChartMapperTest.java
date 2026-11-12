@@ -8,13 +8,12 @@ import static nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays.day;
 import static nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays.hourly;
 import static nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays.planned;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Step;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.Tick;
-import nl.enadeag.carchargeplanner.desktop.dashboard.solar.SolarChartModel.WindowSpan;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import java.time.Duration;
@@ -22,6 +21,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.IntStream;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 
 /** The engine's chart in the desktop's words and marks; the chart's rules are the engine's own tests. */
@@ -38,22 +38,32 @@ class SolarChartMapperTest {
         return curve(planned, index, ENGLISH);
     }
 
-    /** The step that starts at an hour from the start of the day. */
-    private static Step stepFrom(SolarChartModel curve, double hour) {
-        return curve.steps().stream().filter(step -> step.startHour() == hour).findFirst().orElseThrow();
+    /** The readout of the step that starts at an hour from the start of the day. */
+    private static String readoutFrom(SolarChartModel curve, double hour) {
+        return curve.readout(curve.chart().steps().stream().filter(step -> step.startHour() == hour).findFirst()
+                .orElseThrow());
+    }
+
+    /** The marks on the time axis, as (hour, label). */
+    private static List<Tuple> ticks(SolarChartModel curve) {
+        return curve.ticks().stream().map(tick -> tuple(tick.tick().hour(), tick.label())).toList();
+    }
+
+    private static Tuple tick(double hour, String label) {
+        return tuple(hour, label);
     }
 
     @Test
     void theChartHasTheEnginesHoursAndStepsAndMarksEveryThirdHourOfTheClock() {
         var today = curve(TWO_DAYS, 0);
 
-        assertThat(today.fromHour()).isEqualTo(6);
-        assertThat(today.toHour()).isEqualTo(20);
-        assertThat(today.steps()).extracting(SolarChartModel.Step::startHour)
+        assertThat(today.chart().fromHour()).isEqualTo(6);
+        assertThat(today.chart().toHour()).isEqualTo(20);
+        assertThat(today.chart().steps()).extracting(DayChart.Step::startHour)
                 .containsExactly(6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0);
-        assertThat(today.steps().get(7).kw()).isEqualTo(4.2);
-        assertThat(today.ticks()).containsExactly(new Tick(6, "06"), new Tick(9, "09"), new Tick(12, "12"),
-                new Tick(15, "15"), new Tick(18, "18"));
+        assertThat(today.chart().steps().get(7).kw()).isEqualTo(4.2);
+        assertThat(ticks(today)).containsExactly(tick(6, "06"), tick(9, "09"), tick(12, "12"),
+                tick(15, "15"), tick(18, "18"));
     }
 
     @Test
@@ -63,29 +73,30 @@ class SolarChartMapperTest {
 
         var curve = curve(day, 0);
 
-        assertThat(curve.ticks()).containsExactly(new Tick(9, "09"), new Tick(12, "12"), new Tick(15, "15"),
-                new Tick(18, "18"));
+        assertThat(ticks(curve)).containsExactly(tick(9, "09"), tick(12, "12"), tick(15, "15"),
+                tick(18, "18"));
     }
 
     @Test
     void theScaleSaysItsWholeKilowatts() {
-        assertThat(curve(TWO_DAYS, 0).scaleKw()).isEqualTo(6);
+        assertThat(curve(TWO_DAYS, 0).chart().scaleKw()).isEqualTo(6);
         assertThat(curve(TWO_DAYS, 0).scaleText()).isEqualTo("6 kW");
     }
 
     @Test
-    void eachStepReadsOutItsTimeTheSunAndTheHouse() {
-        assertThat(stepFrom(curve(TWO_DAYS, 0), 13).readout()).isEqualTo("13:00: 4.2 kW solar · 0.4 kW house");
+    void eachStepReadsOutItsTimeTheSunAndTheBaseload() {
+        assertThat(readoutFrom(curve(TWO_DAYS, 0), 13)).isEqualTo("13:00: 4.2 kW solar · 0.4 kW house");
     }
 
     @Test
     void theWindowsAndNowAreInHoursOfTheDay() {
         var today = curve(TWO_DAYS, 0);
 
-        assertThat(today.windows()).containsExactly(new WindowSpan(11.25, 14.5));
-        assertThat(today.madeAtHour().orElseThrow()).isCloseTo(8.2, within(1e-9));
-        assertThat(today.houseKw()).isEqualTo(0.4);
-        assertThat(curve(TWO_DAYS, 1).madeAtHour()).isEmpty();
+        assertThat(today.chart().windows()).extracting(DayChart.WindowBand::startHour, DayChart.WindowBand::endHour)
+                .containsExactly(tuple(11.25, 14.5));
+        assertThat(today.chart().now().orElseThrow().hour()).isCloseTo(8.2, within(1e-9));
+        assertThat(today.chart().baseloadKw()).isEqualTo(0.4);
+        assertThat(curve(TWO_DAYS, 1).chart().now()).isEmpty();
     }
 
     @Test
@@ -111,8 +122,8 @@ class SolarChartMapperTest {
         var curve = curve(day, 0);
 
         // the hour from 02:00 to 03:00 comes twice, so 09:00 is 10 hours after midnight
-        assertThat(curve.ticks()).contains(new Tick(10, "09"), new Tick(13, "12"));
-        assertThat(stepFrom(curve, 10).readout()).startsWith("09:00: 2.0 kW solar");
+        assertThat(ticks(curve)).contains(tick(10, "09"), tick(13, "12"));
+        assertThat(readoutFrom(curve, 10)).startsWith("09:00: 2.0 kW solar");
     }
 
     @Test
@@ -130,15 +141,15 @@ class SolarChartMapperTest {
 
         var curve = curve(kyivPlan, 0);
 
-        assertThat(curve.ticks()).containsExactly(new Tick(0, "00"), new Tick(5, "06"), new Tick(8, "09"),
-                new Tick(11, "12"), new Tick(14, "15"), new Tick(17, "18"), new Tick(20, "21"), new Tick(23, "24"));
+        assertThat(ticks(curve)).containsExactly(tick(0, "00"), tick(5, "06"), tick(8, "09"),
+                tick(11, "12"), tick(14, "15"), tick(17, "18"), tick(20, "21"), tick(23, "24"));
     }
 
     @Test
     void inDutchTheNumbersHaveADecimalCommaAndTheWordsAreDutch() {
         var curve = curve(TWO_DAYS, 0, new Messages(Language.DUTCH));
 
-        assertThat(stepFrom(curve, 13).readout()).isEqualTo("13:00: 4,2 kW zonnestroom · 0,4 kW huis");
+        assertThat(readoutFrom(curve, 13)).isEqualTo("13:00: 4,2 kW zonnestroom · 0,4 kW huis");
         assertThat(curve.spoken()).isEqualTo("Vandaag, verwachte zonnestroom: piek 4,2 kW rond 13:00; het huis "
                 + "gebruikt ongeveer 0,4 kW. Laden: 11:15 tot 14:30. Nu 08:12.");
     }
