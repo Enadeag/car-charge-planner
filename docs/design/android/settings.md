@@ -59,6 +59,10 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - Keys that could not be stored give "Not saved: the API keys could not be stored. Try again." (#315).
 - While the Forecast page shows, its window is `FLAG_SECURE` and its fields ask for no autofill (#315).
 - "Wi-Fi only" is the page's last row, a switch that applies at once, outside the page's Save (#361).
+- Under each provider's heading its required settings show, then one shared `Fold` with its optional ones, named by what is in it: "API key and server" ("API-sleutel en server") for a server address and an API key, "API key" ("API-sleutel") for an API key alone, "More settings" for any other optional settings; a provider without optional settings has no fold. Check connection with its result, "Reading the API keys…" and the note on keys that could not be read stay outside the folds (#459).
+- A fold is open when one of its settings holds a value (a stored key, or a server address of the owner's own), else closed, decided once the stored keys are read, so it moves at most once; until then it follows the server address. Once the owner closes it, it stays closed while the page is open, also after a Save. A failed check or keys that could not be read do not open it; a problem in one of its fields does, before the focus moves there, and holds it open as on the Car and house page (`rememberProblemFold`) (#459).
+- A closed fold never changes what is saved: a key or an address in it that the owner did not touch stays as stored (#459).
+- Where two folds on the page have the same name, TalkBack reads each with its provider, as the fields are: "API key, Forecast.Solar"; no other spoken text is added (#459).
 
 ### Open source licences
 
