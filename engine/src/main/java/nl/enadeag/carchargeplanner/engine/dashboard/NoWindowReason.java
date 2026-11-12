@@ -13,14 +13,14 @@ public enum NoWindowReason {
     AWAY,
 
     /**
-     * None of the above, and the car needs no charging that day: the level the day starts from, in whole percent as it
-     * is shown, is at or above the level the plan charges up to that day.
+     * None of the above, and the car needs no charging that day: no trip's grid charge starts on it, and the level the
+     * day starts from, in whole percent as it is shown, is at or above the level the plan charges up to that day.
      */
     NOT_NEEDED,
 
     /**
-     * None of the above, and the car could use a charge: the day starts below the level the plan charges up to, and
-     * there is too little solar power while the car is home for a window.
+     * None of the above, and the car could use a charge: the day starts below the level the plan charges up to, or a
+     * trip's grid charge starts on it, and there is too little solar power while the car is home for a window.
      */
     TOO_LITTLE_SOLAR
 }

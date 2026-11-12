@@ -6,8 +6,10 @@ import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -199,6 +201,26 @@ class DayCardTest {
         assertThat(shown.noWindow()).contains(NoWindowReason.TOO_LITTLE_SOLAR);
     }
 
+    @ParameterizedTest
+    @CsvSource({"21, TOO_LITTLE_SOLAR, NOT_NEEDED", "24, NOT_NEEDED, TOO_LITTLE_SOLAR"})
+    void theDayATripsGridChargeStartsOnHasTooLittleSolarPowerThoughItStartsAboveWhatThePlanChargesTo(int startHour,
+            NoWindowReason today, NoWindowReason tomorrow) {
+        // the trip leaves the day after tomorrow; a grid charge from midnight starts tomorrow, though in UTC it is
+        // still 22:00 today
+        var leaving = trip(DAY_AFTER, 8, DAY_AFTER, 18);
+        var start = at(TODAY, 0, 0).plus(Duration.ofHours(startHour));
+        var grid = new TripGridCharge(new Window(start, start.plus(Duration.ofHours(2)), 16, 3.7, 7.4, 7.4),
+                TripGridCharge.Start.PLANNED);
+        var advice = new TripAdvice(leaving, new Percent(76.5), List.of(), new Percent(70), Optional.of(grid),
+                new Percent(76.5), 0, new Percent(40));
+        var plan = List.of(chargingTo(TODAY, 85, 80), chargingTo(TOMORROW, 85, 80), chargingTo(DAY_AFTER, 85, 80));
+
+        var shown = days(plan, Optional.empty(), List.of(advice), List.of(leaving));
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(today), Optional.of(tomorrow),
+                Optional.of(NoWindowReason.DEPARTURE));
+    }
+
     @Test
     void theGridAdviceTheDepartureAndBeingAwayComeBeforeTooLittleSolarPower() {
         var leaving = trip(TOMORROW, 7, DAY_AFTER, 18);
@@ -208,6 +230,23 @@ class DayCardTest {
 
         assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.GRID),
                 Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.AWAY));
+    }
+
+    @Test
+    void theCardShowsTheBatteryWithAWindowAndForTheGridAdviceADepartureOrATripOnly() {
+        var leaving = trip(TOMORROW, 7, DAY_AFTER, 18);
+        var later = DAY_AFTER.plusDays(1);
+        var plan = List.of(chargingTo(TODAY, 40, 80), chargingTo(TOMORROW, 40, 80), chargingTo(DAY_AFTER, 40, 80),
+                chargingTo(later, 80, 80), chargingTo(later.plusDays(1), 40, 80),
+                day(later.plusDays(2), List.of(window(later.plusDays(2), 11, 14, 0))));
+
+        var shown = days(plan, Optional.of(grid(TODAY)), List.of(advice(leaving)), List.of(leaving));
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.GRID),
+                Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.AWAY),
+                Optional.of(NoWindowReason.NOT_NEEDED), Optional.of(NoWindowReason.TOO_LITTLE_SOLAR), Optional.empty());
+        assertThat(shown).extracting(DashboardDay::showsBattery)
+                .containsExactly(true, true, true, false, false, true);
     }
 
     @Test

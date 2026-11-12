@@ -59,4 +59,20 @@ public record DashboardDay(
         }
         return noWindow.equals(Optional.of(NoWindowReason.GRID)) ? DayKind.GRID : DayKind.NONE;
     }
+
+    /**
+     * Whether the day's card shows its battery levels beside the window or the reason without one. A day that needs no
+     * charging or has too little solar power leaves them out: its heading says all there is to say, and the Car
+     * battery card, shown on every day, has the levels. Both apps follow this, so neither keeps its own list of
+     * reasons.
+     *
+     * @return true with a main window and on a day without one for the grid advice, a departure or a trip the car is
+     *     away on; false on a day without one that needs no charging or has too little solar power
+     */
+    public boolean showsBattery() {
+        return noWindow.map(reason -> switch (reason) {
+            case GRID, DEPARTURE, AWAY -> true;
+            case NOT_NEEDED, TOO_LITTLE_SOLAR -> false;
+        }).orElse(true);
+    }
 }

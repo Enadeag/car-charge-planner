@@ -29,6 +29,8 @@ final class DayBuilder {
     /** The day the grid advice is about; null when the plan gives none. */
     private final LocalDate gridDay;
     private final Set<LocalDate> departures;
+    /** The days a trip's grid charge starts on. */
+    private final Set<LocalDate> tripGridDays;
     /** The trips made with this car, which keep it away on the days from their departure to their return. */
     private final List<Trip> trips;
 
@@ -39,6 +41,10 @@ final class DayBuilder {
         this.gridDay = parts.gridAdvice().map(GridAdvice::day).orElse(null);
         this.departures = parts.tripAdvice().stream()
                 .map(advice -> advice.trip().firstDay(zone))
+                .collect(Collectors.toSet());
+        this.tripGridDays = parts.tripAdvice().stream()
+                .flatMap(advice -> advice.grid().stream())
+                .map(grid -> grid.window().start().atZone(zone).toLocalDate())
                 .collect(Collectors.toSet());
         this.trips = parts.trips().stream().filter(trip -> !trip.notWithThisCar()).toList();
     }
@@ -66,9 +72,11 @@ final class DayBuilder {
     }
 
     /**
-     * The grid advice's day says so whatever the trips; the departure comes before being away on the trip. Any other
-     * day needs no charging when the level it starts from, rounded half up as it is shown, reaches the level the plan
-     * charges up to, so the card never contradicts the number the owner sees.
+     * The grid advice's day says so whatever the trips; the departure comes before being away on the trip. A day a
+     * trip's grid charge starts on could use a charge, as the trip advice beside it says so, though the level it starts
+     * from may reach what the trip needs before the day's own driving. Any other day needs no charging when the level it
+     * starts from, rounded half up as it is shown, reaches the level the plan charges up to, so the card never
+     * contradicts the number the owner sees.
      */
     private NoWindowReason noWindow(DayPlan day) {
         var date = day.date();
@@ -81,7 +89,8 @@ final class DayBuilder {
         if (trips.stream().anyMatch(trip -> trip.covers(date, zone))) {
             return NoWindowReason.AWAY;
         }
-        if (Math.round(day.startLevelPct().value()) >= day.wholeChargeToPct().value()) {
+        if (!tripGridDays.contains(date)
+                && Math.round(day.startLevelPct().value()) >= day.wholeChargeToPct().value()) {
             return NoWindowReason.NOT_NEEDED;
         }
         return NoWindowReason.TOO_LITTLE_SOLAR;

@@ -43,11 +43,13 @@ public record DayPlan(
     }
 
     /**
-     * The level the day's charging aims at as a whole percentage, as a level to charge to is shown, so a battery shown
-     * at it holds what the plan wanted.
+     * The level the day's charging aims at as the whole percentage a level to charge to is given in, the same as the
+     * trip advice's level to charge to. A day's level is compared with this number, not with {@link #chargeToPct()},
+     * so a battery the owner sees at it holds what the plan wanted, and a day just below a trip's level is not said to
+     * need no charging while the advice beside it asks for a whole percent more.
      *
-     * @return {@link #chargeToPct()} rounded up to a whole percentage, a level less than a millionth of a point above a
-     *     whole percentage rounded down to it, as that is the plan's rounding
+     * @return {@link #chargeToPct()} as a level to charge to, at most 100
+     * @see Charging#chargeLimit(double)
      */
     public Percent wholeChargeToPct() {
         return Charging.chargeLimit(chargeToPct.value());
