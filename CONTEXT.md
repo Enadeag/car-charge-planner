@@ -145,7 +145,7 @@ Solar panels that share one tilt and one direction, described by their number an
 _Avoid_: Plane (the forecast services' word), string (an electrical term), roof
 
 **Typical value**:
-A setting the owner did not give ("I don't know") and the app filled in with a common value. It is flagged as an estimate until the owner saves a value of their own.
+A common value the app fills in for a setting when the owner does not know theirs ("I don't know"). The settings file keeps it apart from the owner's own values until the owner enters one of their own.
 _Avoid_: Default, assumed value, guess
 
 **Planning preferences**:

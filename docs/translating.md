@@ -56,7 +56,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | More settings | Meer instellingen | the row that folds the seldom changed settings away, such as a panel array's losses and name, the trip surcharge and the household use on the Car and house page, the charger's phases, currents, voltage and efficiency, and the planning margin, the import tolerance and the minimum charge window length on the Planning page |  |
 | Charge power at home | laadvermogen thuis | the Charger page's drop-down: 3.7 kW, 7.4 kW, 11 kW, 22 kW, Other (3,7 kW, 7,4 kW, 11 kW, 22 kW, Anders), each one text of its own; its hint "The power the car charges with at home: the lower of what the charger and the car can take." ("Het vermogen waarmee de auto thuis laadt: het laagste van wat de laadpaal en de auto aankunnen.") | Charger power, charger size, wallbox rating |
 | Choose… | Kies… | what a drop-down shows before a choice |  |
-| Typical value | gangbare waarde |  | Default, assumed value, guess |
+| Typical value | gangbare waarde | what I don't know: use typical values (Weet ik niet: gangbare waarden gebruiken) fills in; no field says that its value is typical | Default, assumed value, guess |
 | Planning preferences | planning |  | Planning settings, options |
 | App settings | app-instellingen |  | Preferences, interface config |
 | Place search | zoeken (de zoekdienst) |  | Geocoding, location lookup, address search |
