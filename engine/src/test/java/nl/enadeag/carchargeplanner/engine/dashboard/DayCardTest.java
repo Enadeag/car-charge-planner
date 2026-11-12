@@ -201,23 +201,84 @@ class DayCardTest {
         assertThat(shown.noWindow()).contains(NoWindowReason.TOO_LITTLE_SOLAR);
     }
 
+    private static TripAdvice withGrid(Trip trip, Instant gridStart) {
+        var grid = new TripGridCharge(new Window(gridStart, gridStart.plus(Duration.ofHours(2)), 16, 3.7, 7.4, 7.4),
+                TripGridCharge.Start.PLANNED);
+        return new TripAdvice(trip, new Percent(76.5), List.of(), new Percent(70), Optional.of(grid),
+                new Percent(76.5), 0, new Percent(40));
+    }
+
+    private static GridAdvice gridWithWindow(LocalDate day, Instant windowStart) {
+        var window = new Window(windowStart, windowStart.plus(Duration.ofHours(2)), 16, 3.7, 7.4, 7.4);
+        return new GridAdvice(day, 10, 10, 3, Optional.of(window), Optional.of(new Percent(50)));
+    }
+
     @ParameterizedTest
-    @CsvSource({"21, TOO_LITTLE_SOLAR, NOT_NEEDED", "24, NOT_NEEDED, TOO_LITTLE_SOLAR"})
-    void theDayATripsGridChargeStartsOnHasTooLittleSolarPowerThoughItStartsAboveWhatThePlanChargesTo(int startHour,
+    @CsvSource({"21, GRID_CHARGE_STARTS, NOT_NEEDED", "24, NOT_NEEDED, GRID_CHARGE_STARTS"})
+    void theDayATripsGridChargeStartsOnSaysSoThoughItStartsAboveWhatThePlanChargesTo(int startHour,
             NoWindowReason today, NoWindowReason tomorrow) {
         // the trip leaves the day after tomorrow; a grid charge from midnight starts tomorrow, though in UTC it is
         // still 22:00 today
         var leaving = trip(DAY_AFTER, 8, DAY_AFTER, 18);
-        var start = at(TODAY, 0, 0).plus(Duration.ofHours(startHour));
-        var grid = new TripGridCharge(new Window(start, start.plus(Duration.ofHours(2)), 16, 3.7, 7.4, 7.4),
-                TripGridCharge.Start.PLANNED);
-        var advice = new TripAdvice(leaving, new Percent(76.5), List.of(), new Percent(70), Optional.of(grid),
-                new Percent(76.5), 0, new Percent(40));
+        var advice = withGrid(leaving, at(TODAY, 0, 0).plus(Duration.ofHours(startHour)));
         var plan = List.of(chargingTo(TODAY, 85, 80), chargingTo(TOMORROW, 85, 80), chargingTo(DAY_AFTER, 85, 80));
 
         var shown = days(plan, Optional.empty(), List.of(advice), List.of(leaving));
 
         assertThat(reasons(shown)).containsExactly(Optional.of(today), Optional.of(tomorrow),
+                Optional.of(NoWindowReason.DEPARTURE));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"23, 30, GRID_CHARGE_STARTS, NOT_NEEDED", "24, 0, NOT_NEEDED, GRID_CHARGE_STARTS"})
+    void aGridChargesDayIsTheHomesDayAlsoWestOfUtc(int hour, int minute, NoWindowReason today,
+            NoWindowReason tomorrow) {
+        // 23:30 in New York in summer is 03:30 the next day in UTC
+        var newYork = ZoneId.of("America/New_York");
+        var madeAt = TODAY.atTime(8, 0).atZone(newYork).toInstant();
+        var leaving = new Trip(DAY_AFTER.atTime(8, 0).atZone(newYork).toInstant(),
+                DAY_AFTER.atTime(18, 0).atZone(newYork).toInstant(), 300, false);
+        var start = TODAY.atStartOfDay(newYork).toInstant().plus(Duration.ofHours(hour).plusMinutes(minute));
+        var plan = List.of(chargingTo(TODAY, 85, 80), chargingTo(TOMORROW, 85, 80), chargingTo(DAY_AFTER, 85, 80));
+
+        var shown = DashboardView.of(new PlanParts(madeAt, newYork, plan, 0.3, new Percent(40), false,
+                Optional.empty(), List.of(withGrid(leaving, start)), new Percent(20), new Percent(80), List.of(),
+                List.of(leaving), Parts.source(madeAt))).days();
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(today), Optional.of(tomorrow),
+                Optional.of(NoWindowReason.DEPARTURE));
+    }
+
+    @Test
+    void theGridAdvicesWindowOnAnEarlierDaySaysAGridChargeStartsThere() {
+        // the dip is the day after tomorrow, but its window found room only tomorrow evening
+        var plan = List.of(chargingTo(TODAY, 85, 80), chargingTo(TOMORROW, 85, 80), chargingTo(DAY_AFTER, 85, 80));
+
+        var shown = days(plan, Optional.of(gridWithWindow(DAY_AFTER, at(TOMORROW, 20, 0))), List.of(), List.of());
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.NOT_NEEDED),
+                Optional.of(NoWindowReason.GRID_CHARGE_STARTS), Optional.of(NoWindowReason.GRID));
+        assertThat(shown).extracting(DashboardDay::showsBattery).containsExactly(false, true, true);
+    }
+
+    @Test
+    void theGridAdviceTheDepartureAndBeingAwayComeBeforeAGridChargeThatStarts() {
+        // a trip's grid charge starts on the grid advice's day, on its own departure day before it leaves, and on a
+        // day another trip keeps the car away
+        var away = trip(TODAY.plusDays(3), 7, TODAY.plusDays(4), 18);
+        var early = trip(TOMORROW, 9, TOMORROW, 18);
+        var late = trip(TODAY.plusDays(5), 8, TODAY.plusDays(5), 18);
+        var plan = List.of(chargingTo(TODAY, 40, 80), chargingTo(TOMORROW, 40, 80), chargingTo(DAY_AFTER, 40, 80),
+                chargingTo(TODAY.plusDays(3), 40, 80), chargingTo(TODAY.plusDays(4), 40, 80),
+                chargingTo(TODAY.plusDays(5), 40, 80));
+        var advice = List.of(withGrid(early, at(TOMORROW, 5, 0)), withGrid(late, at(TODAY.plusDays(4), 20, 0)),
+                withGrid(away, at(TODAY, 20, 0)));
+
+        var shown = days(plan, Optional.of(grid(TODAY)), advice, List.of(away, early, late));
+
+        assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.GRID),
+                Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.TOO_LITTLE_SOLAR),
+                Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.AWAY),
                 Optional.of(NoWindowReason.DEPARTURE));
     }
 
@@ -233,20 +294,24 @@ class DayCardTest {
     }
 
     @Test
-    void theCardShowsTheBatteryWithAWindowAndForTheGridAdviceADepartureOrATripOnly() {
+    void theCardShowsTheBatteryWithAWindowAndForTheGridAdviceADepartureATripOrAGridChargeThatStartsOnly() {
         var leaving = trip(TOMORROW, 7, DAY_AFTER, 18);
         var later = DAY_AFTER.plusDays(1);
+        var last = trip(later.plusDays(4), 8, later.plusDays(4), 18);
         var plan = List.of(chargingTo(TODAY, 40, 80), chargingTo(TOMORROW, 40, 80), chargingTo(DAY_AFTER, 40, 80),
                 chargingTo(later, 80, 80), chargingTo(later.plusDays(1), 40, 80),
-                day(later.plusDays(2), List.of(window(later.plusDays(2), 11, 14, 0))));
+                day(later.plusDays(2), List.of(window(later.plusDays(2), 11, 14, 0))),
+                chargingTo(later.plusDays(3), 80, 80), chargingTo(later.plusDays(4), 80, 80));
 
-        var shown = days(plan, Optional.of(grid(TODAY)), List.of(advice(leaving)), List.of(leaving));
+        var shown = days(plan, Optional.of(grid(TODAY)),
+                List.of(advice(leaving), withGrid(last, at(later.plusDays(3), 20, 0))), List.of(leaving, last));
 
         assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.GRID),
                 Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.AWAY),
-                Optional.of(NoWindowReason.NOT_NEEDED), Optional.of(NoWindowReason.TOO_LITTLE_SOLAR), Optional.empty());
+                Optional.of(NoWindowReason.NOT_NEEDED), Optional.of(NoWindowReason.TOO_LITTLE_SOLAR), Optional.empty(),
+                Optional.of(NoWindowReason.GRID_CHARGE_STARTS), Optional.of(NoWindowReason.DEPARTURE));
         assertThat(shown).extracting(DashboardDay::showsBattery)
-                .containsExactly(true, true, true, false, false, true);
+                .containsExactly(true, true, true, false, false, true, true, true);
     }
 
     @Test

@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.dashboard;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.LocalDate;
@@ -12,6 +13,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The days of one plan as their cards and battery bars show them, in the home's time zone: the windows and figures,
@@ -29,8 +31,7 @@ final class DayBuilder {
     /** The day the grid advice is about; null when the plan gives none. */
     private final LocalDate gridDay;
     private final Set<LocalDate> departures;
-    /** The days a trip's grid charge starts on. */
-    private final Set<LocalDate> tripGridDays;
+    private final Set<LocalDate> gridStartDays;
     /** The trips made with this car, which keep it away on the days from their departure to their return. */
     private final List<Trip> trips;
 
@@ -42,9 +43,10 @@ final class DayBuilder {
         this.departures = parts.tripAdvice().stream()
                 .map(advice -> advice.trip().firstDay(zone))
                 .collect(Collectors.toSet());
-        this.tripGridDays = parts.tripAdvice().stream()
-                .flatMap(advice -> advice.grid().stream())
-                .map(grid -> grid.window().start().atZone(zone).toLocalDate())
+        this.gridStartDays = Stream.concat(
+                        parts.tripAdvice().stream().flatMap(advice -> advice.grid().stream()).map(TripGridCharge::window),
+                        parts.gridAdvice().stream().flatMap(advice -> advice.window().stream()))
+                .map(window -> window.start().atZone(zone).toLocalDate())
                 .collect(Collectors.toSet());
         this.trips = parts.trips().stream().filter(trip -> !trip.notWithThisCar()).toList();
     }
@@ -72,11 +74,10 @@ final class DayBuilder {
     }
 
     /**
-     * The grid advice's day says so whatever the trips; the departure comes before being away on the trip. A day a
-     * trip's grid charge starts on could use a charge, as the trip advice beside it says so, though the level it starts
-     * from may reach what the trip needs before the day's own driving. Any other day needs no charging when the level it
-     * starts from, rounded half up as it is shown, reaches the level the plan charges up to, so the card never
-     * contradicts the number the owner sees.
+     * The grid advice's day says so whatever the trips; the departure comes before being away on the trip. A day a grid
+     * charge starts on is left to the advice beside it, as the level it starts from may reach what a trip needs before
+     * the day's own driving. Any other day needs no charging when the level it starts from, rounded half up as it is
+     * shown, reaches the level the plan charges up to, so the card never contradicts the number the owner sees.
      */
     private NoWindowReason noWindow(DayPlan day) {
         var date = day.date();
@@ -89,8 +90,10 @@ final class DayBuilder {
         if (trips.stream().anyMatch(trip -> trip.covers(date, zone))) {
             return NoWindowReason.AWAY;
         }
-        if (!tripGridDays.contains(date)
-                && Math.round(day.startLevelPct().value()) >= day.wholeChargeToPct().value()) {
+        if (gridStartDays.contains(date)) {
+            return NoWindowReason.GRID_CHARGE_STARTS;
+        }
+        if (Math.round(day.startLevelPct().value()) >= day.wholeChargeToPct().value()) {
             return NoWindowReason.NOT_NEEDED;
         }
         return NoWindowReason.TOO_LITTLE_SOLAR;

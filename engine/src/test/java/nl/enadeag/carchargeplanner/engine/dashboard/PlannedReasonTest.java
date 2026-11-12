@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.plan.AwayTimes;
 import nl.enadeag.carchargeplanner.engine.plan.Plan;
 import nl.enadeag.carchargeplanner.engine.plan.Planner;
+import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Duration;
 import java.time.Instant;
@@ -127,23 +128,23 @@ class PlannedReasonTest {
     }
 
     @Test
-    void theEveningBeforeATripWithAGridChargeHasTooLittleSolarPowerThoughItStartsAboveTheTarget() {
+    void theEveningBeforeATripWithAGridChargeSaysAGridChargeStartsThoughItStartsAboveTheTarget() {
         // no sun: the trip's grid charge starts on Friday evening; Sunday starts from the 30 % left on return
         var shown = reasons(car(0), days(List.of(Map.of(), Map.of(), Map.of(), Map.of())), 85, at(FRI, 0),
                 new Trip(at(SAT, 8), at(SAT, 18), 300, false));
 
-        assertThat(shown).containsExactly(Optional.of(NoWindowReason.TOO_LITTLE_SOLAR),
+        assertThat(shown).containsExactly(Optional.of(NoWindowReason.GRID_CHARGE_STARTS),
                 Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.TOO_LITTLE_SOLAR));
     }
 
     @Test
-    void aDayThatChargesAboveTheTargetForATripHasTooLittleSolarPowerBelowWhatTheTripNeeds() {
+    void aDayThatChargesAboveTheTargetForATripSaysAGridChargeStartsWhenItsDrivingTakesItBelowWhatTheTripNeeds() {
         // Thursday's sun reaches the 92.1 % and Friday has none; Friday's 9 % of driving leaves 83.1 %, above the
         // target but below what the trip needs, which a grid charge on Friday makes up
         var trip = new Trip(at(SAT, 8), at(SAT, 18), 300, false);
         var shown = reasons(car(50), days(List.of(SUNNY, Map.of(), Map.of())), 50, at(THU, 0), trip);
 
-        assertThat(shown).containsExactly(Optional.empty(), Optional.of(NoWindowReason.TOO_LITTLE_SOLAR),
+        assertThat(shown).containsExactly(Optional.empty(), Optional.of(NoWindowReason.GRID_CHARGE_STARTS),
                 Optional.of(NoWindowReason.DEPARTURE));
     }
 
@@ -167,20 +168,37 @@ class PlannedReasonTest {
         return new Trip(at(SAT, 8), at(SAT, 18), km, false);
     }
 
+    private static void assertGridChargeStartsOn(Plan plan, int trip, LocalDate day) {
+        assertThat(plan.trips().get(trip).grid()).map(grid -> grid.window().start().atZone(ZONE).toLocalDate())
+                .contains(day);
+    }
+
     @ParameterizedTest
     @CsvSource({"80, 181", "100, 300"})
-    void theDayATripsGridChargeStartsOnHasTooLittleSolarPowerThoughItStartsAtWhatTheTripNeeds(double levelPct,
-            double km) {
+    void theDayATripsGridChargeStartsOnSaysSoThoughItStartsAtWhatTheTripNeeds(double levelPct, double km) {
         // 181 km need 76.467 % and 300 km 100 %; Friday's 9 % of driving takes the level below that, so the trip's
         // grid charge starts on Friday evening
         var away = fridayBefore(saturday(km));
-        var plan = plan(car(50), days(NO_SUN), levelPct, at(FRI, 0), away);
-        assertThat(plan.trips().get(0).grid()).map(grid -> grid.window().start().atZone(ZONE).toLocalDate())
-                .contains(FRI);
+        assertGridChargeStartsOn(plan(car(50), days(NO_SUN), levelPct, at(FRI, 0), away), 0, FRI);
 
         var shown = reasons(car(50), days(NO_SUN), levelPct, at(FRI, 0), away);
 
-        assertThat(shown.get(0)).contains(NoWindowReason.TOO_LITTLE_SOLAR);
+        assertThat(shown.get(0)).contains(NoWindowReason.GRID_CHARGE_STARTS);
+    }
+
+    @Test
+    void aSunnyDayAFullBatteryCannotUseSaysAGridChargeStartsNotThatTheSunIsTooLittle() {
+        // the battery is full, so Friday's sun has nothing to charge; its 9 % of driving takes it below the 100 % the
+        // trip of 300 km needs, so the trip's grid charge starts on Friday
+        var away = fridayBefore(saturday(300));
+        var sunnyFriday = days(List.of(Map.of(), SUNNY, Map.of(), Map.of()));
+        var plan = plan(car(50), sunnyFriday, 100, at(FRI, 0), away);
+        assertThat(plan.days().get(0).windows()).isEmpty();
+        assertGridChargeStartsOn(plan, 0, FRI);
+
+        var shown = reasons(car(50), sunnyFriday, 100, at(FRI, 0), away);
+
+        assertThat(shown.get(0)).contains(NoWindowReason.GRID_CHARGE_STARTS);
     }
 
     @ParameterizedTest
@@ -205,5 +223,38 @@ class PlannedReasonTest {
         var shown = reasons(car(0), days(List.of(SUNNY)), 50, at(THU, 0), away);
 
         assertThat(shown).containsExactly(Optional.of(NoWindowReason.TOO_LITTLE_SOLAR));
+    }
+
+    @Test
+    void eachTripsGridChargeMarksTheDayItStartsOn() {
+        // without sun, each trip needs a grid charge the evening before it: Friday for Saturday's, Sunday for Monday's
+        var saturday = saturday(300);
+        var monday = new Trip(at(SAT.plusDays(2), 8), at(SAT.plusDays(2), 18), 300, false);
+        var forecast = days(List.of(Map.of(), Map.of(), Map.of(), Map.of(), Map.of()));
+        var away = new AwayTimes(List.of(), List.of(), List.of(saturday, monday));
+        var plan = plan(car(0), forecast, 85, at(FRI, 0), away);
+        assertGridChargeStartsOn(plan, 0, FRI);
+        assertGridChargeStartsOn(plan, 1, SAT.plusDays(1));
+
+        var shown = reasons(car(0), forecast, 85, at(FRI, 0), away);
+
+        assertThat(shown).containsExactly(Optional.of(NoWindowReason.GRID_CHARGE_STARTS),
+                Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.GRID_CHARGE_STARTS),
+                Optional.of(NoWindowReason.DEPARTURE));
+    }
+
+    @Test
+    void aTripsGridChargeThatStartsNowSaysSoToday() {
+        // at 22:00 there is too little time to charge from 40 % to the 92.1 % by an hour before the departure at
+        // 03:00, so the grid charge starts now
+        var trip = new Trip(at(SAT, 3), at(SAT, 18), 300, false);
+        var away = new AwayTimes(List.of(), List.of(), List.of(trip));
+        var plan = plan(car(0), days(NO_SUN), 40, at(FRI, 22), away);
+        assertThat(plan.trips().get(0).grid()).map(TripGridCharge::start).contains(TripGridCharge.Start.NOW);
+        assertGridChargeStartsOn(plan, 0, FRI);
+
+        var shown = reasons(car(0), days(NO_SUN), 40, at(FRI, 22), away);
+
+        assertThat(shown.get(0)).contains(NoWindowReason.GRID_CHARGE_STARTS);
     }
 }

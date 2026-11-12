@@ -66,12 +66,13 @@ public record DashboardDay(
      * battery card, shown on every day, has the levels. Both apps follow this, so neither keeps its own list of
      * reasons.
      *
-     * @return true with a main window and on a day without one for the grid advice, a departure or a trip the car is
-     *     away on; false on a day without one that needs no charging or has too little solar power
+     * @return true with a main window and on a day without one for the grid advice, a departure, a trip the car is
+     *     away on or a grid charge that starts on it; false on a day without one that needs no charging or has too
+     *     little solar power
      */
     public boolean showsBattery() {
         return noWindow.map(reason -> switch (reason) {
-            case GRID, DEPARTURE, AWAY -> true;
+            case GRID, DEPARTURE, AWAY, GRID_CHARGE_STARTS -> true;
             case NOT_NEEDED, TOO_LITTLE_SOLAR -> false;
         }).orElse(true);
     }

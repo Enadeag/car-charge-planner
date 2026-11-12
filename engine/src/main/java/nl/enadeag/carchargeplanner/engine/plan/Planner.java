@@ -333,8 +333,7 @@ public final class Planner {
      * One day, in parts cut at its departures. Each part charges on solar power up to the target level, or up to what
      * the next trip needs from its first day of charging above the target. A trip's grid charge on its departure day is
      * counted before the departure; one on an earlier day after that day's driving, as it runs in the evening or the
-     * night. The day aims at the highest of its parts' levels, and at what a trip needs on the day its grid charge
-     * starts.
+     * night. The day's solar charging aims at the highest of its parts' levels.
      */
     private DayPlan planDay(LocalDate date, double startPct, Input input, List<TripCharge> charges,
             List<Departure> departures) {
@@ -348,11 +347,9 @@ public final class Planner {
         double chargeToPct = 0;
         var partStart = date.atStartOfDay(zone).toInstant();
         for (var charge : charges) {
-            if (gridDate(charge).filter(date::equals).isPresent()) {
-                chargeToPct = Math.max(chargeToPct, charge.neededPct());
-                if (charge.trip().firstDay(zone).isAfter(date)) {
-                    laterGridPct += gridPct(charge);
-                }
+            if (gridDate(charge).filter(date::equals).isPresent()
+                    && charge.trip().firstDay(zone).isAfter(date)) {
+                laterGridPct += gridPct(charge);
             }
             var departure = charge.trip().departure();
             if (!departure.atZone(zone).toLocalDate().equals(date)) {
