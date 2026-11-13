@@ -1,6 +1,6 @@
 # Secrets: decisions
 
-Decisions about how the app keeps and removes the owner's secrets (API keys, links) that the code alone does not explain. Each says what holds now and ends with the issue that settled it.
+Decisions about how the app keeps and removes the owner's secrets (API keys) that the code alone does not explain. Each says what holds now and ends with the issue that settled it.
 
 ### Every keychain
 
@@ -31,12 +31,7 @@ Decisions about how the app keeps and removes the owner's secrets (API keys, lin
 - A save over an entry the keychain cannot read never falls back to `secrets.json`: when a write or delete of that save fails (a refused `index`, a refused delete of the entry the owner removed), the save fails and the owner is told the keys were not saved, because the keychain was readable and the file would hide the unreadable entry. What was written before the failure stays: a refused `index` leaves the old one, which still lists every entry; a refused delete leaves that entry in the keychain, no longer listed (#292).
 - A save never reads the `index` twice: it deletes only entries listed in the `index` it read at the start of that save. A refused read of the `index` at that point sends the keys to `secrets.json` with `PRIVATE_FILE` and leaves every entry; a damaged `index` counts as none (#292).
 - `ApiKeys.remove` reaches an entry the keychain cannot read: when a load fails on one, it checks the keychain's entries, so it removes such an entry (and its name in the `index`) and keeps it when removing another (#292).
-
-### Leftovers of the calendar trips
-
-- At each start the app removes `calendar/ical-link` and `geoapify/api-key` from the keychain and from `secrets.json` (`CalendarLeftovers`). A copy in the keychain may stay until a start at which the keychain is usable and holds it: while the keychain is locked or unavailable, while `secrets.json` lacks the names but the keychain has them, or after the engine has postponed asking for the keychain. There is no retry within a session (#282).
-- A keychain that stays locked is the owner's to unlock; the app never asks for it unprompted, and removing a secret never asks to unlock the keychain. This is checked with KWallet through the Secret Service; checking GNOME Keyring is the open #52 (#282).
-- The start-up clean-up is not described in the user docs, because no release wrote these secrets; the reason is in the Javadoc of `CalendarLeftovers` and `ConfigFormat` (#282).
+- A locked keychain is the owner's to unlock: a load, the move of `secrets.json` into the keychain and a removal never have the system ask for it, only a save the owner makes does, so nothing prompts unasked. Checked with KWallet through the Secret Service; the check with GNOME Keyring is the open #52 (#282).
 
 ### The Android keychain
 

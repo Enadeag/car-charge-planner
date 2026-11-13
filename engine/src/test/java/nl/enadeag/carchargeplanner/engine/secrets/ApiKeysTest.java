@@ -1044,6 +1044,20 @@ class ApiKeysTest {
         assertThat(keys(lockable).load()).isEqualTo(KEYS);
     }
 
+    @Test
+    void removingFromALockedKeychainStillTakesTheSettingsOutOfTheFileAndNeverPrompts() throws SecretsProblem {
+        var lockable = new LockableKeychain();
+        lockable.locked = true;
+        file().write(KEYS);
+
+        assertThatThrownBy(() -> keys(lockable).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
+
+        assertThat(lockable.prompts).hasValue(0);
+        assertThat(file().read()).isEqualTo(new Secrets(Map.of(FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"))));
+    }
+
     /** Locked after it said it holds the keys, so only the save finds it locked. */
     @Test
     void aKeychainThatLocksBeforeTheRemovalIsWrittenNeverPromptsEither() throws SecretsProblem {
@@ -1057,6 +1071,37 @@ class ApiKeysTest {
                 .isInstanceOfSatisfying(SecretsProblem.class,
                         problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
         assertThat(lockable.prompts).hasValue(0);
+    }
+
+    private static final Secrets WITH_UNKNOWN_PROVIDERS = new Secrets(Map.of(
+            OPEN_METEO, Map.of("api_key", "OM-SECRET-1"),
+            new ProviderId("leftover-a"), Map.of("some-link", "LEFTOVER-1"),
+            new ProviderId("leftover-b"), Map.of("other-key", "LEFTOVER-2")));
+    private static final Secrets UNKNOWN_PROVIDERS_AFTER_A_CHANGE = new Secrets(Map.of(
+            OPEN_METEO, Map.of("api_key", "OM-NEW"),
+            new ProviderId("leftover-a"), Map.of("some-link", "LEFTOVER-1"),
+            new ProviderId("leftover-b"), Map.of("other-key", "LEFTOVER-2")));
+
+    @Test
+    void aKeychainsProvidersAndSettingsThatNoProviderKnowsSurviveASaveAndALoad() throws SecretsProblem {
+        var lockable = new LockableKeychain();
+        keys(lockable).save(WITH_UNKNOWN_PROVIDERS);
+
+        keys(lockable).applyChanges(NEW_OPEN_METEO_KEY, () -> { });
+
+        assertThat(keys(lockable).load()).isEqualTo(UNKNOWN_PROVIDERS_AFTER_A_CHANGE);
+        assertThat(lockable.prompts).hasValue(0);
+    }
+
+    @Test
+    void aFilesProvidersAndSettingsThatNoProviderKnowsSurviveASaveAndALoad() throws SecretsProblem {
+        file().write(WITH_UNKNOWN_PROVIDERS);
+        assertThat(keys(new NoKeychain()).load()).isEqualTo(WITH_UNKNOWN_PROVIDERS);
+
+        keys(new NoKeychain()).applyChanges(NEW_OPEN_METEO_KEY, () -> { });
+
+        assertThat(file().read()).isEqualTo(UNKNOWN_PROVIDERS_AFTER_A_CHANGE);
+        assertThat(keys(new NoKeychain()).load()).isEqualTo(UNKNOWN_PROVIDERS_AFTER_A_CHANGE);
     }
 
     private static final String FORECAST_SOLAR_ENTRY = "forecast/forecast-solar/api_key";
@@ -1611,7 +1656,7 @@ class ApiKeysTest {
 
     @Test
     void withoutAFallbackRemovingFromAKeychainThatCannotBeUsedFailsAndWritesNoFile() {
-        assertThatThrownBy(() -> keys(new NoKeychain(), KeyFallback.NONE).remove(CalendarLeftovers.SECRETS))
+        assertThatThrownBy(() -> keys(new NoKeychain(), KeyFallback.NONE).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
                 .isInstanceOfSatisfying(SecretsProblem.class,
                         problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED));
 

@@ -290,7 +290,7 @@ public final class ApiKeys implements SecretsSource {
     /**
      * Removes these settings from where the keys are kept, without asking the owner anything: unlike
      * {@link #applyChanges(KeyChanges, Runnable)} it never has the system ask to unlock the keychain, so it can run
-     * unasked, such as at start-up. Writes only when one of them is stored; it then saves as
+     * unasked. Writes only when one of them is stored; it then saves as
      * {@link #applyChanges(KeyChanges, Runnable)} does, so keys kept in the file move into a keychain that can be used.
      * While the keychain is locked they are still removed from the file, which needs no keychain, so a secret kept
      * there does not stay behind for as long as the owner leaves the keychain locked. Blocks while the keychain
