@@ -249,7 +249,8 @@ public final class DesktopApp {
                 () -> setUpOffer.openSettingsOrSetUp(Category.SOLAR), setUp::open, this::quit);
         var dashboard = makeOnFx(() -> new Dashboard(icon, AppName.TITLE,
                 new WindowTheme(preferences.windows(), preferences.textSize()),
-                preferences.reducedMotion(), units, Clock.systemUTC(), parts.taskbarHiding(), language, actions));
+                preferences.reducedMotion(), units, Clock.systemUTC(), parts.taskbarHiding(), language,
+                stores.providers(), actions));
         dashboardMade.complete(dashboard);
         return new Windows(dashboard, settings, setUpOffer);
     }

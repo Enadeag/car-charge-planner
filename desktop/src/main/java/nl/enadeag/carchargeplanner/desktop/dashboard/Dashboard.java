@@ -12,6 +12,7 @@ import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.InstantSource;
 import java.util.List;
@@ -37,6 +38,7 @@ public final class Dashboard {
     private final DashboardPopup popup;
     private final DashboardWindow window;
     private final DashboardActions actions;
+    private final List<ProviderInfo> providers;
     // the fields below belong to the JavaFX thread
     private Messages messages;
     private DashboardView view;
@@ -61,12 +63,14 @@ public final class Dashboard {
      *     and when the owner saves an away period or a trip, which must not have ended by then
      * @param taskbarHiding how this system keeps the popup out of its taskbar
      * @param language the language the texts are in, followed while the app runs; never null
+     * @param providers the known forecast providers, which name a provider that refused its API key;
+     *     never null
      * @param actions what the dashboard's controls do; never null
      */
     public Dashboard(AppIcon icon, String appName, WindowTheme theme,
             ObservableValue<Boolean> reducedMotion, ObservableValue<Units> units, InstantSource clock,
             TaskbarHiding taskbarHiding,
-            LanguageChoice language, DashboardActions actions) {
+            LanguageChoice language, List<ProviderInfo> providers, DashboardActions actions) {
         if (actions == null) {
             throw new IllegalArgumentException("the dashboard's actions must not be null");
         }
@@ -74,6 +78,7 @@ public final class Dashboard {
         this.units = units;
         this.clock = clock;
         this.actions = actions;
+        this.providers = List.copyOf(providers);
         this.appName = appName;
         this.popup = new DashboardPopup(theme, icon, appName, clock, taskbarHiding);
         this.window = new DashboardWindow(theme, icon, appName);
@@ -157,7 +162,7 @@ public final class Dashboard {
     }
 
     private void showAgain() {
-        view.show(model(new OutlookMapper(messages)));
+        view.show(model(new OutlookMapper(messages, providers)));
     }
 
     private DashboardModel model(OutlookMapper mapper) {
@@ -172,7 +177,7 @@ public final class Dashboard {
         made.onWeeklyAway(actions.openWeeklyAway());
         made.onSettings(actions.settings());
         made.onSetUp(actions.setUp());
-        made.show(model(new OutlookMapper(messages)));
+        made.show(model(new OutlookMapper(messages, providers)));
         return made;
     }
 

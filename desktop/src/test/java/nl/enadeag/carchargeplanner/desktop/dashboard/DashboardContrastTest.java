@@ -37,7 +37,7 @@ class DashboardContrastTest {
         Fx.run(() -> stage.close());
     }
 
-    /** Every day of the example plan, and the message shown without a plan. */
+    /** Every day of the example plan, and the message shown without a plan, each below a refused key's warning. */
     private List<String> problems(ColorScheme scheme) throws Exception {
         return Fx.call(() -> {
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION,
@@ -46,7 +46,7 @@ class DashboardContrastTest {
             view.onTripChange(_ -> { }, (_, _) -> { }, _ -> { }, Models.CLOCK);
             stage = Scenes.show(view, scheme);
             var problems = new ArrayList<String>();
-            var plan = Models.plan(Optional.of(Models.ADVICE));
+            var plan = Models.withKeyRefused(Models.plan(Optional.of(Models.ADVICE)), Models.OPEN_METEO_REFUSED);
             for (int day = 0; day < plan.days().size(); day++) {
                 view.show(plan);
                 ((javafx.scene.control.TabPane) view.lookup(".day-tabs")).getSelectionModel().select(day);
@@ -58,7 +58,8 @@ class DashboardContrastTest {
             problems.addAll(Contrast.problemsIn(view));
             openTripEntryWithAProblem(view);
             problems.addAll(Contrast.problemsIn(view));
-            view.show(new DashboardModel.NoPlan("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo", false));
+            view.show(new DashboardModel.NoPlan("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo",
+                    false, List.of(Models.OPEN_METEO_REFUSED)));
             view.applyCss();
             problems.addAll(Contrast.problemsIn(view));
             return problems;

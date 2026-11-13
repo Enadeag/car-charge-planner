@@ -13,9 +13,11 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripAdviceModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripOrigin;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripsModel;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayKind;
 import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Duration;
 import java.time.Instant;
@@ -171,9 +173,27 @@ public final class Models {
         return gridAdvice.map(withTrips::withGridAdvice).orElse(withTrips);
     }
 
+    /** The warning that Open-Meteo refused its API key, as the mapper words it in English. */
+    public static final String OPEN_METEO_REFUSED =
+            "Open-Meteo refused the API key. Check it under Forecast in Settings.";
+
+    /** The two providers the app knows, whose ids are not their names. */
+    public static final List<ProviderInfo> PROVIDERS = List.of(provider("open-meteo", "Open-Meteo"),
+            provider("forecast-solar", "Forecast.Solar"));
+
+    private static ProviderInfo provider(String id, String name) {
+        return new ProviderInfo(new ProviderId(id), name, "", "https://example.org", "", "", Duration.ofMinutes(15),
+                Duration.ofDays(2), Duration.ofHours(6), List.of());
+    }
+
     /** The plan of these days, with the away periods and trips. */
     public static DashboardModel.Plan plan(DayModel... days) {
-        return new DashboardModel.Plan(List.of(days), AWAY, TRIPS, FOOTER);
+        return new DashboardModel.Plan(List.of(days), AWAY, TRIPS, FOOTER, List.of());
+    }
+
+    /** The same plan, with these warnings that providers refused their API key. */
+    public static DashboardModel.Plan withKeyRefused(DashboardModel.Plan plan, String... lines) {
+        return new DashboardModel.Plan(plan.days(), plan.away(), plan.trips(), plan.footer(), List.of(lines));
     }
 
     /** The plan of today, tomorrow and Sunday, with this grid advice on today's tab and no trip advice. */

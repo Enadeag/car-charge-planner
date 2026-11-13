@@ -244,6 +244,8 @@ public enum TextKey {
     NO_FORECAST_DETAIL,
     /** Without a forecast because the API keys are in a locked keychain: what the owner should do. */
     NO_FORECAST_KEYCHAIN_LOCKED,
+    /** The dashboard's warning that a provider refused its API key: {0} is the provider's name. */
+    KEY_REFUSED,
     /** The dashboard's headline without a usable config file. */
     NOT_SET_UP,
     /** The config file could not be read: {0} is its path, {1} the system's error. */

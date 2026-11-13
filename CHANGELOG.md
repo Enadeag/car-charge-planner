@@ -4,6 +4,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- The dashboard warns when a forecast provider refuses its API key, as the Android app does: "Open-Meteo refused the API key. Check it under Forecast in Settings.", a line per provider above the day, also while another provider's or an older forecast gives the plan, and above "No forecast" when there is none (#391).
+
 ### Changed
 - Solar panels are entered as the **number of panels**, a **direction** and a **tilt** chosen from a list, the **year placed** and, if you know it, the **power per panel** in Wp, in set-up and in Settings; the line below says what they give together ("Together about 3.6 kWp"). Left empty, the power is the usual one for the year placed. The losses and the name are under **More settings**, and the panels no longer have "I don't know". An array entered before as a size in kWp keeps that size until you enter its number of panels, and a tilt or direction entered in degrees stays as it is until you choose one (#448).
 - The settings file is now version 2, which 0.6.0 and older cannot read: they ask you to update the app. Files of version 1 are still read (#448).

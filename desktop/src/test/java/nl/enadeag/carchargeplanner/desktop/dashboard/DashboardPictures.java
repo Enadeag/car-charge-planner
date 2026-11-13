@@ -228,8 +228,8 @@ public final class DashboardPictures {
             for (var trip : trips) {
                 engine.addTrip(trip);
             }
-            return new OutlookMapper(new Messages(language)).map(engine.outlook(), awayFile.periods(), engine.trips(),
-                    Units.METRIC);
+            return new OutlookMapper(new Messages(language), engine.providers()).map(engine.outlook(),
+                    awayFile.periods(), engine.trips(), Units.METRIC);
         } finally {
             engine.stop();
         }

@@ -3,18 +3,20 @@ package nl.enadeag.carchargeplanner.desktop.dashboard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
+import java.util.List;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.Region;
 
 /**
  * The dashboard as it will look, for set-up to show before Finish: the same view, with the owner's own plan, but
- * without the buttons that lead elsewhere (open as a window, away periods, Settings, entering the battery level).
+ * without the buttons that lead elsewhere (open as a window, away periods, Settings, entering the battery level)
+and without the warning about a refused API key, whose words point to Settings while the owner is still in set-up.
  *
  * <p>Make it and call it on the JavaFX thread.
  */
 public final class DashboardPreview {
 
-    private final Messages messages;
+    private final OutlookMapper mapper;
     private final DashboardView view;
 
     /**
@@ -27,10 +29,12 @@ public final class DashboardPreview {
      * @param messages the texts, in the language set-up speaks
      */
     public DashboardPreview(ObservableValue<Boolean> reducedMotion, String appName, Messages messages) {
-        this.messages = messages;
+        // the preview never shows the warning, so it needs no provider's name
+        this.mapper = new OutlookMapper(messages, List.of());
         this.view = new DashboardView(() -> { }, () -> { }, reducedMotion, appName, messages);
         view.setDetachable(false);
         view.hideFooterButtons();
+        view.hideKeyRefused();
         view.getStyleClass().add("dashboard-preview");
         showLoading();
     }
@@ -46,7 +50,7 @@ public final class DashboardPreview {
 
     /** Says that the forecast is being fetched, as the dashboard does before its first plan. */
     public void showLoading() {
-        view.show(new OutlookMapper(messages).loading());
+        view.show(mapper.loading());
     }
 
     /**
@@ -55,6 +59,6 @@ public final class DashboardPreview {
      * @param outlook the engine's preview of the owner's plan; never null
      */
     public void show(Outlook outlook) {
-        view.show(new OutlookMapper(messages).map(outlook));
+        view.show(mapper.map(outlook));
     }
 }

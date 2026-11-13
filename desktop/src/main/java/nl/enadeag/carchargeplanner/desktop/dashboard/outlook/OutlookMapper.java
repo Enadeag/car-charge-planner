@@ -11,7 +11,9 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.dashboard.Footer;
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -21,14 +23,18 @@ import java.util.List;
 public final class OutlookMapper {
 
     private final Messages messages;
+    private final List<ProviderInfo> providers;
 
     /**
      * Makes the mapper; it keeps nothing between outlooks.
      *
      * @param messages the texts, in the owner's language
+     * @param providers the known forecast providers, which name a provider that refused its API key; never null;
+     *     one not among them is named by its id
      */
-    public OutlookMapper(Messages messages) {
+    public OutlookMapper(Messages messages, List<ProviderInfo> providers) {
         this.messages = messages;
+        this.providers = List.copyOf(providers);
     }
 
     /**
@@ -60,19 +66,20 @@ public final class OutlookMapper {
      * @param trips the stored trips, in order of their departure; may be empty
      * @param units the units the trips' distances are told in, in their list and their advice
      * @return a plan with its days, or why there is none when there is no plan or it has no days; only an outlook
-     *     with a plan has a footer, also when the plan has no days, because only a plan has a forecast to credit
+     *     with a plan has a footer, also when the plan has no days, because only a plan has a forecast to credit;
+     *     with a plan or without a forecast, a warning per provider that refused its API key
      */
     public DashboardModel map(Outlook outlook, List<OneOffAwayPeriod> away, List<Trip> trips, Units units) {
         return switch (outlook) {
             case Outlook.Planned planned when planned.days().isEmpty() -> new DashboardModel.NoPlan(
                     messages.text(TextKey.NO_FORECAST), messages.text(TextKey.NO_FORECAST_NO_DAYS),
-                    footer(planned.footer(), planned.zone()));
+                    footer(planned.footer(), planned.zone()), false, keyRefused(planned.footer().keyRefusedBy()));
             case Outlook.Planned planned -> plan(planned, away, trips, units);
             case Outlook.NoForecast none -> new DashboardModel.NoPlan(messages.text(TextKey.NO_FORECAST),
-                    noForecast(none, messages), "");
+                    noForecast(none, messages), "", false, keyRefused(none.keyRefusedBy()));
             case Outlook.NotSetUp _ ->
                     new DashboardModel.NoPlan(messages.text(TextKey.NOT_SET_UP), messages.text(TextKey.NOT_SET_UP_FIRST),
-                            "", true);
+                            "", true, List.of());
             case Outlook.ConfigUnusable unusable ->
                     new DashboardModel.NoPlan(messages.text(TextKey.NOT_SET_UP), whatToFix(unusable, messages), "");
         };
@@ -129,7 +136,17 @@ public final class OutlookMapper {
                 .toList();
         var coming = new OneOffAwayMapper(dashboard.zone(), messages).map(dashboard.away());
         return new DashboardModel.Plan(days, coming, new TripsModel(dashboard.zone(), units),
-                footer(dashboard.footer(), dashboard.zone()));
+                footer(dashboard.footer(), dashboard.zone()), keyRefused(dashboard.footer().keyRefusedBy()));
+    }
+
+    /** A warning per provider, in the order given, with the provider's name as the desktop names it elsewhere. */
+    private List<String> keyRefused(List<ProviderId> refused) {
+        return refused.stream().map(id -> messages.text(TextKey.KEY_REFUSED, name(id))).toList();
+    }
+
+    private String name(ProviderId id) {
+        return providers.stream().filter(provider -> provider.id().equals(id)).map(ProviderInfo::name).findFirst()
+                .orElse(id.value());
     }
 
     /**

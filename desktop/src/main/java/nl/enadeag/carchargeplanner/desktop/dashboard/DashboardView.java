@@ -47,6 +47,9 @@ final class DashboardView extends VBox {
     private final OneOffAwayCard away;
     private final TripCard trips;
     private List<DayModel> days = List.of();
+    /** The warnings that providers refused their API key, above every day of the plan. */
+    private List<String> keyRefused = List.of();
+    private boolean showsKeyRefused = true;
     /** The away periods for specific days; null until a plan shows. */
     private OneOffAwayModel awayPeriods;
     /** What the trips are entered in; null until a plan shows. Each day carries its own trips. */
@@ -102,6 +105,7 @@ final class DashboardView extends VBox {
         switch (model) {
             case DashboardModel.Plan plan -> {
                 days = plan.days();
+                keyRefused = plan.keyRefused();
                 awayPeriods = plan.away();
                 enteredTrips = plan.trips();
                 tabs.show(days);
@@ -109,6 +113,7 @@ final class DashboardView extends VBox {
             }
             case DashboardModel.NoPlan noPlan -> {
                 days = List.of();
+                keyRefused = noPlan.keyRefused();
                 tabs.show(days);
                 body.show(page(new NoPlanCard(noPlan, canOpenSetUp, setUp, messages)));
                 contentChanged.run();
@@ -214,9 +219,15 @@ final class DashboardView extends VBox {
         footer.hideButtons();
     }
 
+    /** Leaves the warnings about refused API keys out, as in set-up's preview, where they would point to Settings. */
+    void hideKeyRefused() {
+        showsKeyRefused = false;
+    }
+
     /**
-     * Below the day card comes the trip advice the day carries, then the grid advice it carries. The charts follow,
-     * then the day's trips, and the away periods last.
+     * Above the day card come the warnings about refused API keys, if any. Below the day card comes the trip advice
+     * the day carries, then the grid advice it carries. The charts follow, then the day's trips, and the away periods
+     * last.
      */
     private void showDay(int index) {
         if (days.isEmpty()) {
@@ -266,8 +277,13 @@ final class DashboardView extends VBox {
         battery.enterLevel();
     }
 
-    private static VBox page(Region card) {
-        var page = new VBox(card);
+    /** The day's or the message's page: the warnings about refused API keys first, if any, then the card. */
+    private VBox page(Region card) {
+        var page = new VBox();
+        if (showsKeyRefused && !keyRefused.isEmpty()) {
+            page.getChildren().add(new KeyRefusedCard(keyRefused));
+        }
+        page.getChildren().add(card);
         page.getStyleClass().add("dashboard-content");
         return page;
     }
