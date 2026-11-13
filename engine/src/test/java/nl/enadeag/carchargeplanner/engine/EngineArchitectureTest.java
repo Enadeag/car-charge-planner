@@ -13,7 +13,7 @@ import com.tngtech.archunit.core.domain.AccessTarget;
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
-import com.tngtech.archunit.core.domain.JavaConstructorCall;
+import com.tngtech.archunit.core.domain.JavaConstructor;
 import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
@@ -36,6 +36,8 @@ import java.util.OptionalLong;
 import java.util.Set;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
+import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
+import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 
 /**
  * The rules of ADR 0001 about the engine's own parts: parts that depend one way, a pure planner, a domain model
@@ -48,11 +50,11 @@ import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
  * engine's own classes, which the desktop's {@code ArchitectureTest} holds for the desktop's or for every class: no
  * clock, sleep, thread or static mutable state of its own, no request address in a log, no caught
  * {@code NullPointerException}, no {@code Optional} field or parameter, every provider in its package and reached
- * only through the forecast, no {@code java.util.logging}, nothing written to the console, no stack trace printed,
- * no system locale, property or environment read, and every text, number and time in a locale it names. They run
- * when the engine is built alone, without the exceptions the desktop makes for its composition root, its host and
- * its log; only the rules about the boundary with its clients are in the desktop module's {@code ArchitectureTest},
- * which sees both sides.
+ * only through the forecast, no {@code Keychain} of its own but {@code NoKeychain}, no {@code java.util.logging},
+ * nothing written to the console, no stack trace printed, no system locale, property or environment read, and every
+ * text, number and time in a locale it names. They run when the engine is built alone, without the exceptions the
+ * desktop makes for its composition root, its host and its log; only the rules about the boundary with its clients
+ * are in the desktop module's {@code ArchitectureTest}, which sees both sides.
  */
 @AnalyzeClasses(packages = "nl.enadeag.carchargeplanner.engine", importOptions = ImportOption.DoNotIncludeTests.class)
 class EngineArchitectureTest {
@@ -159,10 +161,14 @@ class EngineArchitectureTest {
 
     // the rules of ADR 0005 that the desktop's ArchitectureTest holds for its own classes, here for the engine's
 
-    /** The call names the exception's own class, a subclass of Throwable, whichever overload is called. */
-    private static final DescribedPredicate<JavaMethodCall> PRINT_A_STACK_TRACE = DescribedPredicate.describe(
+    /**
+     * The access names the exception's own class, a subclass of Throwable, whichever overload is called; an access,
+     * not only a call, so a method reference such as {@code Throwable::printStackTrace} is caught as well.
+     */
+    private static final DescribedPredicate<JavaAccess<?>> PRINT_A_STACK_TRACE = DescribedPredicate.describe(
             "print a stack trace",
-            call -> call.getName().equals("printStackTrace") && call.getTargetOwner().isAssignableTo(Throwable.class));
+            access -> access.getName().equals("printStackTrace")
+                    && access.getTargetOwner().isAssignableTo(Throwable.class));
 
     private static final DescribedPredicate<JavaClass> HANDLE_REQUEST_ADDRESSES = DescribedPredicate.describe(
             "make or read the address of a request to a provider",
@@ -176,13 +182,13 @@ class EngineArchitectureTest {
             .orShould().dependOnClassesThat().resideInAnyPackage("java.util.logging..", "org.slf4j..")
             .orShould().accessField(System.class, "out")
             .orShould().accessField(System.class, "err")
-            .orShould().callMethodWhere(PRINT_A_STACK_TRACE)
+            .orShould().accessTargetWhere(PRINT_A_STACK_TRACE)
             .because("an address can hold an API key and the home's coordinates, so what makes or sends one logs "
                     + "nothing; ProviderConformance checks what the providers' errors say");
 
     // an access, not only a call, so a method reference such as Clock::systemUTC is caught as well
     private static final DescribedPredicate<JavaAccess<?>> READ_THE_SYSTEM_CLOCK = DescribedPredicate.describe(
-            "read the system's clock or zone",
+            "read the system's clock or zone, or its timer",
             access -> {
                 var owner = access.getTargetOwner().getName();
                 var name = access.getName();
@@ -193,7 +199,8 @@ class EngineArchitectureTest {
                                 .contains(name)
                         || owner.equals("java.time.ZoneId") && name.equals("systemDefault")
                         || owner.equals("java.util.TimeZone") && name.equals("getDefault")
-                        || owner.equals(System.class.getName()) && name.equals("currentTimeMillis");
+                        || owner.equals(System.class.getName()) && Set.of("currentTimeMillis", "nanoTime")
+                                .contains(name);
             });
 
     @ArchTest
@@ -203,34 +210,44 @@ class EngineArchitectureTest {
             .because("each app hands the engine its clock and the home's zone, so a test can set the time (ADR "
                     + "0005); the engine's files take it too, for the name of a file set aside (#285)");
 
+    // an access, not only a call, so a method reference such as Thread::sleep is caught as well
+    private static final DescribedPredicate<JavaAccess<?>> SLEEP = DescribedPredicate.describe(
+            "sleep (Thread.sleep)",
+            access -> access.getTargetOwner().isEquivalentTo(Thread.class) && access.getName().equals("sleep"));
+
     @ArchTest
     static final ArchRule theEngineDoesNotSleep = noClasses()
             .that().resideInAPackage(ENGINE + "..")
-            .should().callMethod(Thread.class, "sleep", long.class)
-            .orShould().callMethod(Thread.class, "sleep", long.class, int.class)
-            .orShould().callMethod(Thread.class, "sleep", java.time.Duration.class)
+            .should().accessTargetWhere(SLEEP)
             .because("waiting is done with a signal or a deadline that is handed in (ADR 0005)");
 
-    private static final DescribedPredicate<JavaMethodCall> START_A_THREAD = DescribedPredicate.describe(
+    // accesses, not only calls, so a reference such as Thread::new or Executors::newSingleThreadExecutor is caught too
+    private static final DescribedPredicate<JavaAccess<?>> START_A_THREAD = DescribedPredicate.describe(
             "start a thread or make an executor",
-            call -> {
-                var owner = call.getTargetOwner();
+            access -> {
+                var owner = access.getTargetOwner();
                 return owner.isEquivalentTo(Thread.class) && Set.of("ofVirtual", "ofPlatform", "startVirtualThread")
-                        .contains(call.getName())
+                        .contains(access.getName())
                         || owner.isEquivalentTo(java.util.concurrent.Executors.class)
                         || owner.isEquivalentTo(java.util.concurrent.ForkJoinPool.class)
-                                && call.getName().equals("commonPool");
+                                && access.getName().equals("commonPool");
+            });
+
+    private static final DescribedPredicate<JavaAccess<?>> MAKE_A_THREAD = DescribedPredicate.describe(
+            "make a thread, a timer or a pool",
+            access -> {
+                var owner = access.getTargetOwner();
+                return access.getName().equals(JavaConstructor.CONSTRUCTOR_NAME) && (owner.isAssignableTo(Thread.class)
+                        || owner.isAssignableTo(java.util.Timer.class)
+                        || owner.isAssignableTo(java.util.concurrent.ThreadPoolExecutor.class)
+                        || owner.isAssignableTo(java.util.concurrent.ForkJoinPool.class));
             });
 
     @ArchTest
     static final ArchRule theEngineOwnsNoThreads = noClasses()
             .that().resideInAPackage(ENGINE + "..")
-            .should().callMethodWhere(START_A_THREAD)
-            .orShould().callConstructorWhere(DescribedPredicate.describe("make a thread, a timer or a pool",
-                    call -> call.getTargetOwner().isAssignableTo(Thread.class)
-                            || call.getTargetOwner().isAssignableTo(java.util.Timer.class)
-                            || call.getTargetOwner().isAssignableTo(java.util.concurrent.ThreadPoolExecutor.class)
-                            || call.getTargetOwner().isAssignableTo(java.util.concurrent.ForkJoinPool.class)))
+            .should().accessTargetWhere(START_A_THREAD)
+            .orShould().accessTargetWhere(MAKE_A_THREAD)
             .because("each app hands the engine the executor it runs on (ADR 0005, ADR 0010)");
 
     @ArchTest
@@ -384,6 +401,16 @@ class EngineArchitectureTest {
             .should().resideInAPackage(ENGINE + ".forecast.providers..")
             .because("a provider is one class beside the others, so adding one is adding a file (ADR 0001)");
 
+    // the engine's part of the desktop's portsAreImplementedInThePlatforms, whose other ports are the desktop's
+    @ArchTest
+    static final ArchRule theEnginesOnlyKeychainIsNoKeychain = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .and().areNotInterfaces()
+            .and().doNotHaveFullyQualifiedName(NoKeychain.class.getName())
+            .should().implement(Keychain.class)
+            .because("the engine owns the port and each platform implements it on its own system's keychain; the "
+                    + "engine has only NoKeychain, for a system without one (ADR 0005, ADR 0010)");
+
     @ArchTest
     static final ArchRule theEngineLogsThroughSlf4j = noClasses()
             .that().resideInAPackage(ENGINE + "..")
@@ -406,18 +433,24 @@ class EngineArchitectureTest {
             .because("each app sets up its own log, where its records are handled and formatted, and binds slf4j to "
                     + "it; the engine only logs, through slf4j (ADR 0005, ADR 0010)");
 
+    // an access, not only a call, so a method reference such as System::console is caught as well
+    private static final DescribedPredicate<JavaAccess<?>> READ_THE_CONSOLE = DescribedPredicate.describe(
+            "reach the console (System.console)",
+            access -> access.getTargetOwner().isEquivalentTo(System.class) && access.getName().equals("console"));
+
     @ArchTest
     static final ArchRule theEngineWritesNothingToTheConsole = noClasses()
             .that().resideInAPackage(ENGINE + "..")
             .should().accessField(System.class, "out")
             .orShould().accessField(System.class, "err")
+            .orShould().accessTargetWhere(READ_THE_CONSOLE)
             .because("the console, where there is one, is the app's: the desktop prints its command line's answers "
                     + "there; the engine logs (ADR 0005)");
 
     @ArchTest
     static final ArchRule theEnginePrintsNoStackTrace = noClasses()
             .that().resideInAPackage(ENGINE + "..")
-            .should().callMethodWhere(PRINT_A_STACK_TRACE)
+            .should().accessTargetWhere(PRINT_A_STACK_TRACE)
             .because("a failure goes to the log, which knows what it may show; the engine prints no trace, not to the "
                     + "console and not to a writer of its own (ADR 0005)");
 
@@ -441,13 +474,19 @@ class EngineArchitectureTest {
                 || type.getName().equals("java.text.DateFormatSymbols"));
     }
 
-    private static final DescribedPredicate<JavaMethodCall> USE_THE_DEFAULT_LOCALE = DescribedPredicate.describe(
+    private static List<JavaClass> parameterTypes(JavaAccess<?> access) {
+        return access.getTarget() instanceof AccessTarget.CodeUnitAccessTarget target
+                ? target.getRawParameterTypes() : List.of();
+    }
+
+    // accesses, not only calls, so a reference such as String::toLowerCase or DecimalFormat::new is caught as well
+    private static final DescribedPredicate<JavaAccess<?>> USE_THE_DEFAULT_LOCALE = DescribedPredicate.describe(
             "format or change case in the JVM's default locale",
-            call -> {
-                var ownerType = call.getTargetOwner();
+            access -> {
+                var ownerType = access.getTargetOwner();
                 var owner = ownerType.getName();
-                var name = call.getName();
-                var types = call.getTarget().getRawParameterTypes();
+                var name = access.getName();
+                var types = parameterTypes(access);
                 var hasLocale = hasLocale(types);
                 return owner.equals(String.class.getName()) && !hasLocale
                                 && Set.of("toLowerCase", "toUpperCase", "format", "formatted").contains(name)
@@ -461,18 +500,19 @@ class EngineArchitectureTest {
                                 && Set.of("printf", "format").contains(name) && !hasLocale;
             });
 
-    private static final DescribedPredicate<JavaConstructorCall> MAKE_A_FORMAT_IN_THE_DEFAULT_LOCALE =
+    private static final DescribedPredicate<JavaAccess<?>> MAKE_A_FORMAT_IN_THE_DEFAULT_LOCALE =
             DescribedPredicate.describe("make a format that uses the JVM's default locale",
-                    call -> Set.of("java.text.SimpleDateFormat", "java.text.DecimalFormat",
-                            "java.text.MessageFormat", "java.util.Formatter")
-                            .contains(call.getTargetOwner().getName())
-                            && !hasLocale(call.getTarget().getRawParameterTypes()));
+                    access -> access.getName().equals(JavaConstructor.CONSTRUCTOR_NAME)
+                            && Set.of("java.text.SimpleDateFormat", "java.text.DecimalFormat",
+                                    "java.text.MessageFormat", "java.util.Formatter")
+                            .contains(access.getTargetOwner().getName())
+                            && !hasLocale(parameterTypes(access)));
 
     @ArchTest
     static final ArchRule theEnginesTextsNumbersAndTimesNameTheirLocale = noClasses()
             .that().resideInAPackage(ENGINE + "..")
-            .should().callMethodWhere(USE_THE_DEFAULT_LOCALE)
-            .orShould().callConstructorWhere(MAKE_A_FORMAT_IN_THE_DEFAULT_LOCALE)
+            .should().accessTargetWhere(USE_THE_DEFAULT_LOCALE)
+            .orShould().accessTargetWhere(MAKE_A_FORMAT_IN_THE_DEFAULT_LOCALE)
             .because("what the engine writes, such as a time in a file or the name of a file set aside, is for a "
                     + "machine and reads the same in every language: it uses Locale.ROOT (ADR 0005)");
 
