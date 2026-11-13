@@ -345,6 +345,12 @@ class DashboardViewTest {
                 .toList();
     }
 
+    /** What the warning card must be: a warning sign, read as one text, and reached with Tab. */
+    private static List<String> warningCardTraits(Node warning) {
+        return List.of(String.valueOf(warning.lookup(".glyph.warning") != null),
+                String.valueOf(warning.getAccessibleRole()), String.valueOf(warning.isFocusTraversable()));
+    }
+
     @Test
     void refusedKeysAreWarnedOfAboveTheDayCardOnEveryDayALinePerProviderInTheirOrder() throws Exception {
         var second = "Forecast.Solar refused the API key. Check it under Forecast in Settings.";
@@ -359,13 +365,14 @@ class DashboardViewTest {
                 view.layout();
                 var warning = selectedPage(view).lookup(".warning-card");
                 return List.of(cardsInOrder(view), Scenes.visibleTexts(warning),
-                        List.of(String.valueOf(warning.queryAccessibleAttribute(AccessibleAttribute.TEXT)),
-                                String.valueOf(warning.isFocusTraversable())));
+                        List.of(String.valueOf(warning.queryAccessibleAttribute(AccessibleAttribute.TEXT))),
+                        warningCardTraits(warning));
             });
 
             assertThat(page.get(0)).as("day %d", day).startsWith("warning-card", "main-card");
             assertThat(page.get(1)).containsExactly(Models.OPEN_METEO_REFUSED, second);
-            assertThat(page.get(2)).containsExactly(Models.OPEN_METEO_REFUSED + " " + second, "true");
+            assertThat(page.get(2)).containsExactly(Models.OPEN_METEO_REFUSED + " " + second);
+            assertThat(page.get(3)).containsExactly("true", "TEXT", "true");
         }
     }
 
@@ -389,6 +396,8 @@ class DashboardViewTest {
         var texts = Fx.call(() -> Scenes.visibleTexts(selectedPage(view)));
 
         assertThat(cards).containsExactly("warning-card", "card");
+        assertThat(Fx.call(() -> warningCardTraits(selectedPage(view).lookup(".warning-card"))))
+                .containsExactly("true", "TEXT", "true");
         var expected = switch (language) {
             case ENGLISH -> List.of("Forecast.Solar refused the API key. Check it under Forecast in Settings.",
                     "Open-Meteo refused the API key. Check it under Forecast in Settings.", "No forecast");

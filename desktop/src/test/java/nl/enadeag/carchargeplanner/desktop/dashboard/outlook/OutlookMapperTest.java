@@ -481,8 +481,6 @@ class OutlookMapperTest {
 
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
     private static final ProviderId FORECAST_SOLAR = new ProviderId("forecast-solar");
-    private static final String OPEN_METEO_REFUSED =
-            "Open-Meteo refused the API key. Check it under Forecast in Settings.";
     private static final String FORECAST_SOLAR_REFUSED =
             "Forecast.Solar refused the API key. Check it under Forecast in Settings.";
 
@@ -496,7 +494,7 @@ class OutlookMapperTest {
     void aPlanWarnsOfAProviderThatRefusedItsKeyWhileAFallbackGivesThePlan() {
         var plan = (DashboardModel.Plan) MAPPER.map(planned(fallbackAfterRefused(OPEN_METEO)));
 
-        assertThat(plan.keyRefused()).containsExactly(OPEN_METEO_REFUSED);
+        assertThat(plan.keyRefused()).containsExactly(Models.OPEN_METEO_REFUSED);
         assertThat(plan.days()).hasSize(1);
     }
 
@@ -509,7 +507,7 @@ class OutlookMapperTest {
 
         var plan = (DashboardModel.Plan) MAPPER.map(planned(stale));
 
-        assertThat(plan.keyRefused()).containsExactly(FORECAST_SOLAR_REFUSED, OPEN_METEO_REFUSED);
+        assertThat(plan.keyRefused()).containsExactly(FORECAST_SOLAR_REFUSED, Models.OPEN_METEO_REFUSED);
     }
 
     @Test
@@ -524,7 +522,7 @@ class OutlookMapperTest {
         var message = (DashboardModel.NoPlan) MAPPER.map(
                 new Outlook.NoForecast(reason, false, List.of(FORECAST_SOLAR, OPEN_METEO)));
 
-        assertThat(message.keyRefused()).containsExactly(FORECAST_SOLAR_REFUSED, OPEN_METEO_REFUSED);
+        assertThat(message.keyRefused()).containsExactly(FORECAST_SOLAR_REFUSED, Models.OPEN_METEO_REFUSED);
         assertThat(message.headline()).isEqualTo("No forecast");
         assertThat(message.detail()).endsWith(reason);
     }
@@ -541,7 +539,7 @@ class OutlookMapperTest {
 
         var message = (DashboardModel.NoPlan) MAPPER.map(none);
 
-        assertThat(message.keyRefused()).containsExactly(OPEN_METEO_REFUSED);
+        assertThat(message.keyRefused()).containsExactly(Models.OPEN_METEO_REFUSED);
         assertThat(message.detail()).isEqualTo("The forecast has no days to plan.");
     }
 

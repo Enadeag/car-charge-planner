@@ -8,9 +8,7 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
-import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
-import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javafx.beans.value.ObservableValue;
@@ -31,14 +29,13 @@ final class SetUpPreview implements SetUpStepPage {
      * @param preview plans a config with these keys, nothing saved and nobody told; blocks while the forecast is
      *     fetched, so it is called away from the JavaFX thread
      * @param reducedMotion true while the system asks for reduced motion; the charts then change without moving
-     * @param providers the known forecast providers, which name a provider that refused its API key
      */
     SetUpPreview(BiFunction<EngineConfig, Secrets, Outlook> preview, ObservableValue<Boolean> reducedMotion,
-            String appName, Background background, Messages messages, List<ProviderInfo> providers) {
+            String appName, Background background, Messages messages) {
         this.preview = preview;
         this.background = background;
         this.messages = messages;
-        this.dashboard = new DashboardPreview(reducedMotion, appName, messages, providers);
+        this.dashboard = new DashboardPreview(reducedMotion, appName, messages);
         var frame = new StackPane(dashboard.view());
         frame.getStyleClass().add("preview-frame");
         view = new PageView(messages.text(SetUpStep.PREVIEW.title()));

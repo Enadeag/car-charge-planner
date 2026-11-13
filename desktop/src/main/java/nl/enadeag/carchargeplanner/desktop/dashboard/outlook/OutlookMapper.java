@@ -29,8 +29,8 @@ public final class OutlookMapper {
      * Makes the mapper; it keeps nothing between outlooks.
      *
      * @param messages the texts, in the owner's language
-     * @param providers the known forecast providers, which name a provider that refused its API key; one not among
-     *     them is named by its id
+     * @param providers the known forecast providers, which name a provider that refused its API key; never null;
+     *     one not among them is named by its id
      */
     public OutlookMapper(Messages messages, List<ProviderInfo> providers) {
         this.messages = messages;

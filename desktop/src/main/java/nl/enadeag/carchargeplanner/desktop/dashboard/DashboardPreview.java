@@ -3,14 +3,14 @@ package nl.enadeag.carchargeplanner.desktop.dashboard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
-import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import java.util.List;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.Region;
 
 /**
  * The dashboard as it will look, for set-up to show before Finish: the same view, with the owner's own plan, but
- * without the buttons that lead elsewhere (open as a window, away periods, Settings, entering the battery level).
+ * without the buttons that lead elsewhere (open as a window, away periods, Settings, entering the battery level)
+and without the warning about a refused API key, whose words point to Settings while the owner is still in set-up.
  *
  * <p>Make it and call it on the JavaFX thread.
  */
@@ -27,14 +27,14 @@ public final class DashboardPreview {
      *     null
      * @param appName the app's name, for the header; the same in every language
      * @param messages the texts, in the language set-up speaks
-     * @param providers the known forecast providers, which name a provider that refused its API key
      */
-    public DashboardPreview(ObservableValue<Boolean> reducedMotion, String appName, Messages messages,
-            List<ProviderInfo> providers) {
-        this.mapper = new OutlookMapper(messages, providers);
+    public DashboardPreview(ObservableValue<Boolean> reducedMotion, String appName, Messages messages) {
+        // the preview never shows the warning, so it needs no provider's name
+        this.mapper = new OutlookMapper(messages, List.of());
         this.view = new DashboardView(() -> { }, () -> { }, reducedMotion, appName, messages);
         view.setDetachable(false);
         view.hideFooterButtons();
+        view.hideKeyRefused();
         view.getStyleClass().add("dashboard-preview");
         showLoading();
     }

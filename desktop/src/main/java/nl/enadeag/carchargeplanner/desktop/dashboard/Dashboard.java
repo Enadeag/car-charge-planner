@@ -63,7 +63,8 @@ public final class Dashboard {
      *     and when the owner saves an away period or a trip, which must not have ended by then
      * @param taskbarHiding how this system keeps the popup out of its taskbar
      * @param language the language the texts are in, followed while the app runs; never null
-     * @param providers the known forecast providers, which name a provider that refused its API key
+     * @param providers the known forecast providers, which name a provider that refused its API key;
+     *     never null
      * @param actions what the dashboard's controls do; never null
      */
     public Dashboard(AppIcon icon, String appName, WindowTheme theme,

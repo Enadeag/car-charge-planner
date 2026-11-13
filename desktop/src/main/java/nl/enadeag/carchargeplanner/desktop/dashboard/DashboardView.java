@@ -49,6 +49,7 @@ final class DashboardView extends VBox {
     private List<DayModel> days = List.of();
     /** The warnings that providers refused their API key, above every day of the plan. */
     private List<String> keyRefused = List.of();
+    private boolean showsKeyRefused = true;
     /** The away periods for specific days; null until a plan shows. */
     private OneOffAwayModel awayPeriods;
     /** What the trips are entered in; null until a plan shows. Each day carries its own trips. */
@@ -218,6 +219,11 @@ final class DashboardView extends VBox {
         footer.hideButtons();
     }
 
+    /** Leaves the warnings about refused API keys out, as in set-up's preview, where they would point to Settings. */
+    void hideKeyRefused() {
+        showsKeyRefused = false;
+    }
+
     /**
      * Above the day card come the warnings about refused API keys, if any. Below the day card comes the trip advice
      * the day carries, then the grid advice it carries. The charts follow, then the day's trips, and the away periods
@@ -274,7 +280,7 @@ final class DashboardView extends VBox {
     /** The day's or the message's page: the warnings about refused API keys first, if any, then the card. */
     private VBox page(Region card) {
         var page = new VBox();
-        if (!keyRefused.isEmpty()) {
+        if (showsKeyRefused && !keyRefused.isEmpty()) {
             page.getChildren().add(new KeyRefusedCard(keyRefused));
         }
         page.getChildren().add(card);
