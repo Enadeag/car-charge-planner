@@ -29,6 +29,6 @@ The tests show what the app draws, not what a person sees. Before each Android r
 - **Contrast and colour:** the cards, the chart, the battery bar, the chip's colours and the icons of Settings' list on the wallpaper's colours, in light and in dark; every colour comes with a word or sign.
 - **Keyboard:** with a keyboard, Tab reaches every control, a held or busy control keeps the focus through a save, and Enter and Escape do what the buttons do.
 - **A notification's tap** (a tap goes through the app's own alias, `.NoticeTap`, so a forged intent opens nothing): tap a battery check and its "Enter battery level" action with the app open on the dashboard, in the background, and from the recent apps; each reaches the one open app, not a second copy of it (one Back leaves the app), opens the entry of the battery level with the focus on its field, and takes the notification away.
-- **Not about access, on the same phone** (#347, #362): typing on the Galaxy S25 gives one warning and no crash; an alarm comes, late at most an hour, while the phone saves battery; Samsung's path of the note on #279; a notice from the background is in the phone's language.
+- **Not about access, on the same phone** (#347, #362): typing on a Samsung phone gives one warning and no crash; an alarm comes, late at most an hour, while the phone saves battery; Samsung's path of the note on #279; a notice from the background is in the phone's language.
 
 If something in the floor above does not work for you, please open an issue with your system.
