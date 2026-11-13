@@ -28,15 +28,6 @@ class AndroidHttpGetTest : HttpGetContractTest() {
 
     override fun http(): HttpGet = http
 
-    @Test
-    fun theUserAgentIsTheDesktopsAndTheBodyIsAskedForUncompressed() {
-        get("/refusal", Duration.ofSeconds(5))
-
-        assertThat(receivedHeaders().getFirst("User-Agent"))
-            .isEqualTo("car-charge-planner (+https://github.com/Enadeag/car-charge-planner)")
-        assertThat(receivedHeaders().getFirst("Accept-Encoding")).isEqualTo("identity")
-    }
-
     /**
      * Answers one request on the loopback address with [answer], byte for byte, and closes the connection: an answer
      * the contract's server cannot send.
@@ -68,17 +59,9 @@ class AndroidHttpGetTest : HttpGetContractTest() {
             http.get(it)
         }
 
-        assertThat(lines).contains("User-Agent: ${AndroidHttpGet.USER_AGENT}", "Accept-Encoding: identity",
+        assertThat(lines).contains("User-Agent: ${HttpGet.USER_AGENT}", "Accept-Encoding: identity",
             "Accept: application/json")
         assertThat(lines).noneMatch { it.contains("gzip") || it.contains("something else") }
-    }
-
-    @Test
-    fun aBodyCutShortOfItsLengthIsAnIOException() {
-        answeredOnce("HTTP/1.1 200 OK\r\nContent-Length: 100\r\nConnection: close\r\n\r\nonly ten b") {
-            assertThat(catchThrowable { http.get(it) }).isInstanceOf(IOException::class.java)
-                .isNotInstanceOf(HttpGet.TooLarge::class.java)
-        }
     }
 
     /** A 304 may give the length of the answer it stands for, and Content-Length over the limit counts neither. */

@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -36,8 +38,9 @@ import org.junit.jupiter.params.provider.ValueSource;
  * What every {@link HttpGet} must do, as its Javadoc lists it: a platform's implementation passes when its test
  * extends this class and hands it a fresh instance per test. Against a small server on this computer's loopback
  * address, so nothing leaves the machine. Connecting is part of the timeout too, but no server here can be slow to
- * accept, so only the answer's part of it is checked. The server is the JDK's {@code com.sun.net.httpserver} and the
- * tests are JUnit 5, so a subclass runs on a JVM: on Android as a local unit test, not on a device or in Robolectric.
+ * accept, so only the answer's part of it is checked. The server is the JDK's {@code com.sun.net.httpserver}, with a
+ * plain socket for the answer it cannot send: a body cut short. The tests are JUnit 5, so a subclass runs on a JVM:
+ * on Android as a local unit test, not on a device or in Robolectric.
  */
 public abstract class HttpGetContractTest {
 
@@ -49,7 +52,11 @@ public abstract class HttpGetContractTest {
 
     private static final Duration ENOUGH = Duration.ofSeconds(5);
 
+    /** Far longer than any test here waits, so an answer that ends sooner was not ended by the timeout. */
+    private static final Duration LONG = Duration.ofSeconds(60);
+
     private HttpServer server;
+    private ServerSocket raw;
     private ExecutorService handlers;
     private final CountDownLatch over = new CountDownLatch(1);
     private final CountDownLatch streaming = new CountDownLatch(1);
@@ -124,10 +131,38 @@ public abstract class HttpGetContractTest {
     }
 
     @AfterEach
-    void stopServer() {
+    void stopServer() throws IOException {
         over.countDown();
         server.stop(0);
+        if (raw != null) {
+            raw.close();
+        }
         handlers.shutdownNow();
+    }
+
+    /**
+     * Answers every request on a socket of its own with these bytes, as they are, and hangs up after each: for the
+     * answers {@code com.sun.net.httpserver} cannot send.
+     */
+    private URI answeringWith(String answer) throws IOException {
+        raw = new ServerSocket(0, 50, InetAddress.getLoopbackAddress());
+        var listening = raw;
+        handlers.execute(() -> {
+            while (!listening.isClosed()) {
+                try (var client = listening.accept()) {
+                    var request = new BufferedReader(
+                            new InputStreamReader(client.getInputStream(), StandardCharsets.ISO_8859_1));
+                    String line;
+                    do {
+                        line = request.readLine();
+                    } while (line != null && !line.isEmpty());
+                    client.getOutputStream().write(answer.getBytes(StandardCharsets.ISO_8859_1));
+                } catch (IOException e) {
+                    return; // closed: the test is over
+                }
+            }
+        });
+        return URI.create("http://localhost:" + listening.getLocalPort() + "/");
     }
 
     private static void answer(HttpExchange exchange, int status, byte[] body) throws IOException {
@@ -188,15 +223,6 @@ public abstract class HttpGetContractTest {
     }
 
     /**
-     * The headers of the last request to {@code /refusal}.
-     *
-     * @return the headers, or null before such a request
-     */
-    protected Headers receivedHeaders() {
-        return received.get();
-    }
-
-    /**
      * Whether the client dropped a connection on which the server was still sending: {@code /trickle} or
      * {@code /endless}, the paths that stream.
      *
@@ -208,14 +234,14 @@ public abstract class HttpGetContractTest {
     }
 
     @Test
-    void aRefusalIsAReplyWithItsStatusBodyAndHeadersAndTheRequestCarriesItsHeadersAndNamesTheApp() throws Exception {
+    void aRefusalIsAReplyWithItsStatusBodyAndHeadersAndTheRequestCarriesItsHeadersAndTheUserAgent() throws Exception {
         var reply = get("/refusal", ENOUGH);
 
         assertThat(reply.status()).isEqualTo(429);
         assertThat(reply.body()).isEqualTo("slow down");
         assertThat(reply.retryAfter()).contains(Duration.ofSeconds(90));
         assertThat(received.get().getFirst("Accept")).isEqualTo("application/json");
-        assertThat(received.get().getFirst("User-Agent")).contains("car-charge-planner");
+        assertThat(received.get().getFirst("User-Agent")).isEqualTo(HttpGet.USER_AGENT);
     }
 
     @Test
@@ -287,6 +313,20 @@ public abstract class HttpGetContractTest {
         assertThat(error).isInstanceOf(HttpGet.TooLarge.class);
         assertThat(Duration.ofNanos(System.nanoTime() - started)).as("not waiting for the body")
                 .isLessThan(Duration.ofSeconds(3));
+    }
+
+    /** The server hangs up after ten of the hundred bytes it announced, so waiting for the rest cannot help. */
+    @ParameterizedTest
+    @ValueSource(ints = {200, 503})
+    void aBodyCutShortOfItsLengthIsAnIOExceptionAtOnce(int status) throws IOException {
+        var address = answeringWith("HTTP/1.1 " + status + " Whatever\r\nContent-Length: 100\r\n"
+                + "Connection: close\r\n\r\nonly ten b");
+
+        long started = System.nanoTime();
+        var error = catchThrowable(() -> http().get(new HttpGet.Request(address, Map.of(), LONG, SMALL_LIMIT)));
+
+        assertThat(error).isInstanceOf(IOException.class).isNotInstanceOf(HttpGet.TooLarge.class);
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).as("not waiting for the timeout").isLessThan(ENOUGH);
     }
 
     @Test

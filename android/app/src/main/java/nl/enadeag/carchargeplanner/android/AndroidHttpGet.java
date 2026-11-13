@@ -37,9 +37,6 @@ import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
  */
 public final class AndroidHttpGet implements HttpGet {
 
-    /** The desktop's User-Agent ({@code JdkHttpGet}), so the services see one app: no device or version in it. */
-    static final String USER_AGENT = "car-charge-planner (+https://github.com/Enadeag/car-charge-planner)";
-
     private static final int CHUNK = 8 * 1024;
 
     private final AtomicInteger threads = new AtomicInteger();
@@ -113,7 +110,8 @@ public final class AndroidHttpGet implements HttpGet {
             InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
             byte[] body = stream == null ? new byte[0] : read(stream, limit);
             if (declared >= 0 && body.length != declared) {
-                // the JVM's HttpURLConnection hands back a body that was cut short as if it were whole
+                // not every runtime's HttpURLConnection fails on a body that was cut short: older JVMs hand it back
+                // as if it were whole. Newer ones and Android's fail first, so only such a runtime reaches this
                 throw new IOException("the answer ended after " + body.length + " of " + declared + " bytes");
             }
             return new Reply(status, new String(body, StandardCharsets.UTF_8), headers);

@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Fetches web addresses with Java's own HTTP client, naming the app and its home page in the User-Agent: the
+ * Fetches web addresses with Java's own HTTP client, with {@link HttpGet#USER_AGENT} as the User-Agent: the
  * desktop's {@link HttpGet}, as {@code java.net.http} is not there on Android. The body is read into a buffer no
  * larger than the request allows, and the whole answer, body included, must come within the request's timeout; the
  * body is read as UTF-8, which is what JSON is sent in. It owns its client, which every request shares.
@@ -29,8 +29,6 @@ import java.util.concurrent.TimeoutException;
 public final class JdkHttpGet implements HttpGet, AutoCloseable {
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
-
-    private static final String USER_AGENT = "car-charge-planner (+https://github.com/Enadeag/car-charge-planner)";
 
     private final HttpClient client;
 

@@ -50,7 +50,7 @@ class HttpOnTheDeviceTest {
             val reply = http.get(request(server.root))
 
             assertEquals("identity", server.firstRequestHeader("Accept-Encoding"))
-            assertEquals(AndroidHttpGet.USER_AGENT, server.firstRequestHeader("User-Agent"))
+            assertEquals(HttpGet.USER_AGENT, server.firstRequestHeader("User-Agent"))
             assertEquals(String(packed, StandardCharsets.UTF_8), reply.body())
             assertEquals("gzip", reply.header("Content-Encoding").orElse(null))
         }

@@ -83,6 +83,12 @@ Decisions about the engine that both apps share, the desktop app and the Android
 - `Providers.standard(http)` gives Open-Meteo, then Forecast.Solar: the order both apps offer them in, and the first is the primary provider set-up drafts on both apps (`SetUpWindow`, `SetUpSession`). A new provider is added there once ([docs/providers.md](../../providers.md)) (#389).
 - `Providers.standard` is the one class in `engine.forecast` that knows the providers' classes (`EngineArchitectureTest`); the desktop's `ArchitectureTest` keeps the providers out of every class outside `engine.forecast` (#389).
 
+### Fetching from the web
+
+- Every request of either app carries `HttpGet.USER_AGENT` as its User-Agent: the app's name and its home page, one text in the engine, so the services see one app, without a device or a version (#309).
+- A body that ends before its `Content-Length` is an `IOException` in both apps, as soon as the server hangs up, never a shorter body as if it were whole; `HttpGetContractTest` checks it with a plain socket, as `com.sun.net.httpserver` cannot send such an answer (#309).
+- A 1xx, 204 or 304 answer with a `Content-Length` is not part of the contract (decided 2026-11-13): Java's client refuses such a 204 before `JdkHttpGet` sees it, a final 1xx reaches neither client, and no provider sends a conditional request. `AndroidHttpGet` keeps its own rule, an empty body for them, with its own test (#309).
+
 ### The dashboard model
 
 The decisions of the assumption checks behind this model are comments on #341 and #404.
