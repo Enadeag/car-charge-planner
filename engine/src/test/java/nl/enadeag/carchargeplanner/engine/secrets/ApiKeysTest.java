@@ -1611,7 +1611,7 @@ class ApiKeysTest {
 
     @Test
     void withoutAFallbackRemovingFromAKeychainThatCannotBeUsedFailsAndWritesNoFile() {
-        assertThatThrownBy(() -> keys(new NoKeychain(), KeyFallback.NONE).remove(CalendarLeftovers.SECRETS))
+        assertThatThrownBy(() -> keys(new NoKeychain(), KeyFallback.NONE).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
                 .isInstanceOfSatisfying(SecretsProblem.class,
                         problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED));
 

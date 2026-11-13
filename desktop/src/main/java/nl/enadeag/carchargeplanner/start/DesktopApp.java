@@ -27,7 +27,6 @@ import nl.enadeag.carchargeplanner.engine.Engine;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.notify.Notifier;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
-import nl.enadeag.carchargeplanner.engine.secrets.CalendarLeftovers;
 import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
 import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
@@ -183,10 +182,6 @@ public final class DesktopApp {
         var keychain = parts.keychain();
         closing.add("the keychain", keychain::close);
         var apiKeys = new ApiKeys(keychain, secretsFile, KeyFallback.PRIVATE_FILE, Clock.systemUTC());
-        background.run("removing what the calendar trips left", () -> {
-            CalendarLeftovers.remove(apiKeys, dataFolder, files);
-            return null;
-        }, done -> { }, failed -> { });
         var engine = engine(http, apiKeys, dataFolder, notice -> notifications.send(texts.notification(notice)));
         closing.add("the engine", engine::stop);
         var saving = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory());

@@ -32,12 +32,6 @@ Decisions about how the app keeps and removes the owner's secrets (API keys, lin
 - A save never reads the `index` twice: it deletes only entries listed in the `index` it read at the start of that save. A refused read of the `index` at that point sends the keys to `secrets.json` with `PRIVATE_FILE` and leaves every entry; a damaged `index` counts as none (#292).
 - `ApiKeys.remove` reaches an entry the keychain cannot read: when a load fails on one, it checks the keychain's entries, so it removes such an entry (and its name in the `index`) and keeps it when removing another (#292).
 
-### Leftovers of the calendar trips
-
-- At each start the app removes `calendar/ical-link` and `geoapify/api-key` from the keychain and from `secrets.json` (`CalendarLeftovers`). A copy in the keychain may stay until a start at which the keychain is usable and holds it: while the keychain is locked or unavailable, while `secrets.json` lacks the names but the keychain has them, or after the engine has postponed asking for the keychain. There is no retry within a session (#282).
-- A keychain that stays locked is the owner's to unlock; the app never asks for it unprompted, and removing a secret never asks to unlock the keychain. This is checked with KWallet through the Secret Service; checking GNOME Keyring is the open #52 (#282).
-- The start-up clean-up is not described in the user docs, because no release wrote these secrets; the reason is in the Javadoc of `CalendarLeftovers` and `ConfigFormat` (#282).
-
 ### The Android keychain
 
 - On Android the API keys are kept in one encrypted file, `keychain.json` in `noBackupFilesDir`, with its keys in the Android Keystore. `EncryptedKeychain` encrypts each value with AES-256-GCM under a random 12-byte IV that the cipher picks, with the entry's name as additional authenticated data, so an entry moved to another name fails its check (#306).
