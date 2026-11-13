@@ -13,9 +13,10 @@ name: Android release
 # a cache another run filled could change what is built or signed.
 #
 # Dry run: start this workflow by hand (Actions, Android release, Run workflow, on main). It does everything but the
-# checks of the tag, the release branch, the emulator job and an existing release; it signs with a throw-away key made
-# in the run, in a job without the environment, checks everything but the recorded certificate, and makes a draft
-# called "Android dry run", without an attestation. Delete that draft afterwards.
+# checks of the tag, the release branch, the emulator job and an existing release, and does not stop while
+# android/release-certificate.sha256 records no fingerprint; a missing changelog section only warns. It signs with a
+# throw-away key made in the run, in a job without the environment, checks everything but the recorded certificate,
+# and makes a draft called "Android dry run", without an attestation. Delete that draft afterwards.
 #
 # The build uses one exact Java version (AndroidReleaseWorkflowTest keeps it so); a new one comes through a pull
 # request (docs/dev/ci-and-releasing.md, Java updates).
@@ -27,9 +28,12 @@ on:
 permissions:
   contents: read
 
-# one run per tag (or per branch, for a dry run) at a time; a second one waits, and none is cancelled
+# One run per tag (or per branch, for a dry run) at a time; the others wait in order and none is cancelled. Without
+# queue: max GitHub keeps only one waiting run and cancels it for the next; with it, up to 100 wait and only a run
+# beyond those is cancelled (GitHub's workflow syntax, concurrency).
 concurrency:
   group: android-release-${{ github.ref }}
+  queue: max
   cancel-in-progress: false
 
 env:
@@ -40,6 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
+      commit: ${{ steps.commit.outputs.commit }}
       version-name: ${{ steps.version.outputs.version-name }}
       version-code: ${{ steps.version.outputs.version-code }}
     defaults:
@@ -49,6 +54,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # the commit itself, which GITHUB_SHA need not be for an annotated tag
+      - name: The commit that is released
+        id: commit
+        run: |
+          commit=$(git rev-parse 'HEAD^{commit}')
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
       - name: Check the tag's form
         if: github.event_name == 'push'
         run: |
@@ -102,11 +113,14 @@ jobs:
           notes="$RUNNER_TEMP/notes/notes.md"
           mkdir "$RUNNER_TEMP/notes"
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            fingerprint=$(sh tools/android-sign.sh fingerprint android/release-certificate.sha256)
+            sh tools/android-sign.sh fingerprint android/release-certificate.sha256 > "$RUNNER_TEMP/fingerprint"
+            fingerprint=$(cat "$RUNNER_TEMP/fingerprint")
             java tools/ReleaseNotes.java --android "$VERSION" CHANGELOG.md "$fingerprint" > "$notes"
           else
-            printf 'Dry run of the Android release workflow (run %s, version %s), %s. Delete this draft.\n\n' \
-              "$GITHUB_RUN_ID" "$VERSION" "signed with a throw-away key" > "$notes"
+            {
+              printf 'Dry run of the Android release workflow (run %s, version %s), ' "$GITHUB_RUN_ID" "$VERSION"
+              printf 'signed with a throw-away key. Delete this draft.\n\n'
+            } > "$notes"
             release="${VERSION%-SNAPSHOT}"
             java tools/ReleaseNotes.java --android "$release" CHANGELOG.md "(dry run: a throw-away key)" >> "$notes" \
               || echo "::warning::CHANGELOG.md has no section for Android $release yet; a tag would stop here"
@@ -130,6 +144,7 @@ jobs:
       actions: read  # the runs and jobs of android.yml
     env:
       GH_TOKEN: ${{ github.token }}
+      COMMIT: ${{ needs.prepare.outputs.commit }}
       VERSION: ${{ needs.prepare.outputs.version-name }}
     steps:
       - name: Check that release/android-X.Y.Z is at the tag
@@ -139,24 +154,24 @@ jobs:
           if ! at=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq .object.sha 2> /dev/null); then
             echo "::error::$branch does not exist: create it at the tag's commit before pushing the tag"; exit 1
           fi
-          if [ "$at" != "$GITHUB_SHA" ]; then
-            echo "::error::$branch is at $at, not at this tag's commit $GITHUB_SHA"; exit 1
+          if [ "$at" != "$COMMIT" ]; then
+            echo "::error::$branch is at $at, not at this tag's commit $COMMIT"; exit 1
           fi
-          echo "$branch is at $GITHUB_SHA"
+          echo "$branch is at $COMMIT"
       # A push or a run by hand tests this very commit; a pull request's run tests a merge commit, so it does not count.
       - name: Check that the emulator job was green for this commit
         run: |
           workflow="repos/$GITHUB_REPOSITORY/actions/workflows/android.yml"
-          runs=$(gh api "$workflow/runs?head_sha=$GITHUB_SHA&per_page=100" \
+          runs=$(gh api "$workflow/runs?head_sha=$COMMIT&per_page=100" \
             --jq '.workflow_runs[] | select(.event == "push" or .event == "workflow_dispatch") | .id')
           for run in $runs; do
             green=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/jobs?per_page=100" \
               --jq '.jobs[] | select(.name == "android-emulator" and .conclusion == "success") | .html_url')
             if [ -n "$green" ]; then
-              echo "android-emulator was green for $GITHUB_SHA: $green"; exit 0
+              echo "android-emulator was green for $COMMIT: $green"; exit 0
             fi
           done
-          echo "::error::no green android-emulator job of android.yml for $GITHUB_SHA: a push to" \
+          echo "::error::no green android-emulator job of android.yml for $COMMIT: a push to" \
             "release/android-$VERSION runs it, or run android.yml by hand on that branch"
           exit 1
 
@@ -217,7 +232,8 @@ jobs:
           VERSION_CODE: ${{ needs.prepare.outputs.version-code }}
         run: |
           apk=android/app/build/outputs/apk/release/app-release-unsigned.apk
-          sha256=$(sha256sum "$apk" | cut -c1-64)
+          sum=$(sha256sum "$apk")
+          sha256=${sum%% *}
           sh tools/android-sign.sh check-unsigned "$apk" "$sha256" "$APP_ID" "$VERSION_NAME" "$VERSION_CODE"
           echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -226,10 +242,11 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 14
+      # the attempt is in the name, so a re-run of failed jobs does not meet the artifact of the first attempt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: android-release-reports
+          name: android-release-reports-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
             android/*/build/reports/
             android/*/build/test-results/
@@ -288,7 +305,8 @@ jobs:
           apk="$RUNNER_TEMP/signed/car-charge-planner-android-$VERSION_NAME.apk"
           sh tools/android-sign.sh check-signed "$apk" "$APP_ID" "$VERSION_NAME" "$VERSION_CODE" \
             android/app/debug.keystore android/release-certificate.sha256
-          echo "sha256=$(sha256sum "$apk" | cut -c1-64)" >> "$GITHUB_OUTPUT"
+          sum=$(sha256sum "$apk")
+          echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-signed-apk
@@ -346,7 +364,8 @@ jobs:
           apk="$RUNNER_TEMP/signed/car-charge-planner-android-$VERSION_NAME-dry-run.apk"
           sh tools/android-sign.sh check-signed "$apk" "$APP_ID" "$VERSION_NAME" "$VERSION_CODE" \
             android/app/debug.keystore
-          echo "sha256=$(sha256sum "$apk" | cut -c1-64)" >> "$GITHUB_OUTPUT"
+          sum=$(sha256sum "$apk")
+          echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-signed-apk
@@ -389,7 +408,8 @@ jobs:
           if [ "$(ls)" != "$apk" ]; then
             echo "::error::expected $apk only"; ls -l; exit 1
           fi
-          if [ "$(sha256sum "$apk" | cut -c1-64)" != "$SIGNED_SHA256" ]; then
+          sum=$(sha256sum "$apk")
+          if [ "${sum%% *}" != "$SIGNED_SHA256" ]; then
             echo "::error::$apk is not the APK the signing job checked (SHA-256 $SIGNED_SHA256)"; exit 1
           fi
           sha256sum -- "$apk" > SHA256SUMS

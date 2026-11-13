@@ -8,8 +8,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +46,36 @@ class AndroidReleaseWorkflowTest {
     }
 
     @Test
+    void onlyAnAndroidTagAndARunByHandStartIt() {
+        assertThat(workflow)
+                .contains("\non:\n  push:\n    tags: [\"android-v*\"]\n  workflow_dispatch:\n\npermissions:\n");
+        assertThat(workflow.lines().filter(line -> line.matches("[^#\\s].*")))
+                .containsExactly("name: Android release", "on:", "permissions:", "concurrency:", "env:", "jobs:");
+    }
+
+    @Test
+    void runsForOneRefWaitInOrderAndAreNeverCancelled() {
+        assertThat(workflow).contains("\nconcurrency:\n  group: android-release-${{ github.ref }}\n  queue: max\n"
+                + "  cancel-in-progress: false\n");
+        assertThat(lines(workflow, "concurrency:")).containsExactly("concurrency:");
+        assertThat(lines(workflow, "cancel-in-progress:")).containsExactly("  cancel-in-progress: false");
+    }
+
+    @Test
+    void theKeyIsAskedForOnlyAfterEveryCheckOfTheTag() {
+        assertThat(lines(jobs.get("sign"), "    needs:"))
+                .containsExactly("    needs: [prepare, build, tag-checks, no-release-yet]");
+        for (var job : List.of("tag-checks", "no-release-yet")) {
+            assertThat(lines(jobs.get(job), "    if:")).as(job).containsExactly("    if: github.event_name == 'push'");
+        }
+        assertThat(lines(jobs.get("release"), "    needs:"))
+                .containsExactly("    needs: [prepare, build, sign, sign-dry-run]");
+        assertThat(jobs.get("release")).contains("\n    if: >-\n"
+                + "      ${{ !cancelled() && needs.build.result == 'success'\n"
+                + "      && (needs.sign.result == 'success' || needs.sign-dry-run.result == 'success') }}\n");
+    }
+
+    @Test
     void onlyTheTagRunsSigningJobUsesTheEnvironment() {
         assertThat(lines(workflow, "environment:")).containsExactly("    environment: android-release");
         assertThat(lines(jobs.get("sign"), "environment:")).hasSize(1);
@@ -53,7 +85,6 @@ class AndroidReleaseWorkflowTest {
 
     @Test
     void theKeysSecretsAreInTheEnvOfTheSigningStepAlone() {
-        assertThat(count(workflow, "secrets.")).isEqualTo(2);
         var signing = steps(jobs.get("sign")).stream().filter(step -> step.contains("secrets.")).toList();
 
         assertThat(signing).hasSize(1);
@@ -63,7 +94,21 @@ class AndroidReleaseWorkflowTest {
                 + "          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}\n        run: |\n");
         assertThat(step).contains("umask 077", "\"$RUNNER_TEMP/release-keystore.p12\"")
                 .doesNotContain("uses:", "gradle", "set -x", "echo \"$ANDROID_KEYSTORE");
-        assertThat(workflow).doesNotContain("set -x", "secrets: inherit", "toJSON(secrets)");
+        assertThat(workflow).doesNotContain("set -x");
+        // in any form, such as secrets['NAME'] or secrets: inherit; comments aside
+        var code = workflow.lines().filter(line -> !line.strip().startsWith("#"))
+                .collect(Collectors.joining("\n")).toLowerCase(Locale.ROOT);
+        assertThat(count(code, "secrets")).isEqualTo(2);
+        assertThat(count(step.toLowerCase(Locale.ROOT), "secrets")).isEqualTo(2);
+    }
+
+    @Test
+    void theReleaseIsAlwaysADraftThatIsNotTheLatest() {
+        var joined = workflow.replace("\\\n", " ");
+        var creates = joined.lines().filter(line -> line.contains("gh release create")).toList();
+
+        assertThat(creates).hasSize(2).allSatisfy(line -> assertThat(line).contains(" --draft ", " --latest=false "));
+        assertThat(workflow).doesNotContain("gh release edit", "--draft=false", "--latest=true");
     }
 
     @Test
@@ -84,6 +129,27 @@ class AndroidReleaseWorkflowTest {
                 .filter(step -> step.contains("gradle/actions/setup-gradle@")).toList();
 
         assertThat(gradleSteps).isNotEmpty().allSatisfy(step -> assertThat(step).contains("cache-disabled: true"));
+    }
+
+    @Test
+    void noActionIsGivenACache() {
+        assertThat(lines(workflow, "cache:")).isEmpty();
+    }
+
+    @Test
+    void noCheckoutKeepsTheToken() {
+        var checkouts = stepsUsing("actions/checkout@");
+
+        assertThat(checkouts).hasSize(4).allSatisfy(step -> assertThat(step).contains("persist-credentials: false\n"));
+    }
+
+    @Test
+    void javaIsTemurinOfTheVersionNamedAndNoNewer() {
+        var setups = stepsUsing("actions/setup-java@");
+
+        assertThat(setups).hasSize(2).allSatisfy(step -> assertThat(step).contains("distribution: temurin\n"));
+        assertThat(lines(workflow, "distribution:")).hasSize(2);
+        assertThat(workflow).doesNotContain("check-latest");
     }
 
     @Test
@@ -131,6 +197,12 @@ class AndroidReleaseWorkflowTest {
             assertThat(match.group(1)).matches("[a-z-]+/[a-z-]+(/[a-z-]+)?@[0-9a-f]{40}");
             assertThat(match.group(2)).matches(" # v\\d+(\\.\\d+)*");
         });
+    }
+
+    /** Every step of every job that uses {@code action}. */
+    private static List<String> stepsUsing(String action) {
+        return jobs.values().stream().flatMap(job -> steps(job).stream()).filter(step -> step.contains(action))
+                .toList();
     }
 
     /** Each job's text, from its id's line up to the next job, by id. */
