@@ -39,8 +39,8 @@ import org.junit.jupiter.params.provider.ValueSource;
  * extends this class and hands it a fresh instance per test. Against a small server on this computer's loopback
  * address, so nothing leaves the machine. Connecting is part of the timeout too, but no server here can be slow to
  * accept, so only the answer's part of it is checked. The server is the JDK's {@code com.sun.net.httpserver}, with a
- * plain socket for an answer it cannot send, a body cut short, and the tests are JUnit 5, so a subclass runs on a
- * JVM: on Android as a local unit test, not on a device or in Robolectric.
+ * plain socket for the answer it cannot send: a body cut short. The tests are JUnit 5, so a subclass runs on a JVM:
+ * on Android as a local unit test, not on a device or in Robolectric.
  */
 public abstract class HttpGetContractTest {
 
@@ -220,15 +220,6 @@ public abstract class HttpGetContractTest {
      */
     protected HttpGet.Reply get(String path, Duration timeout) throws IOException, InterruptedException {
         return http().get(new HttpGet.Request(at(path), Map.of("Accept", "application/json"), timeout, SMALL_LIMIT));
-    }
-
-    /**
-     * The headers of the last request to {@code /refusal}.
-     *
-     * @return the headers, or null before such a request
-     */
-    protected Headers receivedHeaders() {
-        return received.get();
     }
 
     /**

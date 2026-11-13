@@ -110,7 +110,8 @@ public final class AndroidHttpGet implements HttpGet {
             InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
             byte[] body = stream == null ? new byte[0] : read(stream, limit);
             if (declared >= 0 && body.length != declared) {
-                // the JVM's HttpURLConnection hands back a body that was cut short as if it were whole
+                // not every runtime's HttpURLConnection fails on a body that was cut short: older JVMs hand it back
+                // as if it were whole. Newer ones and Android's fail first, so only such a runtime reaches this
                 throw new IOException("the answer ended after " + body.length + " of " + declared + " bytes");
             }
             return new Reply(status, new String(body, StandardCharsets.UTF_8), headers);
