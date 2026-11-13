@@ -4,6 +4,12 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Android
+
+## [0.7.0] - 2026-11-13
+
+Your home is entered more simply: solar panels as a number of panels with their direction, tilt and year, the charger as its charge power at home, and set-up no longer asks for the house's own use. The dashboard warns when a forecast provider refuses its API key. The settings file is now version 2, which 0.6.0 and older cannot read.
+
 ### Added
 - The dashboard warns when a forecast provider refuses its API key, as the Android app does: "Open-Meteo refused the API key. Check it under Forecast in Settings.", a line per provider above the day, also while another provider's or an older forecast gives the plan, and above "No forecast" when there is none (#391).
 
@@ -18,8 +24,6 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - No field shows **Typical value** any more, in set-up or in Settings: a value "I don't know" filled in looks like any other. The app still keeps which values are typical in the settings file, and set-up's welcome now says that a typical value can be changed there or later in Settings (#458).
 - A day without a charge window now says which of two things it is, on the desktop and on Android: **Charging not needed** when the battery shows the level the plan charges to (the target, or more before a trip), with nothing else in the day card, or **No charge window** with "There is too little solar power while the car is home." when the car could use a charge. Neither shows a battery chip in the day card; the Car battery card still shows the levels on every day. A day a grid charge starts on, a trip's or the grid advice's on an earlier day than the one it is about, says only **No charge window**, with its battery chip, as the day a trip leaves does. A day the car is away on a trip, the day a trip leaves and the grid advice's day say what they said before (#460).
 - On the desktop, a settings file that exists but cannot be used is headed **Settings file cannot be used** in English, as on Android, in the dashboard and in the tray ("Settings file cannot be used: Fix engine.json: …"), instead of "Not set up", which now says only that there is no settings file. The Dutch stays "Niet ingesteld" (#325).
-
-### Android
 
 ## [Android 0.1.0] - 2026-11-13
 
@@ -191,7 +195,8 @@ First version, for Linux.
 - Installation with `pipx` as the command `car-charge-planner`.
 - `config.toml` and `state.json` say which file format they are in, so later versions can upgrade them. A config file from a newer version of the app is refused with a clear message, and a newer state file is left alone. A config file written before this release, with a single `[panels]` table, is read as one panel array.
 
-[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.3.0...v0.4.0
