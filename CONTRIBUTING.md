@@ -47,7 +47,7 @@ The app is developed on KDE Plasma under Wayland and checked on Windows. If you 
 | [docs/dev/code.md](docs/dev/code.md) | You write or change code: Java versions and the editor, code layout (modules and packages), Javadoc, comments, types and invariants, logging. |
 | [docs/dev/testing.md](docs/dev/testing.md) | You write a test or a PR needs checking: how the tests run, architecture tests, what is tested where, coverage floors, mutation testing (PIT), live providers, the checklist Before a release, what a test should do, reporting how it runs on your desktop. |
 | [docs/dev/android.md](docs/dev/android.md) | You touch `android/` or the engine's sources: building, the app's unit and instrumented tests, its CI jobs, trying the app and installing the debug build. |
-| [docs/dev/ci-and-releasing.md](docs/dev/ci-and-releasing.md) | You touch a workflow, a `pom.xml` or a library, or you make a release: the workflows, repository rules, Releasing, Java updates, Dependencies and licence files. |
+| [docs/dev/ci-and-releasing.md](docs/dev/ci-and-releasing.md) | You touch a workflow, a `pom.xml` or a library, or you make a release: the workflows, repository rules, Releasing, Releasing the Android app, Java updates, Dependencies and licence files. |
 | [docs/dev/packaging.md](docs/dev/packaging.md) | You build or change a package: the jlink runtime, Linux and Windows packages, SBOMs, the Flatpak and its app ID, pictures in the documentation. |
 | [docs/translating.md](docs/translating.md) | You translate the app or add a language. |
 | [docs/providers.md](docs/providers.md) | You add a forecast provider. |

@@ -104,6 +104,8 @@ The device tests use a Keystore alias of their own, never the app's. The app ref
 
 CI builds the app with `android.yml`, on Linux with JDK 21, in two jobs; [What is tested where](testing.md#what-is-tested-where) says when each runs and what it keeps. The emulator job uses an Android 10 (API 29) AOSP image without Google's apps. It makes a new AVD and boots it cold every run, without a cache or snapshot, as boots from the cached snapshot came up without the `input` service. Its emulator step has a 15-minute timeout, so a hang on shutdown (seen only on snapshot boots) fails the job fast instead of running into its 30 minutes. A change to `android.yml` runs the emulator job too, so it is tried before it is merged. Neither job is a required check yet: look at them before merging, until the maintainer makes them required once they run stably.
 
+A release is built and signed by `android-release.yml`, for a tag `android-vX.Y.Z`; see [Releasing the Android app](ci-and-releasing.md#releasing-the-android-app).
+
 ## Trying the app
 
 Open `android/` in Android Studio and run the app on an emulator from its Device Manager (any system image from API 29) or on a phone; or start an emulator and run `adb install app/build/outputs/apk/debug/app-debug.apk` from `android/`. It opens on set-up, and after Finish on the dashboard, a tab per day of the plan, with Refresh and Settings in its top app bar.
@@ -116,4 +118,4 @@ To install the CI's build on a phone without a cable: open the pull request's `a
 
 Every debug build is signed with the same key, `android/app/debug.keystore` (password `android`, alias `androiddebugkey`): it is public and no secret, made for this project and no one's own, so a newer debug build updates an older one. Install a debug APK only from this repository's own runs; the debug app's data is only as safe as the public debug key, so keep real provider keys out of it or accept that.
 
-Release signing is not set up yet (#271, #272). `checkReleaseNotDebugSigned`, in `check` and before every build of a build type other than debug, fails when such a build type, with the signing config it ends up with (its own, a product flavor's or the default config's), is signed with the debug key.
+The release build is not signed by Gradle: `assembleRelease` makes an unsigned APK, and `android-release.yml` signs it with the release key, in a job of its own that runs no Gradle (#272; see [Releasing the Android app](ci-and-releasing.md#releasing-the-android-app)). `checkReleaseNotDebugSigned`, in `check` and before every build of a build type other than debug, fails when such a build type, with the signing config it ends up with (its own, a product flavor's or the default config's), is signed with the debug key. The release build's `versionCode` follows from its `versionName` (`AppVersion` in `android/build-logic`), and `./gradlew -q :app:printReleaseVersion` prints both.

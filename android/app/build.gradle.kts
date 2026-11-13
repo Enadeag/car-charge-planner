@@ -1,6 +1,7 @@
 import com.android.build.api.artifact.SingleArtifact
 import java.util.Locale
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+import nl.enadeag.carchargeplanner.buildlogic.AppVersion
 import nl.enadeag.carchargeplanner.buildlogic.LicenceAssets
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -41,14 +42,17 @@ android {
         applicationId = "io.github.enadeag.car_charge_planner"
         minSdk = libs.versions.android.min.sdk.get().toInt()
         targetSdk = 36
-        versionCode = 1
+        // A release commit sets the version name without -SNAPSHOT, and the next one with it
+        // (docs/dev/ci-and-releasing.md, Releasing the Android app); the version code follows from it (AppVersion).
         versionName = "0.1.0-SNAPSHOT"
+        versionCode = AppVersion.versionCode(checkNotNull(versionName))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // The debug build is signed with the project's public debug key (not secret: anyone can sign with it, so it proves
-    // nothing about the owner); release signing is #271/#272's. checkReleaseNotDebugSigned keeps the debug key off
-    // every build type other than debug. No git details in the package.
+    // nothing about the owner); the release build stays unsigned here, as android-release.yml signs it (#272).
+    // checkReleaseNotDebugSigned keeps the debug key off every build type other than debug. No git details in the
+    // package.
     signingConfigs {
         getByName("debug") {
             storeFile = file("debug.keystore")
@@ -214,6 +218,25 @@ val checkReleaseNotDebugSigned = tasks.register<ReleaseSigningCheck>("checkRelea
 }
 tasks.named("check") { dependsOn(checkReleaseNotDebugSigned) }
 
+/** Prints the release build's version name and version code as its APK gets them, one `name=value` line each. */
+abstract class PrintReleaseVersion : DefaultTask() {
+
+    @get:Input
+    abstract val versionName: Property<String>
+
+    @get:Input
+    abstract val versionCode: Property<Int>
+
+    @TaskAction
+    fun print() {
+        println("versionName=${versionName.get()}")
+        println("versionCode=${versionCode.get()}")
+    }
+}
+
+// for android-release.yml, which compares them with the tag and hands them to the signing job (#272)
+val printReleaseVersion = tasks.register<PrintReleaseVersion>("printReleaseVersion")
+
 androidComponents {
     finalizeDsl { dsl ->
         // the signing config a build type ends up with: its own, else the first product flavor's that sets one (in the
@@ -240,6 +263,11 @@ androidComponents {
         variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(exampleConfigAsset, ExampleConfigAsset::assets)
         // MergedManifestTest reads the release build's manifest, with what the libraries add to it
         if (variant.name == "release") {
+            val output = variant.outputs.single()
+            printReleaseVersion.configure {
+                versionName.set(output.versionName)
+                versionCode.set(output.versionCode)
+            }
             val manifest = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
             tasks.withType<Test>().named { it == "testDebugUnitTest" }.configureEach {
                 inputs.file(manifest).withPropertyName("releaseManifest")

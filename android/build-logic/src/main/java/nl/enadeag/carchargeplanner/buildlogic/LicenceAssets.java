@@ -27,7 +27,7 @@ import org.gradle.api.tasks.TaskAction;
  * {@code LICENSE} and {@code ADDITIONAL-TERMS.md} of its root, then each file of {@code android/legal} in name order,
  * each as an asset of its own in {@code licences/}, with {@code licences/index.txt}, which the app's screen of the
  * licences reads. The same files always give the same bytes: UTF-8, {@code \n} line endings, a fixed order, no
- * timestamp, so the APK stays reproducible (#272, #280).
+ * timestamp, so the APK stays reproducible (#424, #280).
  */
 public abstract class LicenceAssets extends DefaultTask {
 
