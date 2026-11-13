@@ -40,21 +40,20 @@ import nl.enadeag.carchargeplanner.engine.secrets.Keychain;
 import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
 
 /**
- * The rules of ADR 0001 about the engine's own parts: parts that depend one way, a pure planner, a domain model
- * without its file format, files written in one place, and no translations; and the rules of ADR 0010 that the engine
- * uses no {@code java.net.http}, which Android lacks, opens no connection of its own beside its HttpGet, leaves the
- * checks of TLS and the network settings of the process alone, logs
- * through slf4j, sets no POSIX file modes, which it leaves to the platform's FilePrivacy, reaches no keychain
- * through D-Bus or native calls, which it leaves to the platform's Keychain, starts no programs and declares no
- * native methods, which each platform does for itself, and has no user interface. And the rules of ADR 0005 for the
- * engine's own classes, which the desktop's {@code ArchitectureTest} holds for the desktop's or for every class: no
- * clock, sleep, thread or static mutable state of its own, no request address in a log, no caught
- * {@code NullPointerException}, no {@code Optional} field or parameter, every provider in its package and reached
- * only through the forecast, no {@code Keychain} of its own but {@code NoKeychain}, no {@code java.util.logging},
- * nothing written to the console, no stack trace printed, no system locale, property or environment read, and every
- * text, number and time in a locale it names. They run when the engine is built alone, without the exceptions the
- * desktop makes for its composition root, its host and its log; only the rules about the boundary with its clients
- * are in the desktop module's {@code ArchitectureTest}, which sees both sides.
+ * The rules of ADR 0001 about the engine's own parts: parts that depend one way, a pure planner, a domain model without
+ * its file format, files written in one place, and no translations; and the rules of ADR 0010 that the engine uses no
+ * {@code java.net.http}, which Android lacks, opens no connection of its own beside its HttpGet, leaves the checks of
+ * TLS and the network settings of the process alone, logs through slf4j, sets no POSIX file modes, which it leaves to
+ * the platform's FilePrivacy, reaches no keychain through D-Bus or native calls, which it leaves to the platform's
+ * Keychain, starts no programs and declares no native methods, which each platform does for itself, and has no user
+ * interface. And the rules of ADR 0005 for the engine's own classes, which the desktop's {@code ArchitectureTest} holds
+ * for the desktop's or for every class: no clock, sleep, thread or static mutable state of its own, no request address
+ * in a log, no caught {@code NullPointerException}, no {@code Optional} field or parameter, every provider in its
+ * package and reached only through the forecast, no {@code Keychain} of its own but {@code NoKeychain}, no
+ * {@code java.util.logging}, nothing written to the console, no stack trace printed, no system locale, property or
+ * environment read, and every text, number and time in a locale it names. They run when the engine is built alone,
+ * without the exceptions the desktop makes for its composition root, its host and its log; only the rules about the
+ * boundary with its clients are in the desktop module's {@code ArchitectureTest}, which sees both sides.
  */
 @AnalyzeClasses(packages = "nl.enadeag.carchargeplanner.engine", importOptions = ImportOption.DoNotIncludeTests.class)
 class EngineArchitectureTest {

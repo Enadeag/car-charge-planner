@@ -52,7 +52,7 @@ public final class TripFile {
      *
      * @param path where the file is, or should be; it and its folder are made when the first trip is added
      * @param files how the file and its folders are written privately on this platform
-     * @param clock the time a file that cannot be used is renamed with; never null
+     * @param clock the time a file is renamed with when it turns out unusable while a change is written; never null
      */
     public TripFile(Path path, PrivateFiles files, Clock clock) {
         this.file = new StoredFile<>(path, new Format(), files, clock);

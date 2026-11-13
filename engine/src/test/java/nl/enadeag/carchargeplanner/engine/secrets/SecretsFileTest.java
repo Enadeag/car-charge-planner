@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
@@ -31,7 +33,7 @@ class SecretsFileTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
-    private static final Clock CLOCK = Clock.systemUTC();
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-06T07:00:00Z"), ZoneOffset.UTC);
 
     private static final String SECRET = "SUPER-SECRET-VALUE-42";
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
@@ -263,8 +265,8 @@ class SecretsFileTest {
         assertThat(path()).doesNotExist();
         assertThat(keys.load().of(OPEN_METEO)).containsEntry("api_key", SECRET);
         try (var kept = Files.list(folder)) {
-            assertThat(kept.filter(file -> file.getFileName().toString().startsWith("secrets.json.damaged-")))
-                    .singleElement().satisfies(file -> assertThat(file).hasContent(broken));
+            assertThat(kept).singleElement().satisfies(file -> assertThat(file)
+                    .hasFileName("secrets.json.damaged-20261006-070000").hasContent(broken));
         }
     }
 
