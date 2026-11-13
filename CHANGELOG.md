@@ -34,6 +34,7 @@ Not released yet; this is the way to the first Android release, 0.1.0.
 - The API keys are kept encrypted with a key in the Android Keystore, and never in a plain file.
 - The app needs Android 10 or newer.
 - Releases of the app come as an APK signed with the app's own release key, with `SHA256SUMS` and the key's certificate fingerprint, on the repository's GitHub Releases, tagged `android-vX.Y.Z` (#272).
+- The README, the install guide, the guide and the privacy page describe the Android app: what it is and what it does not have next to the desktop app, installing, checking and updating the APK, the notification permission, what to do when the phone puts the app to sleep, what is different on the phone, and what the app keeps and sends, with the encrypted API keys, the transfer to a new phone and the language the place search is sent with, on the desktop too (#279).
 
 ## [0.6.0] - 2026-11-10
 

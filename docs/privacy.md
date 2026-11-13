@@ -1,6 +1,6 @@
 # Data and privacy
 
-The app runs on your computer and has no account, no telemetry and no update check. This is everything that leaves it, and everything it keeps.
+The app runs on your computer or phone and has no account, no telemetry and no update check. This is everything that leaves it, and everything it keeps.
 
 ## What is sent, and to whom
 
@@ -13,13 +13,13 @@ Only the **forecast provider** you chose (and the fallback, if you set one) is c
 
 - **Commercial use.** The free plans are for personal use. If you use the app for a business, take the provider's own commercial plan or run your own server (Open-Meteo can be self-hosted or taken as a paid plan, with its own server address and key: both go in Settings, on the Forecast page). Forecast.Solar's pages do not say whether the public plan may be used commercially; ask them.
 - **Credit.** The credit above is shown on the dashboard next to the age of the forecast, because both providers ask for it (Open-Meteo's data is CC BY 4.0). It is shown for whichever provider made the forecast on screen.
-- **Place search.** The place you type in the search box of set-up's or Settings' Location page is sent to the place search of the forecast provider you have chosen (Open-Meteo by default), which answers with matching places and their coordinates. The page says so. A provider without a place search is never sent it: you type coordinates instead. The place names come from [GeoNames](https://www.geonames.org) (CC BY 4.0), via Open-Meteo. The name of the place you choose is kept in the settings file on your computer or phone, next to the coordinates; what goes to the forecast provider does not change.
-- **Nothing else.** The battery level, your away periods and trips, your panels' number, power per panel and year placed, their size (except to Forecast.Solar, which gets it in kWp), the house and car settings and the plan itself never leave the computer.
+- **Place search.** The place you type in the search box of set-up's or Settings' Location page is sent to the place search of the forecast provider you have chosen (Open-Meteo by default), which answers with matching places and their coordinates. The page says so. With the typed text goes the language of the app, `language=en` or `language=nl` (the app's language on the desktop, the phone's on Android, English for any other), so that the place names come back in it; it is sent on the desktop and on Android alike, and only Open-Meteo has a place search to send it to. A provider without a place search is never sent it: you type coordinates instead. The place names come from [GeoNames](https://www.geonames.org) (CC BY 4.0), via Open-Meteo. The name of the place you choose is kept in the settings file on your computer or phone, next to the coordinates; what goes to the forecast provider does not change.
+- **Nothing else.** The battery level, your away periods and trips, your panels' number, power per panel and year placed, their size (except to Forecast.Solar, which gets it in kWp), the house and car settings and the plan itself never leave the computer or phone.
 - **Local only.** Notifications go through your desktop's own notification service. A second start finds the running app through a lock file and a socket in a folder only you can open. Nothing listens on the network.
 
 ## What is kept, and where
 
-Everything the app keeps is on your computer. Delete any of it to start over.
+Everything the app keeps is on your computer; the Android app's is on your phone, described below the table. Delete any of it to start over.
 
 | What | Linux | Windows |
 | --- | --- | --- |
@@ -40,7 +40,7 @@ On Linux `XDG_CONFIG_HOME` and `XDG_DATA_HOME` move the config and data folders,
 
 How the app reads and writes these files, and what it does with a damaged one, is in the [guide](guide.md#the-files-and-the-log).
 
-In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, the away periods you entered for a day, `away.json`, your trips, `trips.json`, and what you were notified about each trip, `trip-notices.json`, among them) are kept in the app's own files folder on the phone, which no other app can read, in the same format as the desktop's. They never leave the phone except in Android's transfer to your next phone, which takes them all along; the API keys stay out of that. Beside them the app keeps a few files of its own: two small preferences files (Android's DataStore) in `files/datastore/`, which the engine does not use, and in the no-backup folder the schedule of the work in the background and the encrypted API keys. Its log goes to Logcat:
+In the Android app, which is not released yet, the engine's files (the settings file, the battery level you entered last, `battery.json`, the away periods you entered for a day, `away.json`, your trips, `trips.json`, and what you were notified about each trip, `trip-notices.json`, among them) are kept in the app's own files folder on the phone, which no other app can read, in the same format as the desktop's. They never leave the phone except in Android's device-to-device transfer to your next phone (Android 12 and later; Android 10 and 11 take nothing along), which takes them all along; the API keys stay out of that. There is no cloud backup: the app turns it off. Beside them the app keeps a few files of its own: two small preferences files (Android's DataStore) in `files/datastore/`, which the engine does not use, and in the no-backup folder the schedule of the work in the background and the encrypted API keys. Its log goes to Logcat:
 
 | What | File | In the transfer to your next phone |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ The Android app's notifications go through Android's own notification service on
 
 Once the Android app is set up and notifications are allowed, it asks the forecast provider about once an hour while it is closed, so it can tell you before a charge window starts: only with a network connection, and with **Wi-Fi only** switched on only on Wi-Fi or another network without a data limit; a low battery does not stop it, though Android's battery saver may delay it. It sends the same as when the app is open, to the same provider and fallback, and nothing else. Forecast.Solar's public plan allows 12 requests an hour for everything behind your internet address, so the phone shares that limit with the desktop app and any other device at home that asks it. The app also asks once when you open it, after a change you saved, and after the phone starts or the app is updated, for which Android lets it start at boot (the permission `RECEIVE_BOOT_COMPLETED`). Android's WorkManager, which runs the hourly update, adds two permissions of its own: `WAKE_LOCK`, to keep the phone awake while the update runs, and `ACCESS_NETWORK_STATE`, to wait for a network (or Wi-Fi only). The alarm that wakes the phone shortly before a notice uses only the forecast already on the phone and sends nothing; with a lead time under about 10 minutes a notice may come late. While notifications are not allowed, none of this runs, until you allow them on the dashboard's card or open the app with them allowed.
 
-WorkManager keeps this schedule in its own database (in the table above). After a force stop nothing runs until you open the app again, and some phone makers stop apps in the background on their own; how to keep the app out of their "sleeping apps" is for the install guide ([#279](https://github.com/Enadeag/car-charge-planner/issues/279)).
+WorkManager keeps this schedule in its own database (in the table above). After a force stop nothing runs until you open the app again, and some phone makers stop apps in the background on their own; how to keep the app out of their "sleeping apps" is in [Installing](install.md#notices-while-the-app-is-closed).
 
 ### API keys
 
@@ -68,7 +68,7 @@ API keys are kept by the system, not in a plain file:
 | --- | --- |
 | Linux | The Secret Service: GNOME Keyring, KWallet or another that offers it, as items with the attribute `application` set to `car-charge-planner` |
 | Windows | Credential Manager (Windows Credentials), as generic credentials whose names start with `car-charge-planner:` |
-| Android (not released yet) | `keychain.json` in the app's no-backup folder: each value encrypted with AES-256-GCM, under a key in the Android Keystore that never leaves the phone and that not even the app can read out. Never in a backup or the transfer to your next phone, so you type the API keys again there; there is no `secrets.json`. Should the Keystore lose that key, the API keys can no longer be read and you type them again too |
+| Android (not released yet) | `keychain.json` in the app's no-backup folder: each value encrypted with AES-256-GCM, under a key in the Android Keystore that never leaves the phone and that not even the app can read out. Never in a backup or the transfer to your next phone, so you type the API keys again there; there is no `secrets.json`. Should the Keystore lose that key for good, the API keys can no longer be read and you type them again; the encrypted entries are not deleted, they stay on the phone as unreadable orphans until their names are written again |
 
 The entries are named `forecast/<provider>/<name>`, after the setting, and one more entry, `index`, lists the names (no values) because a keychain cannot be asked what it holds. Without a usable keychain (a Linux machine with no Secret Service, for one) the API keys are kept in `secrets.json`, readable only by you, and the app says so. On Windows that file is in `%LOCALAPPDATA%`, so a roaming profile does not copy it to other computers (a file an older version kept beside `engine.json` is moved there once). The app reads the API keys from the keychain once and keeps them in memory until you save new ones; a keychain that cannot be used, or does not answer within a few seconds, is tried again five minutes later.
 
