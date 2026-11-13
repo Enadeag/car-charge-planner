@@ -18,6 +18,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - No field shows **Typical value** any more, in set-up or in Settings: a value "I don't know" filled in looks like any other. The app still keeps which values are typical in the settings file, and set-up's welcome now says that a typical value can be changed there or later in Settings (#458).
 - A day without a charge window now says which of two things it is, on the desktop and on Android: **Charging not needed** when the battery shows the level the plan charges to (the target, or more before a trip), with nothing else in the day card, or **No charge window** with "There is too little solar power while the car is home." when the car could use a charge. Neither shows a battery chip in the day card; the Car battery card still shows the levels on every day. A day a grid charge starts on, a trip's or the grid advice's on an earlier day than the one it is about, says only **No charge window**, with its battery chip, as the day a trip leaves does. A day the car is away on a trip, the day a trip leaves and the grid advice's day say what they said before (#460).
 
+### Android
+
 ## [Android 0.1.0] - 2026-11-13
 
 The first release of the Android app.
