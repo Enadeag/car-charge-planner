@@ -22,6 +22,7 @@ import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -39,6 +40,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 class TripNoticesTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     private static final LocalDate FRIDAY = LocalDate.of(2026, 7, 3);
@@ -65,7 +68,7 @@ class TripNoticesTest {
     /** The example system, charging on one phase to a target of 80 %, with {@code leadMinutes} of lead time. */
     private EngineConfig config() {
         try {
-            var example = new ConfigFile(Path.of("docs", "example-engine.json"), FILES).read();
+            var example = new ConfigFile(Path.of("docs", "example-engine.json"), FILES, CLOCK).read();
             var planning = example.planning();
             return example.withPlanning(new PlanningPreferences(planning.minimumPct(), planning.targetPct(),
                     planning.margin(), planning.importToleranceKwh(), planning.minWindow(),
@@ -82,8 +85,8 @@ class TripNoticesTest {
 
     /** Kept in the test's folder, so a new announcer is like the app after a restart. */
     private Announcer announcer() {
-        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
-                new ToldTrips(folder.resolve("trip-notices.json"), FILES), told::add);
+        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, CLOCK),
+                new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK), told::add);
     }
 
     /** The trip needs 93.2 %, solar power brings it to 60 %, and the grid charge does the rest. */
@@ -418,7 +421,8 @@ class TripNoticesTest {
 
         check(announcer, laterAdvice, now);
 
-        assertThat(new ToldTrips(folder.resolve("trip-notices.json"), FILES).load()).extracting(ToldTrip::departure)
+        assertThat(new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK).load())
+                .extracting(ToldTrip::departure)
                 .isEqualTo(kept ? List.of(TRIP.departure(), later.departure()) : List.of(later.departure()));
     }
 

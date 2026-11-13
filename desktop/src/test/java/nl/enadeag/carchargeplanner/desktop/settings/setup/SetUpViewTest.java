@@ -32,6 +32,7 @@ import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.Year;
@@ -58,6 +59,8 @@ class SetUpViewTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     @TempDir
     Path folder;
 
@@ -74,7 +77,7 @@ class SetUpViewTest {
     }
 
     private EngineConfig stored() throws Exception {
-        return new ConfigFile(setUp.configPath, FILES).read();
+        return new ConfigFile(setUp.configPath, FILES, CLOCK).read();
     }
 
     private void next(SetUpView view, int times) throws Exception {

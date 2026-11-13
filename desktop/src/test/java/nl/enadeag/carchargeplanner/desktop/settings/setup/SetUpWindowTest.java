@@ -23,6 +23,7 @@ import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import javafx.application.ColorScheme;
@@ -43,6 +44,8 @@ import org.junit.jupiter.api.io.TempDir;
 class SetUpWindowTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     private static final Messages DUTCH = new Messages(Language.DUTCH);
 
@@ -203,7 +206,7 @@ class SetUpWindowTest {
 
         var view = view();
         Fx.run(() -> view.show(SetUpStep.LOCATION));
-        var stored = new ConfigFile(setUp.configPath, FILES).read();
+        var stored = new ConfigFile(setUp.configPath, FILES, CLOCK).read();
         assertThat(Fx.call(() -> ((TextField) setUp.field(view, TextKey.FIELD_LATITUDE)).getText()))
                 .isEqualTo(setUp.messages.number(stored.system().location().latitude(), 4));
         assertThat(Fx.call(() -> view.draft().config())).isEqualTo(stored);

@@ -31,6 +31,8 @@ class SecretsFileTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     private static final String SECRET = "SUPER-SECRET-VALUE-42";
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
 
@@ -42,7 +44,7 @@ class SecretsFileTest {
     }
 
     private ApiKeys withoutKeychain() {
-        return new ApiKeys(new NoKeychain(), new SecretsFile(path(), FILES),
+        return new ApiKeys(new NoKeychain(), new SecretsFile(path(), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
     }
 
@@ -57,7 +59,7 @@ class SecretsFileTest {
     @Test
     void secretsAreWrittenThroughThePlatformsPrivacyAndReadBack() throws Exception {
         var privacy = new RecordingFilePrivacy();
-        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy)),
+        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy), CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var both = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", SECRET), new ProviderId("forecast-solar"),
                 Map.of("api_key", "other")));
@@ -85,7 +87,7 @@ class SecretsFileTest {
     @Test
     void whereThePlatformHasNothingToMakePrivateAMissingFileIsNoSecrets() throws Exception {
         // a platform that has something to make private refuses a missing file before it is read
-        assertThat(new SecretsFile(path(), FILES).read()).isEqualTo(Secrets.NONE);
+        assertThat(new SecretsFile(path(), FILES, CLOCK).read()).isEqualTo(Secrets.NONE);
     }
 
     @Test
@@ -94,7 +96,7 @@ class SecretsFileTest {
         var privacy = new RecordingFilePrivacy();
         privacy.openToOthers(path());
 
-        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy)),
+        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy), CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
 
         assertThat(keys.load().of(OPEN_METEO)).containsEntry("api_key", SECRET);
@@ -107,7 +109,7 @@ class SecretsFileTest {
         var privacy = new RecordingFilePrivacy();
         privacy.refuse(new AccessDeniedException(path().toString()));
 
-        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy)),
+        var keys = new ApiKeys(new NoKeychain(), new SecretsFile(path(), new PrivateFiles(privacy), CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
 
         assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class).hasMessage(path()
@@ -203,7 +205,7 @@ class SecretsFileTest {
         try {
             withoutKeychain().save(secrets("open-meteo", SECRET));
             withoutKeychain().load();
-            new ApiKeys(new MemoryKeychain(), new SecretsFile(path(), FILES),
+            new ApiKeys(new MemoryKeychain(), new SecretsFile(path(), FILES, CLOCK),
                     KeyFallback.PRIVATE_FILE, Clock.systemUTC()).load(); // the move into a keychain
             Files.writeString(path(), "{\"open-meteo\": {\"api_key\": \"" + SECRET + "\" oops}}");
             assertThatThrownBy(() -> withoutKeychain().load()).isInstanceOf(SecretsProblem.class);
@@ -253,7 +255,7 @@ class SecretsFileTest {
     void aBrokenFileIsKeptAsideWhenTheKeysGoToTheKeychain() throws Exception {
         var broken = "{\"open-meteo\": oops}";
         Files.writeString(path(), broken);
-        var keys = new ApiKeys(new MemoryKeychain(), new SecretsFile(path(), FILES),
+        var keys = new ApiKeys(new MemoryKeychain(), new SecretsFile(path(), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
 
         keys.save(secrets("open-meteo", SECRET));
@@ -269,7 +271,7 @@ class SecretsFileTest {
     @Test
     void makingTheFilePrivateSaysWhetherThePlatformHadToChangeIt() throws Exception {
         var privacy = new RecordingFilePrivacy();
-        var file = new SecretsFile(path(), new PrivateFiles(privacy));
+        var file = new SecretsFile(path(), new PrivateFiles(privacy), CLOCK);
         file.write(secrets("open-meteo", SECRET));
         privacy.openToOthers(path());
 
@@ -279,7 +281,7 @@ class SecretsFileTest {
 
     @Test
     void whereThePlatformHasNothingToChangeNothingIsMadePrivate() throws Exception {
-        var file = new SecretsFile(path(), FILES);
+        var file = new SecretsFile(path(), FILES, CLOCK);
         file.write(secrets("open-meteo", SECRET));
 
         assertThat(file.makePrivate()).isFalse();
@@ -289,7 +291,7 @@ class SecretsFileTest {
     void aBadNameIsRefusedBeforeTheFileIsWritten() {
         var evil = new Secrets(Map.of(OPEN_METEO, Map.of("api key", "x")));
 
-        assertThatThrownBy(() -> new SecretsFile(path(), FILES).write(evil)).isInstanceOf(SecretsProblem.class)
+        assertThatThrownBy(() -> new SecretsFile(path(), FILES, CLOCK).write(evil)).isInstanceOf(SecretsProblem.class)
                 .hasMessage("A setting name has characters that are not allowed");
         assertThat(folder.resolve("secrets.json")).doesNotExist();
         assertThat(folder.resolve("secrets.json.tmp")).doesNotExist();

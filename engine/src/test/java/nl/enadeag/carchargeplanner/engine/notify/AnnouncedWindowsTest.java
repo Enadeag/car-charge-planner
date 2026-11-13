@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 class AnnouncedWindowsTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     private static final Window WINDOW = new Window(Instant.parse("2026-07-03T10:00:00Z"),
             Instant.parse("2026-07-03T12:00:00Z"), 16, 3.68, 6.9, 0.46);
@@ -35,9 +38,9 @@ class AnnouncedWindowsTest {
     void savedWindowsAreLoadedInTheirOrder() {
         var later = new Window(Instant.parse("2026-07-04T09:00:00Z"), Instant.parse("2026-07-04T10:30:00Z"), 6,
                 1.38, 2.0, 0.07);
-        new AnnouncedWindows(path(), FILES).save(List.of(WINDOW, later));
+        new AnnouncedWindows(path(), FILES, CLOCK).save(List.of(WINDOW, later));
 
-        assertThat(new AnnouncedWindows(path(), FILES).load()).containsExactly(WINDOW, later);
+        assertThat(new AnnouncedWindows(path(), FILES, CLOCK).load()).containsExactly(WINDOW, later);
     }
 
     /** The shape the file has had since windows were first announced, so an update does not announce them again. */
@@ -47,7 +50,7 @@ class AnnouncedWindowsTest {
         Files.writeString(path(), "[{\"start\":\"2026-07-03T10:00:00Z\",\"end\":\"2026-07-03T12:00:00Z\",\"amps\":16,"
                 + "\"powerKw\":3.68,\"solarKwh\":6.9,\"importKwh\":0.46}]");
 
-        assertThat(new AnnouncedWindows(path(), FILES).load()).containsExactly(WINDOW);
+        assertThat(new AnnouncedWindows(path(), FILES, CLOCK).load()).containsExactly(WINDOW);
     }
 
     @ParameterizedTest
@@ -60,7 +63,7 @@ class AnnouncedWindowsTest {
         Files.createDirectories(path().getParent());
         Files.writeString(path(), content);
 
-        assertThat(new AnnouncedWindows(path(), FILES).load()).isEmpty();
+        assertThat(new AnnouncedWindows(path(), FILES, CLOCK).load()).isEmpty();
     }
 
     @Test
@@ -69,7 +72,7 @@ class AnnouncedWindowsTest {
         Files.writeString(path(), "[{\"start\":\"2026-07-03T10:00:00Z\",\"end\":\"2026-07-03T12:00:00Z\",\"amps\":16,"
                 + "\"powerKw\":3.68,\"solarKwh\":6.9,\"importKwh\":0.46}, {\"start\":\"2026-07-03T13:00:00Z\"}]");
         try (var log = LogCapture.of(StoredFile.class)) {
-            assertThat(new AnnouncedWindows(path(), FILES).load()).isEmpty();
+            assertThat(new AnnouncedWindows(path(), FILES, CLOCK).load()).isEmpty();
 
             assertThat(log.lines()).containsExactly("WARNING " + path() + " cannot be used: window 2 is not a whole window");
         }

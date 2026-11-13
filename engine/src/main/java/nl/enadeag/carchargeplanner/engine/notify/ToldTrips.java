@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -37,9 +38,10 @@ public final class ToldTrips {
      *
      * @param file the file the trips are kept in; it and its folder are made when the first trip is saved
      * @param files how the file and its folders are written privately on this platform
+     * @param clock the time a file that cannot be used is renamed with; never null
      */
-    public ToldTrips(Path file, PrivateFiles files) {
-        this.file = new StoredFile<>(file, new Format(), files);
+    public ToldTrips(Path file, PrivateFiles files, Clock clock) {
+        this.file = new StoredFile<>(file, new Format(), files, clock);
     }
 
     /**

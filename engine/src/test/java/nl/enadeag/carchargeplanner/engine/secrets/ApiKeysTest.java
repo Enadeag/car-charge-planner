@@ -33,6 +33,8 @@ class ApiKeysTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
     private static final Secrets KEYS = new Secrets(Map.of(
             OPEN_METEO, Map.of("api_key", "OM-SECRET-1"),
@@ -68,7 +70,7 @@ class ApiKeysTest {
     }
 
     private SecretsFile file() {
-        return new SecretsFile(folder.resolve("secrets.json"), FILES);
+        return new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK);
     }
 
     private ApiKeys keys(Keychain keychain) {

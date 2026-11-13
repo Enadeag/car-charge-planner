@@ -11,6 +11,7 @@ import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,9 +42,10 @@ public final class SecretsFile {
      *
      * @param path where the file is, or will be made; its folder is made when needed
      * @param files how the file and its folder are written, and made private, on this platform
+     * @param clock the time a file that cannot be used is renamed with; never null
      */
-    public SecretsFile(Path path, PrivateFiles files) {
-        this.file = new StoredFile<>(path, new Format(), files);
+    public SecretsFile(Path path, PrivateFiles files, Clock clock) {
+        this.file = new StoredFile<>(path, new Format(), files, clock);
         this.files = files;
     }
 

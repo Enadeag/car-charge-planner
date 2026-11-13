@@ -14,6 +14,7 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.ArrayList;
 import javafx.application.ColorScheme;
 import javafx.scene.Node;
@@ -33,6 +34,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 class SettingsKeyboardTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     @TempDir
     Path folder;
@@ -100,7 +103,8 @@ class SettingsKeyboardTest {
 
         Keyboard.press(view.getScene(), KeyCode.ENTER);
 
-        assertThat(new ConfigFile(settings.configPath, FILES).read().planning().targetPct().value()).isEqualTo(90.0);
+        assertThat(new ConfigFile(settings.configPath, FILES, CLOCK).read().planning().targetPct().value())
+                .isEqualTo(90.0);
         assertThat(focusedName(view)).isEqualTo(settings.messages.text(TextKey.SETTINGS_SAVED));
     }
 

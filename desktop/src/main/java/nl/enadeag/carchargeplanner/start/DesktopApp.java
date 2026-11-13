@@ -175,7 +175,7 @@ public final class DesktopApp {
         var trayPresenter = new TrayPresenter(tray, language);
 
         var secretsFile = new SecretsFile(SecretsLocation.moveFromOldPlace(host.os(), configPath, dataFolder, files),
-                files);
+                files, Clock.systemUTC());
         // folders made before the app made its folders private; a folder named with --config= stays as it is
         files.tighten(appSettingsFile.path().toAbsolutePath().getParent());
         // the engine's thread reads the units the JavaFX thread sets: a notice just after a Save may keep the old ones

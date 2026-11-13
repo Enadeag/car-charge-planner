@@ -9,10 +9,12 @@ import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -31,6 +33,7 @@ class AwayFileTest {
     private static final ZoneId TZ = ZoneId.of("Europe/Amsterdam");
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
     private static final Instant NOW = DAY.atTime(7, 0).atZone(TZ).toInstant();
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     /** Enough changes from each of two threads that, without one change at a time, some overlap. */
     private static final int PERIODS_PER_THREAD = 40;
 
@@ -38,7 +41,7 @@ class AwayFileTest {
     Path folder;
 
     private AwayFile file() {
-        return new AwayFile(folder.resolve("data").resolve("away.json"), FILES);
+        return new AwayFile(folder.resolve("data").resolve("away.json"), FILES, CLOCK);
     }
 
     @Test
@@ -156,7 +159,7 @@ class AwayFileTest {
     void aMissingOrDamagedFileHoldsNoPeriods() throws IOException {
         assertThat(file().periods()).isEmpty();
         var damaged = Files.writeString(folder.resolve("damaged.json"), "{oops");
-        assertThat(new AwayFile(damaged, FILES).periods()).isEmpty();
+        assertThat(new AwayFile(damaged, FILES, CLOCK).periods()).isEmpty();
     }
 
     @Test
@@ -166,7 +169,7 @@ class AwayFileTest {
                   {"start": "2026-07-04T08:00:00Z", "end": "2026-07-04T06:00:00Z"},
                   {"start": "2026-07-04T06:00:00Z", "end": "2026-07-04T08:00:00Z"}]}
                 """);
-        assertThat(new AwayFile(path, FILES).periods()).containsExactly(
+        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(
                 new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")));
     }
 
@@ -185,9 +188,9 @@ class AwayFileTest {
         var path = Files.writeString(folder.resolve("away.json"), content);
         var period = OneOffAwayPeriod.allDay(DAY, TZ);
 
-        assertThatThrownBy(() -> new AwayFile(path, FILES).add(period, NOW)).isInstanceOf(IOException.class)
+        assertThatThrownBy(() -> new AwayFile(path, FILES, CLOCK).add(period, NOW)).isInstanceOf(IOException.class)
                 .hasMessageContaining("left as it is");
-        assertThatThrownBy(() -> new AwayFile(path, FILES).remove(period)).isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> new AwayFile(path, FILES, CLOCK).remove(period)).isInstanceOf(IOException.class);
         assertThat(path).hasContent(content);
     }
 
@@ -196,13 +199,13 @@ class AwayFileTest {
         var path = Files.writeString(folder.resolve("away.json"),
                 "{\"periods\": [{\"start\": \"2026-07-04T06:00:00Z\", \"end\": \"2026-07-04T08:00:00Z\"}]}");
         var stored = new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z"));
-        assertThat(new AwayFile(path, FILES).periods()).containsExactly(stored);
+        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(stored);
 
         var added = OneOffAwayPeriod.allDay(LocalDate.of(2026, 7, 5), TZ);
-        new AwayFile(path, FILES).add(added, NOW);
+        new AwayFile(path, FILES, CLOCK).add(added, NOW);
 
         assertThat(StoredJson.parse(Files.readString(path)).path("version").intValue()).isEqualTo(1);
-        assertThat(new AwayFile(path, FILES).periods()).containsExactly(stored, added);
+        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(stored, added);
     }
 
     @Test
@@ -221,7 +224,7 @@ class AwayFileTest {
                   {"start": "2026-07-04T06:00:00Z", "end": "2026-07-04T08:00:00Z"}]}
                 """);
 
-        assertThat(new AwayFile(path, FILES).periods()).containsExactly(
+        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(
                 new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")),
                 new OneOffAwayPeriod(Instant.parse("2026-07-05T06:00:00Z"), Instant.parse("2026-07-05T08:00:00Z")));
     }

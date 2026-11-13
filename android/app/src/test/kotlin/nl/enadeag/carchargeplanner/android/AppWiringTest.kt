@@ -166,7 +166,7 @@ class AppWiringTest {
 
         assertThat(saved).isEqualTo(BatteryLevelSave.Saved)
         val reading = onDisk { BatteryFile(app.platform.dataFolder().resolve("battery.json"),
-            PrivateFiles(FilePrivacy.NONE)).reading() }
+            PrivateFiles(FilePrivacy.NONE), app.clock).reading() }
         assertThat(reading.map { it.enteredAt() }).contains(NOON)
     }
 }

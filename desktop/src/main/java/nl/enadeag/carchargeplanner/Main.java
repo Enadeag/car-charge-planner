@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.instance.SingleInstance;
 import nl.enadeag.carchargeplanner.logging.UncaughtLogging;
 import nl.enadeag.carchargeplanner.platforms.PlatformParts;
 import nl.enadeag.carchargeplanner.start.DesktopApp;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Locale;
 
@@ -58,7 +59,7 @@ public final class Main {
         var defaultConfig = ConfigLocation.defaultPath(host.os(), host.environment(), host.home());
         var files = new PrivateFiles(new PosixFilePrivacy());
         var appSettingsFile = new AppSettingsFile(defaultConfig.resolveSibling(APP_SETTINGS_FILE),
-                Units.ofCountry(Locale.getDefault(Locale.Category.FORMAT).getCountry()), files);
+                Units.ofCountry(Locale.getDefault(Locale.Category.FORMAT).getCountry()), files, Clock.systemUTC());
         // the mode is read once, as the app starts, and applies at the next start; language and appearance follow Settings
         var appSettings = appSettingsFile.read();
         var language = new LanguageChoice(Language.ofSystem(host.environment(), Locale.getDefault(Locale.Category.DISPLAY)));

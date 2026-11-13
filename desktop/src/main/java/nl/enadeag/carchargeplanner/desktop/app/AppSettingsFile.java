@@ -11,6 +11,7 @@ import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -43,9 +44,10 @@ public final class AppSettingsFile {
      * @param path where the file is, or would be; it need not exist
      * @param systemUnits the units of the owner's country, for a file that does not choose any
      * @param files how the file and its folder are written, private, on this system
+     * @param clock the time a file that cannot be used is renamed with; never null
      */
-    public AppSettingsFile(Path path, Units systemUnits, PrivateFiles files) {
-        this.file = new StoredFile<>(path, new Format(), files);
+    public AppSettingsFile(Path path, Units systemUnits, PrivateFiles files, Clock clock) {
+        this.file = new StoredFile<>(path, new Format(), files, clock);
         this.system = AppSettings.following(systemUnits);
     }
 

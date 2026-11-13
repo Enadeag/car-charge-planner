@@ -33,6 +33,7 @@ class EngineInFolderTest {
     private static final Path EXAMPLE = Path.of("docs", "example-engine.json");
     /** The morning the recorded Open-Meteo answer starts on. */
     private static final Instant NOW = Instant.parse("2026-10-06T07:00:00Z");
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     private static final HttpGet SUNNY = ReplayHttp.always(new Reply(200, Recorded.answer("open_meteo_3days.json")));
 
     @TempDir
@@ -48,7 +49,7 @@ class EngineInFolderTest {
     }
 
     private ApiKeys apiKeys() {
-        return new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES),
+        return new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
     }
 
@@ -56,7 +57,7 @@ class EngineInFolderTest {
     void theSettingsFileIsReadFromTheDataFolder() throws IOException, ConfigProblem {
         Files.copy(EXAMPLE, folder.resolve("engine.json"));
 
-        assertThat(inFolder().config()).isEqualTo(new ConfigFile(EXAMPLE, FILES).read());
+        assertThat(inFolder().config()).isEqualTo(new ConfigFile(EXAMPLE, FILES, CLOCK).read());
     }
 
     @Test
@@ -66,9 +67,9 @@ class EngineInFolderTest {
         Files.createDirectories(configFile.getParent());
         Files.copy(EXAMPLE, configFile);
         var engine = Engine.inFolder(data, configFile, SUNNY, FILES, apiKeys(), notice -> { },
-                Clock.fixed(NOW, ZoneOffset.UTC), new ManualScheduler());
+                CLOCK, new ManualScheduler());
 
-        assertThat(engine.config()).isEqualTo(new ConfigFile(EXAMPLE, FILES).read());
+        assertThat(engine.config()).isEqualTo(new ConfigFile(EXAMPLE, FILES, CLOCK).read());
         assertThat(data.resolve("engine.json")).doesNotExist();
     }
 
@@ -76,14 +77,23 @@ class EngineInFolderTest {
     void aSettingsFileKeptElsewhereIsSavedThereAndNotInTheDataFolder() throws IOException, ConfigProblem {
         var configFile = folder.resolve("config").resolve("planner.json");
         var data = folder.resolve("data");
-        var example = new ConfigFile(EXAMPLE, FILES).read();
+        var example = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
         var engine = Engine.inFolder(data, configFile, SUNNY, FILES, apiKeys(), notice -> { },
-                Clock.fixed(NOW, ZoneOffset.UTC), new ManualScheduler());
+                CLOCK, new ManualScheduler());
 
         engine.saveConfig(example);
 
-        assertThat(new ConfigFile(configFile, FILES).read()).isEqualTo(example);
+        assertThat(new ConfigFile(configFile, FILES, CLOCK).read()).isEqualTo(example);
         assertThat(data.resolve("engine.json")).doesNotExist();
+    }
+
+    @Test
+    void aSettingsFileSetAsideIsNamedWithTheEnginesClock() throws IOException {
+        Files.writeString(folder.resolve("engine.json"), "{oops");
+
+        var aside = inFolder().setConfigAside();
+
+        assertThat(aside).hasFileName("engine.json.damaged-20261006-070000").hasContent("{oops");
     }
 
     @Test

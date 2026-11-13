@@ -21,6 +21,7 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -39,6 +40,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 class AnnouncerTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
@@ -72,7 +75,7 @@ class AnnouncerTest {
     /** The example system, which charges on one phase and keeps a minimum of 30 %, with this lead time. */
     private static EngineConfig config(int leadMinutes) {
         try {
-            var example = new ConfigFile(Path.of("docs", "example-engine.json"), FILES).read();
+            var example = new ConfigFile(Path.of("docs", "example-engine.json"), FILES, CLOCK).read();
             var planning = example.planning();
             return example.withPlanning(new PlanningPreferences(planning.minimumPct(), planning.targetPct(),
                     planning.margin(), planning.importToleranceKwh(), planning.minWindow(),
@@ -88,8 +91,9 @@ class AnnouncerTest {
     }
 
     private Announcer announcer() {
-        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
-                new ToldTrips(folder.resolve("trip-notices.json"), FILES), notice -> told.add((Announcement) notice));
+        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, CLOCK),
+                new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK),
+                notice -> told.add((Announcement) notice));
     }
 
     /** Announces with a forecast fetched five minutes ago and the given lead time. */
@@ -103,8 +107,8 @@ class AnnouncerTest {
     /** With an announcer that has announced nothing yet. */
     private List<Window> check(List<DayPlan> days, Instant now) {
         var fresh = new Announcer(
-                new AnnouncedWindows(folder.resolve("fresh-" + now.getEpochSecond() + ".json"), FILES),
-                new ToldTrips(folder.resolve("trips-" + now.getEpochSecond() + ".json"), FILES),
+                new AnnouncedWindows(folder.resolve("fresh-" + now.getEpochSecond() + ".json"), FILES, CLOCK),
+                new ToldTrips(folder.resolve("trips-" + now.getEpochSecond() + ".json"), FILES, CLOCK),
                 notice -> told.add((Announcement) notice));
         return check(fresh, days, now, 15);
     }

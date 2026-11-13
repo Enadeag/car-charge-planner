@@ -44,8 +44,9 @@ class KeysNotInLogcatOnTheDeviceTest {
         val files = PrivateFiles(FilePrivacy.NONE)
         val keychain = EncryptedKeychain(File(folder, EncryptedKeychain.FILE_NAME).toPath(), files,
             AndroidKeystoreKeys(), alias)
-        return ApiKeys(keychain, SecretsFile(File(folder, "secrets.json").toPath(), files), KeyFallback.NONE,
-            Clock.systemUTC())
+        val clock = Clock.systemUTC()
+        return ApiKeys(keychain, SecretsFile(File(folder, "secrets.json").toPath(), files, clock), KeyFallback.NONE,
+            clock)
     }
 
     @After

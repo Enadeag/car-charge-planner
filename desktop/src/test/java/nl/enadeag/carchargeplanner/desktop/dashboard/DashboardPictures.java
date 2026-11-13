@@ -68,6 +68,7 @@ public final class DashboardPictures {
     /** A Friday in summer, mid-morning. */
     private static final LocalDate TODAY = LocalDate.of(2026, 7, 3);
     private static final Instant NOW = TODAY.atTime(10, 20).atZone(BRUSSELS).toInstant();
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     /** The sun's peak in kW from today on: a grey Friday, a sunnier Saturday, then two grey days. */
     private static final double[] PEAKS = {1.3, 2.6, 0.9, 0.8};
     /** The dashboard's width as the app makes it: 30 em of 14 px. */
@@ -213,16 +214,17 @@ public final class DashboardPictures {
         }).info()), new ForecastSolar(_ -> {
             throw new IOException("no network");
         })));
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES),
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
-        var awayFile = new AwayFile(folder.resolve("away.json"), FILES);
-        var engine = new Engine(new ConfigFile(config, FILES),
-                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
-                apiKeys, awayFile, new TripFile(folder.resolve("trips.json"), FILES),
-                new BatteryFile(folder.resolve("battery.json"), FILES),
-                Clock.fixed(NOW, ZoneOffset.UTC),
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
-                        new ToldTrips(folder.resolve("trip-notices.json"), FILES), _ -> { }),
+        var awayFile = new AwayFile(folder.resolve("away.json"), FILES, CLOCK);
+        var engine = new Engine(new ConfigFile(config, FILES, CLOCK),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES, CLOCK), apiKeys),
+                providers,
+                apiKeys, awayFile, new TripFile(folder.resolve("trips.json"), FILES, CLOCK),
+                new BatteryFile(folder.resolve("battery.json"), FILES, CLOCK),
+                CLOCK,
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, CLOCK),
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK), _ -> { }),
                 new ManualScheduler());
         try {
             for (var trip : trips) {

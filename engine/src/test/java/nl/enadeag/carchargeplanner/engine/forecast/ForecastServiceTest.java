@@ -26,9 +26,11 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +58,7 @@ class ForecastServiceTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
     private static final Instant T0 = DAY.atTime(7, 0).atZone(SunnyDays.TZ).toInstant();
+    private static final Clock CLOCK = Clock.fixed(T0, ZoneOffset.UTC);
     private static final SolarSite SYSTEM = ProviderCase.EXAMPLE_SYSTEM;
     private static final String SECRET = "SERVICE-SECRET-31";
     private static final ProviderId MAIN = new ProviderId("main");
@@ -80,8 +83,8 @@ class ForecastServiceTest {
     }
 
     private void restart() {
-        service = new ForecastService(new Providers(List.of(main, backup)), new ForecastCache(cacheFolder(), FILES),
-                () -> secrets.load());
+        service = new ForecastService(new Providers(List.of(main, backup)),
+                new ForecastCache(cacheFolder(), FILES, CLOCK), () -> secrets.load());
     }
 
     private Path cacheFolder() {
@@ -322,7 +325,7 @@ class ForecastServiceTest {
         secrets = () -> new Secrets(Map.of(MAIN, Map.of("api_key", SECRET), BACKUP, Map.of("api_key", otherKey)));
         withoutFallback();
         var echoed = new ForecastService(new Providers(List.of(echoing, backup)),
-                new ForecastCache(cacheFolder(), FILES), () -> secrets.load());
+                new ForecastCache(cacheFolder(), FILES, CLOCK), () -> secrets.load());
 
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
             assertThatThrownBy(() -> echoed.get(SYSTEM, selection, T0)).isInstanceOf(ForecastUnavailable.class)
@@ -673,7 +676,7 @@ class ForecastServiceTest {
 
     @Test
     void thePlainSettingsArePartOfTheCacheKeyInNameOrder() {
-        var key = new ForecastCache(cacheFolder(), FILES).key(SYSTEM, Map.of("b", "2", "a", "1"));
+        var key = new ForecastCache(cacheFolder(), FILES, CLOCK).key(SYSTEM, Map.of("b", "2", "a", "1"));
         assertThat(key.path("settings").propertyNames()).containsExactly("a", "b");
         assertThat(key.path("settings").path("a").stringValue()).isEqualTo("1");
         assertThat(key.path("settings").path("b").stringValue()).isEqualTo("2");

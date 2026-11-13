@@ -44,8 +44,9 @@ class PrivateFilesOnTheDesktopTest {
     }
 
     private ApiKeys keys() {
-        return new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), files),
-                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
+        var clock = Clock.systemUTC();
+        return new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), files, clock),
+                KeyFallback.PRIVATE_FILE, clock);
     }
 
     private static Secrets secrets(String value) {

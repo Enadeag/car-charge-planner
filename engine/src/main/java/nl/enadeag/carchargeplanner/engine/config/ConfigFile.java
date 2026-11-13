@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 
 /**
  * The engine's own config file, in JSON, read and written whole in the shape {@link ConfigFormat} gives. Every value
@@ -23,9 +24,10 @@ public final class ConfigFile {
      *
      * @param path where the file is, or should be; it need not exist, a missing file is reported when it is read
      * @param files how the file and its folders are written privately on this platform
+     * @param clock the time a file that cannot be used is renamed with; never null
      */
-    public ConfigFile(Path path, PrivateFiles files) {
-        this.file = new StoredFile<>(path, new ConfigFormat(), files);
+    public ConfigFile(Path path, PrivateFiles files, Clock clock) {
+        this.file = new StoredFile<>(path, new ConfigFormat(), files, clock);
     }
 
     /**

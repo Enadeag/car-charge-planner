@@ -46,24 +46,12 @@ public final class StoredFile<T> {
     private Stored<T> remembered = new Stored.Absent<>();
 
     /**
-     * Makes the store for one file; a file that cannot be used is renamed with the time on the system's clock.
-     * Nothing is read yet.
-     *
-     * @param path where the file is, or will be made; its folder is made when needed
-     * @param format how the file is read and written
-     * @param files how the file and its folders are written privately on this platform
-     */
-    public StoredFile(Path path, FileFormat<T> format, PrivateFiles files) {
-        this(path, format, files, Clock.systemUTC());
-    }
-
-    /**
      * Makes the store for one file; nothing is read yet.
      *
      * @param path where the file is, or will be made; its folder is made when needed
      * @param format how the file is read and written
      * @param files how the file and its folders are written privately on this platform
-     * @param clock the time a file that cannot be used is renamed with
+     * @param clock the time a file that cannot be used is renamed with; never null
      */
     public StoredFile(Path path, FileFormat<T> format, PrivateFiles files, Clock clock) {
         this.path = path;

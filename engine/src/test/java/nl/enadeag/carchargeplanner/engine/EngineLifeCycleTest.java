@@ -56,6 +56,7 @@ class EngineLifeCycleTest {
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
     private static final Instant NOW = Instant.parse("2026-07-03T06:00:00Z");
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     private static final OneOffAwayPeriod AWAY = new OneOffAwayPeriod(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)));
     private static final Trip TRIP = new Trip(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)), 300, false);
 
@@ -82,15 +83,17 @@ class EngineLifeCycleTest {
             sunny.add(new ForecastStep(start, start.plus(Duration.ofHours(1)), 4.0));
         }
         var providers = new Providers(List.of(new FakeProvider("main", "Main", steps(sunny))));
-        var apiKeys = new ApiKeys(new MemoryKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES),
+        var apiKeys = new ApiKeys(new MemoryKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
-        return new Engine(new ConfigFile(config, FILES),
-                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
+        return new Engine(new ConfigFile(config, FILES, CLOCK),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES, CLOCK), apiKeys),
+                providers,
                 apiKeys,
-                new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
-                new BatteryFile(folder.resolve("battery.json"), FILES), Clock.fixed(NOW, ZoneOffset.UTC),
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
-                        new ToldTrips(folder.resolve("trip-notices.json"), FILES), ignored -> { }), on);
+                new AwayFile(folder.resolve("away.json"), FILES, CLOCK),
+                new TripFile(folder.resolve("trips.json"), FILES, CLOCK),
+                new BatteryFile(folder.resolve("battery.json"), FILES, CLOCK), CLOCK,
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, CLOCK),
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK), ignored -> { }), on);
     }
 
     private Engine started() throws Exception {
@@ -210,7 +213,7 @@ class EngineLifeCycleTest {
         planner.advance(Duration.ofMinutes(5));
 
         assertThat(told).hasSize(1);
-        assertThat(new BatteryFile(folder.resolve("battery.json"), FILES).reading()).isPresent();
+        assertThat(new BatteryFile(folder.resolve("battery.json"), FILES, CLOCK).reading()).isPresent();
     }
 
     @Test

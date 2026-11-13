@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,13 +21,15 @@ class AppSettingsFileTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     private static final AppSettings FOLLOWING = AppSettings.following(Units.IMPERIAL);
 
     @TempDir
     Path folder;
 
     private AppSettingsFile file() {
-        return new AppSettingsFile(folder.resolve("app.json"), Units.IMPERIAL, FILES);
+        return new AppSettingsFile(folder.resolve("app.json"), Units.IMPERIAL, FILES, CLOCK);
     }
 
     private AppSettings read(String content) throws IOException {
@@ -67,7 +70,7 @@ class AppSettingsFileTest {
     @Test
     void writtenSettingsAreReadBack() throws IOException {
         var chosen = new AppSettings(Optional.of(Language.ENGLISH), Units.METRIC, DisplayMode.WINDOW, Appearance.DARK);
-        var file = new AppSettingsFile(folder.resolve("new", "app.json"), Units.IMPERIAL, FILES);
+        var file = new AppSettingsFile(folder.resolve("new", "app.json"), Units.IMPERIAL, FILES, CLOCK);
 
         file.write(chosen);
 
@@ -78,7 +81,8 @@ class AppSettingsFileTest {
     void followingTheSystemsLanguageIsReadBackAsSuch() throws IOException {
         file().write(new AppSettings(Optional.empty(), Units.METRIC, DisplayMode.TRAY, Appearance.SYSTEM));
 
-        assertThat(new AppSettingsFile(folder.resolve("app.json"), Units.METRIC, FILES).read().language()).isEmpty();
+        assertThat(new AppSettingsFile(folder.resolve("app.json"), Units.METRIC, FILES, CLOCK).read().language())
+                .isEmpty();
     }
 
     @Test

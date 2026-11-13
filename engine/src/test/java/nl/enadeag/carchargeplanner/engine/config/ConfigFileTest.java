@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
@@ -37,6 +38,8 @@ class ConfigFileTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     private static final Path EXAMPLE = Path.of("docs", "example-engine.json");
 
     /** The example array's size: its count, its power per panel and its year. */
@@ -51,7 +54,7 @@ class ConfigFileTest {
 
     @Test
     void theExampleConfigDescribesAWholeSystem() throws ConfigProblem {
-        var config = new ConfigFile(EXAMPLE, FILES).read();
+        var config = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
 
         assertThat(config.system().location()).isEqualTo(new Coordinates(51.0, 5.0));
         assertThat(config.system().place()).contains(new PlaceName("Zonnedorp, Belgium"));
@@ -148,7 +151,7 @@ class ConfigFileTest {
         assertThat(example).contains(original);
         var file = write(example.replace(original, replacement));
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read())
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read())
                 .isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining(named);
     }
@@ -158,7 +161,7 @@ class ConfigFileTest {
         var file = write(Files.readString(EXAMPLE).replace("\"minimumPct\": 30", "\"minimumPct\": \"30\"")
                 .replace("\"phases\": 1", "\"phases\": \"3\""));
 
-        var config = new ConfigFile(file, FILES).read();
+        var config = new ConfigFile(file, FILES, CLOCK).read();
 
         assertThat(config.planning().minimumPct()).isEqualTo(new Percent(30));
         assertThat(config.system().charger().phases()).isEqualTo(Phases.THREE);
@@ -168,7 +171,7 @@ class ConfigFileTest {
     void aWrongValueIsNamedByItsWholePlaceInTheFile() throws IOException {
         var file = write(Files.readString(EXAMPLE).replace(COUNTED, "\"kwp\": 0,"));
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessage("engine.json: system.panels[0]: kwp must be more than 0");
     }
 
@@ -177,7 +180,7 @@ class ConfigFileTest {
     void aWrongPeakPowerIsRefused(String kwp) throws IOException {
         var file = write(Files.readString(EXAMPLE).replace(COUNTED, kwp));
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining("system.panels[0]").hasMessageContaining("kwp");
     }
 
@@ -187,10 +190,10 @@ class ConfigFileTest {
         var file = write(Files.readString(EXAMPLE).replace("\"version\": 2", "\"version\": 1")
                 .replace(COUNTED, "\"kwp\": 4.2,"));
 
-        var config = new ConfigFile(file, FILES).read();
+        var config = new ConfigFile(file, FILES, CLOCK).read();
 
         assertThat(config.system().panels().get(0).size()).isEqualTo(new PanelSize.Peak(4.2));
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         copy.write(config);
         var written = StoredJson.parse(Files.readString(folder.resolve("copy.json")));
         assertThat(written.path("version").intValue()).isEqualTo(2);
@@ -204,10 +207,10 @@ class ConfigFileTest {
     void anArrayWithoutThePowerPerPanelKeepsOnlyTheCountAndTheYear() throws IOException, ConfigProblem {
         var file = write(Files.readString(EXAMPLE).replace(COUNTED, "\"count\": 10, \"yearPlaced\": 2021,"));
 
-        var config = new ConfigFile(file, FILES).read();
+        var config = new ConfigFile(file, FILES, CLOCK).read();
 
         assertThat(config.system().panels().get(0).kwp()).isEqualTo(3.6);
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         copy.write(config);
         var array = StoredJson.parse(Files.readString(folder.resolve("copy.json"))).path("system").path("panels")
                 .path(0);
@@ -221,7 +224,7 @@ class ConfigFileTest {
     void theLastYearThereIsIsReadFromAFile() throws IOException, ConfigProblem {
         var file = write(Files.readString(EXAMPLE).replace(COUNTED, "\"count\": 20, \"yearPlaced\": 999999999,"));
 
-        var config = new ConfigFile(file, FILES).read();
+        var config = new ConfigFile(file, FILES, CLOCK).read();
 
         assertThat(config.system().panels().get(0).size())
                 .isEqualTo(new PanelSize.Panels(20, OptionalInt.empty(), Optional.of(Year.of(999999999))));
@@ -231,11 +234,11 @@ class ConfigFileTest {
     void anArrayWithThePowerPerPanelMayLeaveOutTheYear() throws IOException, ConfigProblem {
         var file = write(Files.readString(EXAMPLE).replace(COUNTED, "\"count\": 12, \"wpPerPanel\": 410,"));
 
-        var config = new ConfigFile(file, FILES).read();
+        var config = new ConfigFile(file, FILES, CLOCK).read();
 
         assertThat(config.system().panels().get(0).size())
                 .isEqualTo(new PanelSize.Panels(12, OptionalInt.of(410), Optional.empty()));
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         copy.write(config);
         var array = StoredJson.parse(Files.readString(folder.resolve("copy.json"))).path("system").path("panels")
                 .path(0);
@@ -255,11 +258,11 @@ class ConfigFileTest {
         var file = write(example.replace("\"version\": 2", "\"version\": " + version).replace(PLACE, "")
                 .replace(COUNTED, "\"kwp\": 5.0,"));
 
-        var config = new ConfigFile(file, FILES).read();
+        var config = new ConfigFile(file, FILES, CLOCK).read();
 
         assertThat(config.system().place()).isEmpty();
         assertThat(config.system().location()).isEqualTo(new Coordinates(51.0, 5.0));
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         copy.write(config);
         var written = StoredJson.parse(Files.readString(folder.resolve("copy.json")));
         assertThat(written.path("version").intValue()).isEqualTo(2);
@@ -271,10 +274,10 @@ class ConfigFileTest {
     void aPlaceNameIsReadTrimmedAndWrittenBesideTheCoordinates() throws IOException, ConfigProblem {
         var file = write(Files.readString(EXAMPLE).replace(PLACE, "\"placeName\": \"  Lisbon, Portugal \","));
 
-        var config = new ConfigFile(file, FILES).read();
+        var config = new ConfigFile(file, FILES, CLOCK).read();
 
         assertThat(config.system().place()).contains(new PlaceName("Lisbon, Portugal"));
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         copy.write(config);
         var written = StoredJson.parse(Files.readString(folder.resolve("copy.json")));
         assertThat(written.path("system").path("placeName").stringValue()).isEqualTo("Lisbon, Portugal");
@@ -289,14 +292,14 @@ class ConfigFileTest {
         var example = Files.readString(EXAMPLE);
         var hundred = "a".repeat(100);
 
-        var blank = new ConfigFile(write(example.replace(PLACE, "\"placeName\": \"  \",")), FILES).read();
-        var longest = new ConfigFile(write(example.replace(PLACE, "\"placeName\": \"" + hundred + "\",")), FILES)
+        var blank = new ConfigFile(write(example.replace(PLACE, "\"placeName\": \"  \",")), FILES, CLOCK).read();
+        var longest = new ConfigFile(write(example.replace(PLACE, "\"placeName\": \"" + hundred + "\",")), FILES, CLOCK)
                 .read();
         var tooLong = write(example.replace(PLACE, "\"placeName\": \"" + hundred + "b\","));
 
         assertThat(blank.system().place()).isEmpty();
         assertThat(longest.system().place()).contains(new PlaceName(hundred));
-        assertThatThrownBy(() -> new ConfigFile(tooLong, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(tooLong, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessage("engine.json: system.placeName: a place name must be at most 100 characters");
     }
 
@@ -306,7 +309,7 @@ class ConfigFileTest {
     void aPlaceNameWithALineBreakOrADirectionCharacterIsRefused(String escaped) throws IOException {
         var file = write(Files.readString(EXAMPLE).replace(PLACE, "\"placeName\": \"" + escaped + "\","));
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessage("engine.json: system.placeName: a place name must not hold a control, line break or"
                         + " direction character");
     }
@@ -315,7 +318,7 @@ class ConfigFileTest {
     void aPlaceNameThatIsNoTextIsRefused() throws IOException {
         var file = write(Files.readString(EXAMPLE).replace(PLACE, "\"placeName\": 12,"));
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining("system.placeName: must be a text in quotes");
     }
 
@@ -323,7 +326,7 @@ class ConfigFileTest {
     void anUnknownNameIsRefusedWithTheNamesThatAreAllowed() throws IOException {
         var file = write(Files.readString(EXAMPLE).replace("\"kmPerDay\"", "\"kmPerWeek\""));
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessage("engine.json: system.car: unknown setting 'kmPerWeek'; allowed are 'usableBatteryKwh', "
                         + "'consumptionKwhPer100km', 'kmPerDay', 'tripSurchargePct'");
     }
@@ -336,12 +339,12 @@ class ConfigFileTest {
     void otherChargingHoursAreReadAndWrittenBack() throws IOException, ConfigProblem {
         var file = write(Files.readString(EXAMPLE).replace(PLANNING,
                 PLANNING + ", \"chargingHours\": {\"start\": \"20:30\", \"end\": \"01:00\"}"));
-        var config = new ConfigFile(file, FILES).read();
+        var config = new ConfigFile(file, FILES, CLOCK).read();
         var hours = new ChargingHours(LocalTime.of(20, 30), LocalTime.of(1, 0));
         assertThat(config.planning())
                 .isEqualTo(PlanningFixtures.withChargingHours(PlanningPreferences.RECOMMENDED, hours));
 
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         copy.write(config);
         assertThat(Files.readString(folder.resolve("copy.json")))
                 .contains("\"chargingHours\" : {", "\"start\" : \"20:30\"", "\"end\" : \"01:00\"");
@@ -351,10 +354,10 @@ class ConfigFileTest {
     /** A config file from before charging hours existed must keep working, and the app versions from then read ours. */
     @Test
     void theStandardChargingHoursAreLeftOutOfTheFile() throws IOException, ConfigProblem {
-        var config = new ConfigFile(EXAMPLE, FILES).read();
+        var config = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
         assertThat(config.planning().chargingHours()).isEqualTo(ChargingHours.STANDARD);
 
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         copy.write(config);
         assertThat(Files.readString(folder.resolve("copy.json"))).doesNotContain("chargingHours");
         assertThat(copy.read().planning().chargingHours()).isEqualTo(ChargingHours.STANDARD);
@@ -363,10 +366,10 @@ class ConfigFileTest {
     @Test
     void anotherTripSurchargeIsReadAndWrittenBack() throws IOException, ConfigProblem {
         var file = write(Files.readString(EXAMPLE).replace(CAR, CAR + ", \"tripSurchargePct\": 22.5"));
-        var config = new ConfigFile(file, FILES).read();
+        var config = new ConfigFile(file, FILES, CLOCK).read();
         assertThat(config.system().car()).isEqualTo(new Car(60, 18, 40, new Percent(22.5)));
 
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         copy.write(config);
         assertThat(Files.readString(folder.resolve("copy.json"))).contains("\"tripSurchargePct\"");
         assertThat(copy.read().system().car().tripSurcharge()).isEqualTo(new Percent(22.5));
@@ -375,10 +378,10 @@ class ConfigFileTest {
     /** A config file from before trips existed must keep working, and the app versions from then read ours. */
     @Test
     void theStandardTripSurchargeIsLeftOutOfTheFile() throws IOException, ConfigProblem {
-        var config = new ConfigFile(EXAMPLE, FILES).read();
+        var config = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
         assertThat(config.system().car().tripSurcharge()).isEqualTo(new Percent(15));
 
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         copy.write(config);
         assertThat(Files.readString(folder.resolve("copy.json"))).doesNotContain("tripSurcharge");
         assertThat(copy.read().system().car().tripSurcharge()).isEqualTo(new Percent(15));
@@ -391,15 +394,15 @@ class ConfigFileTest {
         var file = write(Files.readString(EXAMPLE).replace("\"typical\": {", "\"calendar\": {\"icsFile\": \""
                 + ics.toString().replace("\\", "\\\\") + "\", \"travelMarginMinutes\": 20, "
                 + "\"allDay\": {\"departure\": \"08:00\", \"return\": \"19:30\"}}, \"typical\": {"));
-        var copy = new ConfigFile(folder.resolve("copy.json"), FILES);
+        var copy = new ConfigFile(folder.resolve("copy.json"), FILES, CLOCK);
         EngineConfig withoutCalendar;
         try (var log = LogCapture.of(ConfigFormat.class)) {
-            withoutCalendar = new ConfigFile(EXAMPLE, FILES).read();
+            withoutCalendar = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
             assertThat(log.lines()).isEmpty();
         }
 
         try (var log = LogCapture.of(ConfigFormat.class)) {
-            var config = new ConfigFile(file, FILES).read();
+            var config = new ConfigFile(file, FILES, CLOCK).read();
             assertThat(config).isEqualTo(withoutCalendar);
             assertThat(log.lines()).singleElement().asString().startsWith("WARNING ").contains("calendar")
                     .doesNotContain(ics.toString(), "20", "08:00", "19:30");
@@ -415,7 +418,7 @@ class ConfigFileTest {
 
     @Test
     void theAwaySectionGivesTheWeeklyAwayPeriods() throws ConfigProblem {
-        assertThat(new ConfigFile(EXAMPLE, FILES).read().away().weekly())
+        assertThat(new ConfigFile(EXAMPLE, FILES, CLOCK).read().away().weekly())
                 .containsExactly(new WeeklyAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)));
     }
 
@@ -427,7 +430,7 @@ class ConfigFileTest {
                         + "{\"weekday\": \"Thursday\", \"start\": \"06:00\", \"end\": \"19:00\"},"
                         + "{\"weekday\": \"SUNDAY\", \"start\": \"00:00\", \"end\": \"12:15\"}"));
 
-        assertThat(new ConfigFile(file, FILES).read().away().weekly()).containsExactly(
+        assertThat(new ConfigFile(file, FILES, CLOCK).read().away().weekly()).containsExactly(
                 new WeeklyAwayPeriod(DayOfWeek.MONDAY, LocalTime.of(7, 30), LocalTime.of(17, 45)),
                 new WeeklyAwayPeriod(DayOfWeek.THURSDAY, LocalTime.of(6, 0), LocalTime.of(19, 0)),
                 new WeeklyAwayPeriod(DayOfWeek.SUNDAY, LocalTime.of(0, 0), LocalTime.of(12, 15)));
@@ -437,7 +440,7 @@ class ConfigFileTest {
     void anEmptyListMeansNoWeeklyAwayPeriods() throws IOException, ConfigProblem {
         var example = Files.readString(EXAMPLE);
         var file = write(example.substring(0, example.indexOf("\"recurring\"")) + "\"recurring\": []}}");
-        assertThat(new ConfigFile(file, FILES).read().away()).isEqualTo(WeeklyAwaySchedule.NONE);
+        assertThat(new ConfigFile(file, FILES, CLOCK).read().away()).isEqualTo(WeeklyAwaySchedule.NONE);
     }
 
     /** A config file from before away periods existed must keep working. */
@@ -445,20 +448,20 @@ class ConfigFileTest {
     void aFileWithoutTheAwaySectionHasNoWeeklyAwayPeriods() throws IOException, ConfigProblem {
         var example = Files.readString(EXAMPLE);
         var file = write(example.substring(0, example.indexOf(",\n  \"away\"")) + "\n}");
-        assertThat(new ConfigFile(file, FILES).read().away()).isEqualTo(WeeklyAwaySchedule.NONE);
+        assertThat(new ConfigFile(file, FILES, CLOCK).read().away()).isEqualTo(WeeklyAwaySchedule.NONE);
     }
 
     @Test
     void aFileThatHoldsNoObjectIsRejected() throws IOException {
         var file = write("[]");
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read())
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read())
                 .isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining("engine.json");
     }
 
     @Test
     void theForecastSectionNamesTheProvidersAndTheirPlainSettings() throws ConfigProblem {
-        var forecast = new ConfigFile(EXAMPLE, FILES).read().forecast();
+        var forecast = new ConfigFile(EXAMPLE, FILES, CLOCK).read().forecast();
 
         var openMeteo = new ProviderId("open-meteo");
         var forecastSolar = new ProviderId("forecast-solar");
@@ -470,7 +473,7 @@ class ConfigFileTest {
     @Test
     void anEmptyFallbackMeansThereIsNone() throws IOException, ConfigProblem {
         var file = write(Files.readString(EXAMPLE).replace("\"fallback\": \"forecast-solar\"", "\"fallback\": \"\""));
-        var forecast = new ConfigFile(file, FILES).read().forecast();
+        var forecast = new ConfigFile(file, FILES, CLOCK).read().forecast();
 
         assertThat(forecast.fallback()).isEmpty();
         assertThat(forecast.order()).containsExactly(new ProviderId("open-meteo"));
@@ -480,19 +483,19 @@ class ConfigFileTest {
     @Test
     void anUnknownProviderIdIsNotAConfigProblem() throws IOException, ConfigProblem {
         var file = write(Files.readString(EXAMPLE).replace("\"primary\": \"open-meteo\"", "\"primary\": \"solcast\""));
-        assertThat(new ConfigFile(file, FILES).read().forecast().primary()).isEqualTo(new ProviderId("solcast"));
+        assertThat(new ConfigFile(file, FILES, CLOCK).read().forecast().primary()).isEqualTo(new ProviderId("solcast"));
     }
 
     @Test
     void aFileThatIsNotJsonIsRejected() throws IOException {
         var file = write("[system\nlatitude = 1");
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class);
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class);
     }
 
     @Test
     void aMissingFileIsAProblemThatSaysWhereTheFileShouldBe() {
         var missing = folder.resolve("nothing-here.json");
-        assertThatThrownBy(() -> new ConfigFile(missing, FILES).read())
+        assertThatThrownBy(() -> new ConfigFile(missing, FILES, CLOCK).read())
                 .isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining(missing.toString());
     }
@@ -505,7 +508,7 @@ class ConfigFileTest {
         Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("-w-------"));
         assumeFalse(Files.isReadable(file), "root reads any file");
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOfSatisfying(ConfigProblem.class,
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOfSatisfying(ConfigProblem.class,
                 problem -> {
                     assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.UNREADABLE);
                     assertThat(problem.getMessage()).contains(file.toString());
@@ -514,8 +517,8 @@ class ConfigFileTest {
 
     @Test
     void aWrittenConfigIsReadBackTheSame() throws IOException, ConfigProblem {
-        var example = new ConfigFile(EXAMPLE, FILES).read();
-        var file = new ConfigFile(folder.resolve("new").resolve("engine.json"), FILES);
+        var example = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
+        var file = new ConfigFile(folder.resolve("new").resolve("engine.json"), FILES, CLOCK);
 
         file.write(example);
 
@@ -526,8 +529,8 @@ class ConfigFileTest {
 
     @Test
     void writingReplacesTheWholeFile() throws IOException, ConfigProblem {
-        var example = new ConfigFile(EXAMPLE, FILES).read();
-        var file = new ConfigFile(write(Files.readString(EXAMPLE)), FILES);
+        var example = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
+        var file = new ConfigFile(write(Files.readString(EXAMPLE)), FILES, CLOCK);
         var fewer = new EngineConfig(example.system(),
                 new PlanningPreferences(new Percent(20), new Percent(90), 0.7, 0.1,
                         Duration.ofMinutes(30), Duration.ofMinutes(0)),
@@ -545,17 +548,17 @@ class ConfigFileTest {
         var path = write(original);
         Files.createDirectory(folder.resolve("engine.json.tmp"));
 
-        assertThatThrownBy(() -> new ConfigFile(path, FILES).write(new ConfigFile(EXAMPLE, FILES).read()))
+        assertThatThrownBy(() -> new ConfigFile(path, FILES, CLOCK).write(new ConfigFile(EXAMPLE, FILES, CLOCK).read()))
                 .isInstanceOf(IOException.class);
         assertThat(path).hasContent(original);
     }
 
     @Test
     void typicalValuesAreWrittenAndReadBack() throws IOException, ConfigProblem {
-        var example = new ConfigFile(EXAMPLE, FILES).read();
+        var example = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
         var typical = new TypicalValues(Set.of(ConfigSetting.CAR_BATTERY, ConfigSetting.CHARGER_PHASES),
                 List.of(Set.of(ConfigSetting.PANEL_SIZE, ConfigSetting.PANEL_TILT)));
-        var file = new ConfigFile(folder.resolve("engine.json"), FILES);
+        var file = new ConfigFile(folder.resolve("engine.json"), FILES, CLOCK);
 
         file.write(example.withSystem(example.system(), typical));
 
@@ -564,7 +567,7 @@ class ConfigFileTest {
 
     @Test
     void aFileWithoutTypicalValuesHasNone() throws ConfigProblem {
-        assertThat(new ConfigFile(EXAMPLE, FILES).read().typical()).isEqualTo(TypicalValues.NONE);
+        assertThat(new ConfigFile(EXAMPLE, FILES, CLOCK).read().typical()).isEqualTo(TypicalValues.NONE);
     }
 
     @ParameterizedTest
@@ -578,26 +581,26 @@ class ConfigFileTest {
         var example = Files.readString(EXAMPLE);
         var file = write(example.substring(0, example.lastIndexOf('}')) + ", \"typical\": " + typical + "}");
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining(named);
     }
 
     @Test
     void aWrittenFileHasVersionTwoFirst() throws IOException, ConfigProblem {
         var path = folder.resolve("engine.json");
-        new ConfigFile(path, FILES).write(new ConfigFile(EXAMPLE, FILES).read());
+        new ConfigFile(path, FILES, CLOCK).write(new ConfigFile(EXAMPLE, FILES, CLOCK).read());
 
         var written = StoredJson.parse(Files.readString(path));
         assertThat(List.copyOf(written.propertyNames())).startsWith("version", "system");
         assertThat(written.path("version").intValue()).isEqualTo(2);
-        assertThat(new ConfigFile(path, FILES).read()).isEqualTo(new ConfigFile(EXAMPLE, FILES).read());
+        assertThat(new ConfigFile(path, FILES, CLOCK).read()).isEqualTo(new ConfigFile(EXAMPLE, FILES, CLOCK).read());
     }
 
     @Test
     void aFileOfANewerVersionIsRefusedAsWrittenByANewerApp() throws IOException {
         var file = write(Files.readString(EXAMPLE).replace("\"version\": 2", "\"version\": 3"));
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOfSatisfying(ConfigProblem.class,
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOfSatisfying(ConfigProblem.class,
                 problem -> {
                     assertThat(problem.kind()).isEqualTo(ConfigProblem.Kind.NEWER_VERSION);
                     assertThat(problem.detail()).contains("written by a newer version of the app");
@@ -608,7 +611,7 @@ class ConfigFileTest {
     @Test
     void aFileSetAsideIsKeptAsDamagedWithTheTimeAndTheConfigIsMissingThen() throws IOException {
         var file = write("{\"version\": 1}");
-        var config = new ConfigFile(file, FILES);
+        var config = new ConfigFile(file, FILES, CLOCK);
 
         var aside = config.setAside();
 
@@ -622,7 +625,7 @@ class ConfigFileTest {
     @Test
     void aFileOfANewerVersionIsNotSetAsideAndStaysUnusableForThatReason() throws IOException {
         var file = write(Files.readString(EXAMPLE).replace("\"version\": 2", "\"version\": 3"));
-        var config = new ConfigFile(file, FILES);
+        var config = new ConfigFile(file, FILES, CLOCK);
 
         assertThatThrownBy(config::setAside).isInstanceOf(IOException.class)
                 .hasMessageContaining("written by a newer version of the app");
@@ -635,7 +638,7 @@ class ConfigFileTest {
         var newer = Files.readString(EXAMPLE).replace("\"version\": 2", "\"version\": 3");
         var file = write(newer);
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).write(new ConfigFile(EXAMPLE, FILES).read()))
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).write(new ConfigFile(EXAMPLE, FILES, CLOCK).read()))
                 .isInstanceOf(IOException.class).hasMessageContaining("written by a newer version of the app");
         assertThat(file).hasContent(newer);
         assertThat(folder).isDirectoryNotContaining(entry -> entry.getFileName().toString().contains("damaged"));
@@ -645,7 +648,7 @@ class ConfigFileTest {
     void anUnknownNameIsStillRefusedBesideTheVersion() throws IOException {
         var file = write(Files.readString(EXAMPLE).replaceFirst("\\{", "{\"version\": 2, \"extra\": 1,"));
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining("unknown setting 'extra'");
     }
 
@@ -653,11 +656,11 @@ class ConfigFileTest {
     @ValueSource(strings = {"{\"system\": oops", "{\"version\": 1}", "{\"planning\": {}}"})
     void writingOverAFileThatCannotBeUsedKeepsItAside(String unusable) throws IOException, ConfigProblem {
         var path = write(unusable);
-        var config = new ConfigFile(EXAMPLE, FILES).read();
+        var config = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
 
-        new ConfigFile(path, FILES).write(config);
+        new ConfigFile(path, FILES, CLOCK).write(config);
 
-        assertThat(new ConfigFile(path, FILES).read()).isEqualTo(config);
+        assertThat(new ConfigFile(path, FILES, CLOCK).read()).isEqualTo(config);
         try (var kept = Files.list(folder)) {
             assertThat(kept.filter(file -> file.getFileName().toString().startsWith("engine.json.damaged-")))
                     .singleElement().satisfies(file -> assertThat(file).hasContent(unusable));
@@ -667,7 +670,7 @@ class ConfigFileTest {
     @Test
     void aChangedFileIsReadAgainByTheSameReader() throws IOException, ConfigProblem {
         var path = write(Files.readString(EXAMPLE));
-        var file = new ConfigFile(path, FILES);
+        var file = new ConfigFile(path, FILES, CLOCK);
         assertThat(file.read().planning().margin()).isEqualTo(0.85);
 
         write(Files.readString(EXAMPLE).replace("\"margin\": 0.85", "\"margin\": 0.5"));
@@ -682,7 +685,7 @@ class ConfigFileTest {
                 example.indexOf("}", example.indexOf("\"panels\"")) + 1);
         var file = write(example.replace(roof, roof + ", " + roof.replace("\"tiltDeg\": 35", "\"tiltDeg\": 91")));
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessage("engine.json: system.panels[1]: tiltDeg must be between 0 and 90");
     }
 
@@ -692,38 +695,38 @@ class ConfigFileTest {
         var file = write(example.substring(0, example.lastIndexOf('}'))
                 + ", \"typical\": {\"system\": [], \"panels\": [[\"PANEL_SIZE\", 5]]}}");
 
-        assertThatThrownBy(() -> new ConfigFile(file, FILES).read()).isInstanceOf(ConfigProblem.class)
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read()).isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining("typical.panels[0][1]");
     }
 
     @Test
     void typicalValuesAreInTheFileForTheNextReader() throws IOException, ConfigProblem {
-        var example = new ConfigFile(EXAMPLE, FILES).read();
+        var example = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
         var typical = new TypicalValues(Set.of(ConfigSetting.CHARGER_PHASES, ConfigSetting.CAR_BATTERY),
                 List.of(Set.of(ConfigSetting.PANEL_TILT, ConfigSetting.PANEL_SIZE)));
         var path = folder.resolve("engine.json");
 
-        new ConfigFile(path, FILES).write(example.withSystem(example.system(), typical));
+        new ConfigFile(path, FILES, CLOCK).write(example.withSystem(example.system(), typical));
 
         var written = StoredJson.parse(Files.readString(path)).path("typical");
         assertThat(written.path("system").values()).extracting(node -> node.stringValue())
                 .containsExactly("CAR_BATTERY", "CHARGER_PHASES");
         assertThat(written.path("panels").get(0).values()).extracting(node -> node.stringValue())
                 .containsExactly("PANEL_SIZE", "PANEL_TILT");
-        assertThat(new ConfigFile(path, FILES).read().typical()).isEqualTo(typical);
+        assertThat(new ConfigFile(path, FILES, CLOCK).read().typical()).isEqualTo(typical);
     }
 
     @Test
     void theProvidersSettingsAreWrittenInTheOrderOfTheirIds() throws IOException, ConfigProblem {
-        var example = new ConfigFile(EXAMPLE, FILES).read();
+        var example = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
         var settings = new LinkedHashMap<ProviderId, Map<String, String>>();
         for (var id : List.of("zz-last", "open-meteo", "aa-first", "forecast-solar")) {
             settings.put(new ProviderId(id), Map.of("note", id));
         }
         var path = folder.resolve("engine.json");
 
-        new ConfigFile(path, FILES).write(example.withForecast(new ForecastSelection(new ProviderId("open-meteo"),
-                Optional.empty(), settings)));
+        new ConfigFile(path, FILES, CLOCK).write(example.withForecast(
+                new ForecastSelection(new ProviderId("open-meteo"), Optional.empty(), settings)));
 
         var written = StoredJson.parse(Files.readString(path)).path("forecast").path("settings");
         assertThat(List.copyOf(written.propertyNames())).containsExactly("aa-first", "forecast-solar", "open-meteo", "zz-last");

@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.MemoryKeychain;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.lang.ref.WeakReference;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import javafx.scene.Node;
@@ -37,6 +38,8 @@ import org.junit.jupiter.api.io.TempDir;
 class SlowStoresTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     @TempDir
     Path folder;
@@ -94,7 +97,7 @@ class SlowStoresTest {
         keychain.letGo.countDown();
         SettingsFixture.waitFor(() -> !view.isReading());
 
-        var target = new ConfigFile(settings.configPath, FILES).read().planning().targetPct().value();
+        var target = new ConfigFile(settings.configPath, FILES, CLOCK).read().planning().targetPct().value();
         assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_TARGET_CHARGE)).getText()))
                 .isEqualTo(settings.messages.number(target, 0));
         assertThat(Fx.call(() -> planningPage(view).isDisabled())).isFalse();

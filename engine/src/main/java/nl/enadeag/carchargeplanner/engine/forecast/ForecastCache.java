@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -61,6 +62,7 @@ public final class ForecastCache {
 
     private final Path folder;
     private final PrivateFiles privateFiles;
+    private final Clock clock;
     private final Map<ProviderId, StoredFile<Entry>> files = new ConcurrentHashMap<>();
 
     /**
@@ -68,10 +70,12 @@ public final class ForecastCache {
      *
      * @param folder where the files go; made when the first one is written
      * @param privateFiles how the files and the folder are written privately on this platform
+     * @param clock the time a file that cannot be used is renamed with; never null
      */
-    public ForecastCache(Path folder, PrivateFiles privateFiles) {
+    public ForecastCache(Path folder, PrivateFiles privateFiles, Clock clock) {
         this.folder = folder;
         this.privateFiles = privateFiles;
+        this.clock = clock;
     }
 
     /**
@@ -156,7 +160,8 @@ public final class ForecastCache {
 
     private StoredFile<Entry> file(ProviderId providerId) {
         return files.computeIfAbsent(providerId,
-                id -> new StoredFile<>(folder.resolve("forecast-" + id.value() + ".json"), new Format(), privateFiles));
+                id -> new StoredFile<>(folder.resolve("forecast-" + id.value() + ".json"), new Format(), privateFiles,
+                        clock));
     }
 
     private Entry read(ProviderId providerId) {

@@ -70,6 +70,8 @@ class SystemPagesTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     private static final PanelArray EXAMPLE_ARRAY = new PanelArray("South roof",
             new PanelSize.Panels(20, OptionalInt.of(250), Optional.of(Year.of(2013))), 35, 0, 0.14);
 
@@ -89,7 +91,7 @@ class SystemPagesTest {
     }
 
     private EngineConfig stored() throws Exception {
-        return new ConfigFile(settings.configPath, FILES).read();
+        return new ConfigFile(settings.configPath, FILES, CLOCK).read();
     }
 
     /** The example config, changed and written back before Settings opens. */
@@ -100,7 +102,7 @@ class SystemPagesTest {
     private SettingsView openWith(Clock clock, java.util.function.UnaryOperator<EngineConfig> change)
             throws Exception {
         settings = new SettingsFixture(folder, Language.ENGLISH, clock);
-        var file = new ConfigFile(settings.configPath, FILES);
+        var file = new ConfigFile(settings.configPath, FILES, CLOCK);
         file.write(change.apply(file.read()));
         return settings.open();
     }
@@ -419,7 +421,7 @@ class SystemPagesTest {
     /** The example config with this charger, nothing typical, written back before Settings opens on its page. */
     private SettingsView openWithCharger(Language language, Charger charger) throws Exception {
         settings = new SettingsFixture(folder, language);
-        var file = new ConfigFile(settings.configPath, FILES);
+        var file = new ConfigFile(settings.configPath, FILES, CLOCK);
         var example = file.read();
         file.write(example.withSystem(example.system().withCharger(charger), TypicalValues.NONE));
         var view = settings.open();
@@ -780,7 +782,7 @@ class SystemPagesTest {
     private SettingsView openUnnamedFinding(Place place) throws Exception {
         settings = new SettingsFixture(folder, Language.ENGLISH, List.of(new SearchOnly(
                 (text, language) -> new PlaceResults.Found(List.of(place)))));
-        var file = new ConfigFile(settings.configPath, FILES);
+        var file = new ConfigFile(settings.configPath, FILES, CLOCK);
         var example = file.read();
         file.write(example.withSystem(example.system().withUnnamedLocation(Coordinates.NOT_CHOSEN,
                 example.system().timezone()), example.typical()));
@@ -937,7 +939,7 @@ class SystemPagesTest {
     /** The example config with this house's use, nothing typical, written back before Settings opens. */
     private SettingsView openWithHouse(Language language, double kw) throws Exception {
         settings = new SettingsFixture(folder, language);
-        var file = new ConfigFile(settings.configPath, FILES);
+        var file = new ConfigFile(settings.configPath, FILES, CLOCK);
         var example = file.read();
         file.write(example.withSystem(example.system().withHouseAndCar(new House(kw), example.system().car()),
                 TypicalValues.NONE));
@@ -1089,7 +1091,7 @@ class SystemPagesTest {
     @Test
     void typicalValuesStayMarkedInImperialUnits() throws Exception {
         settings = new SettingsFixture(folder, Language.ENGLISH);
-        var file = new ConfigFile(settings.configPath, FILES);
+        var file = new ConfigFile(settings.configPath, FILES, CLOCK);
         var example = file.read();
         file.write(example.withSystem(example.system(), new TypicalValues(Set.of(ConfigSetting.CAR_CONSUMPTION), List.of())));
         settings.appSettings.write(new AppSettings(Optional.empty(), Units.IMPERIAL, DisplayMode.AUTOMATIC, Appearance.SYSTEM));

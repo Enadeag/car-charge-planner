@@ -9,6 +9,7 @@ import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ToldTripsTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     private static final ToldTrip ASKED = new ToldTrip(Instant.parse("2026-07-05T06:30:00Z"), true,
             Optional.of(23.5), false);
@@ -34,14 +37,14 @@ class ToldTripsTest {
     @Test
     void savedTripsAreLoadedInTheirOrder() {
         var notAsked = new ToldTrip(Instant.parse("2026-07-04T15:00:00Z"), false, Optional.empty(), true);
-        new ToldTrips(path(), FILES).save(List.of(ASKED, notAsked));
+        new ToldTrips(path(), FILES, CLOCK).save(List.of(ASKED, notAsked));
 
-        assertThat(new ToldTrips(path(), FILES).load()).containsExactly(ASKED, notAsked);
+        assertThat(new ToldTrips(path(), FILES, CLOCK).load()).containsExactly(ASKED, notAsked);
     }
 
     @Test
     void aTripTheOwnerWasNotAskedAboutHasNoGridShareInTheFile() throws IOException {
-        new ToldTrips(path(), FILES).save(List.of(new ToldTrip(Instant.parse("2026-07-04T15:00:00Z"), true,
+        new ToldTrips(path(), FILES, CLOCK).save(List.of(new ToldTrip(Instant.parse("2026-07-04T15:00:00Z"), true,
                 Optional.empty(), false)));
 
         assertThat(Files.readString(path())).doesNotContain("askedGridPct");
@@ -54,7 +57,7 @@ class ToldTripsTest {
         Files.writeString(path(), "{\"version\": 1, \"trips\": [{\"departure\": \"2026-07-05T06:30:00Z\", "
                 + "\"chargeStart\": true, \"askedGridPct\": 23.5, \"short\": false}]}");
 
-        assertThat(new ToldTrips(path(), FILES).load()).containsExactly(ASKED);
+        assertThat(new ToldTrips(path(), FILES, CLOCK).load()).containsExactly(ASKED);
     }
 
     @ParameterizedTest
@@ -69,7 +72,7 @@ class ToldTripsTest {
         Files.createDirectories(path().getParent());
         Files.writeString(path(), content);
 
-        assertThat(new ToldTrips(path(), FILES).load()).isEmpty();
+        assertThat(new ToldTrips(path(), FILES, CLOCK).load()).isEmpty();
     }
 
     @Test
@@ -78,7 +81,7 @@ class ToldTripsTest {
         Files.writeString(path(), "{\"trips\": [{\"departure\": \"2026-07-05T06:30:00Z\", \"chargeStart\": true, "
                 + "\"short\": false}, {\"departure\": \"2026-07-05T06:30:00Z\"}]}");
         try (var log = LogCapture.of(StoredFile.class)) {
-            assertThat(new ToldTrips(path(), FILES).load()).isEmpty();
+            assertThat(new ToldTrips(path(), FILES, CLOCK).load()).isEmpty();
 
             assertThat(log.lines())
                     .containsExactly("WARNING " + path() + " cannot be used: trip 2 is not a whole trip");
