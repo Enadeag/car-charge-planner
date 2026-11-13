@@ -3,6 +3,8 @@ package nl.enadeag.carchargeplanner.desktop.dashboard;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
+import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
+import java.util.List;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.Region;
 
@@ -14,7 +16,7 @@ import javafx.scene.layout.Region;
  */
 public final class DashboardPreview {
 
-    private final Messages messages;
+    private final OutlookMapper mapper;
     private final DashboardView view;
 
     /**
@@ -25,9 +27,11 @@ public final class DashboardPreview {
      *     null
      * @param appName the app's name, for the header; the same in every language
      * @param messages the texts, in the language set-up speaks
+     * @param providers the known forecast providers, which name a provider that refused its API key
      */
-    public DashboardPreview(ObservableValue<Boolean> reducedMotion, String appName, Messages messages) {
-        this.messages = messages;
+    public DashboardPreview(ObservableValue<Boolean> reducedMotion, String appName, Messages messages,
+            List<ProviderInfo> providers) {
+        this.mapper = new OutlookMapper(messages, providers);
         this.view = new DashboardView(() -> { }, () -> { }, reducedMotion, appName, messages);
         view.setDetachable(false);
         view.hideFooterButtons();
@@ -46,7 +50,7 @@ public final class DashboardPreview {
 
     /** Says that the forecast is being fetched, as the dashboard does before its first plan. */
     public void showLoading() {
-        view.show(new OutlookMapper(messages).loading());
+        view.show(mapper.loading());
     }
 
     /**
@@ -55,6 +59,6 @@ public final class DashboardPreview {
      * @param outlook the engine's preview of the owner's plan; never null
      */
     public void show(Outlook outlook) {
-        view.show(new OutlookMapper(messages).map(outlook));
+        view.show(mapper.map(outlook));
     }
 }

@@ -81,7 +81,7 @@ class DashboardTest {
 
     private Dashboard dashboard(TaskbarHiding taskbarHiding) throws Exception {
         return Fx.call(() -> new Dashboard(new AppIcon(), AppName.TITLE, Scenes.theme(new SimpleObjectProperty<>(ColorScheme.LIGHT)),
-                new SimpleObjectProperty<>(true), units, clock, taskbarHiding, language,
+                new SimpleObjectProperty<>(true), units, clock, taskbarHiding, language, List.of(),
                 new DashboardActions(level -> { }, period -> { }, removed::add, tripsAdded::add,
                         (trip, changed) -> tripsChanged.add(List.of(trip, changed)), tripsRemoved::add, () -> { },
                         settingsOpened::incrementAndGet, setUpOpened::incrementAndGet, quit::incrementAndGet)));

@@ -187,7 +187,8 @@ final class SetUpView extends BorderPane {
             settings.putAll(keys.of(primary));
             return stores.checkConnection(primary, config.system(), settings);
         }, providers, background, messages));
-        pages.put(SetUpStep.PREVIEW, new SetUpPreview(stores::preview, reducedMotion, appName, background, messages));
+        pages.put(SetUpStep.PREVIEW, new SetUpPreview(stores::preview, reducedMotion, appName, background, messages,
+                providers));
 
         var parts = new EnumMap<SetUpStep, List<ConfigPart>>(SetUpStep.class);
         parts.put(SetUpStep.LOCATION, List.of(location));

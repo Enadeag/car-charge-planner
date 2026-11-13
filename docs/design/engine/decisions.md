@@ -69,9 +69,10 @@ Decisions about the engine that both apps share, the desktop app and the Android
 ### A refused API key
 
 - A 401 or 403 from a provider is `ProviderError.KeyRefused`. `Outlook.NoForecast.keyRefusedBy` and `ForecastSource.keyRefusedBy` name the providers that refused their key, also while a fallback answered or an older forecast is still used, until the provider answers again or the keys or settings are saved. A stored-only round never says so, as it asks nobody (#359).
-- Only the Android app reads `keyRefusedBy`: a separate warning on the dashboard, also while a fallback or an older forecast still gives a plan (#359).
+- Both apps read `keyRefusedBy` for a separate warning on the dashboard, also while a fallback or an older forecast still gives a plan (#359, #391). Neither the desktop's tray icon nor its notifications say it (#391).
 - The Android app's Problems notification counts a refused key as a problem (#361).
-- The desktop shows the provider's own refusal message as the detail under "No forecast" (`OutlookMapper`, `ProviderAttempt`) and in the connection check (the engine's `ConnectionCheck`, which the Android set-up and Settings use too), not while a plan is still given; showing a refused key on its dashboard is the open #391 (#359).
+- The desktop shows the provider's own refusal message as the detail under "No forecast" (`OutlookMapper`, `ProviderAttempt`) and in the connection check (the engine's `ConnectionCheck`, which the Android set-up and Settings use too), not while a plan is still given (#359).
+- The desktop's dashboard, and set-up's preview of it, warn above the day card on every day's tab, or above "No forecast" (also for a forecast without days), in Android's words ("Open-Meteo refused the API key. Check it under Forecast in Settings."): one card with a warning sign and a line per provider, in the order they were asked, named as `ProviderInfo` names it (by its id when the app does not know it). The card is reached with Tab and read as one text, as the cards below it. `OutlookMapper` writes the lines into `DashboardModel.keyRefused`; before the first plan and without a usable set-up there are none (#391).
 
 ### The engine factory
 

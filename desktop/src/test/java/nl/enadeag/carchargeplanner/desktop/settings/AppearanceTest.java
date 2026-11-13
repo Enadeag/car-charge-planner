@@ -48,8 +48,9 @@ class AppearanceTest {
         settingsWindow = settings.window(language, appearance, system);
         dashboard = Fx.call(() -> new Dashboard(new AppIcon(), AppName.TITLE, Scenes.theme(Appearance.scheme(appearance, system)),
                 Fx.REDUCED_MOTION, new SimpleObjectProperty<>(Units.METRIC), () -> Instant.parse("2026-10-15T08:00:00Z"),
-                TaskbarHiding.NONE, language, new DashboardActions(level -> { }, period -> { }, period -> { }, trip -> { },
-                        (trip, changed) -> { }, trip -> { }, () -> { }, () -> { }, () -> { }, () -> { })));
+                TaskbarHiding.NONE, language, List.of(), new DashboardActions(level -> { }, period -> { },
+                        period -> { }, trip -> { }, (trip, changed) -> { }, trip -> { }, () -> { }, () -> { },
+                        () -> { }, () -> { })));
         dashboard.openWindow();
         settingsWindow.open(Category.APP);
         Fx.settle();

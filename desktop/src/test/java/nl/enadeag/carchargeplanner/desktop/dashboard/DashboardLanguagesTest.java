@@ -84,7 +84,7 @@ class DashboardLanguagesTest {
      * Every kind of day: one with two windows and grid energy, one that needs the grid charge and that a trip leaves on
      * after a charge, one without a window;
      * and the advice for tomorrow's trip with its longest texts: solar power, a grid charge outside the charging hours
-     * and a charging stop.
+     * and a charging stop; both providers refused their key.
      */
     private static Outlook.Planned planned() {
         var today = new DayPlan(TODAY, new Percent(50), List.of(new Window(at(TODAY, 10), at(TODAY, 13), 10, 2.3, 7.3, 0.6),
@@ -95,7 +95,8 @@ class DashboardLanguagesTest {
         var friday = new DayPlan(TODAY.plusDays(2), new Percent(22), List.of(), new Percent(22), new Percent(80), new Percent(10), 12, List.of());
         var night = new Window(at(TODAY, 22), at(TODAY.plusDays(1), 4), 16, 3.7, 0, 11.0);
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)",
-                at(TODAY, 7), Freshness.STALE, ProviderRole.FALLBACK, "Forecast.Solar", Optional.of(at(TODAY, 9)), List.of());
+                at(TODAY, 7), Freshness.STALE, ProviderRole.FALLBACK, "Forecast.Solar", Optional.of(at(TODAY, 9)),
+                List.of(new ProviderId("forecast-solar"), new ProviderId("open-meteo")));
         return new Outlook.Planned(at(TODAY, 8), BRUSSELS, List.of(today, tomorrow, friday), new Percent(50), true,
                 Optional.of(new GridAdvice(TODAY.plusDays(1), 22, 8, 11.0, Optional.of(night),
                         Optional.of(new Percent(67)))), List.of(tripAdvice(today.windows())), source, 0.45,
@@ -123,13 +124,13 @@ class DashboardLanguagesTest {
     }
 
     /**
-     * Every day, the readout and the entries open, a refused away period, a refused trip and the message without a
-     * config.
+     * Every day, the readout and the entries open, a refused away period, a refused trip, the message without a
+     * config and the one without a forecast, the plan and the latter below warnings that providers refused their key.
      */
     private List<String> problems(Language language, Optional<TextScale> scale) throws Exception {
         return Fx.call(() -> {
             var messages = new Messages(language);
-            var mapper = new OutlookMapper(messages);
+            var mapper = new OutlookMapper(messages, Models.PROVIDERS);
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, AppName.TITLE, messages);
             view.onBatteryEntered(_ -> { });
             view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
@@ -164,6 +165,9 @@ class DashboardLanguagesTest {
             TripEntry.save(view);
             found.addAll(check(view));
             view.show(mapper.map(new Outlook.NotSetUp(Path.of("/home/owner/.config/car-charge-planner/engine.json"))));
+            found.addAll(check(view));
+            view.show(mapper.map(new Outlook.NoForecast("Forecast.Solar refused the request (status 401)", false,
+                    List.of(new ProviderId("forecast-solar")))));
             found.addAll(check(view));
             return found;
         });

@@ -11,6 +11,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.host.AppName;
+import java.util.List;
 import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.scene.control.Button;
@@ -60,7 +61,7 @@ class DashboardKeyboardTest {
     void everyControlOfADayIsReachedInOrderWithANameAndAVisibleFocus(ColorScheme scheme) throws Exception {
         var view = show(scheme);
         Fx.run(() -> {
-            view.show(Models.plan(Optional.of(Models.ADVICE)));
+            view.show(Models.withKeyRefused(Models.plan(Optional.of(Models.ADVICE)), Models.OPEN_METEO_REFUSED));
             // both entries open, with the times of part of the day: every control the day can show
             press(view, TextKey.BATTERY_UPDATE);
             press(view, TextKey.ONE_OFF_ADD);
@@ -89,7 +90,17 @@ class DashboardKeyboardTest {
     void theMessageBeforeSetUpAndItsButtonAreReachedTheSameWay(ColorScheme scheme) throws Exception {
         var view = show(scheme);
         Fx.run(() -> view.show(new DashboardModel.NoPlan("Not set up yet", "Set up the app to see a plan.",
-                "Forecast: none", true)));
+                "Forecast: none", true, List.of())));
+
+        assertThat(Keyboard.problems(stage.getScene(), view)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(ColorScheme.class)
+    void theWarningAboveNoForecastIsReachedTheSameWay(ColorScheme scheme) throws Exception {
+        var view = show(scheme);
+        Fx.run(() -> view.show(new DashboardModel.NoPlan("No forecast", "Open-Meteo refused the request (status 401)",
+                "", false, List.of(Models.OPEN_METEO_REFUSED))));
 
         assertThat(Keyboard.problems(stage.getScene(), view)).isEmpty();
     }

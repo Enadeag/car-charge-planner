@@ -8,9 +8,12 @@ import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
+import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
+import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayKind;
 import nl.enadeag.carchargeplanner.host.AppName;
 import java.util.ArrayList;
@@ -29,6 +32,8 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 @FxTest
 class DashboardViewTest {
@@ -37,9 +42,13 @@ class DashboardViewTest {
     private Stage stage;
 
     private DashboardView shown(DashboardModel model) throws Exception {
+        return shown(model, new Messages(Language.ENGLISH));
+    }
+
+    private DashboardView shown(DashboardModel model, Messages messages) throws Exception {
         return Fx.call(() -> {
             var view = new DashboardView(detached::incrementAndGet, () -> { }, Fx.REDUCED_MOTION,
-                    AppName.TITLE, new Messages(Language.ENGLISH));
+                    AppName.TITLE, messages);
             view.show(model);
             stage = Scenes.show(view, ColorScheme.LIGHT);
             return view;
@@ -318,12 +327,78 @@ class DashboardViewTest {
 
     @Test
     void withoutAPlanTheMessageIsShownInsteadOfTheDays() throws Exception {
-        var view = shown(new DashboardModel.NoPlan("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo", false));
+        var view = shown(new DashboardModel.NoPlan("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo",
+                false, List.of()));
 
         var texts = Fx.call(() -> Scenes.visibleTexts(view));
 
         assertThat(texts).contains("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo");
         assertThat(Fx.call(() -> Scenes.reallyVisible(tabs(view)))).isFalse();
+    }
+
+    /** The cards of the selected page in their order, by their "-card" class; the message without a plan is "card". */
+    private static List<String> cardsInOrder(DashboardView view) {
+        return Scenes.all(selectedPage(view)).stream()
+                .filter(node -> node.getStyleClass().contains("card"))
+                .map(node -> node.getStyleClass().stream().filter(style -> style.endsWith("-card")).findFirst()
+                        .orElse("card"))
+                .toList();
+    }
+
+    @Test
+    void refusedKeysAreWarnedOfAboveTheDayCardOnEveryDayALinePerProviderInTheirOrder() throws Exception {
+        var second = "Forecast.Solar refused the API key. Check it under Forecast in Settings.";
+        var view = shown(Models.withKeyRefused(Models.plan(Optional.of(Models.ADVICE)), Models.OPEN_METEO_REFUSED,
+                second));
+
+        for (int day = 0; day < 3; day++) {
+            int index = day;
+            var page = Fx.call(() -> {
+                tabs(view).getSelectionModel().select(index);
+                view.applyCss();
+                view.layout();
+                var warning = selectedPage(view).lookup(".warning-card");
+                return List.of(cardsInOrder(view), Scenes.visibleTexts(warning),
+                        List.of(String.valueOf(warning.queryAccessibleAttribute(AccessibleAttribute.TEXT)),
+                                String.valueOf(warning.isFocusTraversable())));
+            });
+
+            assertThat(page.get(0)).as("day %d", day).startsWith("warning-card", "main-card");
+            assertThat(page.get(1)).containsExactly(Models.OPEN_METEO_REFUSED, second);
+            assertThat(page.get(2)).containsExactly(Models.OPEN_METEO_REFUSED + " " + second, "true");
+        }
+    }
+
+    @Test
+    void aPlanWithoutRefusedKeysHasNoWarning() throws Exception {
+        var view = shown(Models.plan(Optional.of(Models.ADVICE)));
+
+        assertThat(Fx.call(() -> view.lookup(".warning-card"))).isNull();
+    }
+
+    @ParameterizedTest
+    @EnumSource(Language.class)
+    void withoutAForecastTheWarningIsAboveTheMessageInTheOwnersLanguage(Language language) throws Exception {
+        var messages = new Messages(language);
+        var model = new OutlookMapper(messages, Models.PROVIDERS).map(new Outlook.NoForecast(
+                "Forecast.Solar refused the request (status 401)", false,
+                List.of(new ProviderId("forecast-solar"), new ProviderId("open-meteo"))));
+        var view = shown(model, messages);
+
+        var cards = Fx.call(() -> cardsInOrder(view));
+        var texts = Fx.call(() -> Scenes.visibleTexts(selectedPage(view)));
+
+        assertThat(cards).containsExactly("warning-card", "card");
+        var expected = switch (language) {
+            case ENGLISH -> List.of("Forecast.Solar refused the API key. Check it under Forecast in Settings.",
+                    "Open-Meteo refused the API key. Check it under Forecast in Settings.", "No forecast");
+            case DUTCH -> List.of(
+                    "Forecast.Solar weigert de API-sleutel. Controleer de sleutel bij Voorspelling in Instellingen.",
+                    "Open-Meteo weigert de API-sleutel. Controleer de sleutel bij Voorspelling in Instellingen.",
+                    "Geen voorspelling");
+        };
+        assertThat(texts).containsSubsequence(expected);
+        assertThat(texts.subList(0, 2)).isEqualTo(expected.subList(0, 2));
     }
 
     @Test

@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.outlook;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import nl.enadeag.carchargeplanner.desktop.dashboard.Models;
 import nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayModel;
@@ -41,8 +42,8 @@ class OutlookMapperTest {
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     /** A Friday. */
     private static final LocalDate TODAY = LocalDate.of(2026, 7, 3);
-    private static final OutlookMapper MAPPER = new OutlookMapper(new Messages(Language.ENGLISH));
-    private static final OutlookMapper DUTCH = new OutlookMapper(new Messages(Language.DUTCH));
+    private static final OutlookMapper MAPPER = new OutlookMapper(new Messages(Language.ENGLISH), Models.PROVIDERS);
+    private static final OutlookMapper DUTCH = new OutlookMapper(new Messages(Language.DUTCH), Models.PROVIDERS);
     private static final String CREDIT = "Weather data: Open-Meteo.com (CC BY 4.0)";
 
     private static Instant at(LocalDate day, int hour, int minute) {
@@ -295,8 +296,8 @@ class OutlookMapperTest {
                 new Percent(94), 0, new Percent(42));
         var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, days, new Percent(50), false, Optional.empty(),
                 List.of(advice), fresh(), 0.4, new Percent(30), new Percent(80));
-        return (DashboardModel.Plan) new OutlookMapper(messages).map(planned, List.of(), List.of(LONG_TRIP, OTHER_CAR),
-                Units.METRIC);
+        return (DashboardModel.Plan) new OutlookMapper(messages, Models.PROVIDERS).map(planned, List.of(),
+                List.of(LONG_TRIP, OTHER_CAR), Units.METRIC);
     }
 
     @Test
@@ -385,8 +386,8 @@ class OutlookMapperTest {
                 new Percent(94), 0, new Percent(42));
         var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(today, saturday), new Percent(80), false,
                 Optional.empty(), List.of(advice), fresh(), 0.4, new Percent(30), new Percent(80));
-        return (DashboardModel.Plan) new OutlookMapper(messages).map(planned, List.of(), List.of(LONG_TRIP),
-                Units.METRIC);
+        return (DashboardModel.Plan) new OutlookMapper(messages, Models.PROVIDERS).map(planned, List.of(),
+                List.of(LONG_TRIP), Units.METRIC);
     }
 
     @Test
@@ -476,6 +477,98 @@ class OutlookMapperTest {
     @Test
     void aPlanWithoutDaysHasTheFooterOfItsForecast() {
         assertThat(MAPPER.map(planned(false)).footer()).isEqualTo(CREDIT + " · updated 07:45");
+    }
+
+    private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
+    private static final ProviderId FORECAST_SOLAR = new ProviderId("forecast-solar");
+    private static final String OPEN_METEO_REFUSED =
+            "Open-Meteo refused the API key. Check it under Forecast in Settings.";
+    private static final String FORECAST_SOLAR_REFUSED =
+            "Forecast.Solar refused the API key. Check it under Forecast in Settings.";
+
+    /** Forecast.Solar's forecast standing in for Open-Meteo, after these providers refused their key. */
+    private static ForecastSource fallbackAfterRefused(ProviderId... refused) {
+        return new ForecastSource(FORECAST_SOLAR, "Forecast.Solar", "Solar forecast: Forecast.Solar", at(TODAY, 7, 45),
+                Freshness.FRESH, ProviderRole.FALLBACK, "Open-Meteo", Optional.empty(), List.of(refused));
+    }
+
+    @Test
+    void aPlanWarnsOfAProviderThatRefusedItsKeyWhileAFallbackGivesThePlan() {
+        var plan = (DashboardModel.Plan) MAPPER.map(planned(fallbackAfterRefused(OPEN_METEO)));
+
+        assertThat(plan.keyRefused()).containsExactly(OPEN_METEO_REFUSED);
+        assertThat(plan.days()).hasSize(1);
+    }
+
+    @Test
+    void aPlanFromAnOlderForecastWarnsOfEveryProviderThatRefusedItsKeyInTheOrderTheyWereAsked() {
+        // Forecast.Solar was asked first here, so it comes first, although the app offers Open-Meteo first
+        var stale = new ForecastSource(FORECAST_SOLAR, "Forecast.Solar", "Solar forecast: Forecast.Solar",
+                at(TODAY, 5, 30), Freshness.STALE, ProviderRole.PRIMARY, "", Optional.empty(),
+                List.of(FORECAST_SOLAR, OPEN_METEO));
+
+        var plan = (DashboardModel.Plan) MAPPER.map(planned(stale));
+
+        assertThat(plan.keyRefused()).containsExactly(FORECAST_SOLAR_REFUSED, OPEN_METEO_REFUSED);
+    }
+
+    @Test
+    void aPlanWhoseProvidersTookTheirKeysHasNoWarning() {
+        assertThat(MAPPER.map(planned(fresh())).keyRefused()).isEmpty();
+    }
+
+    @Test
+    void withoutAForecastEveryProviderThatRefusedItsKeyIsWarnedOfAndTheReasonStays() {
+        var reason = "Forecast.Solar refused the request (status 401); Open-Meteo refused the request (status 403)";
+
+        var message = (DashboardModel.NoPlan) MAPPER.map(
+                new Outlook.NoForecast(reason, false, List.of(FORECAST_SOLAR, OPEN_METEO)));
+
+        assertThat(message.keyRefused()).containsExactly(FORECAST_SOLAR_REFUSED, OPEN_METEO_REFUSED);
+        assertThat(message.headline()).isEqualTo("No forecast");
+        assertThat(message.detail()).endsWith(reason);
+    }
+
+    @Test
+    void withoutAForecastForAnotherReasonThereIsNoWarning() {
+        assertThat(MAPPER.map(new Outlook.NoForecast("Could not reach Open-Meteo")).keyRefused()).isEmpty();
+    }
+
+    @Test
+    void aPlanWithoutDaysWarnsOfAProviderThatRefusedItsKey() {
+        var none = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, List.of(), new Percent(50), false, Optional.empty(),
+                List.of(), fallbackAfterRefused(OPEN_METEO), 0.4, new Percent(30), new Percent(80));
+
+        var message = (DashboardModel.NoPlan) MAPPER.map(none);
+
+        assertThat(message.keyRefused()).containsExactly(OPEN_METEO_REFUSED);
+        assertThat(message.detail()).isEqualTo("The forecast has no days to plan.");
+    }
+
+    @Test
+    void beforeTheFirstPlanAndWithoutAUsableSetUpThereIsNoWarning() {
+        var unusable = new Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("/home/owner/engine.json"),
+                "system: is required");
+
+        assertThat(List.of(MAPPER.loading(), MAPPER.map(new Outlook.NotSetUp(Path.of("/home/owner/engine.json"))),
+                MAPPER.map(unusable))).allSatisfy(model -> assertThat(model.keyRefused()).isEmpty());
+    }
+
+    @Test
+    void aProviderThisVersionDoesNotKnowIsNamedByItsId() {
+        var message = MAPPER.map(new Outlook.NoForecast("refused", false, List.of(new ProviderId("example-solar"))));
+
+        assertThat(message.keyRefused())
+                .containsExactly("example-solar refused the API key. Check it under Forecast in Settings.");
+    }
+
+    @Test
+    void theWarningIsInTheOwnersLanguage() {
+        var message = DUTCH.map(new Outlook.NoForecast("refused", false, List.of(FORECAST_SOLAR, OPEN_METEO)));
+
+        assertThat(message.keyRefused()).containsExactly(
+                "Forecast.Solar weigert de API-sleutel. Controleer de sleutel bij Voorspelling in Instellingen.",
+                "Open-Meteo weigert de API-sleutel. Controleer de sleutel bij Voorspelling in Instellingen.");
     }
 
     @Test

@@ -11,6 +11,7 @@ import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
 
 /** Small 16 px pictures beside figures and on the day tabs; dashboard.css colours them after their source. */
 public final class Glyphs {
@@ -58,6 +59,19 @@ public final class Glyphs {
         box.setArcWidth(3);
         box.setArcHeight(3);
         return glyph("neutral", box, stroke(7, 9, 14.5, 1.5), stroke(9.5, 1.5, 14.5, 1.5), stroke(14.5, 1.5, 14.5, 6.5));
+    }
+
+    /**
+     * A triangle with an exclamation mark, beside a warning whose words say what is wrong.
+     *
+     * @return a new 16 px glyph, in the warning colour
+     */
+    public static Node warning() {
+        var triangle = outlined(new Polygon(8, 1.5, 15, 14, 1, 14));
+        triangle.setStrokeLineJoin(StrokeLineJoin.ROUND);
+        var dot = new Circle(8, 11.6, 0.9);
+        dot.getStyleClass().add("glyph-fill");
+        return glyph("warning", triangle, stroke(8, 6, 8, 9), dot);
     }
 
     /**
