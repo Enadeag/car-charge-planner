@@ -1,8 +1,11 @@
 # Car charge planner
 
 [![CI](https://github.com/Enadeag/car-charge-planner/actions/workflows/ci.yml/badge.svg)](https://github.com/Enadeag/car-charge-planner/actions/workflows/ci.yml)
+[![Android build](https://github.com/Enadeag/car-charge-planner/actions/workflows/android.yml/badge.svg)](https://github.com/Enadeag/car-charge-planner/actions/workflows/android.yml)
+[![Latest desktop release](https://img.shields.io/github/v/release/Enadeag/car-charge-planner?filter=v*&label=desktop)](https://github.com/Enadeag/car-charge-planner/releases/latest)
+[![Latest Android release](https://img.shields.io/github/v/release/Enadeag/car-charge-planner?filter=android-v*&label=Android)](https://github.com/Enadeag/car-charge-planner/releases?q=android-v&expanded=true)
+[![Platforms: Linux, Windows, Android 10 or newer](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20Android%2010%2B-blue.svg)](docs/install.md)
 [![Licence: GPL-3.0-or-later](https://img.shields.io/badge/licence-GPL--3.0--or--later-blue.svg)](LICENSE)
-![Java 25](https://img.shields.io/badge/java-25-blue.svg)
 
 A desktop app for Linux and Windows that tells you when to charge your electric car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid. It suits a fixed-price energy contract: it does not look at hourly energy prices.
 
@@ -18,14 +21,14 @@ The pictures are of an example home; a real desktop theme looks a little differe
 
 ## What it does
 
-- Turns a solar forecast ([Open-Meteo](https://open-meteo.com) by default, or [Forecast.Solar](https://forecast.solar); both free, no account; a second can be a fallback) into expected surplus: panel output minus the house's own use.
+- Turns a solar forecast ([Open-Meteo](https://open-meteo.com) by default, or [Forecast.Solar](https://forecast.solar); both free, no account; a second can be a fallback) into expected surplus: panel output minus the house's own use (a typical household's until you enter yours).
 - Recommends charge windows within the hours the car is at home, with one constant power per window (in amps and kW), aiming for almost no grid draw.
 - **Grid advice:** if the battery would end a day below your minimum charge level, it says how much to charge from the grid and when.
 - **Trips:** enter a drive with its departure, return and distance, and the plan makes sure the battery holds enough at the departure, with advice and notifications for the charge and the charge limit to set.
 - Shows the plan in a tray icon and on the **dashboard**, and notifies you a few minutes before each window.
 - Reads nothing from the car: you enter the battery level by hand. Reading it from the car is not planned for now; [ADR 0006](docs/adr/0006-integrations-built-in.md) records which car makers offer their owners an official route.
 
-**Current state:** all of this works, rewritten from Python and Qt in Java with JavaFX ([ADR 0005](docs/adr/0005-java-with-javafx.md)). Mind the [limits](docs/guide.md#limits-to-know-about).
+**Current state:** all of this works, in the desktop app (Java with JavaFX, [ADR 0005](docs/adr/0005-java-with-javafx.md)), released for Linux and Windows, and in the Android app ([ADR 0010](docs/adr/0010-android-app.md)), first released on 2026-11-13. This page describes the code on `main`; where the latest desktop release does something else, the Unreleased part of the [changelog](CHANGELOG.md) says what. Mind the [limits](docs/guide.md#limits-to-know-about).
 
 ## Supported systems
 
