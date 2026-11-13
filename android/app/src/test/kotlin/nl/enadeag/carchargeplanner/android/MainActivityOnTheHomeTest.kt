@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.android
 
 import android.Manifest
 import android.app.NotificationManager
+import android.os.Looper
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -63,11 +64,16 @@ class MainActivityOnTheHomeTest {
 
     /**
      * Runs work on the phone's stores in the app's scope until it ends, while the main thread goes on, as the screen
-     * reads the same stores from it: blocking the main thread meanwhile could hold a read of the screen's up forever.
+     * reads the same stores from it: a store's first read, when the screen began it, ends on the main thread and holds
+     * every other read until then. On Robolectric the rule's `waitUntil` only moves Compose's clock and never runs the
+     * main looper, so each poll idles it.
      */
     private fun offTheMainThread(work: suspend () -> Unit) {
         val running = app.scope.async { work() }
-        compose.waitUntil(10_000) { running.isCompleted }
+        compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            running.isCompleted
+        }
         // done by now: this only hands on a failure
         runBlocking { running.await() }
     }
