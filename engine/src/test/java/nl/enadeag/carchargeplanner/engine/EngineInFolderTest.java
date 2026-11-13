@@ -24,6 +24,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -94,6 +96,56 @@ class EngineInFolderTest {
         var aside = inFolder().setConfigAside();
 
         assertThat(aside).hasFileName("engine.json.damaged-20261006-070000").hasContent("{oops");
+    }
+
+    @Test
+    void aDamagedBatteryFileIsSetAsideUnderTheEnginesClock() throws IOException {
+        Files.writeString(folder.resolve("battery.json"), "{oops");
+
+        inFolder().setBatteryLevel(new Percent(60));
+
+        assertThat(folder.resolve("battery.json.damaged-20261006-070000")).hasContent("{oops");
+    }
+
+    @Test
+    void aDamagedCachedForecastIsSetAsideUnderTheEnginesClock() throws IOException {
+        Files.copy(EXAMPLE, folder.resolve("engine.json"));
+        Files.createDirectories(folder.resolve("forecasts"));
+        Files.writeString(folder.resolve("forecasts").resolve("forecast-open-meteo.json"), "{oops");
+
+        inFolder().round(ForecastUse.ASK_PROVIDERS);
+
+        assertThat(folder.resolve("forecasts").resolve("forecast-open-meteo.json.damaged-20261006-070000"))
+                .hasContent("{oops");
+    }
+
+    @Test
+    void aDamagedFileOfWhatWasToldAboutTheTripsIsSetAsideUnderTheEnginesClock() throws IOException {
+        Files.writeString(folder.resolve("trip-notices.json"), "{oops");
+
+        withATripTooLongForAFullBattery().round(ForecastUse.ASK_PROVIDERS);
+
+        assertThat(folder.resolve("trip-notices.json.damaged-20261006-070000")).hasContent("{oops");
+    }
+
+    @Test
+    void aDamagedFileOfTheAnnouncedWindowsIsSetAsideUnderTheEnginesClock() throws IOException {
+        var engine = withATripTooLongForAFullBattery();
+        var windowDue = engine.nextNoticeDue(engine.round(ForecastUse.ASK_PROVIDERS)).orElseThrow();
+        Files.writeString(folder.resolve("announced.json"), "{oops");
+
+        inFolder(windowDue).round(ForecastUse.ASK_PROVIDERS);
+
+        var at = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss", Locale.ROOT).withZone(ZoneOffset.UTC);
+        assertThat(folder.resolve("announced.json.damaged-" + at.format(windowDue))).hasContent("{oops");
+    }
+
+    /** The engine on the example settings, with a trip that makes a round ask whether the assumed level is right. */
+    private Engine withATripTooLongForAFullBattery() throws IOException {
+        Files.copy(EXAMPLE, folder.resolve("engine.json"));
+        var engine = inFolder();
+        engine.addTrip(new Trip(NOW.plus(Duration.ofHours(24)), NOW.plus(Duration.ofHours(32)), 300, false));
+        return engine;
     }
 
     @Test

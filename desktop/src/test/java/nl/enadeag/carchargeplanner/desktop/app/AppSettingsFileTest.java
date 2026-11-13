@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -92,6 +94,16 @@ class AppSettingsFileTest {
 
         assertThatThrownBy(() -> file().write(FOLLOWING)).isInstanceOf(IOException.class);
         assertThat(file().read().language()).contains(Language.DUTCH);
+    }
+
+    @Test
+    void aDamagedFileIsSetAsideUnderTheTimeOfTheClockItWasGiven() throws IOException {
+        Files.writeString(folder.resolve("app.json"), "{oops");
+        var clock = Clock.fixed(Instant.parse("2026-10-17T14:30:00Z"), ZoneOffset.UTC);
+
+        new AppSettingsFile(folder.resolve("app.json"), Units.IMPERIAL, FILES, clock).write(FOLLOWING);
+
+        assertThat(folder.resolve("app.json.damaged-20261017-143000")).hasContent("{oops");
     }
 
     @Test

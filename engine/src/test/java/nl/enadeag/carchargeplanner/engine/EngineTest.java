@@ -156,7 +156,7 @@ class EngineTest {
         return new Engine(new ConfigFile(config, FILES, clock), service, known, apiKeys,
                 new AwayFile(folder.resolve("away.json"), FILES, clock),
                 new TripFile(folder.resolve("trips.json"), FILES, clock),
-                new BatteryFile(folder.resolve("battery.json"), FILES, clock), clock, announcer(), scheduler);
+                new BatteryFile(folder.resolve("battery.json"), FILES, clock), clock, announcer(clock), scheduler);
     }
 
     /** Starts the engine and runs its first round, which announces what is due; its outlooks go to {@link #rounds}. */
@@ -173,9 +173,9 @@ class EngineTest {
     }
 
     /** Kept in the test's folder, so a new engine is like the app after a restart. */
-    private Announcer announcer() {
-        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, CLOCK),
-                new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK), notice -> {
+    private Announcer announcer(Clock clock) {
+        return new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, clock),
+                new ToldTrips(folder.resolve("trip-notices.json"), FILES, clock), notice -> {
                     if (notice instanceof Announcement announcement) {
                         told.add(announcement);
                     } else {
@@ -625,15 +625,16 @@ class EngineTest {
         assertThat(engine(clockAt(7)).keyStorage()).isEqualTo(KeyStorage.KEYCHAIN);
 
         var known = new Providers(List.of(main));
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
+        var clock = clockAt(7);
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES, clock),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
-        var withoutKeychain = new Engine(new ConfigFile(config, FILES, CLOCK),
-                new ForecastService(known, new ForecastCache(folder.resolve("cache"), FILES, CLOCK), apiKeys), known,
+        var withoutKeychain = new Engine(new ConfigFile(config, FILES, clock),
+                new ForecastService(known, new ForecastCache(folder.resolve("cache"), FILES, clock), apiKeys), known,
                 apiKeys,
-                new AwayFile(folder.resolve("away.json"), FILES, CLOCK),
-                new TripFile(folder.resolve("trips.json"), FILES, CLOCK),
-                new BatteryFile(folder.resolve("battery.json"), FILES, CLOCK), clockAt(7),
-                announcer(), new ManualScheduler());
+                new AwayFile(folder.resolve("away.json"), FILES, clock),
+                new TripFile(folder.resolve("trips.json"), FILES, clock),
+                new BatteryFile(folder.resolve("battery.json"), FILES, clock), clock,
+                announcer(clock), new ManualScheduler());
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
     }
