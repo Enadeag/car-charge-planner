@@ -13,6 +13,7 @@ import com.tngtech.archunit.core.domain.AccessTarget;
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
+import com.tngtech.archunit.core.domain.JavaConstructorCall;
 import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
@@ -26,6 +27,8 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import java.time.Clock;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
@@ -33,7 +36,6 @@ import java.util.OptionalLong;
 import java.util.Set;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
-import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 
 /**
  * The rules of ADR 0001 about the engine's own parts: parts that depend one way, a pure planner, a domain model
@@ -41,13 +43,16 @@ import nl.enadeag.carchargeplanner.engine.store.StoredFile;
  * uses no {@code java.net.http}, which Android lacks, opens no connection of its own beside its HttpGet, leaves the
  * checks of TLS and the network settings of the process alone, logs
  * through slf4j, sets no POSIX file modes, which it leaves to the platform's FilePrivacy, reaches no keychain
- * through D-Bus or native calls, which it leaves to the platform's Keychain, and starts no programs and declares no
- * native methods, which each platform does for itself. And the rules of ADR 0005 for the engine's own classes, which
- * the desktop's {@code ArchitectureTest} holds for the desktop's: no clock, sleep, thread or static mutable state of
- * its own, no request address in a log, no caught {@code NullPointerException}, no {@code Optional} field or
- * parameter, and every provider in its package. They run when the engine is built alone; the rules about the boundary
- * with its clients, and those for every class, are in the desktop module's {@code ArchitectureTest}, which sees both
- * sides.
+ * through D-Bus or native calls, which it leaves to the platform's Keychain, starts no programs and declares no
+ * native methods, which each platform does for itself, and has no user interface. And the rules of ADR 0005 for the
+ * engine's own classes, which the desktop's {@code ArchitectureTest} holds for the desktop's or for every class: no
+ * clock, sleep, thread or static mutable state of its own, no request address in a log, no caught
+ * {@code NullPointerException}, no {@code Optional} field or parameter, every provider in its package and reached
+ * only through the forecast, no {@code java.util.logging}, nothing written to the console, no stack trace printed,
+ * no system locale, property or environment read, and every text, number and time in a locale it names. They run
+ * when the engine is built alone, without the exceptions the desktop makes for its composition root, its host and
+ * its log; only the rules about the boundary with its clients are in the desktop module's {@code ArchitectureTest},
+ * which sees both sides.
  */
 @AnalyzeClasses(packages = "nl.enadeag.carchargeplanner.engine", importOptions = ImportOption.DoNotIncludeTests.class)
 class EngineArchitectureTest {
@@ -191,22 +196,12 @@ class EngineArchitectureTest {
                         || owner.equals(System.class.getName()) && name.equals("currentTimeMillis");
             });
 
-    /**
-     * The one default clock left: the time a file that cannot be used is set aside with, until its callers pass one.
-     */
-    private static final DescribedPredicate<JavaAccess<?>> STORED_FILES_DEFAULT = DescribedPredicate.describe(
-            "are not StoredFile's constructor without a clock",
-            access -> access.getOrigin().getOwner().isEquivalentTo(StoredFile.class)
-                    && access.getOrigin().isConstructor()
-                    && access.getOrigin().getRawParameterTypes().size() == 3);
-
     @ArchTest
     static final ArchRule theEngineReadsNoClock = noClasses()
             .that().resideInAPackage(ENGINE + "..")
-            .should().accessTargetWhere(READ_THE_SYSTEM_CLOCK.and(DescribedPredicate.not(STORED_FILES_DEFAULT)))
+            .should().accessTargetWhere(READ_THE_SYSTEM_CLOCK)
             .because("each app hands the engine its clock and the home's zone, so a test can set the time (ADR "
-                    + "0005); StoredFile's constructor without a clock, which the engine's files use, is the one "
-                    + "default left, for the name of a file set aside");
+                    + "0005); the engine's files take it too, for the name of a file set aside (#285)");
 
     @ArchTest
     static final ArchRule theEngineDoesNotSleep = noClasses()
@@ -399,6 +394,108 @@ class EngineArchitectureTest {
             .because("the engine logs through slf4j, which each platform binds to its own log, instead of "
                     + "System.Logger (ADR 0010)");
 
+    // the rules of ADR 0005 that the desktop's ArchitectureTest holds for every class, the engine's among them, here
+    // for the engine's alone and without the desktop's exceptions for its composition root, its host and its log
+
+    @ArchTest
+    static final ArchRule theEngineUsesNoJavaUtilLogging = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().dependOnClassesThat().resideInAPackage("java.util.logging..")
+            .orShould().dependOnClassesThat().areAssignableTo(java.util.logging.Handler.class)
+            .orShould().dependOnClassesThat().areAssignableTo(java.util.logging.Formatter.class)
+            .because("each app sets up its own log, where its records are handled and formatted, and binds slf4j to "
+                    + "it; the engine only logs, through slf4j (ADR 0005, ADR 0010)");
+
+    @ArchTest
+    static final ArchRule theEngineWritesNothingToTheConsole = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().accessField(System.class, "out")
+            .orShould().accessField(System.class, "err")
+            .because("the console, where there is one, is the app's: the desktop prints its command line's answers "
+                    + "there; the engine logs (ADR 0005)");
+
+    @ArchTest
+    static final ArchRule theEnginePrintsNoStackTrace = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().callMethodWhere(PRINT_A_STACK_TRACE)
+            .because("a failure goes to the log, which knows what it may show; the engine prints no trace, not to the "
+                    + "console and not to a writer of its own (ADR 0005)");
+
+    // an access, not only a call, so a method reference such as Locale::getDefault is caught as well
+    private static final DescribedPredicate<JavaAccess<?>> USE_THE_SYSTEM_LOCALE = DescribedPredicate.describe(
+            "read or set the JVM's default locale",
+            access -> access.getTargetOwner().isEquivalentTo(Locale.class)
+                    && Set.of("getDefault", "setDefault").contains(access.getName()));
+
+    @ArchTest
+    static final ArchRule theEngineLeavesTheSystemLocaleAlone = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().accessTargetWhere(USE_THE_SYSTEM_LOCALE)
+            .because("the engine reports kinds and details, which each app says in the language the owner chose; the "
+                    + "JVM's default is not that choice (ADR 0005)");
+
+    private static boolean hasLocale(List<JavaClass> types) {
+        return types.stream().anyMatch(type -> type.isEquivalentTo(Locale.class)
+                || type.isEquivalentTo(Locale.Category.class)
+                || type.getName().equals("java.text.DecimalFormatSymbols")
+                || type.getName().equals("java.text.DateFormatSymbols"));
+    }
+
+    private static final DescribedPredicate<JavaMethodCall> USE_THE_DEFAULT_LOCALE = DescribedPredicate.describe(
+            "format or change case in the JVM's default locale",
+            call -> {
+                var ownerType = call.getTargetOwner();
+                var owner = ownerType.getName();
+                var name = call.getName();
+                var types = call.getTarget().getRawParameterTypes();
+                var hasLocale = hasLocale(types);
+                return owner.equals(String.class.getName()) && !hasLocale
+                                && Set.of("toLowerCase", "toUpperCase", "format", "formatted").contains(name)
+                        || (owner.equals("java.text.NumberFormat") || owner.equals("java.text.DateFormat"))
+                                && name.endsWith("Instance") && !hasLocale
+                        || owner.equals("java.time.format.DateTimeFormatter") && name.equals("ofPattern")
+                                && types.size() == 1
+                        || (ownerType.isAssignableTo(java.io.PrintStream.class)
+                                || ownerType.isAssignableTo(java.io.PrintWriter.class)
+                                || owner.equals("java.util.Formatter"))
+                                && Set.of("printf", "format").contains(name) && !hasLocale;
+            });
+
+    private static final DescribedPredicate<JavaConstructorCall> MAKE_A_FORMAT_IN_THE_DEFAULT_LOCALE =
+            DescribedPredicate.describe("make a format that uses the JVM's default locale",
+                    call -> Set.of("java.text.SimpleDateFormat", "java.text.DecimalFormat",
+                            "java.text.MessageFormat", "java.util.Formatter")
+                            .contains(call.getTargetOwner().getName())
+                            && !hasLocale(call.getTarget().getRawParameterTypes()));
+
+    @ArchTest
+    static final ArchRule theEnginesTextsNumbersAndTimesNameTheirLocale = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().callMethodWhere(USE_THE_DEFAULT_LOCALE)
+            .orShould().callConstructorWhere(MAKE_A_FORMAT_IN_THE_DEFAULT_LOCALE)
+            .because("what the engine writes, such as a time in a file or the name of a file set aside, is for a "
+                    + "machine and reads the same in every language: it uses Locale.ROOT (ADR 0005)");
+
+    // an access, not only a call, so a method reference such as System::getenv is caught as well
+    private static final DescribedPredicate<JavaAccess<?>> READ_THE_SYSTEM = DescribedPredicate.describe(
+            "read a system property or the environment (System.getProperty, System.getenv)",
+            access -> access.getTargetOwner().isEquivalentTo(System.class)
+                    && Set.of("getProperty", "getenv").contains(access.getName()));
+
+    @ArchTest
+    static final ArchRule theEngineReadsNoSystemPropertyOrEnvironment = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().accessTargetWhere(READ_THE_SYSTEM)
+            .because("each app reads the system and its user once, as it starts, and hands the engine what it needs, "
+                    + "such as its folders (ADR 0005)");
+
+    @ArchTest
+    static final ArchRule theEngineHasNoUserInterface = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .should().dependOnClassesThat().resideInAnyPackage("javafx..", "java.awt..", "javax.swing..", "atlantafx..")
+            .because("the engine also runs on a machine without a desktop, and on Android, which has none of these "
+                    + "(ADR 0001, ADR 0010)");
+
     private static final DescribedPredicate<JavaClass> POSIX_FILE_ATTRIBUTES = DescribedPredicate.describe(
             "are POSIX file attributes, permissions or views (java.nio.file.attribute.Posix*)",
             type -> type.getPackageName().equals("java.nio.file.attribute")
@@ -471,6 +568,14 @@ class EngineArchitectureTest {
             .should().dependOnClassesThat().resideInAPackage(ENGINE + ".forecast.providers..")
             .because("Providers.standard is the one place that knows the providers' classes, so the providers depend "
                     + "on the forecast and not back (#389, ADR 0001)");
+
+    @ArchTest
+    static final ArchRule theEngineReachesTheProvidersOnlyThroughTheForecast = noClasses()
+            .that().resideInAPackage(ENGINE + "..")
+            .and().resideOutsideOfPackage(ENGINE + ".forecast..")
+            .should().dependOnClassesThat().resideInAPackage(ENGINE + ".forecast.providers..")
+            .because("a provider is chosen by engine.forecast; the engine's other parts know only the forecast "
+                    + "(ADR 0001)");
 
     @ArchTest
     static final ArchRule engineSubPackagesDoNotReachUpIntoTheEngine = noClasses()
