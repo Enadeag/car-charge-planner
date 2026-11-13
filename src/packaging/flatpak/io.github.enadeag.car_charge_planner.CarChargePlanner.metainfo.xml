@@ -76,6 +76,14 @@
   </screenshots>
 
   <releases>
+    <release version="0.7.0" date="2026-11-13">
+      <url type="details">https://github.com/Enadeag/car-charge-planner/releases/tag/v0.7.0</url>
+      <description>
+        <p>Your home is entered more simply: solar panels as a number of panels, the charger as its charge power at
+          home, and set-up no longer asks for the house's own use. The dashboard warns when a forecast provider
+          refuses its API key.</p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-11-10">
       <url type="details">https://github.com/Enadeag/car-charge-planner/releases/tag/v0.6.0</url>
       <description>
