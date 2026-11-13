@@ -12,6 +12,8 @@
 #       the APK verifies with v2 and v3 and without v1, has exactly one signer, whose certificate is not that of
 #       DEBUG_KEYSTORE and, with FINGERPRINT_FILE, is the one recorded there; and it is zip-aligned, carries that app
 #       ID, version name and version code, and is neither debuggable nor test-only
+#   certificate APK
+#       prints the SHA-256 digest of the one signer's certificate of APK, as apksigner shows it
 #   fingerprint FINGERPRINT_FILE
 #       prints the SHA-256 fingerprint FINGERPRINT_FILE records, as 64 lowercase hex digits, or fails when it holds
 #       none: its one line that is not blank and does not start with #, with or without colons, in either case
@@ -32,7 +34,7 @@ fail() {
 }
 
 usage() {
-  echo "usage: sh tools/android-sign.sh check-unsigned|sign|check-signed|fingerprint|throwaway-key ..." >&2
+  echo "usage: sh tools/android-sign.sh check-unsigned|sign|check-signed|certificate|fingerprint|throwaway-key ..." >&2
   echo "(the comment at the top of tools/android-sign.sh describes each)" >&2
   exit 2
 }
@@ -130,6 +132,7 @@ case "$command" in
     sha256_of "$apk"
     actual=$sha256
     [ "$actual" = "$expected" ] || fail "$apk has SHA-256 $actual, not $expected as the build job made it"
+    # Any failure of verify counts as unsigned; a broken apksigner is caught by sign and check-signed, which need it.
     if "$apksigner" verify --min-sdk-version "$min_sdk" "$apk" > /dev/null 2>&1; then
       fail "$apk is signed already; the build must leave the release APK unsigned"
     fi
@@ -182,6 +185,16 @@ certificate $fingerprint that $6 records"
     fi
     check_manifest "$apk" "$2" "$3" "$4"
     echo "$apk: signed with v2 and v3 only, by one signer, certificate SHA-256 $digests"
+    ;;
+  certificate)
+    [ $# -eq 1 ] || usage
+    need_build_tools
+    need_apk "$1"
+    report=$("$apksigner" verify --min-sdk-version 24 --verbose --print-certs "$1" 2> /dev/null) \
+      || fail "$1 does not verify"
+    digests=$(printf '%s\n' "$report" | sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p')
+    [ "$(printf '%s\n' "$digests" | grep -c .)" -eq 1 ] || fail "$1 has not exactly one signer's certificate"
+    printf '%s\n' "$digests"
     ;;
   fingerprint)
     [ $# -eq 1 ] || usage

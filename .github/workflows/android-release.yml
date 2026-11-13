@@ -113,8 +113,7 @@ jobs:
           notes="$RUNNER_TEMP/notes/notes.md"
           mkdir "$RUNNER_TEMP/notes"
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            sh tools/android-sign.sh fingerprint android/release-certificate.sha256 > "$RUNNER_TEMP/fingerprint"
-            fingerprint=$(cat "$RUNNER_TEMP/fingerprint")
+            fingerprint=$(sh tools/android-sign.sh fingerprint android/release-certificate.sha256)
             java tools/ReleaseNotes.java --android "$VERSION" CHANGELOG.md "$fingerprint" > "$notes"
           else
             {
@@ -126,9 +125,11 @@ jobs:
               || echo "::warning::CHANGELOG.md has no section for Android $release yet; a tag would stop here"
           fi
           cat "$notes"
+      # overwrite: a re-run of all jobs meets the artifact of the first attempt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-release-notes
+          overwrite: true
           path: ${{ runner.temp }}/notes/notes.md
           if-no-files-found: error
           retention-days: 14
@@ -236,9 +237,11 @@ jobs:
           sha256=${sum%% *}
           sh tools/android-sign.sh check-unsigned "$apk" "$sha256" "$APP_ID" "$VERSION_NAME" "$VERSION_CODE"
           echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+      # overwrite: a re-run of all jobs meets the artifact of the first attempt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-unsigned-apk
+          overwrite: true
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 14
@@ -252,8 +255,8 @@ jobs:
             android/*/build/test-results/
           retention-days: 7
 
-  # Signs with the release key. The environment android-release asks the maintainer to approve, holds the key's
-  # secrets and lets only android-v* tags in (#271). The secrets are in the env of the signing step alone.
+  # Signs with the release key. The environment android-release, once #271 has made it, asks the maintainer to approve,
+  # holds the key's secrets and lets only android-v* tags in. The secrets are in the env of the signing step alone.
   sign:
     needs: [prepare, build, tag-checks, no-release-yet]
     if: github.event_name == 'push'
@@ -262,6 +265,7 @@ jobs:
     environment: android-release
     outputs:
       apk-sha256: ${{ steps.signed.outputs.sha256 }}
+      certificate: ${{ steps.signed.outputs.certificate }}
     env:
       VERSION_NAME: ${{ needs.prepare.outputs.version-name }}
       VERSION_CODE: ${{ needs.prepare.outputs.version-code }}
@@ -269,6 +273,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Check that this is the commit that was built
+        env:
+          COMMIT: ${{ needs.prepare.outputs.commit }}
+        run: |
+          head=$(git rev-parse 'HEAD^{commit}')
+          if [ "$head" != "$COMMIT" ]; then
+            echo "::error::this checkout is at $head, not at the commit $COMMIT that prepare and build used"; exit 1
+          fi
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: android-unsigned-apk
@@ -305,11 +317,15 @@ jobs:
           apk="$RUNNER_TEMP/signed/car-charge-planner-android-$VERSION_NAME.apk"
           sh tools/android-sign.sh check-signed "$apk" "$APP_ID" "$VERSION_NAME" "$VERSION_CODE" \
             android/app/debug.keystore android/release-certificate.sha256
+          certificate=$(sh tools/android-sign.sh certificate "$apk")
           sum=$(sha256sum "$apk")
           echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
+          echo "certificate=$certificate" >> "$GITHUB_OUTPUT"
+      # overwrite: a re-run of all jobs meets the artifact of the first attempt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-signed-apk
+          overwrite: true
           path: ${{ runner.temp }}/signed/car-charge-planner-android-*.apk
           if-no-files-found: error
           retention-days: 14
@@ -329,6 +345,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Check that this is the commit that was built
+        env:
+          COMMIT: ${{ needs.prepare.outputs.commit }}
+        run: |
+          head=$(git rev-parse 'HEAD^{commit}')
+          if [ "$head" != "$COMMIT" ]; then
+            echo "::error::this checkout is at $head, not at the commit $COMMIT that prepare and build used"; exit 1
+          fi
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: android-unsigned-apk
@@ -366,9 +390,11 @@ jobs:
             android/app/debug.keystore
           sum=$(sha256sum "$apk")
           echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
+      # overwrite: a re-run of all jobs meets the artifact of the first attempt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-signed-apk
+          overwrite: true
           path: ${{ runner.temp }}/signed/car-charge-planner-android-*.apk
           if-no-files-found: error
           retention-days: 14
@@ -391,6 +417,7 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version-name }}
       DRY_RUN: ${{ github.event_name != 'push' }}
       SIGNED_SHA256: ${{ needs.sign.outputs.apk-sha256 || needs.sign-dry-run.outputs.apk-sha256 }}
+      SIGNED_CERTIFICATE: ${{ needs.sign.outputs.certificate }}
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -420,6 +447,13 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: release/car-charge-planner-android-*.apk
+      # The notes name the certificate that the prepare job read from the repository; the APK must carry that one.
+      - name: Check that the notes name the signed APK's certificate
+        if: env.DRY_RUN != 'true'
+        run: |
+          if [ -z "$SIGNED_CERTIFICATE" ] || ! grep -Fq -- "$SIGNED_CERTIFICATE" "$RUNNER_TEMP/notes/notes.md"; then
+            echo "::error::the release notes do not name the signed APK's certificate '$SIGNED_CERTIFICATE'"; exit 1
+          fi
       - name: Create the draft release
         run: |
           if [ "$DRY_RUN" = "true" ]; then

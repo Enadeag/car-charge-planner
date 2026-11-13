@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,9 @@ class ReleaseNotesToolTest {
             - The desktop.
             """;
 
+    /** In the arguments of {@link #notes}: the path of the changelog it wrote. */
+    private static final String THE_FILE = "<the changelog file>";
+
     private static final String FINGERPRINT = "0123456789abcdef".repeat(4);
 
     @TempDir
@@ -72,7 +76,7 @@ class ReleaseNotesToolTest {
 
     @Test
     void printsTheVersionsSectionAndHowToInstallItsFiles() throws Exception {
-        var run = notes(CHANGELOG, "0.3.0", changelog());
+        var run = notes(CHANGELOG, "0.3.0", THE_FILE);
 
         assertThat(run.exitCode()).isZero();
         assertThat(run.out()).startsWith("The Java version.\n\n### Changed\n- Everything.\n\n### Installing\n");
@@ -87,14 +91,14 @@ class ReleaseNotesToolTest {
 
     @Test
     void namesTheJavaRuntimeOfTheJdkThatRunsIt() throws Exception {
-        var run = notes(CHANGELOG, "0.3.0", changelog());
+        var run = notes(CHANGELOG, "0.3.0", THE_FILE);
 
         assertThat(run.out()).contains("Java " + Runtime.version() + " (" + System.getProperty("java.vendor") + ")");
     }
 
     @Test
     void theLastSectionEndsAtTheLinkDefinitions() throws Exception {
-        var run = notes(CHANGELOG, "0.2.0", changelog());
+        var run = notes(CHANGELOG, "0.2.0", THE_FILE);
 
         assertThat(run.exitCode()).isZero();
         assertThat(run.out()).startsWith("### Added\n- Windows.\n\n### Installing\n").doesNotContain("example.org");
@@ -103,7 +107,7 @@ class ReleaseNotesToolTest {
     @ParameterizedTest
     @ValueSource(strings = {"0.4.0", "0.3", "0x3x0"})
     void aVersionWithoutASectionHasNoNotes(String version) throws Exception {
-        var run = notes(CHANGELOG, version, changelog());
+        var run = notes(CHANGELOG, version, THE_FILE);
 
         assertThat(run.exitCode()).isEqualTo(1);
         assertThat(run.out()).isEmpty();
@@ -111,7 +115,7 @@ class ReleaseNotesToolTest {
 
     @Test
     void anEmptySectionHasNoNotes() throws Exception {
-        var run = notes("## [0.3.0] - 2026-10-20\n\n## [0.2.0] - 2026-10-14\n\n- Windows.\n", "0.3.0", changelog());
+        var run = notes("## [0.3.0] - 2026-10-20\n\n## [0.2.0] - 2026-10-14\n\n- Windows.\n", "0.3.0", THE_FILE);
 
         assertThat(run.exitCode()).isEqualTo(1);
         assertThat(run.out()).isEmpty();
@@ -119,7 +123,7 @@ class ReleaseNotesToolTest {
 
     @Test
     void androidPrintsItsOwnSectionAndHowToInstallAndCheckTheApk() throws Exception {
-        var run = notes(WITH_ANDROID, "--android", "0.1.0", changelog(), FINGERPRINT);
+        var run = notes(WITH_ANDROID, "--android", "0.1.0", THE_FILE, FINGERPRINT);
 
         assertThat(run.exitCode()).isZero();
         assertThat(run.out()).startsWith("The first Android release.\n\n### Installing\n");
@@ -134,16 +138,16 @@ class ReleaseNotesToolTest {
 
     @Test
     void androidAndTheDesktopNeverTakeEachOthersSection() throws Exception {
-        assertThat(notes(WITH_ANDROID, "0.1.0", changelog()).exitCode()).isEqualTo(1);
-        assertThat(notes(WITH_ANDROID, "--android", "0.7.0", changelog(), FINGERPRINT).exitCode()).isEqualTo(1);
-        assertThat(notes(WITH_ANDROID, "0.7.0", changelog()).out()).startsWith("- The desktop.\n\n### Installing\n")
+        assertThat(notes(WITH_ANDROID, "0.1.0", THE_FILE).exitCode()).isEqualTo(1);
+        assertThat(notes(WITH_ANDROID, "--android", "0.7.0", THE_FILE, FINGERPRINT).exitCode()).isEqualTo(1);
+        assertThat(notes(WITH_ANDROID, "0.7.0", THE_FILE).out()).startsWith("- The desktop.\n\n### Installing\n")
                 .doesNotContain("Android release");
     }
 
     @Test
     void anEmptyAndroidSectionHasNoNotes() throws Exception {
         var run = notes("## [Android 0.1.0] - 2026-11-20\n\n## [0.7.0] - 2026-11-18\n\n- The desktop.\n",
-                "--android", "0.1.0", changelog(), FINGERPRINT);
+                "--android", "0.1.0", THE_FILE, FINGERPRINT);
 
         assertThat(run.exitCode()).isEqualTo(1);
         assertThat(run.out()).isEmpty();
@@ -152,7 +156,7 @@ class ReleaseNotesToolTest {
     @Test
     void anAndroidSectionThatIsTheLastOfTheFileEndsThere() throws Exception {
         var run = notes("## [0.7.0] - 2026-11-18\n\n- The desktop.\n\n## [Android 0.1.0] - 2026-11-20\n\n- The app.\n",
-                "--android", "0.1.0", changelog(), FINGERPRINT);
+                "--android", "0.1.0", THE_FILE, FINGERPRINT);
 
         assertThat(run.exitCode()).isZero();
         assertThat(run.out()).startsWith("- The app.\n\n### Installing\n").doesNotContain("The desktop");
@@ -168,22 +172,22 @@ class ReleaseNotesToolTest {
     }
 
     static List<List<String>> wrongAndroidArguments() {
-        return List.of(List.of("--android", "0.1.0", "CHANGELOG.md"),
-                List.of("--android", "0.1.0", "CHANGELOG.md", ""),
-                List.of("--android", "0.1.0", "CHANGELOG.md", " "),
-                List.of("--android", "0.1.0", "CHANGELOG.md", FINGERPRINT, "more"));
+        return List.of(List.of("--android", "0.1.0", THE_FILE),
+                List.of("--android", "0.1.0", THE_FILE, ""),
+                List.of("--android", "0.1.0", THE_FILE, " "),
+                List.of("--android", "0.1.0", THE_FILE, FINGERPRINT, "more"));
     }
 
-    private String changelog() {
-        return folder.resolve("CHANGELOG.md").toString();
-    }
-
-    /** Runs the tool with {@code args}, once {@code changelog} is written to {@link #changelog()}. */
-    private Run notes(String changelog, String... args) throws IOException, InterruptedException {
-        Files.writeString(Path.of(changelog()), changelog, StandardCharsets.UTF_8);
+    /**
+     * Writes {@code changelogText} to a file and runs the tool with {@code args}, in which {@link #THE_FILE} stands
+     * for that file's path.
+     */
+    private Run notes(String changelogText, String... args) throws IOException, InterruptedException {
+        var file = folder.resolve("CHANGELOG.md");
+        Files.writeString(file, changelogText, StandardCharsets.UTF_8);
         var java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
         var command = new ArrayList<>(List.of(java, Path.of("tools", "ReleaseNotes.java").toString()));
-        command.addAll(List.of(args));
+        Arrays.stream(args).map(arg -> arg.equals(THE_FILE) ? file.toString() : arg).forEach(command::add);
         var process = new ProcessBuilder(command)
                 .redirectError(ProcessBuilder.Redirect.DISCARD)
                 .start();

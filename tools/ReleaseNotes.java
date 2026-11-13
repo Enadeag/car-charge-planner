@@ -54,7 +54,7 @@ public final class ReleaseNotes {
 
     public static void main(String[] args) throws IOException {
         var android = args.length > 0 && args[0].equals("--android");
-        if (android ? (args.length != 4 || args[3].isBlank()) : args.length != 2) {
+        if (!rightArguments(args, android)) {
             System.err.println("usage: java tools/ReleaseNotes.java <version> <path/to/CHANGELOG.md>");
             System.err.println("       java tools/ReleaseNotes.java --android <version> <path/to/CHANGELOG.md> "
                     + "<certificate SHA-256 fingerprint>");
@@ -75,6 +75,14 @@ public final class ReleaseNotes {
                         "Java " + Runtime.version() + " (" + System.getProperty("java.vendor") + ")");
         var out = new PrintStream(System.out, true, StandardCharsets.UTF_8);
         out.print(body.get() + "\n\n" + installing);
+    }
+
+    /** Two arguments for the desktop; for Android, {@code --android}, the version, the changelog and a fingerprint. */
+    private static boolean rightArguments(String[] args, boolean android) {
+        if (!android) {
+            return args.length == 2;
+        }
+        return args.length == 4 && !args[3].isBlank();
     }
 
     /** The text under {@code ## [heading]}, up to the next {@code ## [} heading or link definition, if not blank. */

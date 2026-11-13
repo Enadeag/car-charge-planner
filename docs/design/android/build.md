@@ -70,10 +70,11 @@ How a release is built, signed and published (`android-release.yml`, `tools/andr
   - sign has the environment `android-release` and runs `apksigner` through `tools/android-sign.sh`, no Gradle and no third-party action, with a read-only token; sign-dry-run does the same with a throw-away key and without the environment;
   - release has the token that writes the draft and the attestation, and no key.
 - Before signing, the sign job checks the APK's SHA-256 against the build job's, that it is unsigned and zip-aligned, and its app ID, `versionName` and `versionCode`, so it signs only what the build made (#272).
-- Only the APK Signature Schemes v2 and v3, with exactly one signer, checked after signing: the app needs Android 10, which reads v3 (v2 before Android 9), so v1 would add nothing but files in the APK (#272).
+- The sign jobs check out the repository again and stop unless it is at the commit the prepare job named, so the script and the fingerprint file are those of the commit that was built; the release job stops, before it makes the draft, unless the notes name the certificate of the APK that was signed (#272).
+- Only the APK Signature Schemes v2 and v3, with exactly one signer, checked after signing: the app needs Android 10, which reads v3, so v1 would add nothing but files in the APK (#272).
 - The certificate's SHA-256 fingerprint is recorded in `android/release-certificate.sha256`; a tag run refuses any other certificate, the debug one too, and stops early while the file records none (#272).
-- The keystore reaches the runner only in the signing step's `env:`, is written to the runner's temp folder owner-only (`umask 077`), signed with through `--ks-pass env:`, and removed in a step that always runs; the sign job uses no third-party action (#272).
-- After signing the APK is read back: app ID without `.debug`, the tag's version without a debug suffix, not debuggable, not test-only (#272).
+- The keystore reaches the runner only in the signing step's `env:`, is written to the runner's temp folder owner-only (`umask 077`), its password is passed to `apksigner` through `--ks-pass env:`, and it is removed in a step that always runs; the sign job uses no third-party action (#272).
+- After signing the APK is read back: app ID without `.debug`, the tag's version, not debuggable, not test-only (#272).
 - The workflow only makes a draft, created with `--latest=false`; the maintainer reads and publishes it, and unticks GitHub's **Set as the latest release** when publishing, as `--latest=false` holds for the draft only (#272).
 - The notes come from a changelog section `## [Android X.Y.Z] - date`, through `ReleaseNotes.java --android`, with an installing text of the APK's own; the desktop's notes stay as they were (#272).
 - The dry run, started by hand, signs with a throw-away key made in the run in a job without the environment, so it never asks for the release key; it skips only the recorded certificate of the signing checks, and its draft, tag and APK name say "dry run" (#272).
@@ -85,5 +86,5 @@ How a release is built, signed and published (`android-release.yml`, `tools/andr
 - A release, draft or published, that exists for the tag stops the run; nothing is overwritten. Runs for one tag wait for each other in order and are never cancelled (`queue: max`), up to GitHub's limit of 100 waiting runs in a group, beyond which a run is cancelled (#272).
 - No cache anywhere in the workflow (`setup-gradle` with `cache-disabled: true`, no `actions/cache`, no `cache:` of `setup-java`), so no other run can change what is built or signed (#272).
 - `AndroidReleaseWorkflowTest` holds the workflow's text to these rules, in the Maven build, so every pull request that changes the workflow runs it (#272).
-- `assembleRelease` builds as it is, without a release block; R8 is #424 (#272).
+- `assembleRelease` builds as it is, without a release block (#272).
 - No check that the tag is reachable from `main`, as on the desktop: a release branch may carry a fix (#272).

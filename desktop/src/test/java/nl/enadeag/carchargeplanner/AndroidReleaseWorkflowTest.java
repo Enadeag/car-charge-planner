@@ -57,18 +57,19 @@ class AndroidReleaseWorkflowTest {
     void runsForOneRefWaitInOrderAndAreNeverCancelled() {
         assertThat(workflow).contains("\nconcurrency:\n  group: android-release-${{ github.ref }}\n  queue: max\n"
                 + "  cancel-in-progress: false\n");
-        assertThat(lines(workflow, "concurrency:")).containsExactly("concurrency:");
-        assertThat(lines(workflow, "cancel-in-progress:")).containsExactly("  cancel-in-progress: false");
+        assertThat(linesContaining(workflow, "concurrency:")).containsExactly("concurrency:");
+        assertThat(linesContaining(workflow, "cancel-in-progress:")).containsExactly("  cancel-in-progress: false");
     }
 
     @Test
     void theKeyIsAskedForOnlyAfterEveryCheckOfTheTag() {
-        assertThat(lines(jobs.get("sign"), "    needs:"))
+        assertThat(linesStarting(jobs.get("sign"), "    needs:"))
                 .containsExactly("    needs: [prepare, build, tag-checks, no-release-yet]");
         for (var job : List.of("tag-checks", "no-release-yet")) {
-            assertThat(lines(jobs.get(job), "    if:")).as(job).containsExactly("    if: github.event_name == 'push'");
+            assertThat(linesStarting(jobs.get(job), "    if:")).as(job)
+                    .containsExactly("    if: github.event_name == 'push'");
         }
-        assertThat(lines(jobs.get("release"), "    needs:"))
+        assertThat(linesStarting(jobs.get("release"), "    needs:"))
                 .containsExactly("    needs: [prepare, build, sign, sign-dry-run]");
         assertThat(jobs.get("release")).contains("\n    if: >-\n"
                 + "      ${{ !cancelled() && needs.build.result == 'success'\n"
@@ -76,11 +77,12 @@ class AndroidReleaseWorkflowTest {
     }
 
     @Test
-    void onlyTheTagRunsSigningJobUsesTheEnvironment() {
-        assertThat(lines(workflow, "environment:")).containsExactly("    environment: android-release");
-        assertThat(lines(jobs.get("sign"), "environment:")).hasSize(1);
-        assertThat(lines(jobs.get("sign"), "    if:")).containsExactly("    if: github.event_name == 'push'");
-        assertThat(lines(jobs.get("sign-dry-run"), "    if:")).containsExactly("    if: github.event_name != 'push'");
+    void onlyTheTagRunsSigningJobNamesTheEnvironment() {
+        assertThat(linesContaining(workflow, "environment:")).containsExactly("    environment: android-release");
+        assertThat(linesContaining(jobs.get("sign"), "environment:")).hasSize(1);
+        assertThat(linesStarting(jobs.get("sign"), "    if:")).containsExactly("    if: github.event_name == 'push'");
+        assertThat(linesStarting(jobs.get("sign-dry-run"), "    if:"))
+                .containsExactly("    if: github.event_name != 'push'");
     }
 
     @Test
@@ -125,15 +127,11 @@ class AndroidReleaseWorkflowTest {
     @Test
     void nothingCaches() {
         assertThat(workflow).doesNotContain("actions/cache", "cache-provider", "cache-read-only", "cache-encryption");
+        assertThat(linesContaining(workflow, "cache:")).isEmpty();
         var gradleSteps = jobs.values().stream().flatMap(job -> steps(job).stream())
                 .filter(step -> step.contains("gradle/actions/setup-gradle@")).toList();
 
         assertThat(gradleSteps).isNotEmpty().allSatisfy(step -> assertThat(step).contains("cache-disabled: true"));
-    }
-
-    @Test
-    void noActionIsGivenACache() {
-        assertThat(lines(workflow, "cache:")).isEmpty();
     }
 
     @Test
@@ -144,12 +142,103 @@ class AndroidReleaseWorkflowTest {
     }
 
     @Test
-    void javaIsTemurinOfTheVersionNamedAndNoNewer() {
+    void javaIsTemurinAndNeverTheLatest() {
         var setups = stepsUsing("actions/setup-java@");
 
         assertThat(setups).hasSize(2).allSatisfy(step -> assertThat(step).contains("distribution: temurin\n"));
-        assertThat(lines(workflow, "distribution:")).hasSize(2);
+        assertThat(linesContaining(workflow, "distribution:")).hasSize(2);
         assertThat(workflow).doesNotContain("check-latest");
+    }
+
+    @Test
+    void theSigningJobsRunOnlyTheScriptAndNothingFetchedOrEvaluated() {
+        for (var job : SIGNING_JOBS) {
+            var text = jobs.get(job);
+
+            assertThat(text).as(job).doesNotContainIgnoringCase("curl").doesNotContainIgnoringCase("wget")
+                    .doesNotContain("eval", "bash -c", "sh -c", "| sh", "| bash");
+            assertThat(text.replace("cmdline-tools/", "").lines().filter(line -> line.contains("tools/")).toList())
+                    .as(job)
+                    .allSatisfy(line -> assertThat(line).contains("sh tools/android-sign.sh "));
+        }
+        var tag = jobs.get("sign").replaceAll("\\\\\n\\s*", " ").replaceAll("[ ]+", " ");
+        assertThat(tag).contains("sh tools/android-sign.sh sign ", "sh tools/android-sign.sh check-unsigned ",
+                "sh tools/android-sign.sh check-signed \"$apk\" \"$APP_ID\" \"$VERSION_NAME\" \"$VERSION_CODE\" "
+                        + "android/app/debug.keystore android/release-certificate.sha256\n");
+    }
+
+    @Test
+    void nothingIsTurnedOffOrAllowedToFail() {
+        assertThat(workflow).doesNotContain("continue-on-error", "if: false", "if: true", "if: ${{ false");
+    }
+
+    @Test
+    void theChecksOfTheTagKeepTheirComparisonAndTheirStop() {
+        var form = step(jobs.get("prepare"), "Check the tag's form");
+        assertThat(form).contains("        if: github.event_name == 'push'\n",
+                "if ! printf '%s\\n' \"$GITHUB_REF_NAME\" | grep -Eqx \"android-v$number\\.$number\\.$number\"; then",
+                "tag $GITHUB_REF_NAME is not android-vX.Y.Z", "exit 1");
+
+        var version = step(jobs.get("prepare"), "Read the version and compare it with the tag");
+        assertThat(version).contains("if [ \"$GITHUB_REF_NAME\" != \"android-v$name\" ]; then",
+                "[ \"$GITHUB_EVENT_NAME\" = \"push\" ] || exit 0", "*-SNAPSHOT)");
+
+        var branch = step(jobs.get("tag-checks"), "Check that release/android-X.Y.Z is at the tag");
+        assertThat(branch).contains("if ! at=$(gh api \"repos/$GITHUB_REPOSITORY/git/ref/heads/$branch\"",
+                "if [ \"$at\" != \"$COMMIT\" ]; then",
+                "echo \"::error::$branch is at $at, not at this tag's commit $COMMIT\"; exit 1");
+
+        var emulator = step(jobs.get("tag-checks"), "Check that the emulator job was green for this commit");
+        assertThat(emulator).contains("head_sha=$COMMIT",
+                "select(.name == \"android-emulator\" and .conclusion == \"success\")",
+                "if [ -n \"$green\" ]; then",
+                "exit 0", "\n          exit 1\n");
+
+        var existing = step(jobs.get("no-release-yet"),
+                "Check that no release, draft or published, exists for the tag");
+        assertThat(existing).contains("grep -Fqx \"$GITHUB_REF_NAME\"", "exit 1");
+    }
+
+    @Test
+    void theTagRunsReleaseNeedsTheTagToExist() {
+        var creates = jobs.get("release").replace("\\\n", " ").lines()
+                .filter(line -> line.contains("gh release create")).toList();
+
+        assertThat(creates).hasSize(2);
+        assertThat(creates.stream().filter(line -> line.contains("\"$GITHUB_REF_NAME\"")).toList())
+                .singleElement().asString().contains(" --verify-tag ");
+    }
+
+    @Test
+    void theAttestationIsNotMadeInADryRun() {
+        var attest = step(jobs.get("release"), "Attest where the APK was built");
+
+        assertThat(attest).startsWith("      - name: Attest where the APK was built\n"
+                + "        if: env.DRY_RUN != 'true'\n        uses: actions/attest-build-provenance@");
+    }
+
+    @Test
+    void bothSigningJobsCheckTheirCheckoutIsTheCommitThatWasBuiltBeforeAnythingUsesIt() {
+        for (var job : SIGNING_JOBS) {
+            var steps = steps(jobs.get(job));
+
+            assertThat(steps.get(0)).as(job).contains("actions/checkout@");
+            assertThat(steps.get(1)).as(job).startsWith("      - name: Check that this is the commit that was built\n")
+                    .contains("COMMIT: ${{ needs.prepare.outputs.commit }}\n", "git rev-parse 'HEAD^{commit}'",
+                            "if [ \"$head\" != \"$COMMIT\" ]; then", "exit 1");
+        }
+    }
+
+    @Test
+    void theReleaseNotesMustNameTheCertificateOfTheSignedApkBeforeTheDraftIsMade() {
+        assertThat(jobs.get("sign")).contains("certificate: ${{ steps.signed.outputs.certificate }}",
+                "certificate=$(sh tools/android-sign.sh certificate \"$apk\")");
+        var release = jobs.get("release");
+        assertThat(release).contains("SIGNED_CERTIFICATE: ${{ needs.sign.outputs.certificate }}");
+        var check = step(release, "Check that the notes name the signed APK's certificate");
+        assertThat(check).contains("        if: env.DRY_RUN != 'true'\n", "[ -z \"$SIGNED_CERTIFICATE\" ]",
+                "grep -Fq -- \"$SIGNED_CERTIFICATE\"", "exit 1");
+        assertThat(release.indexOf(check)).isLessThan(release.indexOf("      - name: Create the draft release"));
     }
 
     @Test
@@ -166,16 +255,16 @@ class AndroidReleaseWorkflowTest {
     @Test
     void onlyTheReleaseJobWritesAndAttests() {
         assertThat(workflow).contains("\npermissions:\n  contents: read\n\n");
-        assertThat(lines(jobs.get("release"), ": write")).containsExactly(
+        assertThat(linesContaining(jobs.get("release"), ": write")).containsExactly(
                 "      contents: write  # create the draft release",
                 "      id-token: write  # the attestation: a token that says which workflow run built the APK",
                 "      attestations: write");
         // only a token that can write lists draft releases; this job runs no code of the repository
-        assertThat(lines(jobs.get("no-release-yet"), ": write")).containsExactly(
+        assertThat(linesContaining(jobs.get("no-release-yet"), ": write")).containsExactly(
                 "      contents: write  # to list draft releases too; nothing is written here");
         assertThat(jobs.get("no-release-yet")).doesNotContain("uses:", "sh tools/", "gradlew");
         for (var job : List.of("prepare", "tag-checks", "build", "sign", "sign-dry-run")) {
-            assertThat(lines(jobs.get(job), ": write")).as(job).isEmpty();
+            assertThat(linesContaining(jobs.get(job), ": write")).as(job).isEmpty();
             assertThat(jobs.get(job)).as(job).doesNotContain("id-token", "attestations");
         }
     }
@@ -229,10 +318,21 @@ class AndroidReleaseWorkflowTest {
         return result;
     }
 
-    /** The lines of {@code text} that hold {@code part}; one that starts with spaces must start the line. */
-    private static List<String> lines(String text, String part) {
-        return text.lines().filter(line -> part.startsWith(" ") ? line.startsWith(part) : line.contains(part))
-                .toList();
+    /** The lines of {@code text} that start with {@code prefix}, indentation included. */
+    private static List<String> linesStarting(String text, String prefix) {
+        return text.lines().filter(line -> line.startsWith(prefix)).toList();
+    }
+
+    /** The lines of {@code text} that hold {@code part} anywhere. */
+    private static List<String> linesContaining(String text, String part) {
+        return text.lines().filter(line -> line.contains(part)).toList();
+    }
+
+    /** The one step of {@code job} that is named {@code name}. */
+    private static String step(String job, String name) {
+        return steps(job).stream().filter(step -> step.startsWith("      - name: " + name + "\n")).reduce((a, b) -> {
+            throw new AssertionError("two steps are named " + name);
+        }).orElseThrow(() -> new AssertionError("no step is named " + name));
     }
 
     private static int count(String text, String part) {
