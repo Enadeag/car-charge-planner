@@ -44,7 +44,7 @@ android {
         targetSdk = 36
         // A release commit sets the version name without -SNAPSHOT, and the next one with it
         // (docs/dev/ci-and-releasing.md, Releasing the Android app); the version code follows from it (AppVersion).
-        versionName = "0.1.0"
+        versionName = "0.1.1-SNAPSHOT"
         versionCode = AppVersion.versionCode(checkNotNull(versionName))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
