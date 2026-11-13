@@ -18,9 +18,9 @@ import java.util.regex.Pattern;
  * <pre>java tools/ReleaseNotes.java --android 0.1.0 CHANGELOG.md &lt;fingerprint&gt; &gt; notes.md</pre>
  *
  * <p>A single source file that the JDK runs as it is, without Maven: the release workflows need only a JDK. The
- * runtime it names is the JDK that runs it, so the release workflow runs it on the Java version it packages. Exits
- * with code 1 when the changelog has no section for the version, or an empty one, so a release cannot go out without
- * notes.
+ * desktop's notes name the runtime of the JDK that runs it, so the desktop's release workflow runs it on the Java
+ * version it packages; the Android notes name no runtime. Exits with code 1 when the changelog has no section for the
+ * version, or an empty one, so a release cannot go out without notes, and with code 2 on wrong arguments.
  */
 public final class ReleaseNotes {
 
@@ -53,8 +53,8 @@ public final class ReleaseNotes {
     }
 
     public static void main(String[] args) throws IOException {
-        var android = args.length == 4 && args[0].equals("--android");
-        if (!android && args.length != 2) {
+        var android = args.length > 0 && args[0].equals("--android");
+        if (android ? (args.length != 4 || args[3].isBlank()) : args.length != 2) {
             System.err.println("usage: java tools/ReleaseNotes.java <version> <path/to/CHANGELOG.md>");
             System.err.println("       java tools/ReleaseNotes.java --android <version> <path/to/CHANGELOG.md> "
                     + "<certificate SHA-256 fingerprint>");
@@ -79,7 +79,8 @@ public final class ReleaseNotes {
 
     /** The text under {@code ## [heading]}, up to the next {@code ## [} heading or link definition, if not blank. */
     private static Optional<String> section(String changelog, String heading) {
-        var pattern = Pattern.compile("^## \\[" + Pattern.quote(heading) + "\\][^\\n]*\\n(.*?)(?=^## \\[|^\\[[^\\]]+\\]: |\\z)",
+        var pattern = Pattern.compile(
+                "^## \\[" + Pattern.quote(heading) + "\\][^\\n]*\\n(.*?)(?=^## \\[|^\\[[^\\]]+\\]: |\\z)",
                 Pattern.MULTILINE | Pattern.DOTALL);
         var match = pattern.matcher(changelog);
         if (!match.find() || match.group(1).isBlank()) {

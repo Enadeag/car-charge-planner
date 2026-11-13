@@ -37,7 +37,8 @@ class AppVersionTest {
     @ParameterizedTest
     @ValueSource(strings = {"", "0.1", "0.1.0.0", "v0.1.0", "android-v0.1.0", "0.1.0-rc1", "0.1.0-snapshot",
         "0.1.0-SNAPSHOT-SNAPSHOT", "0.01.0", "00.1.0", "0.1.00", "0.1.0 ", " 0.1.0", "0.1.0\n", "0.1.x", "-1.0.0",
-        "0.1.0+1", "1234567890.0.0", "\u0660.\u0661.\u0660"})
+        "0.1.0+1", "1234567890.0.0", "0.1000000000.0", "0.0.1000000000", "0.0.99999999999999999999",
+        "\u0660.\u0661.\u0660"})
     void anyOtherFormIsRefused(String name) {
         assertThatThrownBy(() -> AppVersion.versionCode(name)).isInstanceOf(GradleException.class)
                 .hasMessageContaining("is not X.Y.Z or X.Y.Z-SNAPSHOT");
@@ -45,7 +46,7 @@ class AppVersionTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"0.0.0", "0.0.0-SNAPSHOT", "210000.0.1", "999999999.0.0"})
-    void aCodeOfZeroOrAbovePlaysLimitIsRefused(String name) {
+    void aCodeOfZeroOrAboveTheHighestPlayAcceptsIsRefused(String name) {
         assertThatThrownBy(() -> AppVersion.versionCode(name)).isInstanceOf(GradleException.class)
                 .hasMessageContaining("must be from 1 up to 2100000000");
     }

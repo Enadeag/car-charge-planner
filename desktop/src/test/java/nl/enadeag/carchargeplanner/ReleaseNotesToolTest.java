@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** Runs {@code tools/ReleaseNotes.java} the way the release workflow does: as a source file, in a JDK of its own. */
@@ -71,7 +72,7 @@ class ReleaseNotesToolTest {
 
     @Test
     void printsTheVersionsSectionAndHowToInstallItsFiles() throws Exception {
-        var run = releaseNotes("0.3.0", CHANGELOG);
+        var run = notes(CHANGELOG, "0.3.0", changelog());
 
         assertThat(run.exitCode()).isZero();
         assertThat(run.out()).startsWith("The Java version.\n\n### Changed\n- Everything.\n\n### Installing\n");
@@ -86,14 +87,14 @@ class ReleaseNotesToolTest {
 
     @Test
     void namesTheJavaRuntimeOfTheJdkThatRunsIt() throws Exception {
-        var run = releaseNotes("0.3.0", CHANGELOG);
+        var run = notes(CHANGELOG, "0.3.0", changelog());
 
         assertThat(run.out()).contains("Java " + Runtime.version() + " (" + System.getProperty("java.vendor") + ")");
     }
 
     @Test
     void theLastSectionEndsAtTheLinkDefinitions() throws Exception {
-        var run = releaseNotes("0.2.0", CHANGELOG);
+        var run = notes(CHANGELOG, "0.2.0", changelog());
 
         assertThat(run.exitCode()).isZero();
         assertThat(run.out()).startsWith("### Added\n- Windows.\n\n### Installing\n").doesNotContain("example.org");
@@ -102,7 +103,7 @@ class ReleaseNotesToolTest {
     @ParameterizedTest
     @ValueSource(strings = {"0.4.0", "0.3", "0x3x0"})
     void aVersionWithoutASectionHasNoNotes(String version) throws Exception {
-        var run = releaseNotes(version, CHANGELOG);
+        var run = notes(CHANGELOG, version, changelog());
 
         assertThat(run.exitCode()).isEqualTo(1);
         assertThat(run.out()).isEmpty();
@@ -110,7 +111,7 @@ class ReleaseNotesToolTest {
 
     @Test
     void anEmptySectionHasNoNotes() throws Exception {
-        var run = releaseNotes("0.3.0", "## [0.3.0] - 2026-10-20\n\n## [0.2.0] - 2026-10-14\n\n- Windows.\n");
+        var run = notes("## [0.3.0] - 2026-10-20\n\n## [0.2.0] - 2026-10-14\n\n- Windows.\n", "0.3.0", changelog());
 
         assertThat(run.exitCode()).isEqualTo(1);
         assertThat(run.out()).isEmpty();
@@ -118,7 +119,7 @@ class ReleaseNotesToolTest {
 
     @Test
     void androidPrintsItsOwnSectionAndHowToInstallAndCheckTheApk() throws Exception {
-        var run = notes(WITH_ANDROID, "--android", "0.1.0", FINGERPRINT);
+        var run = notes(WITH_ANDROID, "--android", "0.1.0", changelog(), FINGERPRINT);
 
         assertThat(run.exitCode()).isZero();
         assertThat(run.out()).startsWith("The first Android release.\n\n### Installing\n");
@@ -133,36 +134,56 @@ class ReleaseNotesToolTest {
 
     @Test
     void androidAndTheDesktopNeverTakeEachOthersSection() throws Exception {
-        assertThat(notes(WITH_ANDROID, "0.1.0").exitCode()).isEqualTo(1);
-        assertThat(notes(WITH_ANDROID, "--android", "0.7.0", FINGERPRINT).exitCode()).isEqualTo(1);
-        assertThat(notes(WITH_ANDROID, "0.7.0").out()).startsWith("- The desktop.\n\n### Installing\n")
+        assertThat(notes(WITH_ANDROID, "0.1.0", changelog()).exitCode()).isEqualTo(1);
+        assertThat(notes(WITH_ANDROID, "--android", "0.7.0", changelog(), FINGERPRINT).exitCode()).isEqualTo(1);
+        assertThat(notes(WITH_ANDROID, "0.7.0", changelog()).out()).startsWith("- The desktop.\n\n### Installing\n")
                 .doesNotContain("Android release");
     }
 
     @Test
-    void androidNeedsTheFingerprint() throws Exception {
-        var run = notes(WITH_ANDROID, "--android", "0.1.0");
+    void anEmptyAndroidSectionHasNoNotes() throws Exception {
+        var run = notes("## [Android 0.1.0] - 2026-11-20\n\n## [0.7.0] - 2026-11-18\n\n- The desktop.\n",
+                "--android", "0.1.0", changelog(), FINGERPRINT);
+
+        assertThat(run.exitCode()).isEqualTo(1);
+        assertThat(run.out()).isEmpty();
+    }
+
+    @Test
+    void anAndroidSectionThatIsTheLastOfTheFileEndsThere() throws Exception {
+        var run = notes("## [0.7.0] - 2026-11-18\n\n- The desktop.\n\n## [Android 0.1.0] - 2026-11-20\n\n- The app.\n",
+                "--android", "0.1.0", changelog(), FINGERPRINT);
+
+        assertThat(run.exitCode()).isZero();
+        assertThat(run.out()).startsWith("- The app.\n\n### Installing\n").doesNotContain("The desktop");
+    }
+
+    @ParameterizedTest
+    @MethodSource("wrongAndroidArguments")
+    void androidNeedsTheFingerprintAndNothingMore(List<String> args) throws Exception {
+        var run = notes(WITH_ANDROID, args.toArray(String[]::new));
 
         assertThat(run.exitCode()).isEqualTo(2);
         assertThat(run.out()).isEmpty();
     }
 
-    private Run releaseNotes(String version, String changelog) throws IOException, InterruptedException {
-        return notes(changelog, version);
+    static List<List<String>> wrongAndroidArguments() {
+        return List.of(List.of("--android", "0.1.0", "CHANGELOG.md"),
+                List.of("--android", "0.1.0", "CHANGELOG.md", ""),
+                List.of("--android", "0.1.0", "CHANGELOG.md", " "),
+                List.of("--android", "0.1.0", "CHANGELOG.md", FINGERPRINT, "more"));
     }
 
-    /** Runs the tool with {@code args}, the changelog's path put in after the version. */
+    private String changelog() {
+        return folder.resolve("CHANGELOG.md").toString();
+    }
+
+    /** Runs the tool with {@code args}, once {@code changelog} is written to {@link #changelog()}. */
     private Run notes(String changelog, String... args) throws IOException, InterruptedException {
-        var file = Files.writeString(folder.resolve("CHANGELOG.md"), changelog, StandardCharsets.UTF_8);
+        Files.writeString(Path.of(changelog()), changelog, StandardCharsets.UTF_8);
         var java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
         var command = new ArrayList<>(List.of(java, Path.of("tools", "ReleaseNotes.java").toString()));
-        var android = args[0].equals("--android");
-        for (var i = 0; i < args.length; i++) {
-            command.add(args[i]);
-            if (i == (android ? 1 : 0)) {
-                command.add(file.toString());
-            }
-        }
+        command.addAll(List.of(args));
         var process = new ProcessBuilder(command)
                 .redirectError(ProcessBuilder.Redirect.DISCARD)
                 .start();
