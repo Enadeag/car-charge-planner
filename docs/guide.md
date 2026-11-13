@@ -128,8 +128,6 @@ A charge power fills in the phases and the maximum charge current at 230 V: 3.7 
 
 ## The Android app
 
-The Android app is not released yet; the first release will be 0.1.0.
-
 The Android app makes the same plan as the desktop app, from the same engine, and everything above about the plan holds for it: the [dashboard's cards](#the-tray-icon-and-the-dashboard), [trips](#trips), [charging hours](#charging-hours), the [charge limit](#setting-the-charge-limit) and [how it plans](#how-it-plans-briefly). [Installing](install.md#android) says how to get it. This part says only where the phone differs. The app is in English and Dutch, in the phone's language (English when the phone's language is another), in the phone's light or dark look, with the phone's 12- or 24-hour clock, and it shows distances in kilometres only.
 
 ### Set-up on the phone
