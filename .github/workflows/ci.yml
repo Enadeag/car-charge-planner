@@ -43,7 +43,8 @@ jobs:
           code=false
           engine=false
           while IFS= read -r -d '' file; do
-            printf '%s\n' "$file"
+            # after a fixed word and shell-quoted, so that no name can start a line with :: (a workflow command)
+            printf 'changed: %q\n' "$file"
             case "$file" in
               docs/example-engine.json) code=true ;;  # the tests read it
               docs/*|*.md|LICENSE|NOTICE|.github/ISSUE_TEMPLATE/*) ;;
