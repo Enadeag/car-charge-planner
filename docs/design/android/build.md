@@ -64,13 +64,17 @@ How a release is built, signed and published (`android-release.yml`, `tools/andr
 - The release commit sets `versionName` in `android/app/build.gradle.kts`, and a tag that is not `android-v` plus that version, or a version that still ends in `-SNAPSHOT`, stops the run, so the tag, the APK and the notes can never disagree (#272).
 - `versionCode` is major × 10000 + minor × 100 + patch (0.1.0 is 100), worked out only in `AppVersion` with its tests; a minor or patch above 99, any other form of the name and a code of 0 or above Play's 2,100,000,000 fail the build, as two versions could otherwise share a code (#272).
 - Tags are `android-vX.Y.Z` only, without pre-releases; any other tag stops before the key is asked for (#272).
-- Four kinds of job: prepare (checks, no secrets), build (Gradle, the unsigned APK, the tests; read only), sign (the environment `android-release`, `apksigner` only, no Gradle; read only) and release (the write token, no key), so the key never meets Gradle's plugins and the write token never meets the key (#272, #327's note on #271).
+- Each job touches only what it needs, so the key never meets Gradle's plugins and the write token never meets the key (#272):
+  - prepare (the tag's form, the version, the notes) and build (lint, the tests, the unsigned APK) run Gradle with a read-only token and no secrets;
+  - tag-checks and no-release-yet check out nothing and only ask GitHub's API; no-release-yet has `contents: write`, as GitHub lists draft releases only to a token that can write, the one exception to "only the release job writes";
+  - sign has the environment `android-release` and runs `apksigner` through `tools/android-sign.sh`, no Gradle and no third-party action, with a read-only token; sign-dry-run does the same with a throw-away key and without the environment;
+  - release has the token that writes the draft and the attestation, and no key.
 - Before signing, the sign job checks the APK's SHA-256 against the build job's, that it is unsigned and zip-aligned, and its app ID, `versionName` and `versionCode`, so it signs only what the build made (#272).
 - Only the APK Signature Schemes v2 and v3, with exactly one signer, checked after signing: the app needs Android 10, which reads v3 (v2 before Android 9), so v1 would add nothing but files in the APK (#272).
 - The certificate's SHA-256 fingerprint is recorded in `android/release-certificate.sha256`; a tag run refuses any other certificate, the debug one too, and stops early while the file records none (#272).
 - The keystore reaches the runner only in the signing step's `env:`, is written to the runner's temp folder owner-only (`umask 077`), signed with through `--ks-pass env:`, and removed in a step that always runs; the sign job uses no third-party action (#272).
 - After signing the APK is read back: app ID without `.debug`, the tag's version without a debug suffix, not debuggable, not test-only (#272).
-- The workflow only makes a draft, not marked as the latest release; the maintainer reads and publishes it (#272).
+- The workflow only makes a draft, created with `--latest=false`; the maintainer reads and publishes it, and unticks GitHub's **Set as the latest release** when publishing, as `--latest=false` holds for the draft only (#272).
 - The notes come from a changelog section `## [Android X.Y.Z] - date`, through `ReleaseNotes.java --android`, with an installing text of the APK's own; the desktop's notes stay as they were (#272).
 - The dry run, started by hand, signs with a throw-away key made in the run in a job without the environment, so it never asks for the release key; it skips only the recorded certificate of the signing checks, and its draft, tag and APK name say "dry run" (#272).
 - `release/android-X.Y.Z` must exist at the tag's commit before the key is asked for; the workflow never creates or moves it (#272).
@@ -78,9 +82,8 @@ How a release is built, signed and published (`android-release.yml`, `tools/andr
 - The files are `car-charge-planner-android-X.Y.Z.apk` and `SHA256SUMS`, as the desktop's, and the release's title is "Car charge planner for Android X.Y.Z" (#272).
 - The build job runs lint, the unit tests and the build's checks again; it runs no emulator, but the run stops unless `android.yml`'s emulator job was green for the tag's commit in a push or a run by hand, as a pull request's run tests a merge commit (#272).
 - One exact Temurin 21 (`AndroidReleaseWorkflowTest`) and build-tools 36.0.0 build the release; a Java update is a pull request (#272).
-- Only the release job can write and attest. One exception: GitHub lists draft releases only to a token that can write, so the check that no release exists for the tag runs in a job of its own with `contents: write`, which runs nothing of the repository (#272).
-- A release, draft or published, that exists for the tag stops the run; nothing is overwritten, and runs for one tag wait for each other and are never cancelled (#272).
-- No cache anywhere in the workflow (`setup-gradle` with `cache-disabled: true`, no `actions/cache`), so no other run can change what is built or signed (#272, #301).
+- A release, draft or published, that exists for the tag stops the run; nothing is overwritten. Runs for one tag wait for each other in order and are never cancelled (`queue: max`), up to GitHub's limit of 100 waiting runs in a group, beyond which a run is cancelled (#272).
+- No cache anywhere in the workflow (`setup-gradle` with `cache-disabled: true`, no `actions/cache`, no `cache:` of `setup-java`), so no other run can change what is built or signed (#272).
 - `AndroidReleaseWorkflowTest` holds the workflow's text to these rules, in the Maven build, so every pull request that changes the workflow runs it (#272).
 - `assembleRelease` builds as it is, without a release block; R8 is #424 (#272).
 - No check that the tag is reachable from `main`, as on the desktop: a release branch may carry a fix (#272).
