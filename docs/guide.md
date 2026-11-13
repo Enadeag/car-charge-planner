@@ -1,6 +1,6 @@
 # Guide
 
-How to use Car charge planner: set-up, the dashboard and the tray icon, Settings, how it plans, and its commands. [Installing](install.md) says how to get it on your computer. The words used here (surplus, charge window, away period and so on) are defined in [CONTEXT.md](../CONTEXT.md).
+How to use Car charge planner: set-up, the dashboard and the tray icon, Settings, how it plans, the Android app, and its commands. [Installing](install.md) says how to get it on your computer or phone. The words used here (surplus, charge window, away period and so on) are defined in [CONTEXT.md](../CONTEXT.md).
 
 ## Starting and quitting
 
@@ -125,6 +125,41 @@ A charge power fills in the phases and the maximum charge current at 230 V: 3.7 
 
 - **The plan is forecast-only.** It uses a weather forecast and the values you enter, not measured data: no smart-meter, inverter or car readings. The more accurate your panel, battery and consumption values, the better the plan.
 - **You enter the battery level by hand**, and the times the car is away and your trips: weekly away periods in Settings, the rest on the dashboard. There is no calendar sync and no connection to the car.
+
+## The Android app
+
+The Android app is not released yet; the first release will be 0.1.0.
+
+The Android app makes the same plan as the desktop app, from the same engine, and everything above about the plan holds for it: the [dashboard's cards](#the-tray-icon-and-the-dashboard), [trips](#trips), [charging hours](#charging-hours), the [charge limit](#setting-the-charge-limit) and [how it plans](#how-it-plans-briefly). [Installing](install.md#android) says how to get it. This part says only where the phone differs. The app is in English and Dutch, in the phone's language (English when the phone's language is another), in the phone's light or dark look, with the phone's 12- or 24-hour clock, and it shows distances in kilometres only.
+
+### Set-up on the phone
+
+Set-up opens by itself the first time, in seven steps: Welcome, Location, Panels, Car, Charger, Away periods and Check; **Next** and **Back** move between them, and **Back** on Welcome closes the app. It does not ask for your language or units, as the phone's are used, and not for the forecast provider: it asks Open-Meteo, the default, and Settings has the other provider and the API keys. Welcome says what leaves your phone, including that the app asks the provider about once an hour while it is closed.
+
+- **Location:** type a place or postcode under **Place or postcode** and choose **Search** (never per keystroke; at most 8 places are shown), or open **Coordinates and time zone** to type the coordinates.
+- **Panels:** one array, with its number of panels, **Direction**, **Tilt**, **Year placed** and **Power per panel**; panels that face another way are added in Settings, Solar panels, with **Add an array**. There is no **I don't know: use typical values** here.
+- **Car** and **Charger** ask what the desktop's set-up asks, each with **I don't know: use typical values**; the charge power at home must be chosen. **Away periods** are the weekly ones, added with **Add period**, each time chosen on Material's time picker.
+- **Check the forecast** asks for one forecast with what you entered, so you know it works. If it fails you can still finish: the dashboard asks again when it opens. **Nothing is saved until Finish**, as on the desktop.
+
+### The dashboard on the phone
+
+The dashboard is the home of the app. There is no tray icon: **Settings** (the gear) and **Refresh** are in the top bar, and a pull down the page refreshes too. A tab per day, **Today** first, runs across the top, and you can swipe between the days. Each day's page scrolls and holds, in this order, the warnings and the card that asks for notifications (on the day in view), the day card, a trip advice card for each trip, the grid advice, the chart of the expected solar power, the **Car battery** card, the **Trips** card, **Car away** and the footer with the forecast provider's credit and the age of the forecast. The plan is made again when you come back to the app after more than 15 minutes, and at once after a change in Settings.
+
+- **Update battery level** on today's Car battery card opens a field that starts empty, so you read the car rather than accept the assumed level: type a whole number from 0 to 100. Until you do, the plan assumes the level and says so.
+- **Add** in the **Car away** row marks the car away on the day you are looking at, **All day** or **Part of the day** with the times chosen on Material's time picker (**Keyboard** types them instead); each coming one has **Remove**, with **Undo** in the message after it.
+- **Add** in the Trips card's heading enters a trip, and **Change** beside a trip changes it. [Entering a trip](#entering-a-trip) holds, with a few differences: the entry opens over the page, with **Close** and **Save** at the top; its days are chosen on Material's date picker, from today up to 20 days ahead; the distance is in km; and **Not with this car** is ticked in the Trips card, **I can charge at the destination** there or in the entry; a tick in the card is saved at once. **Remove** takes a trip away at once, with **Undo**. **Adjust** on a trip's advice card goes to today and opens the entry of the battery level.
+
+### Settings on the phone
+
+**Settings** (the gear in the top bar) lists the desktop's pages, Solar panels, Location, Car and house, Charger, Forecast, Away and Planning, then **Notifications** and **Open source licences**. There are no App and About pages: language, look and units follow the phone (see above), and there is no tray icon or start at login to set. The licences row shows the licence of the app and of the libraries it brings, read in the app, without a network. Each page has its own **Save** and stays open after it; **Back** with unsaved changes asks "Discard changes?".
+
+- **Forecast** has **Check connection to** the provider where the desktop has **Test**, and the API keys are masked until you choose **Show**. The phone allows no screenshot of the page while it is open. **Wi-Fi only** is a switch that applies at once, without **Save**: the hourly update while the app is closed then waits for Wi-Fi, or another network without a data limit; off, any network will do.
+- **Notifications** opens Android's own settings for the app, where you can set its three channels, **Charge windows**, **Battery and trip checks** and **Problems**.
+- A settings file the app cannot use shows "Settings file cannot be used", with the details in English and **Set up again**, which keeps the file aside under another name and starts set-up; a file of a newer version shows "Update the app" and is left as it is.
+
+### Notices on the phone
+
+The notices are the ones the desktop shows, charge windows, grid charges and the [trip notices](#notifications-for-trips), worded for the phone: you tap one instead of clicking it, and a tap opens the dashboard. The battery check's tap, or its **Enter battery level** button, opens the entry of the level. The lead time is in Settings, Planning, as on the desktop. Android asks your permission before the app may show notices; [Installing](install.md#notifications) says how, and how the notices keep coming while the app is closed, which needs the app to ask the forecast provider about once an hour and an alarm that Android may deliver late.
 
 ## The command line
 

@@ -6,6 +6,8 @@
 
 A desktop app for Linux and Windows that tells you when to charge your electric car so that as much of your own solar energy as possible is used and as little as possible is fed back to the grid. It suits a fixed-price energy contract: it does not look at hourly energy prices.
 
+There is also an **Android app**, the same planner on your phone. It works without the desktop app and without a server: it fetches the forecast and makes the plan itself, and tells you before a charge window starts, also while it is closed. It is described under [The Android app](#the-android-app).
+
 It is advisory only: it recommends a **charge window** and a **charge power**, and you set the charge current in your charger's app yourself.
 
 It plans from a description of your set-up: your solar panels (the number of panels, their direction and tilt, and the year they were placed or their power per panel), your location, the power your car charges with at home and your car's battery, entered in set-up and changed in Settings later. Where you do not know a value, the app uses a **typical value**: replace it with yours when you know it, or the plan will not fit your home.
@@ -34,6 +36,7 @@ The pictures are of an example home; a real desktop theme looks a little differe
 | Other Linux desktops (XFCE, Cinnamon, Sway, X11 sessions and so on) | Untested. Without a system tray (StatusNotifierItem) the app shows a window. |
 | **Windows 11** (x64) | Supported, with an installer. |
 | Windows 10 (x64) | Untested. The same installer, but nobody has confirmed it on Windows 10 yet. |
+| **Android 10 or newer** | Each release is checked by hand on a real phone: see [The Android app](#the-android-app). |
 | macOS | Not built. |
 
 "Supported" means a person has checked every release on that system. Tried it on your desktop? Please tell us, whether it works or not, with the **Does it work on my desktop?** issue form.
@@ -51,6 +54,21 @@ The `.deb` and `.rpm` put the app in `/opt/car-charge-planner` and in the applic
 
 [Installing](docs/install.md) has the details, updates and uninstalling.
 
+## The Android app
+
+The Android app is the same planner on your phone: the same engine, so the same plan from the same forecast, with the dashboard, trips, away periods and notices. It needs no desktop app and no server, and no account. It asks the forecast provider you chose for a forecast itself, once an hour while it is closed too once you allow notifications, so that it can tell you before each charge window starts; with **Wi-Fi only** switched on, only on Wi-Fi. It needs Android 10 or newer, and is in English and Dutch.
+
+The Android app is not released yet; the first release will be 0.1.0.
+
+**Get it:** download `car-charge-planner-android-<version>.apk` from the [release page](https://github.com/Enadeag/car-charge-planner/releases), from the release tagged `android-v<version>`, and install it as [Installing](docs/install.md#android) says. The APK is signed with the app's own release key, whose certificate's fingerprint is in [`android/release-certificate.sha256`](android/release-certificate.sha256) and in each release's notes. There is no Google Play version, and F-Droid is planned and not there yet. No download updates itself: install the next release's APK over the old one.
+
+**What it does not have**, compared with the desktop app:
+
+- It has no tray icon, no command line and no start at login setting of its own.
+- It has no App page in Settings: it takes its language (English or Dutch, English for any other), its light or dark look from the phone and, on Android 12 and later, its colours from the wallpaper, and it shows distances in kilometres only, with no switch to miles.
+
+[The guide](docs/guide.md#the-android-app) says what is different on the phone.
+
 ## More
 
 - [Guide](docs/guide.md): set-up, the dashboard, Settings, how it plans, the command line.
@@ -58,7 +76,7 @@ The `.deb` and `.rpm` put the app in `/opt/car-charge-planner` and in the applic
 
 ## Data and privacy
 
-The app runs on your computer: no account, no telemetry, no update check. It contacts only the forecast provider you chose, for a forecast for your location and panels; your battery level, away periods and plan never leave the computer. [Data and privacy](docs/privacy.md) has the details, and the third-party software the app brings.
+The app runs on your computer or phone: no account, no telemetry, no update check. It contacts only the forecast provider you chose, for a forecast for your location and panels; your battery level, away periods and plan never leave the computer or phone. [Data and privacy](docs/privacy.md) has the details, and the third-party software the app brings.
 
 ## Contributing
 
