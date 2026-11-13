@@ -56,16 +56,16 @@ The `.deb` and `.rpm` put the app in `/opt/car-charge-planner` and in the applic
 
 ## The Android app
 
-The Android app is the same planner on your phone: the same engine, so the same plan from the same forecast, with the dashboard, trips, away periods and notices. It needs no desktop app and no server, and no account. It asks the forecast provider you chose for a forecast itself, once an hour while it is closed too, so that it can tell you before each charge window starts; with **Wi-Fi only** switched on, only on Wi-Fi. It needs Android 10 or newer, and is in English and Dutch.
+The Android app is the same planner on your phone: the same engine, so the same plan from the same forecast, with the dashboard, trips, away periods and notices. It needs no desktop app and no server, and no account. It asks the forecast provider you chose for a forecast itself, once an hour while it is closed too once you allow notifications, so that it can tell you before each charge window starts; with **Wi-Fi only** switched on, only on Wi-Fi. It needs Android 10 or newer, and is in English and Dutch.
 
 The Android app is not released yet; the first release will be 0.1.0.
 
-**Get it:** download `car-charge-planner-android-<version>.apk` from the [release page](https://github.com/Enadeag/car-charge-planner/releases) and install it as [Installing](docs/install.md#android) says. The APK is signed with the app's own release key, whose certificate's fingerprint is in [`android/release-certificate.sha256`](android/release-certificate.sha256) and in each release's notes. There is no Google Play version, and F-Droid is planned and not there yet. No download updates itself: install the next release's APK over the old one.
+**Get it:** download `car-charge-planner-android-<version>.apk` from the [release page](https://github.com/Enadeag/car-charge-planner/releases), from the release tagged `android-v<version>`, and install it as [Installing](docs/install.md#android) says. The APK is signed with the app's own release key, whose certificate's fingerprint is in [`android/release-certificate.sha256`](android/release-certificate.sha256) and in each release's notes. There is no Google Play version, and F-Droid is planned and not there yet. No download updates itself: install the next release's APK over the old one.
 
 **What it does not have**, compared with the desktop app:
 
 - It has no tray icon, no command line and no start at login setting of its own.
-- It has no App page in Settings: it takes its language (English or Dutch, English for any other), its light or dark look and its colours from the phone, and it shows distances in kilometres only, with no switch to miles.
+- It has no App page in Settings: it takes its language (English or Dutch, English for any other), its light or dark look from the phone and, on Android 12 and later, its colours from the wallpaper, and it shows distances in kilometres only, with no switch to miles.
 
 [The guide](docs/guide.md#the-android-app) says what is different on the phone.
 
