@@ -47,9 +47,9 @@ jobs:
               docs/*|*.md|LICENSE|NOTICE|.github/ISSUE_TEMPLATE/*) ;;
               *) code=true ;;
             esac
-            # the engine's tests also run on Java 17: its sources, any pom.xml and this workflow
+            # what the engine's Java 17 run depends on: its sources, the example file its tests read, the build
             case "$file" in
-              engine/*|pom.xml|*/pom.xml|.github/workflows/ci.yml) engine=true ;;
+              engine/*|docs/example-engine.json|pom.xml|*/pom.xml|mvnw|.mvn/*|.github/workflows/ci.yml) engine=true ;;
             esac
           done <<< "$files"
           echo "code=$code" >> "$GITHUB_OUTPUT"
@@ -95,9 +95,9 @@ jobs:
             desktop/target/site/jacoco/
           retention-days: 7
 
-  # The engine is compiled for Java 17 (--release 17) but its tests run on Java 25 above. Maven and javac stay on
-  # Java 25, so the build's compiler flags are the same; only the test JVM that surefire forks is Temurin 17, through
-  # its jvm parameter. The last JDK installed is the default, and the other is found in JAVA_HOME_17_X64.
+  # The engine is compiled for Java 17 (--release 17) but the linux job runs its tests on Java 25. Here Maven and
+  # javac stay on Java 25, so the compiler flags are the same; only the test JVM that surefire forks is Temurin 17,
+  # through its jvm parameter. The last JDK installed is the default, and the other is found in JAVA_HOME_17_X64.
   engine-java17:
     needs: changes
     if: needs.changes.outputs.engine == 'true'
@@ -115,7 +115,11 @@ jobs:
             25
           cache: maven
       - name: The engine's tests on Java 17
-        run: ./mvnw -B -pl engine -am test -Djvm="$JAVA_HOME_17_X64/bin/java"
+        run: |
+          "${JAVA_HOME_17_X64:?}/bin/java" -version
+          ./mvnw -B -pl engine -am test -Djvm="$JAVA_HOME_17_X64/bin/java"
+      - name: The tests ran on Java 17
+        run: grep -q 'name="java.specification.version" value="17"' engine/target/surefire-reports/TEST-*.xml
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
