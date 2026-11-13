@@ -255,7 +255,7 @@ jobs:
             android/*/build/test-results/
           retention-days: 7
 
-  # Signs with the release key. The environment android-release, once #271 has made it, asks the maintainer to approve,
+  # Signs with the release key. The environment android-release asks the maintainer to approve,
   # holds the key's secrets and lets only android-v* tags in. The secrets are in the env of the signing step alone.
   sign:
     needs: [prepare, build, tag-checks, no-release-yet]

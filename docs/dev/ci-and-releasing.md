@@ -24,7 +24,7 @@ GitHub's rulesets hold `main`, the release branches and the desktop's tags:
 - A repository admin may bypass the `main` rules only through a pull request, never with a direct push, which is how the maintainer merges their own pull requests, as nobody can approve their own.
 - Branches `release/**` (with `release/android-*`) and tags `v*` can be created, moved or deleted only by a repository admin.
 
-Not made yet, with the release key (#271): a ruleset that gives tags `android-v*` the same rule, and the environment `android-release`. That environment will hold the Android release key's secrets, `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD`, ask the maintainer to approve every job that uses it, and have one deployment rule, of type tag with the pattern `android-v*`; a rule of type branch would let a branch named `android-v…` ask for the key.
+A ruleset gives tags `android-v*` the same rule. The environment `android-release` holds the Android release key's secrets, `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD`, asks the maintainer to approve every job that uses it, lets no admin bypass that, and has one deployment rule, of type tag with the pattern `android-v*`; a rule of type branch would let a branch named `android-v…` ask for the key.
 
 Private vulnerability reporting, secret scanning and push protection are on.
 
