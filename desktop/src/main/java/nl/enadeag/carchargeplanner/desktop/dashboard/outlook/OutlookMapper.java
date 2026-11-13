@@ -81,7 +81,7 @@ public final class OutlookMapper {
                     new DashboardModel.NoPlan(messages.text(TextKey.NOT_SET_UP), messages.text(TextKey.NOT_SET_UP_FIRST),
                             "", true, List.of());
             case Outlook.ConfigUnusable unusable ->
-                    new DashboardModel.NoPlan(messages.text(TextKey.NOT_SET_UP), whatToFix(unusable, messages), "");
+                    new DashboardModel.NoPlan(messages.text(TextKey.UNUSABLE_CONFIG), whatToFix(unusable, messages), "");
         };
     }
 

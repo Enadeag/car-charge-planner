@@ -102,6 +102,27 @@ class OutlookMapperTest {
     }
 
     @Test
+    void anUnusableConfigIsHeadedByTheSettingsFileThatCannotBeUsedAndNotByNotSetUp() {
+        var unusable = new Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("/home/owner/engine.json"),
+                "system: is required");
+
+        var english = (DashboardModel.NoPlan) MAPPER.map(unusable);
+        var dutch = (DashboardModel.NoPlan) DUTCH.map(unusable);
+
+        assertThat(english.headline()).isEqualTo("Settings file cannot be used");
+        assertThat(english.detail()).isEqualTo("Fix engine.json: system: is required");
+        assertThat(dutch.headline()).isEqualTo("Niet ingesteld");
+    }
+
+    @Test
+    void withoutAConfigFileTheHeadlineIsNotSetUp() {
+        var none = new Outlook.NotSetUp(Path.of("/home/owner/engine.json"));
+
+        assertThat(((DashboardModel.NoPlan) MAPPER.map(none)).headline()).isEqualTo("Not set up");
+        assertThat(((DashboardModel.NoPlan) DUTCH.map(none)).headline()).isEqualTo("Niet ingesteld");
+    }
+
+    @Test
     void theMainCardReadsAsOneSentence() {
         var today = plan(day(TODAY, window(TODAY, 11, 14, 0.6))).days().getFirst();
 

@@ -43,7 +43,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | Grid advice | advies: laden uit het net | a grid charge is laden uit het net | Grid warning, top-up, emergency charge |
 | Set-up | instelhulp |  | Onboarding, configuration, wizard (the wizard is only the form set-up takes) |
 | Not set up | niet ingesteld |  | Unconfigured, first run (first run is the moment, not the state) |
-| Unusable config | niet ingesteld | with what to fix | Broken config, not set up (that is the state without a file) |
+| Unusable config | niet ingesteld | the heading is "Settings file cannot be used" in English, with what to fix under it | Broken config, not set up (that is the state without a file) |
 | Settings file | instellingenbestand |  | Config file, configuration, engine config |
 | Panel array | panelengroep |  | Plane (the forecast services' word), string (an electrical term), roof |
 | Number of panels | aantal panelen | a panel array's field |  |
