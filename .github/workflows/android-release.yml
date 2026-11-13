@@ -321,14 +321,15 @@ jobs:
           sum=$(sha256sum "$apk")
           echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
           echo "certificate=$certificate" >> "$GITHUB_OUTPUT"
-      # overwrite: a re-run of all jobs meets the artifact of the first attempt
+      # overwrite: a re-run of all jobs meets the artifact of the first attempt; one day, as any signed-in user can
+      # download the signed APK until the maintainer has published or deleted the draft
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-signed-apk
           overwrite: true
           path: ${{ runner.temp }}/signed/car-charge-planner-android-*.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   # The dry run's signing: a job of its own, without the environment, so a dry run never asks for the release key.
   sign-dry-run:
@@ -390,14 +391,15 @@ jobs:
             android/app/debug.keystore
           sum=$(sha256sum "$apk")
           echo "sha256=${sum%% *}" >> "$GITHUB_OUTPUT"
-      # overwrite: a re-run of all jobs meets the artifact of the first attempt
+      # overwrite: a re-run of all jobs meets the artifact of the first attempt; one day, as any signed-in user can
+      # download the signed APK until the maintainer has published or deleted the draft
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-signed-apk
           overwrite: true
           path: ${{ runner.temp }}/signed/car-charge-planner-android-*.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   # Needs the one signing job that ran; the other is skipped.
   release:
@@ -441,19 +443,21 @@ jobs:
           fi
           sha256sum -- "$apk" > SHA256SUMS
           cat SHA256SUMS
+      # The notes name the certificate that the prepare job read from the repository, in the sentence of
+      # tools/ReleaseNotes.java; the APK must carry that one.
+      - name: Check that the notes name the signed APK's certificate
+        if: env.DRY_RUN != 'true'
+        run: |
+          sentence="SHA-256 fingerprint \`$SIGNED_CERTIFICATE\`"
+          if [ -z "$SIGNED_CERTIFICATE" ] || ! grep -Fq -- "$sentence" "$RUNNER_TEMP/notes/notes.md"; then
+            echo "::error::the release notes do not name the signed APK's certificate '$SIGNED_CERTIFICATE'"; exit 1
+          fi
       # Not in a dry run: its APK is not a release.
       - name: Attest where the APK was built
         if: env.DRY_RUN != 'true'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: release/car-charge-planner-android-*.apk
-      # The notes name the certificate that the prepare job read from the repository; the APK must carry that one.
-      - name: Check that the notes name the signed APK's certificate
-        if: env.DRY_RUN != 'true'
-        run: |
-          if [ -z "$SIGNED_CERTIFICATE" ] || ! grep -Fq -- "$SIGNED_CERTIFICATE" "$RUNNER_TEMP/notes/notes.md"; then
-            echo "::error::the release notes do not name the signed APK's certificate '$SIGNED_CERTIFICATE'"; exit 1
-          fi
       - name: Create the draft release
         run: |
           if [ "$DRY_RUN" = "true" ]; then

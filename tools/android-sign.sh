@@ -121,6 +121,18 @@ key's certificate (docs/dev/ci-and-releasing.md, Releasing the Android app)"
   fingerprint=$value
 }
 
+# Sets report to apksigner's verbose output for APK $1 and digest to the SHA-256 digest of the certificate of its one
+# signer. A failure shows the last lines of apksigner's output.
+signer_digest() {
+  if ! report=$("$apksigner" verify --min-sdk-version 24 --verbose --print-certs "$1" 2>&1); then
+    fail "$1 does not verify: $(printf '%s\n' "$report" | tail -n 5)"
+  fi
+  digest=$(printf '%s\n' "$report" | sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p')
+  [ "$(printf '%s\n' "$digest" | grep -c .)" -eq 1 ] || fail "$1 has not exactly one signer's certificate"
+  printf '%s\n' "$digest" | grep -Eqx '[0-9a-f]{64}' \
+    || fail "$1: apksigner shows no SHA-256 digest of 64 lowercase hex digits for the signer's certificate"
+}
+
 command=$1
 shift
 case "$command" in
@@ -160,8 +172,7 @@ case "$command" in
     apk=$1
     # From API 28 on apksigner checks the v3 signature alone and reports v2 as false; from API 24, the first with
     # v2, it checks both.
-    report=$("$apksigner" verify --min-sdk-version 24 --verbose --print-certs "$apk" 2> /dev/null) \
-      || fail "$apk does not verify: $("$apksigner" verify --min-sdk-version 24 "$apk" 2>&1 | tail -n 5)"
+    signer_digest "$apk"
     for line in "Verified using v1 scheme (JAR signing): false" \
         "Verified using v2 scheme (APK Signature Scheme v2): true" \
         "Verified using v3 scheme (APK Signature Scheme v3): true" \
@@ -170,31 +181,26 @@ case "$command" in
     done
     no_jar_signature "$apk"
     "$zipalign" -c -P 16 4 "$apk" || fail "$apk is not zip-aligned"
-    digests=$(printf '%s\n' "$report" | sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p')
-    [ "$(printf '%s\n' "$digests" | grep -c .)" -eq 1 ] || fail "$apk has not exactly one signer's certificate"
     # the debug keystore's password is public (docs/dev/android.md)
     certificate_digest "$5" androiddebugkey android
     debug=$sha256
     printf '%s\n' "$debug" | grep -Eqx '[0-9a-f]{64}' || fail "no certificate read from $5"
-    [ "$digests" != "$debug" ] || fail "$apk is signed with the public debug key"
+    [ "$digest" != "$debug" ] || fail "$apk is signed with the public debug key"
     if [ $# -eq 6 ]; then
       read_fingerprint "$6"
-      [ "$digests" = "$fingerprint" ] || fail "$apk is signed with certificate $digests, not with the release \
+      [ "$digest" = "$fingerprint" ] || fail "$apk is signed with certificate $digest, not with the release \
 certificate $fingerprint that $6 records"
       echo "$apk: the certificate is the one $6 records"
     fi
     check_manifest "$apk" "$2" "$3" "$4"
-    echo "$apk: signed with v2 and v3 only, by one signer, certificate SHA-256 $digests"
+    echo "$apk: signed with v2 and v3 only, by one signer, certificate SHA-256 $digest"
     ;;
   certificate)
     [ $# -eq 1 ] || usage
     need_build_tools
     need_apk "$1"
-    report=$("$apksigner" verify --min-sdk-version 24 --verbose --print-certs "$1" 2> /dev/null) \
-      || fail "$1 does not verify"
-    digests=$(printf '%s\n' "$report" | sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p')
-    [ "$(printf '%s\n' "$digests" | grep -c .)" -eq 1 ] || fail "$1 has not exactly one signer's certificate"
-    printf '%s\n' "$digests"
+    signer_digest "$1"
+    printf '%s\n' "$digest"
     ;;
   fingerprint)
     [ $# -eq 1 ] || usage

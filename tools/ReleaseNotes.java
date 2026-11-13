@@ -77,11 +77,11 @@ public final class ReleaseNotes {
         out.print(body.get() + "\n\n" + installing);
     }
 
-    /** Two arguments for the desktop; for Android, {@code --android}, the version, the changelog and a fingerprint. */
     private static boolean rightArguments(String[] args, boolean android) {
         if (!android) {
             return args.length == 2;
         }
+        // a blank fingerprint would leave the notes without the certificate to check the APK against
         return args.length == 4 && !args[3].isBlank();
     }
 

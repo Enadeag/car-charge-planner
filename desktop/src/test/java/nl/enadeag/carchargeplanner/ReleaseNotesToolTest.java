@@ -128,7 +128,7 @@ class ReleaseNotesToolTest {
         assertThat(run.exitCode()).isZero();
         assertThat(run.out()).startsWith("The first Android release.\n\n### Installing\n");
         assertThat(run.out()).contains("Android 10 or newer", "`car-charge-planner-android-0.1.0.apk`",
-                        "`sha256sum --ignore-missing -c SHA256SUMS`", "`" + FINGERPRINT + "`",
+                        "`sha256sum --ignore-missing -c SHA256SUMS`", "SHA-256 fingerprint `" + FINGERPRINT + "`",
                         "`apksigner verify --print-certs car-charge-planner-android-0.1.0.apk`",
                         "tag `android-v0.1.0`",
                         "`gh attestation verify car-charge-planner-android-0.1.0.apk -R Enadeag/car-charge-planner`",
