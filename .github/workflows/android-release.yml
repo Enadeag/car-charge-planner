@@ -1,0 +1,411 @@
+name: Android release
+
+# A tag android-vX.Y.Z builds the Android app's release APK, signs it in the environment android-release once the
+# maintainer approves, and attaches it, with SHA256SUMS and an attestation, to a DRAFT GitHub Release that the
+# maintainer reads and publishes by hand (docs/dev/ci-and-releasing.md, Releasing the Android app; #272). The tag must
+# be "android-v" plus the versionName of android/app/build.gradle.kts, which has no -SNAPSHOT at a release; the branch
+# release/android-X.Y.Z must be at the tag, the emulator job of android.yml green for its commit, and no release may
+# exist for the tag yet. All of that is checked before the key is asked for.
+#
+# The jobs split what each may touch: prepare and build run Gradle with a read-only token and no secrets; sign has the
+# key (environment android-release) and runs no Gradle and no third-party action, only apksigner and
+# tools/android-sign.sh; release has the token that writes the draft and the attestation, and no key. Nothing caches:
+# a cache another run filled could change what is built or signed.
+#
+# Dry run: start this workflow by hand (Actions, Android release, Run workflow, on main). It does everything but the
+# checks of the tag, the release branch, the emulator job and an existing release; it signs with a throw-away key made
+# in the run, in a job without the environment, checks everything but the recorded certificate, and makes a draft
+# called "Android dry run", without an attestation. Delete that draft afterwards.
+#
+# The build uses one exact Java version (AndroidReleaseWorkflowTest keeps it so); a new one comes through a pull
+# request (docs/dev/ci-and-releasing.md, Java updates).
+on:
+  push:
+    tags: ["android-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# one run per tag (or per branch, for a dry run) at a time; a second one waits, and none is cancelled
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  APP_ID: io.github.enadeag.car_charge_planner
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version-name: ${{ steps.version.outputs.version-name }}
+      version-code: ${{ steps.version.outputs.version-code }}
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the tag's form
+        if: github.event_name == 'push'
+        run: |
+          number='(0|[1-9][0-9]*)'
+          if ! printf '%s\n' "$GITHUB_REF_NAME" | grep -Eqx "android-v$number\.$number\.$number"; then
+            echo "::error::tag $GITHUB_REF_NAME is not android-vX.Y.Z; an Android release has no other tags"
+            exit 1
+          fi
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      # Checks gradle-wrapper.jar against Gradle's published checksums.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-disabled: true
+      - name: Android SDK platform 37 and build-tools 36.0.0
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$sdkmanager" --licenses > /dev/null
+          "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
+      # The version code follows from the version name in the build (AppVersion), so it is read, not worked out here.
+      - name: Read the version and compare it with the tag
+        id: version
+        run: |
+          out=$(./gradlew -q --console=plain :app:printReleaseVersion)
+          name=$(printf '%s\n' "$out" | sed -n 's/^versionName=//p')
+          code=$(printf '%s\n' "$out" | sed -n 's/^versionCode=//p')
+          if [ -z "$name" ] || [ -z "$code" ]; then
+            echo "::error::printReleaseVersion gave no version name or code: $out"; exit 1
+          fi
+          echo "versionName $name, versionCode $code"
+          echo "version-name=$name" >> "$GITHUB_OUTPUT"
+          echo "version-code=$code" >> "$GITHUB_OUTPUT"
+          [ "$GITHUB_EVENT_NAME" = "push" ] || exit 0
+          case "$name" in
+            *-SNAPSHOT)
+              echo "::error::the build says $name: a release commit sets the versionName without -SNAPSHOT"
+              exit 1 ;;
+          esac
+          if [ "$GITHUB_REF_NAME" != "android-v$name" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match the versionName $name (expected tag android-v$name)"
+            exit 1
+          fi
+      # here, not in the release job, which holds a token that can write to the repository
+      - name: Release notes, from the CHANGELOG.md section for this version
+        working-directory: .
+        env:
+          VERSION: ${{ steps.version.outputs.version-name }}
+        run: |
+          notes="$RUNNER_TEMP/notes/notes.md"
+          mkdir "$RUNNER_TEMP/notes"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            fingerprint=$(sh tools/android-sign.sh fingerprint android/release-certificate.sha256)
+            java tools/ReleaseNotes.java --android "$VERSION" CHANGELOG.md "$fingerprint" > "$notes"
+          else
+            printf 'Dry run of the Android release workflow (run %s, version %s), %s. Delete this draft.\n\n' \
+              "$GITHUB_RUN_ID" "$VERSION" "signed with a throw-away key" > "$notes"
+            release="${VERSION%-SNAPSHOT}"
+            java tools/ReleaseNotes.java --android "$release" CHANGELOG.md "(dry run: a throw-away key)" >> "$notes" \
+              || echo "::warning::CHANGELOG.md has no section for Android $release yet; a tag would stop here"
+          fi
+          cat "$notes"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-release-notes
+          path: ${{ runner.temp }}/notes/notes.md
+          if-no-files-found: error
+          retention-days: 14
+
+  # The checks of the tag that read GitHub's API, in a job without the repository's code.
+  tag-checks:
+    needs: prepare
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read  # the runs and jobs of android.yml
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.prepare.outputs.version-name }}
+    steps:
+      - name: Check that release/android-X.Y.Z is at the tag
+        run: |
+          branch="release/android-$VERSION"
+          # gh prints the 404 body on stdout when the branch does not exist, so only trust its output on success.
+          if ! at=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq .object.sha 2> /dev/null); then
+            echo "::error::$branch does not exist: create it at the tag's commit before pushing the tag"; exit 1
+          fi
+          if [ "$at" != "$GITHUB_SHA" ]; then
+            echo "::error::$branch is at $at, not at this tag's commit $GITHUB_SHA"; exit 1
+          fi
+          echo "$branch is at $GITHUB_SHA"
+      # A push or a run by hand tests this very commit; a pull request's run tests a merge commit, so it does not count.
+      - name: Check that the emulator job was green for this commit
+        run: |
+          workflow="repos/$GITHUB_REPOSITORY/actions/workflows/android.yml"
+          runs=$(gh api "$workflow/runs?head_sha=$GITHUB_SHA&per_page=100" \
+            --jq '.workflow_runs[] | select(.event == "push" or .event == "workflow_dispatch") | .id')
+          for run in $runs; do
+            green=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/jobs?per_page=100" \
+              --jq '.jobs[] | select(.name == "android-emulator" and .conclusion == "success") | .html_url')
+            if [ -n "$green" ]; then
+              echo "android-emulator was green for $GITHUB_SHA: $green"; exit 0
+            fi
+          done
+          echo "::error::no green android-emulator job of android.yml for $GITHUB_SHA: a push to" \
+            "release/android-$VERSION runs it, or run android.yml by hand on that branch"
+          exit 1
+
+  # Only a token that can write sees draft releases, so this check has a job of its own, with that token alone and
+  # without the repository's code.
+  no-release-yet:
+    needs: prepare
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write  # to list draft releases too; nothing is written here
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check that no release, draft or published, exists for the tag
+        run: |
+          tags=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name')
+          if printf '%s\n' "$tags" | grep -Fqx "$GITHUB_REF_NAME"; then
+            echo "::error::a release (draft or published) exists for $GITHUB_REF_NAME; this workflow never replaces one"
+            exit 1
+          fi
+          echo "no release exists for $GITHUB_REF_NAME"
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      apk-sha256: ${{ steps.apk.outputs.sha256 }}
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-disabled: true
+      - name: Android SDK platform 37 and build-tools 36.0.0
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$sdkmanager" --licenses > /dev/null
+          "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
+      # the emulator's tests are not run here: tag-checks requires android.yml's emulator job green for this commit
+      - name: Android Lint, the unit tests and the build's checks, and the unsigned release APK
+        run: ./gradlew --stacktrace lint check assembleRelease
+      - name: Check the unsigned APK
+        id: apk
+        working-directory: .
+        env:
+          VERSION_NAME: ${{ needs.prepare.outputs.version-name }}
+          VERSION_CODE: ${{ needs.prepare.outputs.version-code }}
+        run: |
+          apk=android/app/build/outputs/apk/release/app-release-unsigned.apk
+          sha256=$(sha256sum "$apk" | cut -c1-64)
+          sh tools/android-sign.sh check-unsigned "$apk" "$sha256" "$APP_ID" "$VERSION_NAME" "$VERSION_CODE"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-unsigned-apk
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: android-release-reports
+          path: |
+            android/*/build/reports/
+            android/*/build/test-results/
+          retention-days: 7
+
+  # Signs with the release key. The environment android-release asks the maintainer to approve, holds the key's
+  # secrets and lets only android-v* tags in (#271). The secrets are in the env of the signing step alone.
+  sign:
+    needs: [prepare, build, tag-checks, no-release-yet]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: android-release
+    outputs:
+      apk-sha256: ${{ steps.signed.outputs.sha256 }}
+    env:
+      VERSION_NAME: ${{ needs.prepare.outputs.version-name }}
+      VERSION_CODE: ${{ needs.prepare.outputs.version-code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: android-unsigned-apk
+          path: ${{ runner.temp }}/unsigned
+      - name: Build-tools 36.0.0
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$sdkmanager" --licenses > /dev/null
+          "$sdkmanager" --install "build-tools;36.0.0"
+      - name: Check the unsigned APK
+        env:
+          APK_SHA256: ${{ needs.build.outputs.apk-sha256 }}
+        run: |
+          sh tools/android-sign.sh check-unsigned "$RUNNER_TEMP/unsigned/app-release-unsigned.apk" "$APK_SHA256" \
+            "$APP_ID" "$VERSION_NAME" "$VERSION_CODE"
+      - name: Sign the APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          umask 077
+          keystore="$RUNNER_TEMP/release-keystore.p12"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$keystore"
+          unset ANDROID_KEYSTORE_BASE64
+          mkdir "$RUNNER_TEMP/signed"
+          sh tools/android-sign.sh sign "$RUNNER_TEMP/unsigned/app-release-unsigned.apk" "$keystore" \
+            "$RUNNER_TEMP/signed/car-charge-planner-android-$VERSION_NAME.apk"
+      - name: Remove the keystore
+        if: always()
+        run: rm -f "${RUNNER_TEMP:?}/release-keystore.p12"
+      - name: Check the signed APK
+        id: signed
+        run: |
+          apk="$RUNNER_TEMP/signed/car-charge-planner-android-$VERSION_NAME.apk"
+          sh tools/android-sign.sh check-signed "$apk" "$APP_ID" "$VERSION_NAME" "$VERSION_CODE" \
+            android/app/debug.keystore android/release-certificate.sha256
+          echo "sha256=$(sha256sum "$apk" | cut -c1-64)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-signed-apk
+          path: ${{ runner.temp }}/signed/car-charge-planner-android-*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  # The dry run's signing: a job of its own, without the environment, so a dry run never asks for the release key.
+  sign-dry-run:
+    needs: [prepare, build]
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      apk-sha256: ${{ steps.signed.outputs.sha256 }}
+    env:
+      VERSION_NAME: ${{ needs.prepare.outputs.version-name }}
+      VERSION_CODE: ${{ needs.prepare.outputs.version-code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: android-unsigned-apk
+          path: ${{ runner.temp }}/unsigned
+      - name: Build-tools 36.0.0
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$sdkmanager" --licenses > /dev/null
+          "$sdkmanager" --install "build-tools;36.0.0"
+      - name: Check the unsigned APK
+        env:
+          APK_SHA256: ${{ needs.build.outputs.apk-sha256 }}
+        run: |
+          sh tools/android-sign.sh check-unsigned "$RUNNER_TEMP/unsigned/app-release-unsigned.apk" "$APK_SHA256" \
+            "$APP_ID" "$VERSION_NAME" "$VERSION_CODE"
+      - name: Make a throw-away key and sign the APK with it
+        run: |
+          umask 077
+          ANDROID_KEYSTORE_PASSWORD=$(openssl rand -hex 24)
+          export ANDROID_KEYSTORE_PASSWORD
+          keystore="$RUNNER_TEMP/dry-run-keystore.p12"
+          sh tools/android-sign.sh throwaway-key "$keystore"
+          mkdir "$RUNNER_TEMP/signed"
+          sh tools/android-sign.sh sign "$RUNNER_TEMP/unsigned/app-release-unsigned.apk" "$keystore" \
+            "$RUNNER_TEMP/signed/car-charge-planner-android-$VERSION_NAME-dry-run.apk"
+      - name: Remove the keystore
+        if: always()
+        run: rm -f "${RUNNER_TEMP:?}/dry-run-keystore.p12"
+      # every check but the recorded certificate's, which the throw-away key cannot have
+      - name: Check the signed APK
+        id: signed
+        run: |
+          apk="$RUNNER_TEMP/signed/car-charge-planner-android-$VERSION_NAME-dry-run.apk"
+          sh tools/android-sign.sh check-signed "$apk" "$APP_ID" "$VERSION_NAME" "$VERSION_CODE" \
+            android/app/debug.keystore
+          echo "sha256=$(sha256sum "$apk" | cut -c1-64)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-signed-apk
+          path: ${{ runner.temp }}/signed/car-charge-planner-android-*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  # Needs the one signing job that ran; the other is skipped.
+  release:
+    needs: [prepare, build, sign, sign-dry-run]
+    if: >-
+      ${{ !cancelled() && needs.build.result == 'success'
+      && (needs.sign.result == 'success' || needs.sign-dry-run.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write  # create the draft release
+      id-token: write  # the attestation: a token that says which workflow run built the APK
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.prepare.outputs.version-name }}
+      DRY_RUN: ${{ github.event_name != 'push' }}
+      SIGNED_SHA256: ${{ needs.sign.outputs.apk-sha256 || needs.sign-dry-run.outputs.apk-sha256 }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: android-release-notes
+          path: ${{ runner.temp }}/notes
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: android-signed-apk
+          path: release
+      - name: Checksums
+        run: |
+          cd release
+          if [ "$DRY_RUN" = "true" ]; then apk="car-charge-planner-android-$VERSION-dry-run.apk"
+          else apk="car-charge-planner-android-$VERSION.apk"; fi
+          if [ "$(ls)" != "$apk" ]; then
+            echo "::error::expected $apk only"; ls -l; exit 1
+          fi
+          if [ "$(sha256sum "$apk" | cut -c1-64)" != "$SIGNED_SHA256" ]; then
+            echo "::error::$apk is not the APK the signing job checked (SHA-256 $SIGNED_SHA256)"; exit 1
+          fi
+          sha256sum -- "$apk" > SHA256SUMS
+          cat SHA256SUMS
+      # Not in a dry run: its APK is not a release.
+      - name: Attest where the APK was built
+        if: env.DRY_RUN != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/car-charge-planner-android-*.apk
+      - name: Create the draft release
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            gh release create "android-dry-run-$GITHUB_RUN_ID" release/* --draft --target "$GITHUB_SHA" --latest=false \
+              --title "Android dry run" --notes-file "$RUNNER_TEMP/notes/notes.md"
+          else
+            gh release create "$GITHUB_REF_NAME" release/* --draft --verify-tag --latest=false \
+              --title "Car charge planner for Android $VERSION" --notes-file "$RUNNER_TEMP/notes/notes.md"
+          fi

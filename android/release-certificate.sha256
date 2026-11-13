@@ -1,0 +1,4 @@
+# The SHA-256 fingerprint of the release key's certificate (#271), which android-release.yml requires of the signed
+# APK and the release notes name: one line of 64 hex digits, with or without colons, below these comments. It stays
+# empty until the release key exists; until then a tag run stops before it asks for the key.
+# docs/dev/ci-and-releasing.md, Releasing the Android app, says how to read it from the keystore.
