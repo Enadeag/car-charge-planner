@@ -11,6 +11,7 @@ The workflows are in `.github/workflows/`:
 - `windows-installer.yml` builds the installer with `tools\package-windows.ps1`, installs it silently, runs the installed `car-charge-planner.exe quit`, uninstalls it and keeps the installer as an artifact for 14 days. It runs when the packaging changes on `main`, by hand, and for a release.
 - `mutation.yml` runs PIT and the tests in a random order, weekly and by hand, and PIT on the engine for a pull request that touches it; see [What is tested where](testing.md#what-is-tested-where).
 - `release.yml` makes a release; see [Releasing](#releasing).
+- `android-release.yml` makes a release of the Android app, for a tag `android-vX.Y.Z` and by hand as a dry run; see [Releasing the Android app](#releasing-the-android-app). It uses no cache at all.
 
 The actions are pinned to a full commit SHA, with the version in a comment beside it: update both together. Dependabot (`.github/dependabot.yml`) proposes new versions of the actions, of what the poms name (from the root, which reaches the modules) and of what the Android build's catalog names, weekly and a week after their release, as pull requests that CI builds like any other.
 
@@ -21,7 +22,8 @@ GitHub's rulesets hold three refs:
 - `main` cannot be deleted or force-pushed, and every change reaches it through a pull request with one approving review: a new push dismisses an earlier approval and needs one of its own, and every review thread must be resolved.
 - The required checks of `main` are `changes`, `linux` and `windows` of `ci.yml`, without the need to be up to date with `main` first. The Android jobs (`android-changes`, `android-build`, `android-emulator`) are not among them, so a red Android job does not block a merge.
 - A repository admin may bypass the `main` rules only through a pull request, never with a direct push, which is how the maintainer merges their own pull requests, as nobody can approve their own.
-- Branches `release/**` and tags `v*` can be created, moved or deleted only by a repository admin.
+- Branches `release/**` (with `release/android-*`) and tags `v*` can be created, moved or deleted only by a repository admin; tags `android-v*` get the same rule (#271).
+- The environment `android-release` holds the Android release key's secrets, `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD`, asks the maintainer to approve every job that uses it, and lets only `android-v*` tags deploy to it (#271).
 
 Private vulnerability reporting, secret scanning and push protection are on.
 
@@ -37,6 +39,24 @@ The app has one version, `<revision>` in the parent `pom.xml` at the root; every
 
 To try the workflow without releasing, start it by hand on `main`: it builds everything and makes a draft called "dry run" (delete it afterwards), without the tag check, the attestations or the release branch.
 
+### Releasing the Android app
+
+The Android app has a version of its own, `versionName` in `android/app/build.gradle.kts`: between releases the next one with `-SNAPSHOT`, such as `0.2.0-SNAPSHOT`. The `versionCode` follows from it in the build (`AppVersion` in `android/build-logic`): major × 10000 + minor × 100 + patch, so 0.1.0 is 100; a minor or patch version above 99 fails the build. Its release tags are `android-vX.Y.Z` and its branches `release/android-X.Y.Z`, apart from the desktop's. To release X.Y.Z:
+
+1. Go through [Check on a phone before an Android release](../accessibility.md#check-on-a-phone-before-an-android-release).
+2. In a pull request, set `versionName = "X.Y.Z"`, and move the `### Android` part of `## [Unreleased]` in `CHANGELOG.md` into a section `## [Android X.Y.Z] - YYYY-MM-DD` of its own, above the desktop's latest release; the release notes are made from it (`java tools/ReleaseNotes.java --android X.Y.Z CHANGELOG.md <fingerprint>`).
+3. After the merge, create the branch `release/android-X.Y.Z` at that commit. A push to a `release/android-*` branch runs `android.yml` with its emulator job; wait until that job is green for the commit (or run `android.yml` by hand on the branch).
+4. Tag the same commit `android-vX.Y.Z` and push the tag. `android-release.yml` stops, before anyone is asked for the key, when the tag is not exactly `android-vX.Y.Z`, the `versionName` still ends in `-SNAPSHOT` or is not the tag's version, `CHANGELOG.md` has no section for it, `android/release-certificate.sha256` holds no fingerprint, `release/android-X.Y.Z` does not exist at the tag's commit, no `android-emulator` job of `android.yml` was green for that commit in a run for a push or by hand, or a release, draft or published, exists for the tag. The build job then runs lint, `check` and `assembleRelease` on one exact Temurin 21, without a cache, and checks the unsigned APK.
+5. Approve the job `sign` (environment `android-release`). It checks the unsigned APK again (the build job's SHA-256, unsigned, app ID, version name and code, not debuggable, not test-only), signs it with `apksigner` (v2 and v3, no v1, key alias `release`), removes the keystore, and checks the signed APK: exactly one signer, v2 and v3 without v1, not the debug key, the certificate recorded in `android/release-certificate.sha256`, and the manifest's values once more. `tools/android-sign.sh` does all of that, and runs by hand the same way.
+6. The release job writes `SHA256SUMS`, attests where `car-charge-planner-android-X.Y.Z.apk` was built and makes a draft release "Car charge planner for Android X.Y.Z", not marked as the latest release, so the desktop's stays the latest. Read the draft, install its APK on a phone over the previous release, and publish it by hand.
+7. In a pull request, set `versionName` to the next `-SNAPSHOT` and add an empty `### Android` part under `## [Unreleased]`.
+
+`android/release-certificate.sha256` records the SHA-256 fingerprint of the release key's certificate, on one line below its comments (64 hex digits, with or without colons). Read it from the keystore with `keytool -exportcert -keystore <keystore> -alias release | sha256sum` (it asks for the password), or from an APK signed with the key with `apksigner verify --print-certs <apk>` (`Signer #1 certificate SHA-256 digest`). The file changes only with a new key, which existing installs would refuse as an update.
+
+To try the workflow without releasing, start it by hand (Actions, Android release, Run workflow) on `main`. It skips the checks of the tag, the release branch, the emulator job and an existing release, makes a throw-away key in the run and signs with it in a job without the environment, so it never asks for the release key; it checks everything but the recorded certificate, and makes a draft "Android dry run" (tag `android-dry-run-<run id>`, APK `car-charge-planner-android-<version>-dry-run.apk`) without an attestation. Delete that draft afterwards.
+
+A run that fails leaves nothing to clean up but a draft it may have made: a failure in or after the release job can leave a draft for the tag, and a new run stops while it exists. Delete that draft by hand, fix the cause, and re-run the workflow or, when the fix needs a new commit, move on to the next patch version, as a pushed tag and its branch are never moved.
+
 ### Java updates
 
 The release builds use one exact Java version, the `java-version` of each `setup-java` in `release.yml`, `windows-installer.yml` and `linux-packages.yml` (`ReleaseWorkflowTest` keeps them the same; the last one only builds the test packages, which are not released), and the packages bring that runtime: a user's app gets Java's security fixes only through a new release. Java's security updates come quarterly, on the third Tuesday of January, April, July and October. After each one:
@@ -44,6 +64,8 @@ The release builds use one exact Java version, the `java-version` of each `setup
 1. Read the advisory of the OpenJDK Vulnerability Group (<https://openjdk.org/groups/vulnerability/advisories/>) and check which fixed vulnerabilities reach the app: the modules it links are in `src/packaging/jlink.args` and in the SBOM (`jlink.modules`); what matters most is what a forecast provider's answer reaches: TLS, the HTTP client and the JSON parsing.
 2. Once Temurin has the update, set its exact version (such as `25.0.5+11`) in all three workflows in a pull request, and run `sh tools/scan-sbom.sh` on fresh SBOMs for the libraries.
 3. When a fixed vulnerability reaches the app, release a patch version on the new runtime; otherwise the next release takes it along. The release notes and the SBOMs name the runtime each release brings.
+
+The Android release builds the APK on one exact Temurin 21, the `java-version` of both `setup-java` steps in `android-release.yml` (`AndroidReleaseWorkflowTest` keeps them the same and exact). The APK brings no Java runtime, so an update only changes what builds it: set the newest Temurin 21 version in a pull request after each quarterly update, without an Android release of its own.
 
 ## Dependencies
 

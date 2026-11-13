@@ -33,6 +33,7 @@ Not released yet; this is the way to the first Android release, 0.1.0.
 - A settings file the app cannot use shows its details (in English) and **Set up again**; one of a newer version asks you to update the app and is left as it is.
 - The API keys are kept encrypted with a key in the Android Keystore, and never in a plain file.
 - The app needs Android 10 or newer.
+- Releases of the app come as an APK signed with the app's own release key, with `SHA256SUMS` and the key's certificate fingerprint, on the repository's GitHub Releases, tagged `android-vX.Y.Z` (#272).
 
 ## [0.6.0] - 2026-11-10
 
