@@ -36,12 +36,14 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             echo "code=true" >> "$GITHUB_OUTPUT"; echo "engine=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          files=$(git diff --name-only "$BASE" "$GITHUB_SHA")
-          echo "$files"
+          # unquoted names (a non-ASCII name stays as it is), NUL-separated, and a move as its two paths; into a
+          # file first, so a failing git diff fails the step
+          list=$(mktemp)
+          git -c core.quotePath=false diff --name-only -z --no-renames "$BASE" "$GITHUB_SHA" > "$list"
           code=false
           engine=false
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
+          while IFS= read -r -d '' file; do
+            printf '%s\n' "$file"
             case "$file" in
               docs/example-engine.json) code=true ;;  # the tests read it
               docs/*|*.md|LICENSE|NOTICE|.github/ISSUE_TEMPLATE/*) ;;
@@ -51,7 +53,7 @@ jobs:
             case "$file" in
               engine/*|docs/example-engine.json|pom.xml|*/pom.xml|mvnw|.mvn/*|.github/workflows/ci.yml) engine=true ;;
             esac
-          done <<< "$files"
+          done < "$list"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "engine=$engine" >> "$GITHUB_OUTPUT"
 
