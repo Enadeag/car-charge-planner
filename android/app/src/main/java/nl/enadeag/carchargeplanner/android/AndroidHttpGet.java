@@ -37,9 +37,6 @@ import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
  */
 public final class AndroidHttpGet implements HttpGet {
 
-    /** The desktop's User-Agent ({@code JdkHttpGet}), so the services see one app: no device or version in it. */
-    static final String USER_AGENT = "car-charge-planner (+https://github.com/Enadeag/car-charge-planner)";
-
     private static final int CHUNK = 8 * 1024;
 
     private final AtomicInteger threads = new AtomicInteger();

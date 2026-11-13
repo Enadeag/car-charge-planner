@@ -14,8 +14,7 @@ import java.util.Optional;
  *
  * <p>What every implementation must do, which {@code HttpGetContractTest} among the engine's tests checks:
  * <ul>
- *   <li>send the request's headers, and a User-Agent that names the app with {@code car-charge-planner} (the rest
- *   of its text is the implementation's);</li>
+ *   <li>send the request's headers, and {@link #USER_AGENT} as the User-Agent;</li>
  *   <li>throw an {@link IOException} when nothing answers at the address, or the server could not be reached at
  *       all;</li>
  *   <li>return a redirect (3xx) as the {@link Reply} it is, without following it;</li>
@@ -24,6 +23,8 @@ import java.util.Optional;
  *       fixed type;</li>
  *   <li>refuse a body larger than the request allows with {@link TooLarge}, without reading the rest of it, and
  *       before reading any of it when its {@code Content-Length} already says so;</li>
+ *   <li>throw an {@link IOException} when the body ends before its {@code Content-Length}, as when the server hangs
+ *       up, at once rather than at the timeout;</li>
  *   <li>read the body as UTF-8, which is what JSON is sent in;</li>
  *   <li>keep the first value of a header the server sent more than once;</li>
  *   <li>abort the request when the waiting thread is interrupted, and throw {@link InterruptedException};</li>
@@ -32,6 +33,12 @@ import java.util.Optional;
  * </ul>
  */
 public interface HttpGet {
+
+    /**
+     * The User-Agent every request carries, the same on every platform so the services see one app: its name and its
+     * home page, without a device or a version.
+     */
+    String USER_AGENT = "car-charge-planner (+https://github.com/Enadeag/car-charge-planner)";
 
     /** How long a provider waits for the whole answer, body included, unless it asks otherwise. */
     Duration DEFAULT_TIMEOUT = Duration.ofSeconds(15);
@@ -45,7 +52,8 @@ public interface HttpGet {
      * @param request what to fetch
      * @return the server's answer, whatever its status
      * @throws TooLarge when the body is larger than the request allows; nothing more of it is read
-     * @throws IOException when the server could not be reached or the whole answer did not come in time
+     * @throws IOException when the server could not be reached, the whole answer did not come in time, or the body
+     *     ended before its {@code Content-Length}
      * @throws InterruptedException when the waiting thread was interrupted
      */
     Reply get(Request request) throws IOException, InterruptedException;

@@ -7,7 +7,6 @@ import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGetContractTest;
 import java.io.IOException;
 import java.net.ConnectException;
-import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -24,13 +23,6 @@ class JdkHttpGetTest extends HttpGetContractTest {
     @AfterEach
     void closeTheClient() {
         http.close();
-    }
-
-    @Test
-    void theUserAgentAlsoNamesTheHomePage() throws Exception {
-        get("/refusal", Duration.ofSeconds(5));
-
-        assertThat(receivedHeaders().getFirst("User-Agent")).contains("https://github.com/Enadeag/car-charge-planner");
     }
 
     @Test
