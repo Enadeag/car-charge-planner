@@ -651,7 +651,7 @@ class DashboardTest {
 
         var popup = popup().orElseThrow();
         var texts = Fx.call(() -> Scenes.visibleTexts(popup.getScene().getRoot()));
-        assertThat(texts).contains("Not set up", "Fix engine.json: system.car: is required");
+        assertThat(texts).contains("Settings file cannot be used", "Fix engine.json: system.car: is required");
     }
 
     @Test

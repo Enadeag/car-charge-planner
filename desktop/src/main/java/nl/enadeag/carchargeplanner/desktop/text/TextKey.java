@@ -246,14 +246,16 @@ public enum TextKey {
     NO_FORECAST_KEYCHAIN_LOCKED,
     /** The dashboard's warning that a provider refused its API key: {0} is the provider's name. */
     KEY_REFUSED,
-    /** The dashboard's headline without a usable config file. */
+    /** The dashboard's headline without a config file. */
     NOT_SET_UP,
+    /** The dashboard's headline for a config file that cannot be used. */
+    UNUSABLE_CONFIG,
     /** The config file could not be read: {0} is its path, {1} the system's error. */
     NOT_SET_UP_UNREADABLE,
     /** The config file is wrong: {0} is its name, {1} the setting and what is wrong, in English. */
     NOT_SET_UP_INVALID,
-    /** The tray's tooltip without a usable config file: {0} is what is wrong. */
-    TRAY_NOT_SET_UP,
+    /** The tray's tooltip for a config file that cannot be used: {0} is what is wrong. */
+    TRAY_UNUSABLE_CONFIG,
     /** The tray's tooltip without a forecast: {0} is the engine's reason, in English. */
     TRAY_NO_FORECAST,
     /** The tray's tooltip without a forecast because the API keys are in a locked keychain: what the owner should do. */

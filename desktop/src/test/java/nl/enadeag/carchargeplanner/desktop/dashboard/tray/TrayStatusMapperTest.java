@@ -63,6 +63,26 @@ class TrayStatusMapperTest {
     }
 
     @Test
+    void anUnusableConfigIsNamedAsSuchAndNotAsNotSetUp() {
+        var unusable = new Outlook.ConfigUnusable(ConfigProblem.Kind.INVALID, Path.of("engine.json"),
+                "system.location: is required");
+
+        assertThat(MAPPER.map(unusable).text())
+                .isEqualTo("Settings file cannot be used: Fix engine.json: system.location: is required");
+        assertThat(new TrayStatusMapper(new Messages(Language.DUTCH)).map(unusable).text())
+                .isEqualTo("Niet ingesteld: Herstel engine.json. Details (in het Engels): system.location: is required");
+    }
+
+    @Test
+    void withoutAConfigFileTheTrayStillSaysNotSetUpYet() {
+        var none = new Outlook.NotSetUp(Path.of("engine.json"));
+
+        assertThat(MAPPER.map(none).text()).isEqualTo("Not set up yet: choose Set up in the menu.");
+        assertThat(new TrayStatusMapper(new Messages(Language.DUTCH)).map(none).text())
+                .isEqualTo("Nog niet ingesteld: kies Instelhulp in het menu.");
+    }
+
+    @Test
     void withoutAForecastTheOwnerMustActAndIsToldWhy() {
         var status = MAPPER.map(new Outlook.NoForecast("Open-Meteo: no connection."));
 
