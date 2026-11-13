@@ -16,6 +16,7 @@ import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -36,6 +37,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 class SettingsLanguagesTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     @TempDir
     Path folder;
@@ -63,7 +66,7 @@ class SettingsLanguagesTest {
     @EnumSource(Language.class)
     void noTextIsCutOff(Language language) throws Exception {
         settings = new SettingsFixture(folder, language, SettingsFixture.realProviders());
-        var file = new ConfigFile(settings.configPath, FILES);
+        var file = new ConfigFile(settings.configPath, FILES, CLOCK);
         var example = file.read();
         file.write(example.withSystem(example.system().withPanels(List.of(PanelArray.TYPICAL, PanelArray.TYPICAL)),
                 TypicalValues.NONE));
@@ -91,7 +94,7 @@ class SettingsLanguagesTest {
     @MethodSource("languagesAndScales")
     void withLargerTextNoTextIsCutOffOrOverlapsEither(Language language, TextScale scale) throws Exception {
         settings = new SettingsFixture(folder, language, SettingsFixture.realProviders());
-        var file = new ConfigFile(settings.configPath, FILES);
+        var file = new ConfigFile(settings.configPath, FILES, CLOCK);
         var example = file.read();
         file.write(example.withSystem(example.system().withPanels(List.of(PanelArray.TYPICAL, PanelArray.TYPICAL)),
                 TypicalValues.NONE));

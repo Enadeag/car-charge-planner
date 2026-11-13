@@ -62,8 +62,8 @@ public final class AndroidPlatform {
         keychainFile = keysFolder.resolve(EncryptedKeychain.FILE_NAME);
         keychain = new EncryptedKeychain(keychainFile, files, keys, AndroidKeystoreKeys.ALIAS);
         // without the fallback the file is never read, written, deleted or moved; ApiKeys still takes one
-        apiKeys = new ApiKeys(keychain, new SecretsFile(keysFolder.resolve(SECRETS_FILE), files), KeyFallback.NONE,
-                clock);
+        apiKeys = new ApiKeys(keychain, new SecretsFile(keysFolder.resolve(SECRETS_FILE), files, clock),
+                KeyFallback.NONE, clock);
     }
 
     /**

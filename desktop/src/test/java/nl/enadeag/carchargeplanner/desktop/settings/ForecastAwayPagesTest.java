@@ -26,6 +26,7 @@ import nl.enadeag.carchargeplanner.engine.secrets.Secrets;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -47,6 +48,8 @@ import org.junit.jupiter.api.io.TempDir;
 class ForecastAwayPagesTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     private static final ProviderId OPEN_METEO = new ProviderId("open-meteo");
     private static final ProviderId FORECAST_SOLAR = new ProviderId("forecast-solar");
@@ -74,7 +77,7 @@ class ForecastAwayPagesTest {
     }
 
     private EngineConfig stored() throws Exception {
-        return new ConfigFile(settings.configPath, FILES).read();
+        return new ConfigFile(settings.configPath, FILES, CLOCK).read();
     }
 
     private <T> List<T> all(SettingsView view, Class<T> type) {

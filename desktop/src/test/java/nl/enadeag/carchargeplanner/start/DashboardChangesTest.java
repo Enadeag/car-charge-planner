@@ -43,6 +43,7 @@ class DashboardChangesTest {
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
     private static final Instant NOW = Instant.parse("2026-07-03T06:00:00Z");
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     private static final OneOffAwayPeriod AWAY = new OneOffAwayPeriod(NOW.plus(Duration.ofHours(2)), NOW.plus(Duration.ofHours(12)));
 
     @TempDir
@@ -55,15 +56,17 @@ class DashboardChangesTest {
     @BeforeEach
     void makeTheEngine() {
         var providers = new Providers(List.of());
-        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES),
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
-        var engine = new Engine(new ConfigFile(folder.resolve("engine.json"), FILES),
-                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
+        var engine = new Engine(new ConfigFile(folder.resolve("engine.json"), FILES, CLOCK),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES, CLOCK), apiKeys),
+                providers,
                 apiKeys,
-                new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
-                new BatteryFile(folder.resolve("battery.json"), FILES), Clock.fixed(NOW, ZoneOffset.UTC),
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
-                        new ToldTrips(folder.resolve("trip-notices.json"), FILES), _ -> { }),
+                new AwayFile(folder.resolve("away.json"), FILES, CLOCK),
+                new TripFile(folder.resolve("trips.json"), FILES, CLOCK),
+                new BatteryFile(folder.resolve("battery.json"), FILES, CLOCK), CLOCK,
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, CLOCK),
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK), _ -> { }),
                 new ManualScheduler());
         changes = new DashboardChanges(engine, new Background(handedOn::add, Runnable::run));
     }
@@ -83,10 +86,10 @@ class DashboardChangesTest {
 
         runTheSavingThread();
 
-        assertThat(new BatteryFile(folder.resolve("battery.json"), FILES).reading().map(BatteryReading::level))
+        assertThat(new BatteryFile(folder.resolve("battery.json"), FILES, CLOCK).reading().map(BatteryReading::level))
                 .contains(new Percent(72));
         assertThat(Files.exists(folder.resolve("away.json"))).isTrue();
-        assertThat(new AwayFile(folder.resolve("away.json"), FILES).periods()).isEmpty();
+        assertThat(new AwayFile(folder.resolve("away.json"), FILES, CLOCK).periods()).isEmpty();
     }
 
     @Test
@@ -102,7 +105,7 @@ class DashboardChangesTest {
 
         runTheSavingThread();
 
-        assertThat(new TripFile(folder.resolve("trips.json"), FILES).trips(NOW)).containsExactly(changed);
+        assertThat(new TripFile(folder.resolve("trips.json"), FILES, CLOCK).trips(NOW)).containsExactly(changed);
     }
 
     @Test
@@ -117,6 +120,6 @@ class DashboardChangesTest {
             assertThat(log.lines()).containsExactly(
                     "WARNING failed in the background: saving the battery level (UncheckedIOException)");
         }
-        assertThat(new AwayFile(folder.resolve("away.json"), FILES).periods()).containsExactly(AWAY);
+        assertThat(new AwayFile(folder.resolve("away.json"), FILES, CLOCK).periods()).containsExactly(AWAY);
     }
 }

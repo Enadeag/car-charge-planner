@@ -10,7 +10,9 @@ import nl.enadeag.carchargeplanner.engine.store.StoredJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,6 +24,8 @@ class BatteryFileTest {
 
     private static final Instant NOW = Instant.parse("2026-07-03T07:00:00Z");
 
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
+
     @TempDir
     Path folder;
 
@@ -31,16 +35,16 @@ class BatteryFileTest {
 
     @Test
     void theLevelEnteredLastIsKeptWithItsMoment() throws IOException {
-        new BatteryFile(path(), FILES).save(new BatteryReading(new Percent(40), NOW));
-        new BatteryFile(path(), FILES).save(new BatteryReading(new Percent(64.5), NOW.plusSeconds(60)));
+        new BatteryFile(path(), FILES, CLOCK).save(new BatteryReading(new Percent(40), NOW));
+        new BatteryFile(path(), FILES, CLOCK).save(new BatteryReading(new Percent(64.5), NOW.plusSeconds(60)));
 
-        assertThat(new BatteryFile(path(), FILES).reading())
+        assertThat(new BatteryFile(path(), FILES, CLOCK).reading())
                 .contains(new BatteryReading(new Percent(64.5), NOW.plusSeconds(60)));
     }
 
     @Test
     void withoutAFileThereIsNoReading() {
-        assertThat(new BatteryFile(path(), FILES).reading()).isEmpty();
+        assertThat(new BatteryFile(path(), FILES, CLOCK).reading()).isEmpty();
     }
 
     @ParameterizedTest
@@ -55,12 +59,12 @@ class BatteryFileTest {
         Files.createDirectories(path().getParent());
         Files.writeString(path(), content);
 
-        assertThat(new BatteryFile(path(), FILES).reading()).isEmpty();
+        assertThat(new BatteryFile(path(), FILES, CLOCK).reading()).isEmpty();
     }
 
     @Test
     void aFileThatCannotBeWrittenIsLeftAsItWas() throws IOException {
-        var file = new BatteryFile(path(), FILES);
+        var file = new BatteryFile(path(), FILES, CLOCK);
         file.save(new BatteryReading(new Percent(40), NOW));
         Files.createDirectories(path().resolveSibling("battery.json.tmp"));
 
@@ -78,9 +82,9 @@ class BatteryFileTest {
     void aFileWithoutAVersionIsReadAndAWrittenOneHasVersionOne() throws IOException {
         Files.createDirectories(path().getParent());
         Files.writeString(path(), "{\"levelPct\": 40, \"enteredAt\": \"2026-07-03T07:00:00Z\"}");
-        assertThat(new BatteryFile(path(), FILES).reading()).contains(new BatteryReading(new Percent(40), NOW));
+        assertThat(new BatteryFile(path(), FILES, CLOCK).reading()).contains(new BatteryReading(new Percent(40), NOW));
 
-        new BatteryFile(path(), FILES).save(new BatteryReading(new Percent(70), NOW));
+        new BatteryFile(path(), FILES, CLOCK).save(new BatteryReading(new Percent(70), NOW));
 
         assertThat(StoredJson.parse(Files.readString(path())).path("version").intValue()).isEqualTo(1);
     }
@@ -90,9 +94,9 @@ class BatteryFileTest {
         Files.createDirectories(path().getParent());
         var newer = "{\"version\": 2, \"levelPct\": 40, \"enteredAt\": \"2026-07-03T07:00:00Z\"}";
         Files.writeString(path(), newer);
-        assertThat(new BatteryFile(path(), FILES).reading()).isEmpty();
+        assertThat(new BatteryFile(path(), FILES, CLOCK).reading()).isEmpty();
 
-        assertThatThrownBy(() -> new BatteryFile(path(), FILES).save(new BatteryReading(new Percent(70), NOW)))
+        assertThatThrownBy(() -> new BatteryFile(path(), FILES, CLOCK).save(new BatteryReading(new Percent(70), NOW)))
                 .isInstanceOf(IOException.class).hasMessageContaining("written by a newer version of the app");
 
         assertThat(path()).hasContent(newer);

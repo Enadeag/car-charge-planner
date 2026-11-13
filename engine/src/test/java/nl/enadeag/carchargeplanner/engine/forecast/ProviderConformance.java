@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +37,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 public abstract class ProviderConformance {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
+
+    private static final Clock CLOCK = Clock.systemUTC();
 
     /** Where the forecast cache of {@link #addressesCoordinatesAndSecretsNeverReachLogsOrReasons()} goes. */
     @TempDir
@@ -180,7 +183,7 @@ public abstract class ProviderConformance {
         var c = providerCase();
         var otherKey = "OtherProviderKey31";
         var made = c.provider(c.errorSaying().apply("we also know " + otherKey));
-        var cache = new ForecastCache(cacheFolder, FILES);
+        var cache = new ForecastCache(cacheFolder, FILES, CLOCK);
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
             var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(), true,
                     true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,
@@ -266,7 +269,7 @@ public abstract class ProviderConformance {
         try (var log = LogCapture.of("nl.enadeag.carchargeplanner")) {
             for (var routes : scenarios(c)) {
                 var made = c.provider(routes);
-                var cache = new ForecastCache(cacheFolder, FILES);
+                var cache = new ForecastCache(cacheFolder, FILES, CLOCK);
                 // as the forecast service asks, so the lines it logs about a provider failing are made too
                 var outcome = new ProviderAttempt(made.provider(), cache, new HashMap<>(), new ProviderHealth(), c.now(),
                         true, true).forecastOrReason(ProviderCase.EXAMPLE_SYSTEM, c::allSettings,

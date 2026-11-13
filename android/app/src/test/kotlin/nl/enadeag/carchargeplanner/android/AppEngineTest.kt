@@ -57,20 +57,21 @@ class AppEngineTest {
         assertThat(state).isInstanceOfSatisfying(StartState.Ready::class.java) { ready ->
             assertThat(ready.config.system().location()).isEqualTo(Coordinates(51.0, 5.0))
             assertThat(ready.config.system().timezone()).isEqualTo(ZoneId.of("Europe/Brussels"))
-            assertThat(ready.config).isEqualTo(ConfigFile(EXAMPLE, PrivateFiles(FilePrivacy.NONE)).read())
+            assertThat(ready.config)
+                .isEqualTo(ConfigFile(EXAMPLE, PrivateFiles(FilePrivacy.NONE), Clock.systemUTC()).read())
         }
     }
 
     @Test
     fun theSettingsAreWrittenToEngineJsonInTheFilesFolderInTheDesktopsFormat() = runTest {
-        val example = ConfigFile(EXAMPLE, PrivateFiles(FilePrivacy.NONE)).read()
+        val example = ConfigFile(EXAMPLE, PrivateFiles(FilePrivacy.NONE), Clock.systemUTC()).read()
         val access = EngineOnDispatcher(AppEngine.build(platform, Notifier { }, Clock.systemUTC()),
             StandardTestDispatcher(testScheduler))
 
         access.saveSettings(example)
 
         val file = filesFolder.resolve("engine.json")
-        assertThat(ConfigFile(file, PrivateFiles(FilePrivacy.NONE)).read()).isEqualTo(example)
+        assertThat(ConfigFile(file, PrivateFiles(FilePrivacy.NONE), Clock.systemUTC()).read()).isEqualTo(example)
         assertThat(Files.list(filesFolder).use { it.toList() }).containsExactly(file)
     }
 }

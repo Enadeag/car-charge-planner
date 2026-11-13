@@ -126,7 +126,7 @@ public final class Engine {
      * @param files how the engine writes its files; never null
      * @param apiKeys where the providers' secret settings are kept; never null
      * @param notifier tells the owner what a round finds due; never null
-     * @param clock the time plans are made at; never null
+     * @param clock the time plans are made at, and a file that cannot be used is renamed with; never null
      * @param planner the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
      *     #stop()} shuts it down; never null
      * @return the engine, not started
@@ -149,7 +149,7 @@ public final class Engine {
      * @param files how the engine writes its files; never null
      * @param apiKeys where the providers' secret settings are kept; never null
      * @param notifier tells the owner what a round finds due; never null
-     * @param clock the time plans are made at; never null
+     * @param clock the time plans are made at, and a file that cannot be used is renamed with; never null
      * @param planner the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
      *     #stop()} shuts it down; never null
      * @return the engine, not started
@@ -157,13 +157,14 @@ public final class Engine {
     public static Engine inFolder(Path dataFolder, Path configFile, HttpGet http, PrivateFiles files,
             ApiKeys apiKeys, Notifier notifier, Clock clock, ScheduledExecutorService planner) {
         var providers = Providers.standard(http);
-        var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json"), files),
-                new ToldTrips(dataFolder.resolve("trip-notices.json"), files), notifier);
-        return new Engine(new ConfigFile(configFile, files),
-                new ForecastService(providers, new ForecastCache(dataFolder.resolve("forecasts"), files), apiKeys),
-                providers, apiKeys, new AwayFile(dataFolder.resolve("away.json"), files),
-                new TripFile(dataFolder.resolve("trips.json"), files),
-                new BatteryFile(dataFolder.resolve("battery.json"), files), clock, announcer, planner);
+        var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json"), files, clock),
+                new ToldTrips(dataFolder.resolve("trip-notices.json"), files, clock), notifier);
+        return new Engine(new ConfigFile(configFile, files, clock),
+                new ForecastService(providers, new ForecastCache(dataFolder.resolve("forecasts"), files, clock),
+                        apiKeys),
+                providers, apiKeys, new AwayFile(dataFolder.resolve("away.json"), files, clock),
+                new TripFile(dataFolder.resolve("trips.json"), files, clock),
+                new BatteryFile(dataFolder.resolve("battery.json"), files, clock), clock, announcer, planner);
     }
 
     /**

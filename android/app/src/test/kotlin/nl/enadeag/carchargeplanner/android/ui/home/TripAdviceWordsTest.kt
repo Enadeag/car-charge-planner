@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.nio.file.Files
+import java.time.Clock
+import java.time.ZoneOffset
 import java.util.Locale
 import java.util.Optional
 import java.util.TimeZone
@@ -537,8 +539,9 @@ class TripAdviceWordsTest {
         val folder = Files.createTempDirectory("trip-notices")
         val files = PrivateFiles(FilePrivacy.NONE)
         val told = mutableListOf<Notice>()
-        Announcer(AnnouncedWindows(folder.resolve("announced.json"), files),
-            ToldTrips(folder.resolve("trip-notices.json"), files)) { told += it }
+        val clock = Clock.fixed(now, ZoneOffset.UTC)
+        Announcer(AnnouncedWindows(folder.resolve("announced.json"), files, clock),
+            ToldTrips(folder.resolve("trip-notices.json"), files, clock)) { told += it }
             .announceTripsDue(listOf(advice), PlanLevel(Percent(45.0), Optional.empty()), Plans.source(now), now,
                 EngineConfig.setUpDraft(BRUSSELS, ProviderId("open-meteo")))
         return told.filterIsInstance<TripChargeStart>().single()

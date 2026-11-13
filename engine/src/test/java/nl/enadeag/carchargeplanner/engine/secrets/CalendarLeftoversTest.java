@@ -19,6 +19,8 @@ class CalendarLeftoversTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(FilePrivacy.NONE);
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     private static final String ICAL_LINK = "https://calendar.example/private-0123456789abcdef/basic.ics";
     private static final String ROUTE_KEY = "GEO-SECRET-3";
     private static final Secrets FORECAST_KEYS = new Secrets(Map.of(
@@ -37,7 +39,7 @@ class CalendarLeftoversTest {
     private final LockableKeychain keychain = new LockableKeychain();
 
     private ApiKeys keys() {
-        return new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+        return new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
     }
 
@@ -63,7 +65,7 @@ class CalendarLeftoversTest {
 
     @Test
     void theSecretsKeptInTheFileWithoutAKeychainAreRemovedToo() throws Exception {
-        var file = new SecretsFile(folder.resolve("secrets.json"), FILES);
+        var file = new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK);
         file.write(WITH_LEFTOVERS);
 
         CalendarLeftovers.remove(new ApiKeys(new NoKeychain(), file,
@@ -110,7 +112,7 @@ class CalendarLeftoversTest {
 
     @Test
     void theSecretsInTheFileGoWhileTheKeychainIsLockedWhichIsLoggedForTheNextStartWithoutAPrompt() throws Exception {
-        var file = new SecretsFile(folder.resolve("secrets.json"), FILES);
+        var file = new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK);
         file.write(WITH_LEFTOVERS);
         keychain.locked = true;
 

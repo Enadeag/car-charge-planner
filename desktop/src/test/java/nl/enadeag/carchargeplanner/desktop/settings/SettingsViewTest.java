@@ -25,6 +25,7 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -45,6 +46,8 @@ class SettingsViewTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     @TempDir
     Path folder;
 
@@ -61,12 +64,12 @@ class SettingsViewTest {
     }
 
     private PlanningPreferences storedPlanning() throws Exception {
-        return new ConfigFile(settings.configPath, FILES).read().planning();
+        return new ConfigFile(settings.configPath, FILES, CLOCK).read().planning();
     }
 
     @Test
     void savingAChangedPreferenceWritesItAndKeepsTheRestOfTheConfig() throws Exception {
-        var before = new ConfigFile(settings.configPath, FILES).read();
+        var before = new ConfigFile(settings.configPath, FILES, CLOCK).read();
         var view = settings.open();
 
         boolean saved = Fx.call(() -> {
@@ -75,7 +78,7 @@ class SettingsViewTest {
             return SettingsFixture.save(view);
         });
 
-        var after = new ConfigFile(settings.configPath, FILES).read();
+        var after = new ConfigFile(settings.configPath, FILES, CLOCK).read();
         assertThat(saved).isTrue();
         assertThat(after.planning()).isEqualTo(new PlanningPreferences(new Percent(30), new Percent(90), 0.7, 0.2,
                 Duration.ofMinutes(45), Duration.ofMinutes(15)));

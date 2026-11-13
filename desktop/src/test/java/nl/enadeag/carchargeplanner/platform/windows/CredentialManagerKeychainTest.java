@@ -37,6 +37,8 @@ class CredentialManagerKeychainTest extends KeychainContractTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     @TempDir
     Path folder;
 
@@ -76,7 +78,7 @@ class CredentialManagerKeychainTest extends KeychainContractTest {
     @Test
     void theKeysAreKeptInTheCredentialManager() throws Exception {
         assumeTrue(loggedOn, "no logon session, as over ssh");
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
@@ -92,7 +94,7 @@ class CredentialManagerKeychainTest extends KeychainContractTest {
         assumeFalse(loggedOn, "a logon session, so the Credential Manager works");
         assertThatThrownBy(() -> keychain.write("probe", "x")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.UNAVAILABLE));
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 

@@ -60,6 +60,8 @@ class SecretServiceKeychainTest extends KeychainContractTest {
 
     private static final PrivateFiles FILES = new PrivateFiles(new PosixFilePrivacy());
 
+    private static final Clock CLOCK = Clock.systemUTC();
+
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
     @TempDir
@@ -293,8 +295,9 @@ class SecretServiceKeychainTest extends KeychainContractTest {
     @Test
     void theKeysAreKeptInTheKeyring() throws Exception {
         startAThrowawayKeyring();
-        var keys = new ApiKeys(keychain("car-charge-planner"), new SecretsFile(folder.resolve("secrets.json"), FILES),
-                KeyFallback.PRIVATE_FILE, Clock.systemUTC());
+        var keys = new ApiKeys(keychain("car-charge-planner"),
+                new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK), KeyFallback.PRIVATE_FILE,
+                Clock.systemUTC());
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);
@@ -325,7 +328,7 @@ class SecretServiceKeychainTest extends KeychainContractTest {
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
         assertThatThrownBy(() -> keychain.delete("index")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         assertThatThrownBy(keys::load).isInstanceOfSatisfying(SecretsProblem.class,
                 problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
@@ -351,7 +354,7 @@ class SecretServiceKeychainTest extends KeychainContractTest {
         assertThat(keychain.unlock(TIMEOUT, () -> { })).isEqualTo(UnlockOutcome.DISMISSED);
         assertThatThrownBy(() -> keychain.read("index")).isInstanceOfSatisfying(KeychainException.class,
                 e -> assertThat(e.kind()).isEqualTo(KeychainException.Kind.LOCKED));
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         keys.save(new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1"))));
         assertThat(keys.storage()).as("dismissed: the owner chose the file").isEqualTo(KeyStorage.FILE);
@@ -362,12 +365,12 @@ class SecretServiceKeychainTest extends KeychainContractTest {
     void oneConnectionServesEveryCallAndClosingTheKeychainClosesIt() throws Exception {
         startAThrowawayKeyring();
         var keychain = counted();
-        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+        var keys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var secrets = new Secrets(Map.of(new ProviderId("open-meteo"), Map.of("api_key", "OM-SECRET-1")));
 
         keys.save(secrets);
-        assertThat(new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+        assertThat(new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC()).load())
                 .isEqualTo(secrets);
         keychain.delete("index");
@@ -475,8 +478,9 @@ class SecretServiceKeychainTest extends KeychainContractTest {
     void withoutASecretServiceOnTheBusThereIsNoKeychain() {
         assertThatThrownBy(() -> keychain("car-charge-planner").read("index")).isInstanceOf(KeychainException.class)
                 .hasMessageContaining("no Secret Service");
-        assertThat(new ApiKeys(keychain("car-charge-planner"), new SecretsFile(folder.resolve("secrets.json"), FILES),
-                KeyFallback.PRIVATE_FILE, Clock.systemUTC())
+        assertThat(new ApiKeys(keychain("car-charge-planner"),
+                new SecretsFile(folder.resolve("secrets.json"), FILES, CLOCK), KeyFallback.PRIVATE_FILE,
+                Clock.systemUTC())
                 .storage())
                 .isEqualTo(KeyStorage.FILE);
     }

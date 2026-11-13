@@ -123,17 +123,19 @@ final class SetUpFixture {
         this.background = background;
         this.messages = new Messages(language);
         configPath = folder.resolve("engine.json");
-        appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC, FILES);
+        appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC, FILES, clock);
         var providers = new Providers(List.of(provider, new ForecastSolar(offline())));
-        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES),
+        var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES, clock),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
-        engine = new Engine(new ConfigFile(configPath, FILES),
-                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES), apiKeys), providers,
+        engine = new Engine(new ConfigFile(configPath, FILES, clock),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), FILES, clock), apiKeys),
+                providers,
                 apiKeys,
-                new AwayFile(folder.resolve("away.json"), FILES), new TripFile(folder.resolve("trips.json"), FILES),
-                new BatteryFile(folder.resolve("battery.json"), FILES), clock,
-                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES),
-                        new ToldTrips(folder.resolve("trip-notices.json"), FILES), _ -> { }),
+                new AwayFile(folder.resolve("away.json"), FILES, clock),
+                new TripFile(folder.resolve("trips.json"), FILES, clock),
+                new BatteryFile(folder.resolve("battery.json"), FILES, clock), clock,
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, clock),
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, clock), _ -> { }),
                 new ManualScheduler());
     }
 

@@ -30,7 +30,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 ### Tests
 
 - Screen tests run on Robolectric only, with explicit checks (name, role, a drawn size of 48 dp, scrolling at font scale 2) in place of Compose's accessibility checks, which find nothing there. What TalkBack says is checked on a phone before a release, by the list in `docs/accessibility.md` (#314).
-- `AppArchitectureTest` holds the app to ADR 0005's wiring rules (one clock, no static mutable state but `EncryptedKeychain.LOCKS`, threads only from the root, `AndroidPlatform` no singleton), with rules on cycles, screens, engine access and sleeping in tests; `StoredFile`'s system clock is a named exception (#382).
+- `AppArchitectureTest` holds the app to ADR 0005's wiring rules (one clock, no static mutable state but `EncryptedKeychain.LOCKS`, threads only from the root, `AndroidPlatform` no singleton), with rules on cycles, screens, engine access and sleeping in tests (#382). The engine's classes are not among the app's: `EngineArchitectureTest` holds them to theirs, and the engine's files take the clock the app hands in, so no exception for a clock is left (#285).
 - The home screen stays split into a file per card (#382).
 - `check` packages the debug APK, for `LicencesInTheApkTest` (#331).
 
