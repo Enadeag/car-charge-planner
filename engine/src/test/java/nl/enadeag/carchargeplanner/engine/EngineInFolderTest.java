@@ -89,6 +89,7 @@ class EngineInFolderTest {
         assertThat(data.resolve("engine.json")).doesNotExist();
     }
 
+    // The away and trip files have no such test: the engine leaves a damaged one as it is, so it never sets one aside.
     @Test
     void aSettingsFileSetAsideIsNamedWithTheEnginesClock() throws IOException {
         Files.writeString(folder.resolve("engine.json"), "{oops");
