@@ -3,7 +3,6 @@ package nl.enadeag.carchargeplanner.android
 import android.Manifest
 import android.app.NotificationManager
 import android.os.StrictMode
-import androidx.datastore.preferences.core.PreferencesFileSerializer
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.io.File
@@ -14,7 +13,6 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.TimeZone
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -72,20 +70,12 @@ class AppWiringTest {
     private fun stored(name: String): Boolean = onDisk { file(name).exists() }
 
     /** What a store's file holds on the disk, by key name; empty while there is no file. */
-    private fun held(name: String): Map<String, Any> = onDisk {
-        if (!file(name).exists()) {
-            emptyMap()
-        } else {
-            val preferences = runBlocking { file(name).inputStream().use { PreferencesFileSerializer.readFrom(it) } }
-            preferences.asMap().mapKeys { it.key.name }
-        }
-    }
+    private fun held(name: String): Map<String, Any> = onDisk { runBlocking { StoreFiles.held(file(name)) } }
 
     @Test
     fun theWifiOnlySwitchGoesToTheSettingsFileAndTheCardsStateToTheStateFile() {
         app.phoneSettings.switch(true)
-        // DataStore shows a write to its readers just before it moves the file into place, so the file is waited for
-        runBlocking { withTimeout(5_000) { while (held("settings").isEmpty()) delay(10) } }
+        onDisk { StoreFiles.awaitHeld(file("settings")) }
         runBlocking { app.phoneState.close() }
 
         assertThat(held("settings")).containsExactly(entry("wifi_only", true))
