@@ -29,6 +29,7 @@ import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.store.FilePrivacy
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.entry
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
@@ -64,19 +65,21 @@ class AppWiringTest {
         }
     }
 
-    private fun stored(name: String): Boolean = onDisk { File(app.filesDir, "datastore/$name.preferences_pb").exists() }
+    private fun file(name: String) = File(app.filesDir, "datastore/$name.preferences_pb")
+
+    private fun stored(name: String): Boolean = onDisk { file(name).exists() }
+
+    /** What a store's file holds on the disk, by key name; empty while there is no file. */
+    private fun held(name: String): Map<String, Any> = onDisk { runBlocking { StoreFiles.held(file(name)) } }
 
     @Test
     fun theWifiOnlySwitchGoesToTheSettingsFileAndTheCardsStateToTheStateFile() {
         app.phoneSettings.switch(true)
-        runBlocking { withTimeout(5_000) { app.phoneSettings.on.first { it } } }
-
-        assertThat(stored("settings")).isTrue()
-        assertThat(stored("state")).isFalse()
-
+        onDisk { StoreFiles.awaitHeld(file("settings")) }
         runBlocking { app.phoneState.close() }
 
-        assertThat(stored("state")).isTrue()
+        assertThat(held("settings")).containsExactly(entry("wifi_only", true))
+        assertThat(held("state")).containsExactly(entry("card_closed", true))
     }
 
     @Test

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import nl.enadeag.carchargeplanner.android.StoreFiles
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -79,6 +80,7 @@ class PhonePreferencesTest {
 
         wifiOnly.switch(true)
         waitFor({ wifiOnly.on.first() }) { it }
+        StoreFiles.awaitHeld(file)
 
         val (later, laterScope) = again(scope, file)
         assertThat(runBlocking { PhoneSettings(later, laterScope).on.first() }).isTrue()
