@@ -64,10 +64,12 @@ import org.w3c.dom.Node;
  * its job's default or the workflow's (the emulator action by its input), and does not change its folder; every other
  * {@code working-directory} and {@code cd} goes to a folder of {@link #DIRECTORIES}; only the actions of
  * {@link #ACTIONS} are used, each with the inputs of {@link #INPUTS_OF}; no job sets a container or services, no step
- * or default names a shell; no {@code env} sets a variable of {@link #BUILD_VARIABLES} or
- * {@link #BUILD_VARIABLE_PREFIXES}, whatever its value; no command holds a here-document, an expression other than
- * those of {@link #EXPRESSIONS} (none), or a line that ends in an expression. In every file: no other action with
- * "gradle" in its name, no workflow of another repository, no local action outside {@code .github/actions} or
+ * or default names a shell, and no step holds {@code parallel} steps; no {@code env}, nor a map of a {@code matrix},
+ * sets a variable of {@link #BUILD_VARIABLES} or {@link #BUILD_VARIABLE_PREFIXES}, whatever its value; no command
+ * holds a here-document, an expression other than those of {@link #EXPRESSIONS} (none), or a line that ends in an
+ * expression. In every file: one YAML document; an {@code env}, {@code with}, {@code defaults} and
+ * {@code defaults.run} that is a map, not an expression; no key that is an expression; no other action with "gradle"
+ * in its name, no workflow of another repository, no local action outside {@code .github/actions} or
  * {@code .github/workflows}, no key {@code arguments} or {@code build-root-directory}. Every key, value and command
  * line is held to the deny patterns: the verification flags and the mode's property in any spelling, another Gradle
  * user home, an init script, the wrapper's jar, the refresh script, which writes the checksums instead of checking
@@ -82,8 +84,9 @@ import org.w3c.dom.Node;
  * <p>Not seen, and left to the maintainer's review of a workflow or build change: a Gradle call through a shell
  * variable or from a script file a workflow runs; a step that changes the build's files or environment before the call
  * by a path this test does not know ({@code cat file >> "$GITHUB_ENV"}, a sourced script,
- * {@code curl ... >> gradle.properties}, a restored cache, a checkout of another tree, the emulator's {@code target},
- * {@code arch} and {@code emulator-options} beyond the deny patterns); a job on a self-hosted runner; build scripts
+ * {@code curl ... >> gradle.properties}, a restored cache, a checkout of another tree, the emulator's
+ * {@code api-level}, {@code target} and {@code emulator-options}, which it writes into a shell line, beyond the deny
+ * patterns); a job on a self-hosted runner; build scripts
  * that apply code from outside {@code android/}, from a build's output folder, or use {@code files(...)} dependencies.
  * Text written to hide from a reviewer is out of scope.
  */
@@ -125,7 +128,10 @@ class AndroidDependencyVerificationTest {
     /** The environment variables the JVM, Gradle or the shell reads for options or to find a program. */
     private static final Set<String> BUILD_VARIABLES = Set.of("GRADLE_OPTS", "JAVA_OPTS", "JAVA_TOOL_OPTIONS",
             "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "PATH", "JAVA_HOME", "HOME", "GRADLE_USER_HOME");
-    private static final List<String> BUILD_VARIABLE_PREFIXES = List.of("ORG_GRADLE_", "DEVELOCITY_", "LD_");
+    private static final List<String> BUILD_VARIABLE_PREFIXES = List.of("ORG_GRADLE_", "DEVELOCITY_", "LD_",
+            "GITHUB_DEPENDENCY_GRAPH_", "DEPENDENCY_GRAPH_", "GRADLE_PLUGIN_REPOSITORY_");
+    /** The keys whose value GitHub reads as a map, which an expression in its place would fill in at run time. */
+    private static final Set<String> MAPS = Set.of("env", "with", "defaults");
     /** An expression GitHub fills in before a command runs, with what it holds. */
     private static final Pattern EXPRESSION = Pattern.compile("\\$\\{\\{(.*?)(?:}}|$)", Pattern.DOTALL);
     /**
@@ -361,7 +367,7 @@ class AndroidDependencyVerificationTest {
         assertRefused(workflow("run: xargs -E run: ./gradlew check"), "does not parse");
         assertRefused(workflow("run: ./gradlew check\nrun: ./gradlew check -F off"), "does not parse");
         assertRefused(workflow("with: !gradle {arguments: -F off}"), "does not parse");
-        assertRefused(workflow("env: &loop [*loop]"), "holds itself");
+        assertRefused(workflow("x: &loop [*loop]"), "holds itself");
         assertRefused(workflow("uses: [x/y@v1]"), "holds no plain text");
         assertRefused(workflow("run: ./gradlew check\nworking-directory: [android/build-logic]"),
                 "holds no plain text", "not in android");
@@ -445,6 +451,54 @@ class AndroidDependencyVerificationTest {
                 .isEmpty();
         assertThat(problems("a.yml", workflow("env:\n  BUILD_COMMIT: x\n  VERSION_NAME: y\n  OPTS: z", call),
                 SOME_TASKS)).isEmpty();
+    }
+
+    /** A block GitHub reads as a map, written as one expression, would be filled in at run time unseen. */
+    @Test
+    void aBlockIsAMapAndAKeyNoExpression() {
+        var call = "run: ./gradlew check";
+        assertRefused(workflow("env: ${{ fromJSON(github.event.pull_request.body) }}", call), "env is no map");
+        assertRefused("jobs:\n  build:\n    env: ${{ fromJSON(github.event.pull_request.body) }}\n"
+                + "    defaults:\n      run:\n        working-directory: android\n    steps:\n      - " + call + "\n",
+                "env is no map");
+        var emulator = "uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d\n";
+        assertRefused(workflow(emulator + "with: ${{ fromJSON(vars.EMULATOR_WITH) }}", call), "with is no map");
+        assertRefused(workflow("uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c\n"
+                + "with: ${{ fromJSON(vars.SETUP) }}", call), "with is no map");
+        assertRefused("defaults:\n  run:\n    working-directory: android\njobs:\n  build:\n    defaults:\n"
+                + "      run: ${{ fromJSON(vars.DEFAULTS) }}\n    steps:\n      - " + call + "\n", "run is no map");
+        assertRefused("defaults: ${{ fromJSON(vars.DEFAULTS) }}\n" + workflow(call), "defaults is no map");
+        assertRefused(workflow("env:\n  ${{ vars.N }}: ${{ vars.V }}", call), "the key is an expression");
+        assertRefused(workflow("env: {}", "env:", call), "env is no map but 'null'");
+        assertRefused(workflow("with: [a]"), "with is no map but a list");
+        assertRefused("on: push\n---\njobs: {}\n", "holds 2 YAML documents");
+
+        assertThat(problems("a.yml", workflow("env:\n  SHA: ${{ github.sha }}", emulator + """
+                with:
+                  working-directory: android
+                  api-level: ${{ vars.API_LEVEL }}
+                  script: ./gradlew check""", call), SOME_TASKS)).isEmpty();
+    }
+
+    @Test
+    void aFileThatCallsGradleSetsNoBuildVariableInAMatrixNorRunsParallelSteps() {
+        var steps = "    defaults:\n      run:\n        working-directory: android\n    steps:\n";
+        var matrix = "jobs:\n  build:\n    strategy:\n      matrix:\n        e: [{JAVA_TOOL_OPTIONS: x}]\n";
+        assertRefused(matrix + steps + "      - env: ${{ matrix.e }}\n        run: ./gradlew check\n",
+                "sets JAVA_TOOL_OPTIONS,", "env is no map");
+        assertRefused(matrix.replace("e: [{", "include: [{e: x, ") + steps + "      - run: ./gradlew check\n",
+                "sets JAVA_TOOL_OPTIONS,");
+        for (var name : List.of("GITHUB_DEPENDENCY_GRAPH_ENABLED", "DEPENDENCY_GRAPH_REPORT_DIR",
+                "GRADLE_PLUGIN_REPOSITORY_URL")) {
+            assertRefused(workflow("env:\n  " + name + ": x", "run: ./gradlew check"), "sets " + name + ",");
+        }
+        assertRefused(workflow("parallel:\n  - run: echo", "run: ./gradlew check"), "holds steps of its own");
+
+        assertThat(problems("a.yml", matrix + steps + "      - run: mvn verify\n", SOME_TASKS)).isEmpty();
+        assertThat(problems("a.yml", workflow("parallel:\n  - run: echo"), SOME_TASKS)).isEmpty();
+        assertThat(problems("a.yml", "jobs:\n  build:\n    strategy:\n      matrix:\n        java: [17, 21]\n"
+                + steps + "      - run: ./gradlew check\n      - uses: actions/upload-artifact@v7\n        with:\n"
+                + "          path: build/reports\n", SOME_TASKS)).isEmpty();
     }
 
     /**
@@ -989,6 +1043,9 @@ class AndroidDependencyVerificationTest {
                     + String.valueOf(e.getMessage()).lines().findFirst().orElse(""));
         }
         var problems = new ArrayList<String>();
+        if (documents.size() > 1) {
+            problems.add(name + ": holds %d YAML documents, where GitHub reads one".formatted(documents.size()));
+        }
         for (var document : documents) {
             var found = new ArrayList<Found>();
             walk(document, List.of(), Collections.newSetFromMap(new IdentityHashMap<>()), name, found, problems);
@@ -1056,10 +1113,24 @@ class AndroidDependencyVerificationTest {
                     problems.add(at + "a job of a file that calls Gradle sets its " + text + ", whose image may set"
                             + " Gradle's home and environment");
                 }
-                if (callsGradle && item.path().size() >= 2 && "env".equals(item.path().get(item.path().size() - 2))
+                var parents = item.path().subList(0, item.path().size() - 1);
+                if (callsGradle && (!parents.isEmpty() && "env".equals(parents.getLast()) || parents.contains("matrix"))
                         && readByTheBuild(text) && denials(text).isEmpty()) {
                     problems.add(at + "a file that calls Gradle sets " + text + ", which the JVM, Gradle or the shell"
                             + " reads for options or to find a program, whatever its value");
+                }
+                if (text.contains("${{")) {
+                    problems.add(at + "the key is an expression, which GitHub fills in at run time unseen by this"
+                            + " test");
+                }
+                if ((MAPS.contains(text) || "run".equals(text) && !parents.isEmpty()
+                        && "defaults".equals(parents.getLast())) && !(item.value() instanceof Map<?, ?>)) {
+                    problems.add(at + text + " is no map but " + (item.value() instanceof List<?> ? "a list"
+                            : "'" + item.value() + "'") + ", which GitHub may fill in at run time unseen by this test");
+                }
+                if (callsGradle && "parallel".equals(text) && stepLength(item.path()) == parents.size()) {
+                    problems.add(at + "a step of a file that calls Gradle holds steps of its own, which this test does"
+                            + " not read as steps");
                 }
                 continue;
             }
