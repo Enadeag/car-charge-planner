@@ -57,19 +57,22 @@ import org.w3c.dom.Node;
  * them: split at any line break, each line trimmed and run on its own, lines starting with {@code #} left out, and a
  * line that ends in a backslash refused. A line that names Gradle is, as a whole, {@code ./gradlew WORDS} or
  * {@code name=$(./gradlew WORDS)}, each word one of {@link #OPTIONS} or a task the refresh script runs too; a line that
- * only echoes plain double-quoted text is a message and is left out. No other key or value names Gradle as a command,
- * and a composite action does not call Gradle at all, as its call would escape the rules of the workflow that uses it.
+ * only echoes plain double-quoted text is a message and is left out. In a {@code run}, nothing but such calls and blank
+ * lines comes before its last Gradle call: bash runs a script command by command, so a complete command on the first
+ * lines runs before anything later is read, and nothing before it can open a quote, a substitution, an array, a
+ * {@code case} or a function, or change the folder. An emulator script may have other lines before its call, as the
+ * action runs each line in a shell of its own, where no line can open anything for another. No other key or value
+ * names Gradle as a command, and a composite action does not call Gradle at all, as its call would escape the rules of
+ * the workflow that uses it.
  *
  * <p>In a file that calls Gradle: a step that calls it runs in {@code android}, by its own {@code working-directory},
- * its job's default or the workflow's (the emulator action by its input), and does not change its folder; every other
+ * its job's default or the workflow's (the emulator action by its input); every other
  * {@code working-directory} and {@code cd} goes to a folder of {@link #DIRECTORIES}; only the actions of
  * {@link #ACTIONS} are used, each with the inputs of {@link #INPUTS_OF}; every job runs on a runner of
  * {@link #RUNNERS}, named as text; no job sets a container or services, no step or default names a shell, and no step
- * holds {@code parallel} steps; no {@code env}, nor a map of a {@code matrix},
- * sets a variable of {@link #BUILD_VARIABLES} or {@link #BUILD_VARIABLE_PREFIXES}, whatever its value; no command
- * holds a here-document, an expression other than those of {@link #EXPRESSIONS} (none), a line that ends in an
- * expression, or a line that ends inside a quote, which bash would carry on to the next line (a {@code run}'s line
- * after its backslash continuations are joined). In every file: one YAML document; an {@code env}, {@code with},
+ * holds {@code parallel} steps; no {@code env}, nor a map of a {@code matrix}, sets a variable of
+ * {@link #BUILD_VARIABLES} or {@link #BUILD_VARIABLE_PREFIXES}, whatever its value; no command holds an expression
+ * other than those of {@link #EXPRESSIONS} (none). In every file: one YAML document; an {@code env}, {@code with},
  * {@code defaults} and {@code defaults.run} that is a map, not an expression; no key that is an expression; no other
  * action with "gradle" in its name, no workflow of another repository, no local action outside
  * {@code .github/actions} or {@code .github/workflows}, no key {@code arguments} or {@code build-root-directory}.
@@ -90,9 +93,10 @@ import org.w3c.dom.Node;
  * {@code curl ... >> gradle.properties}, a restored cache, a checkout of another tree, the emulator's
  * {@code api-level}, {@code target} and {@code emulator-options}, which it writes into a shell line, beyond the deny
  * patterns); build scripts that apply code from outside {@code android/}, from a build's output folder, or use
- * {@code files(...)} dependencies. The test does not model the shell beyond these rules: a command that feeds text to
- * another shell ({@code | sh}, {@code eval}, {@code bash -c}) with the call built from pieces is text written to get
- * around the test, as is any text written to hide from a reviewer, and left to the review of a workflow change.
+ * {@code files(...)} dependencies. The test does not model the shell beyond these rules: what runs after the last
+ * call of a {@code run}, and the other steps of its job, are not modelled, and a call through a variable, another shell
+ * ({@code | sh}, {@code eval}, {@code bash -c}) or a script file is text written to get around the test, as is any
+ * text written to hide from a reviewer, and left to the review of a workflow change.
  */
 class AndroidDependencyVerificationTest {
 
@@ -133,9 +137,9 @@ class AndroidDependencyVerificationTest {
     private static final Set<String> BUILD_VARIABLES = Set.of("GRADLE_OPTS", "JAVA_OPTS", "JAVA_TOOL_OPTIONS",
             "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "PATH", "JAVA_HOME", "HOME", "GRADLE_USER_HOME");
     private static final List<String> BUILD_VARIABLE_PREFIXES = List.of("ORG_GRADLE_", "GRADLE_", "INPUT_",
-            "DEVELOCITY_", "LD_", "GITHUB_DEPENDENCY_GRAPH_", "DEPENDENCY_GRAPH_", "GRADLE_PLUGIN_REPOSITORY_");
+            "DEVELOCITY_", "LD_", "GITHUB_DEPENDENCY_GRAPH_", "DEPENDENCY_GRAPH_");
     /** The runners a job of a file that calls Gradle may name: GitHub's Ubuntu images, whose default shell is bash. */
-    private static final Pattern RUNNERS = Pattern.compile("ubuntu-latest|ubuntu-[0-9.]+");
+    private static final Pattern RUNNERS = Pattern.compile("ubuntu-latest|ubuntu-[0-9]+[.][0-9]+");
     /** The keys whose value GitHub reads as a map, which an expression in its place would fill in at run time. */
     private static final Set<String> MAPS = Set.of("env", "with", "defaults");
     /** An expression GitHub fills in before a command runs, with what it holds. */
@@ -210,9 +214,6 @@ class AndroidDependencyVerificationTest {
 
     private static final String WEAKENS_MESSAGE =
             " weakens or gets around the dependency verification, or writes the checksums";
-
-    /** No quote open, as {@link #openQuote} gives it. */
-    private static final char NO_QUOTE = ' ';
 
     /** The start of a workflow's job {@code build}, on a runner a file that calls Gradle may use. */
     private static final String JOB = "jobs:\n  build:\n    runs-on: ubuntu-latest\n";
@@ -306,7 +307,7 @@ class AndroidDependencyVerificationTest {
         assertRefused(run("./gradlew --offline check"), "--offline");
         assertRefused(run("./gradlew \"check\""), "\"check\"");
         assertRefused(run("./gradlew 'lint'"), "'lint'");
-        assertRefused(run("./gradlew ${{ matrix.task }}"), "${{ matrix.task }}", "ends in an expression", "${{",
+        assertRefused(run("./gradlew ${{ matrix.task }}"), "${{ matrix.task }}", "${{",
                 "matrix.task", "}}");
         assertRefused(run("./gradlew $TASKS"), "$TASKS");
         assertRefused(run("./gradlew :app:lint"), ":app:lint");
@@ -346,8 +347,9 @@ class AndroidDependencyVerificationTest {
                 "GRADLE_OPTS=$(./gradlew check)", "Out=$(./gradlew check)")) {
             assertRefused(run(line), form);
         }
-        assertRefused(run("cd android; ./gradlew lint"), form, "changes its folder");
-        assertRefused(run("if true; then\n  ./gradlew check -F off\nfi"), "-F", "off");
+        assertRefused(run("cd android; ./gradlew lint"), form);
+        assertRefused(run("if true; then\n  ./gradlew check -F off\nfi"), "'if true; then' comes before", "-F",
+                "off");
     }
 
     /** A value over several lines is one command when YAML reads it as one line, whatever it looks like. */
@@ -405,18 +407,6 @@ class AndroidDependencyVerificationTest {
                 .isEmpty();
     }
 
-    @Test
-    void aFileThatCallsGradleHasNoHereDocumentNorALineEndingInAnExpression() {
-        assertRefused(run("xargs env <<'EOF'\n./gradlew check\n-F off\nEOF"), "<<");
-        assertRefused(run("cat > x <<EOF\nEOF\n./gradlew check"), "<<");
-        assertRefused(run("echo -F off | xargs ${{ '\\' }}\n./gradlew check"), "${{ '\\' }}", "ends in an expression");
-        assertRefused(workflow("run: echo ${{ inputs.x }}", "run: ./gradlew check"), "${{ inputs.x }}",
-                "ends in an expression");
-
-        assertThat(problems("a.yml", workflow("run: |\n  cat <<EOF\n  x\n  EOF", "run: echo ${{ github.sha }}"),
-                SOME_TASKS)).isEmpty();
-    }
-
     /** An input or an event's text with a line break would add a shell line to the command it is written into. */
     @Test
     void aCommandOfAFileThatCallsGradleHoldsNoExpression() {
@@ -424,8 +414,8 @@ class AndroidDependencyVerificationTest {
         assertRefused(workflow("run: echo \"${{ github.event.pull_request.title }}\" > title", call),
                 "${{ github.event.pull_request.title }}");
         assertRefused(workflow("run: echo \"${{ github.sha }}\" > sha", call), "${{ github.sha }}");
-        assertRefused(workflow("run: |\n  echo \"${{ inputs.text\n  }}\" > x", call), "${{ inputs.text }}",
-                "line 1: the line ends inside a \" quote");
+        assertRefused(workflow("run: |\n  echo \"${{ inputs.text\n  }}\" > x", call), "${{ inputs.text }}");
+        assertRefused(run("echo -F off | xargs ${{ '\\' }}\n./gradlew check"), "${{ '\\' }}", "comes before");
         assertRefused(workflow("run: echo \"${{ inputs.x\"", call), "${{ inputs.x\" }}");
         assertRefused(workflow("""
                 uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
@@ -466,37 +456,52 @@ class AndroidDependencyVerificationTest {
                 SOME_TASKS)).isEmpty();
     }
 
-    /** Text in quotes over several lines may hand a clean call line to another shell with more words. */
+    /**
+     * Bash runs a step's script command by command, so nothing may come before a Gradle call that could open a quote, a
+     * substitution, an array, a {@code case} or a function for it, or change its folder.
+     */
     @Test
-    void aCommandOfAFileThatCallsGradleEndsNoLineInsideAQuote() {
-        var call = "run: ./gradlew check";
-        assertRefused(workflow("""
+    void aStepsRunHasNothingBeforeAGradleCall() {
+        var before = "comes before a Gradle call";
+        var call = "./gradlew --continue check";
+        for (var opening : List.of("echo \"$(echo ')\" | xargs env\n", "echo \"${x:-'}\" | xargs env\n",
+                "echo $'\\'' | xargs env\n")) {
+            var closing = opening.contains("$'") ? "' -F off | xargs env" : "' -F off\" | xargs env";
+            assertThat(problems("a.yml", run(opening + call + "\n" + closing), SOME_TASKS)).as(opening)
+                    .singleElement().asString().contains("line 1: ", before);
+        }
+        for (var folder : List.of("case a in a)cd ../ci;; esac", "cd>/dev/null ../ci", "pushd>/dev/null ../ci")) {
+            assertRefused(run(folder + "\n./gradlew check"), before);
+        }
+        assertRefused(run("a=(\n" + call + "\n-F off)\n\"${a[@]}\""), "line 1: 'a=(' " + before);
+        assertRefused(run("echo '\n./gradlew --continue --stacktrace check\n' -F off | tr '\\n' ' ' | sh"),
+                "line 1: 'echo '' " + before);
+        assertRefused(run("# the build\n./gradlew check"), "'# the build' " + before);
+        assertRefused(run("set -x\n./gradlew check"), "'set -x' " + before);
+        assertRefused(run("./gradlew lint\necho done\n./gradlew check"), "line 2: 'echo done' " + before);
+        assertRefused(run("echo \"Building\"\n./gradlew check"), before);
+        assertRefused(run("xargs env <<'EOF'\n./gradlew check\n-F off\nEOF"), "line 1: 'xargs env <<'EOF'' " + before);
+
+        assertThat(problems("a.yml", workflow("""
                 run: |
-                  echo '
-                  ./gradlew --continue --stacktrace check
-                  ' -F off | tr '\\n' ' ' | sh"""), "line 1: the line ends inside a ' quote");
-        assertRefused(workflow("run: |\n  x=\"a\n  b\"", call), "line 1: the line ends inside a \" quote");
-        assertRefused(workflow("run: |\n  echo ok\n  echo a#'b\n  c'", call), "line 2: the line ends inside a ' quote");
-        assertRefused(workflow("run: |\n  echo \"a \\\" b\n  \"", call), "line 1: the line ends inside a \" quote");
-        var emulator = """
+                  out=$(./gradlew -q --console=plain :app:printReleaseVersion)
+                  name=$(printf '%s\\n' "$out" | sed -n 's/^versionName=//p')
+                  if [ -z "$name" ]; then
+                    echo "::error::no version name: $out"; exit 1
+                  fi
+                  cat <<EOF
+                  $name
+                  EOF
+                  cd release""", "run: |\n  ./gradlew lint\n\n  ./gradlew check\n  echo 'it is done'"), SOME_TASKS))
+                .isEmpty();
+        assertThat(problems("a.yml", workflow("""
                 uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
                 with:
                   working-directory: android
                   script: |
-                """;
-        assertRefused(workflow(emulator + "    echo 'a\n    b'\n    ./gradlew check"),
-                "line 1: the line ends inside a ' quote");
-
-        assertThat(problems("a.yml", workflow("""
-                run: |
-                  echo 'one line, closed on it'
-                  echo "it's" 'say "so"' && echo ok
-                  echo \\" \\' "a \\" b" 'c\\' # it's a comment
-                  printf '%s\\n' "$(git rev-parse 'HEAD^{commit}')" > sha
-                  echo "x" \\
-                    "y"
-                  echo ${#PATH}'s length'""", call), SOME_TASKS)).isEmpty();
-        assertThat(problems("a.yml", workflow("run: |\n  echo '\n  text\n  '"), SOME_TASKS)).isEmpty();
+                    mkdir -p build
+                    adb logcat -v threadtime < /dev/null > build/logcat.txt 2>&1 &
+                    ./gradlew --continue check"""), SOME_TASKS)).isEmpty();
     }
 
     @Test
@@ -504,7 +509,7 @@ class AndroidDependencyVerificationTest {
         var steps = "    defaults:\n      run:\n        working-directory: android\n    steps:\n"
                 + "      - run: ./gradlew check\n";
         for (var runner : List.of("${{ matrix.os }}", "[ubuntu-latest]", "self-hosted", "windows-latest",
-                "ubuntu-latest-arm")) {
+                "ubuntu-latest-arm", "ubuntu-24", "ubuntu-24.")) {
             assertRefused("jobs:\n  build:\n    runs-on: " + runner + "\n" + steps, "jobs.build.runs-on");
         }
         assertRefused("jobs:\n  build:\n" + steps, "runs on no runner it names");
@@ -598,9 +603,9 @@ class AndroidDependencyVerificationTest {
                 + "      # ./gradlew -F off, never run\n\n      ./gradlew --continue check"), SOME_TASKS)).isEmpty();
         assertThat(problems("a.yml", workflow("""
                 run: |
-                  echo "Running the instrumented tests" \\
-                    "./gradlew check"
-                  ./gradlew check"""), SOME_TASKS)).isEmpty();
+                  ./gradlew check
+                  echo "Ran the instrumented tests" \\
+                    "with ./gradlew check\""""), SOME_TASKS)).isEmpty();
     }
 
     @Test
@@ -750,12 +755,12 @@ class AndroidDependencyVerificationTest {
                   CACHE: ~/.gradle/caches""", """
                 name: Build with Gradle
                 run: |
+                  ./gradlew check
                   cp android/gradle/libs.versions.toml build/reports/
                   cat android/gradle.properties
                   echo "run ./gradlew check, or gradle check"
                   echo "::error::It failed Gradle's verification," \\
-                    "run ./gradlew check"
-                  ./gradlew check"""), SOME_TASKS)).isEmpty();
+                    "run ./gradlew check\""""), SOME_TASKS)).isEmpty();
     }
 
     @Test
@@ -792,8 +797,8 @@ class AndroidDependencyVerificationTest {
                 "android/build-logic", "'android/build-logic'");
         assertRefused(JOB + "    defaults:\n      run:\n        working-directory: build-logic\n"
                 + "    steps:\n      - run: ./gradlew check\n", "build-logic", "'build-logic'");
-        assertRefused(run("cd android\n./gradlew check"), "changes its folder ('android')");
-        assertRefused(run("pushd ..\n./gradlew check"), "changes its folder ('..')");
+        assertRefused(run("cd android\n./gradlew check"), "'cd android' comes before");
+        assertRefused(run("pushd ..\n./gradlew check"), "'pushd ..' comes before", "'..'");
         assertRefused(workflow("""
                 uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
                 with:
@@ -907,12 +912,10 @@ class AndroidDependencyVerificationTest {
         assertThat(problems("a.yml", workflow("working-directory: \"android\"\nrun: ./gradlew check",
                 "working-directory: android # the root build\nrun: ./gradlew lint", """
                 run: |
-                  if [ -n "$CI" ]; then
-                    ./gradlew check
-                  fi
-                  for attempt in 1 2; do
-                    ./gradlew --continue lint
-                  done""", "run: |2\n    ./gradlew check", "\"run\": ./gradlew check", "? run\n: ./gradlew lint",
+                  ./gradlew check
+
+                    ./gradlew --continue lint""", "run: |2\n    ./gradlew check", "\"run\": ./gradlew check",
+                "? run\n: ./gradlew lint",
                 "run: ./gradlew check\n    # a comment below the call", """
                 uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
                 with:
@@ -927,7 +930,7 @@ class AndroidDependencyVerificationTest {
 
     @Test
     void aProblemNamesTheFileTheJobTheStepAndTheLine() {
-        assertThat(problems("a.yml", workflow("name: Lint\nrun: |\n  echo hi\n  ./gradlew -F"), SOME_TASKS))
+        assertThat(problems("a.yml", workflow("name: Lint\nrun: |\n  ./gradlew check\n  ./gradlew -F"), SOME_TASKS))
                 .singleElement().asString().startsWith("a.yml, job build, step 1 (Lint), run, line 2: ");
         assertThat(problems("action.yml", "runs:\n  using: composite\n  steps:\n    - shell: bash\n      run: echo\n"
                 + "    - shell: bash\n      working-directory: android\n      run: ./gradlew -F\n", SOME_TASKS))
@@ -1247,11 +1250,6 @@ class AndroidDependencyVerificationTest {
         text.chars().filter(c -> Character.isISOControl(c) && c != '\t' && c != '\n').distinct()
                 .forEach(c -> problems.add(place + ": the command holds the control character U+%04X, which YAML and"
                         .formatted(c) + " the shell may read as different line breaks"));
-        var calls = callsGradle(command);
-        if (fileCallsGradle && text.contains("<<")) {
-            problems.add(place + ": a command of a file that calls Gradle holds <<, whose here-document may hand a"
-                    + " later line to another command");
-        }
         if (fileCallsGradle) {
             EXPRESSION.matcher(text).results().map(found -> found.group(1).strip())
                     .filter(expression -> EXPRESSIONS.stream().noneMatch(allowed -> allowed.matcher(expression)
@@ -1262,25 +1260,19 @@ class AndroidDependencyVerificationTest {
         }
         var emulator = byTheEmulator(command);
         var lines = emulator ? emulatorLines(text) : shellLines(text);
-        if (fileCallsGradle) {
-            for (var line : lines) {
-                var quote = openQuote(line.text());
-                if (quote != NO_QUOTE) {
-                    problems.add(place + ", line " + line.number() + (": the line ends inside a %c quote, so the"
-                            .formatted(quote)) + " text of the next lines may reach a shell as part of a command");
-                    break;
-                }
-            }
-        }
-        for (var line : lines) {
+        var lastCall = emulator ? -1 : IntStream.range(0, lines.size()).filter(i -> namesGradle(lines.get(i)))
+                .max().orElse(-1);
+        for (int i = 0; i < lines.size(); i++) {
+            var line = lines.get(i);
             var lineAt = place + ", line " + line.number() + ": ";
             if (emulator && line.text().endsWith("\\")) {
                 problems.add(lineAt + "the line ends in a backslash, but the emulator action runs each line on its"
                         + " own, so the next line does not continue it");
             }
-            if (fileCallsGradle && line.text().strip().endsWith("}}")) {
-                problems.add(lineAt + "the line ends in an expression, which GitHub may fill in with a backslash that"
-                        + " joins the next line");
+            if (i < lastCall && !line.text().isBlank() && !namesGradle(line)) {
+                problems.add(lineAt + "'%s' comes before a Gradle call: in a step's run only Gradle calls and blank"
+                        .formatted(line.text().strip()) + " lines may, as bash reads what comes later only after"
+                        + " running them");
             }
             if (MESSAGE.matcher(line.text()).matches()) {
                 continue;
@@ -1289,46 +1281,24 @@ class AndroidDependencyVerificationTest {
             if (GRADLE.matcher(line.text()).find()) {
                 callProblems(line.text(), tasks).forEach(problem -> problems.add(lineAt + problem));
             }
-            for (var cd : CD.matcher(line.text()).results().map(found -> found.group(1)).toList()) {
-                if (calls) {
-                    problems.add(lineAt + "a command that calls Gradle changes its folder ('%s'): a step that calls"
-                            .formatted(cd) + " Gradle runs in android by its working-directory");
-                } else if (fileCallsGradle && !DIRECTORIES.contains(cd)) {
-                    problems.add(lineAt + outsideTheFolders(cd));
-                }
+            if (fileCallsGradle) {
+                CD.matcher(line.text()).results().map(found -> found.group(1))
+                        .filter(folder -> !DIRECTORIES.contains(folder))
+                        .forEach(folder -> problems.add(lineAt + outsideTheFolders(folder)));
             }
         }
         return problems;
     }
 
-    /**
-     * The quote still open at the end of {@code line}, as bash reads it: {@code '}, {@code "} or {@link #NO_QUOTE}. A
-     * backslash escapes the next character outside single quotes, and a {@code #} that starts a word outside quotes
-     * starts a comment. A line that ends inside a quote is refused, so no line starts inside one.
-     */
-    private static char openQuote(String line) {
-        var quote = NO_QUOTE;
-        for (int i = 0; i < line.length(); i++) {
-            var c = line.charAt(i);
-            if (quote == '\'') {
-                quote = c == '\'' ? NO_QUOTE : quote;
-            } else if (c == '\\') {
-                i++;
-            } else if (quote == '"') {
-                quote = c == '"' ? NO_QUOTE : quote;
-            } else if (c == '\'' || c == '"') {
-                quote = c;
-            } else if (c == '#' && (i == 0 || " \t;&|(".indexOf(line.charAt(i - 1)) >= 0)) {
-                break;
-            }
-        }
-        return quote;
+    /** Whether {@code line} names Gradle and is not a message. */
+    private static boolean namesGradle(ShellLine line) {
+        return !MESSAGE.matcher(line.text()).matches() && GRADLE.matcher(line.text()).find();
     }
 
     /** Whether the command string {@code command} names Gradle on a line that is not a message. */
     private static boolean callsGradle(Found command) {
         return (byTheEmulator(command) ? emulatorLines(command.text()) : shellLines(command.text())).stream()
-                .anyMatch(line -> !MESSAGE.matcher(line.text()).matches() && GRADLE.matcher(line.text()).find());
+                .anyMatch(AndroidDependencyVerificationTest::namesGradle);
     }
 
     /** Whether the command string {@code command} is a script input of the emulator action, not a step's run. */
