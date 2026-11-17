@@ -22,7 +22,8 @@ coroutines = "1.11.0"
 robolectric = "4.17"
 # Robolectric's Android for each SDK the tests run on (robolectric.properties and @Config(sdk = ...)), named as
 # the Robolectric version above asks for it: Gradle downloads and checks these jars, and the tests run with
-# Robolectric offline (#484). RobolectricSdkJarsTest holds them to the Robolectric version; a Robolectric update may need new ones.
+# Robolectric offline (#484). RobolectricSdkJarsTest holds them to the Robolectric version; a Robolectric update may
+# need new ones.
 robolectric-android-sdk32 = "12.1-robolectric-8229987-i7"
 robolectric-android-sdk33 = "13-robolectric-9030017-i7"
 robolectric-android-sdk36 = "16-robolectric-13921718-i7"
