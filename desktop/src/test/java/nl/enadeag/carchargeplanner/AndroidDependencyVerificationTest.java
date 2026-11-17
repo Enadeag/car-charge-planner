@@ -51,13 +51,17 @@ import org.w3c.dom.Node;
  *
  * <p>The workflows and composite actions are read with a YAML parser, as line patterns kept having ways around; a file
  * that does not parse fails, and the rules hold the parsed data, with aliases and merge keys resolved; no file under
- * {@code .github} is a symbolic link. The command strings are the {@code run} of each step, text with no control
+ * {@code .github} is a symbolic link, and none holds U+0085, U+2028 or U+2029, which GitHub's reader takes as a line
+ * break and the parser does not. The command strings are the {@code run} of each step, text with no control
  * character but tab and line feed, read as bash reads it: split at line feeds, a backslash's continuation joined; and
  * the {@code script} and {@code pre-emulator-launch-script} inputs of the emulator action, read as the action runs
  * them: split at any line break, each line trimmed and run on its own, lines starting with {@code #} left out, and a
  * line that ends in a backslash refused. A line that names Gradle is, as a whole, {@code ./gradlew WORDS} or
- * {@code name=$(./gradlew WORDS)}, each word one of {@link #OPTIONS} or a task the refresh script runs too; a line that
- * only echoes plain double-quoted text is a message and is left out. In a {@code run}, nothing but such calls and blank
+ * {@code name=$(./gradlew WORDS)}, each word one of {@link #OPTIONS} or a task the refresh script runs too. A message,
+ * a line that only echoes plain double-quoted text, is no exception, as another command may read its text as data: it
+ * may name the refresh script and the metadata file, for the hint after a failed check, and nothing else the deny
+ * patterns name. A line that runs Java (a {@code java} command or a jar) and names Gradle fails in every file, as it
+ * may run Gradle from a jar. In a {@code run}, nothing but such calls and blank
  * lines comes before its last Gradle call: bash runs a script command by command, so a complete command on the first
  * lines runs before anything later is read, and nothing before it can open a quote, a substitution, an array, a
  * {@code case} or a function, or change the folder. An emulator script may have other lines before its call, as the
@@ -95,8 +99,9 @@ import org.w3c.dom.Node;
  * patterns); build scripts that apply code from outside {@code android/}, from a build's output folder, or use
  * {@code files(...)} dependencies. The test does not model the shell beyond these rules: what runs after the last
  * call of a {@code run}, and the other steps of its job, are not modelled, and a call through a variable, another shell
- * ({@code | sh}, {@code eval}, {@code bash -c}) or a script file is text written to get around the test, as is any
- * text written to hide from a reviewer, and left to the review of a workflow change.
+ * ({@code | sh}, {@code eval}, {@code bash -c}), a script file, or Gradle's own jar run by {@code java} and found by a
+ * pattern that avoids its name, is text written to get around the test, as is any text written to hide from a
+ * reviewer, and left to the review of a workflow change.
  */
 class AndroidDependencyVerificationTest {
 
@@ -191,10 +196,10 @@ class AndroidDependencyVerificationTest {
     /**
      * Another root build, another Gradle user home, or an init script: the long flags, the variable and the property of
      * the user home, an {@code init.d} folder or {@code init.gradle} file, but not the system's {@code /etc/init.d}.
-     * And Gradle run without its name as a command: the wrapper's jar.
+     * And Gradle run without its name as a command: the wrapper's jar and folder, and the folder of its downloads.
      */
     private static final Pattern ELSEWHERE = Pattern.compile("--project-dir|--init-script|--gradle-user-home"
-            + "|gradle-wrapper[.]jar|GRADLE_USER_HOME|gradle[.]user[.]home"
+            + "|gradle-wrapper[.]jar|gradle/wrapper|wrapper/dists|GRADLE_USER_HOME|gradle[.]user[.]home"
             + "|(?<![\\w-])(?<!/etc/)init[.](?:d|gradle)\\b");
     /** The refresh script, which runs Gradle in write mode. */
     private static final Pattern REFRESH = Pattern.compile("refresh-android-verification");
@@ -204,8 +209,18 @@ class AndroidDependencyVerificationTest {
      */
     private static final Pattern INPUTS = Pattern.compile("(?<!--write-)verification-metadata"
             + "|(?<![\\w.*-])[.]gradle(?![\\w.-]|/caches(?![/\\w.-]))|BASH_ENV|(?<!gradle[.])user[.](?:home|dir)");
-    /** An {@code echo} of plain double-quoted text only: a message, which runs nothing it names. */
+    /** An {@code echo} of plain double-quoted text only: a message, such as a hint after a failed check. */
     private static final Pattern MESSAGE = Pattern.compile("\\s*echo(\\s+\"[^\"$`\\\\]*\")+\\s*");
+    /**
+     * What of the deny patterns a message may name: the refresh script and the metadata file, which the hint after a
+     * failed verification names. It may name no Gradle call and no flag or property that weakens the check.
+     */
+    private static final Pattern MESSAGE_MAY_NAME =
+            Pattern.compile("refresh-android-verification|verification-metadata");
+    /** Java as a command, or a jar, which may run Gradle without its name as a command. */
+    private static final Pattern JAVA = Pattern.compile("(?<![\\w.-])java(?![\\w.-])|[.]jar\\b");
+    /** What GitHub's YAML reader takes as a line break and SnakeYAML Engine does not. */
+    private static final Pattern OTHER_LINE_BREAK = Pattern.compile("[\\u0085\\u2028\\u2029]");
     /** A task name, with or without a project path. */
     private static final Pattern TASK = Pattern.compile(":?[A-Za-z][\\w:-]*");
     /** The options of the refresh script's Gradle call whose value is the next word. */
@@ -504,6 +519,73 @@ class AndroidDependencyVerificationTest {
                     ./gradlew --continue check"""), SOME_TASKS)).isEmpty();
     }
 
+    /** Another command may read a message's text as data, so a message that names Gradle is a call line too. */
+    @Test
+    void aMessageNamesNoGradleCallAndNoFlagThatWeakensTheCheck() {
+        var form = "is not ./gradlew WORDS";
+        var before = "comes before a Gradle call";
+        var message = "echo \"./gradlew\" \"-F\" \"off\" \"check\"";
+        assertRefused(run("./gradlew check\ncut -d' ' -f2- <<'X' | xargs env\n" + message + "\nX"),
+                "line 2: 'cut -d' ' -f2- <<'X' | xargs env' " + before, "line 3: '" + "echo \"./gradlew\"");
+        assertRefused(run("./gradlew check\n$(tr -d '\"' <<'X' | cut -d' ' -f2-\n"
+                + "echo \"./gradlew --dependency-verification=off check\"\nX\n)"),
+                "line 2: '$(tr -d '\"' <<'X' | cut -d' ' -f2-' " + before, "line 3: --dependency-verification", form);
+        assertRefused(run("printf '%s' '\n" + message + "\n' | cut -d' ' -f2- | xargs env"),
+                "line 1: 'printf '%s' '' " + before, "line 2: '" + message + "' names Gradle");
+        assertRefused(run("cut -d' ' -f2- <<'X' | xargs env\n" + message + "\nX"),
+                before, form);
+        assertThat(problems("a.yml", "jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: |\n"
+                + "          cut -d' ' -f2- <<'X' | xargs env\n          echo \"./gradlew\" \"check\"\n          X\n",
+                SOME_TASKS)).anySatisfy(problem -> assertThat(problem).contains("the workspace"));
+        assertRefused(run("echo \"set org.gradle.dependency.verification=off\""), "dependency.verification");
+        assertRefused(run("echo \"use --dependency-verification off\""), "--dependency-verification");
+        assertRefused(run("echo \"copy it to ~/.gradle/init.d\""), "init.d", ".gradle");
+
+        assertThat(problems("a.yml", workflow("""
+                run: |
+                  if [ -d build/reports/dependency-verification ]; then
+                    echo "::error::A downloaded file failed Gradle's dependency verification. After a change," \\
+                      "run sh tools/refresh-android-verification.sh from the repository's root, read the diff of" \\
+                      "android/gradle/verification-metadata.xml and commit it (docs/dev/android.md)."
+                  fi"""), SOME_TASKS)).isEmpty();
+    }
+
+    /** Gradle run from a jar names no wrapper, so a line that runs Java and names Gradle fails in every file. */
+    @Test
+    void javaRunsNoGradleJar() {
+        var refused = "runs Java and names Gradle";
+        assertRefused(workflow("run: java -jar gradle/wrapper/*.jar -F off check"), "gradle/wrapper", refused);
+        assertRefused(run("./gradlew check\njava -jar gradle/wrapper/*.jar -F off check"), "gradle/wrapper", refused);
+        assertRefused(workflow("""
+                uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+                with:
+                  working-directory: android
+                  script: |
+                    ./gradlew check
+                    java -jar gradle/wrapper/*.jar -F off check"""), "gradle/wrapper", refused);
+        assertRefused(run("find ~ -name 'gradle-gradle-cli-main-*.jar' -exec java -jar {} -F off check \\;"), refused);
+        assertRefused(workflow("run: sh -c \"$JVM -jar tools/gradle-launcher.jar check\""), refused);
+        assertRefused(workflow("run: java -jar tools/Gradle-cli.jar check"), refused);
+        assertRefused(workflow("env:\n  DISTS: ~/.gradle/wrapper/dists"), "gradle/wrapper", ".gradle");
+        assertRefused(workflow("env:\n  DISTS: /opt/wrapper/dists"), "wrapper/dists");
+        assertRefused(workflow("uses: actions/cache@v4\nwith:\n  key: ${{ hashFiles('android/gradle/wrapper/**') }}"),
+                "gradle/wrapper");
+
+        assertThat(problems("a.yml", workflow("run: java -jar target/x.jar --version",
+                "run: java tools/ReleaseNotes.java \"$VERSION\" CHANGELOG.md > notes", "run: jpackage --input target",
+                "run: javac -d out tools/GradleLike.java"),
+                SOME_TASKS)).isEmpty();
+    }
+
+    @Test
+    void aFileWithAnotherLineBreakThanYamlsIsRefused() {
+        for (var lineBreak : List.of("\u0085", "\u2028", "\u2029")) {
+            assertRefused(workflow("name: a" + lineBreak + "b", "run: ./gradlew check"),
+                    "holds U+%04X".formatted((int) lineBreak.charAt(0)));
+        }
+        assertThat(problems("a.yml", workflow("name: a\tb, \u00e9", "run: ./gradlew check"), SOME_TASKS)).isEmpty();
+    }
+
     @Test
     void aJobOfAFileThatCallsGradleRunsOnAnUbuntuRunner() {
         var steps = "    defaults:\n      run:\n        working-directory: android\n    steps:\n"
@@ -599,13 +681,13 @@ class AndroidDependencyVerificationTest {
                 + "    \"./gradlew\" \"check\""), "ends in a backslash", "is not ./gradlew WORDS", "the workspace");
 
         assertThat(problems("a.yml", workflow(emulator
-                + "    echo \"Running the instrumented tests: ./gradlew :app:connectedDebugAndroidTest\"\n"
+                + "    echo \"Running the instrumented tests\"\n"
                 + "      # ./gradlew -F off, never run\n\n      ./gradlew --continue check"), SOME_TASKS)).isEmpty();
         assertThat(problems("a.yml", workflow("""
                 run: |
                   ./gradlew check
                   echo "Ran the instrumented tests" \\
-                    "with ./gradlew check\""""), SOME_TASKS)).isEmpty();
+                    "with Gradle\""""), SOME_TASKS)).isEmpty();
     }
 
     @Test
@@ -616,7 +698,7 @@ class AndroidDependencyVerificationTest {
                 "the shell 'bash'", "belongs in a workflow's own step");
 
         assertThat(problems("action.yml", "runs:\n  using: composite\n  steps:\n    - shell: bash\n"
-                + "      run: echo \"run ./gradlew check\"\n", SOME_TASKS)).isEmpty();
+                + "      run: echo \"run the build\"\n", SOME_TASKS)).isEmpty();
     }
 
     @Test
@@ -723,7 +805,8 @@ class AndroidDependencyVerificationTest {
         assertRefused(run("cp ci/x.properties ~/.gradle/caches/../gradle.properties"), ".gradle");
         assertRefused(run("cp ci/x.properties \"$HOME/\".gradle/"), ".gradle");
         assertRefused(run("rm android/gradle/verification-metadata.*"), "verification-metadata");
-        assertRefused(run("java -jar gradle/wrapper/gradle-wrapper.jar -F off check"), "gradle-wrapper.jar");
+        assertRefused(run("java -jar gradle/wrapper/gradle-wrapper.jar -F off check"), "gradle/wrapper",
+                "gradle-wrapper.jar", "runs Java and names Gradle");
 
         assertThat(problems("a.yml", workflow("""
                 uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
@@ -739,7 +822,8 @@ class AndroidDependencyVerificationTest {
                 "./gradlew.bat", "./GRADLEW", "gradle", "/opt/gradle/bin/gradle", "gradle.bat")) {
             assertRefused(run("sh " + other + " check"), other);
         }
-        assertRefused(run("java -cp x org.gradle.wrapper.GradleWrapperMain check"), "GradleWrapperMain");
+        assertRefused(run("java -cp x org.gradle.wrapper.GradleWrapperMain check"), "runs Java and names Gradle",
+                "GradleWrapperMain");
         assertRefused(run("out=$(gradle -q help)"), "out=$(gradle");
         assertRefused(workflow("env:\n  CALL: ./gradlew check"), "outside a command string");
         assertRefused(workflow("name: then run gradle check"), "outside a command string");
@@ -758,9 +842,9 @@ class AndroidDependencyVerificationTest {
                   ./gradlew check
                   cp android/gradle/libs.versions.toml build/reports/
                   cat android/gradle.properties
-                  echo "run ./gradlew check, or gradle check"
+                  echo "Gradle's checks ran"
                   echo "::error::It failed Gradle's verification," \\
-                    "run ./gradlew check\""""), SOME_TASKS)).isEmpty();
+                    "run the build again\""""), SOME_TASKS)).isEmpty();
     }
 
     @Test
@@ -924,7 +1008,7 @@ class AndroidDependencyVerificationTest {
         // a step's name and a message are no call, so the rules for the actions and folders of a file that calls
         // Gradle stay off
         assertThat(problems("a.yml", workflow("name: Build with Gradle\nuses: some/other-action@v1",
-                "run: echo \"run ./gradlew check\"",
+                "run: echo \"run the build with Gradle\"",
                 "working-directory: desktop\nrun: mvn verify"), SOME_TASKS)).isEmpty();
     }
 
@@ -1103,6 +1187,11 @@ class AndroidDependencyVerificationTest {
         if (name.endsWith(".properties")) {
             return propertiesProblems(name, text);
         }
+        var lineBreak = OTHER_LINE_BREAK.matcher(text);
+        if (lineBreak.find()) {
+            return List.of(name + ": holds U+%04X, which GitHub reads as a line break and this test's parser does not"
+                    .formatted((int) lineBreak.group().charAt(0)));
+        }
         var documents = new ArrayList<>();
         try {
             new Load(YAML).loadAllFromString(text).forEach(documents::add);
@@ -1274,14 +1363,16 @@ class AndroidDependencyVerificationTest {
                         .formatted(line.text().strip()) + " lines may, as bash reads what comes later only after"
                         + " running them");
             }
-            if (MESSAGE.matcher(line.text()).matches()) {
-                continue;
+            var message = MESSAGE.matcher(line.text()).matches();
+            denials(line.text()).stream().filter(word -> !message || !MESSAGE_MAY_NAME.matcher(word).matches())
+                    .forEach(word -> problems.add(lineAt + word + WEAKENS_MESSAGE));
+            if (JAVA.matcher(line.text()).find() && line.text().toLowerCase(Locale.ROOT).contains("gradle")) {
+                problems.add(lineAt + "the line runs Java and names Gradle, so it may run Gradle from a jar");
             }
-            problems.addAll(denied(lineAt, line.text()));
-            if (GRADLE.matcher(line.text()).find()) {
+            if (namesGradle(line)) {
                 callProblems(line.text(), tasks).forEach(problem -> problems.add(lineAt + problem));
             }
-            if (fileCallsGradle) {
+            if (fileCallsGradle && !message) {
                 CD.matcher(line.text()).results().map(found -> found.group(1))
                         .filter(folder -> !DIRECTORIES.contains(folder))
                         .forEach(folder -> problems.add(lineAt + outsideTheFolders(folder)));
@@ -1290,9 +1381,9 @@ class AndroidDependencyVerificationTest {
         return problems;
     }
 
-    /** Whether {@code line} names Gradle and is not a message. */
+    /** Whether {@code line} names Gradle, a message too, as another command may read a message's text as data. */
     private static boolean namesGradle(ShellLine line) {
-        return !MESSAGE.matcher(line.text()).matches() && GRADLE.matcher(line.text()).find();
+        return GRADLE.matcher(line.text()).find();
     }
 
     /** Whether the command string {@code command} names Gradle on a line that is not a message. */
