@@ -9,11 +9,13 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.MatchResult;
@@ -26,6 +28,10 @@ import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.snakeyaml.engine.v2.api.Load;
+import org.snakeyaml.engine.v2.api.LoadSettings;
+import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
+import org.snakeyaml.engine.v2.schema.CoreSchema;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -35,20 +41,28 @@ import org.w3c.dom.Node;
  * default is the real check; this test is a tripwire beside it, here in the Maven build, so every pull request that
  * changes a workflow runs it.
  *
- * <p>The Gradle calls of the workflows and composite actions are held to an allowlist, as deny patterns kept having
- * ways around: a call is the wrapper written plainly as {@code ./gradlew}, followed only by words of {@link #OPTIONS}
- * and tasks the refresh script runs too, up to the end of the line or the {@code )} of a {@code $(...)}. Any other word
- * fails, and so does any other way of naming the wrapper or Gradle as a command, and a call YAML would join with
- * another line, or that does not start a command: it stands on its {@code run:} line or in a literal block. A file
- * that calls Gradle uses only the actions of {@link #ACTIONS}, and no step names the check's inputs to change them (the
- * metadata file, a Gradle user home's folder, {@code BASH_ENV}, {@code user.home}). In a file that calls Gradle, every
- * {@code working-directory} and every {@code cd} goes to a folder of {@link #DIRECTORIES}. Beside that, no workflow,
- * composite action or {@code gradle.properties} names the verification flags or the mode's property in any spelling,
- * another Gradle user home, an init script, or the refresh script, which writes the checksums instead of checking them;
- * no build file, source, properties file or wrapper script of the Android build sets the mode; and
- * {@code verification-metadata.xml} checks poms too, SHA-256 only, without keys, and trusts only an IDE's sources and
- * Javadoc. Comment lines, and a line that only echoes plain double-quoted text, are left out. Not seen: a Gradle call
- * through a shell variable, or from a script file that a workflow runs.
+ * <p>The workflows and composite actions are read with a YAML parser, as line patterns kept having ways around; a file
+ * that does not parse fails, and the rules hold the parsed data, with aliases and merge keys resolved. The command
+ * strings are the {@code run} of each step and the {@code script} and {@code pre-emulator-launch-script} inputs of the
+ * emulator action, read as shell lines with a backslash's continuation joined. A shell line that names Gradle is, as a
+ * whole, {@code ./gradlew WORDS} or {@code NAME=$(./gradlew WORDS)}, each word one of {@link #OPTIONS} or a task the
+ * refresh script runs too; a line that only echoes plain double-quoted text is a message and is left out. No other key
+ * or value names Gradle as a command. A file that calls Gradle uses only the actions of {@link #ACTIONS}, and its every
+ * {@code working-directory}, at any level, and every {@code cd} goes to a folder of {@link #DIRECTORIES}. No file uses
+ * another action with "gradle" in its name, a workflow of another repository, or a key {@code arguments} or
+ * {@code build-root-directory}. Every key, value and shell line is held to the deny patterns: the verification flags
+ * and the mode's property in any spelling, another Gradle user home, an init script, the refresh script, which writes
+ * the checksums instead of checking them, and the check's inputs (the metadata file, a Gradle user home's folder,
+ * {@code BASH_ENV}, {@code user.home}). Beside that, no {@code gradle.properties} names those either; no build file,
+ * source, properties file or wrapper script of the Android build sets the mode; the wrapper downloads Gradle from
+ * Gradle with a checksum; and {@code verification-metadata.xml} checks poms too, SHA-256 only, without keys, and trusts
+ * only an IDE's sources and Javadoc.
+ *
+ * <p>Not seen, and left to the maintainer's review of a workflow or build change: a Gradle call through a shell
+ * variable or from a script file a workflow runs; a step that changes the build's files or environment before the call
+ * by a path this test does not know ({@code cat file >> "$GITHUB_ENV"}, a sourced script,
+ * {@code curl ... >> gradle.properties}); build scripts that apply code from outside {@code android/} or use
+ * {@code files(...)} dependencies. Text written to hide from a reviewer is out of scope.
  */
 class AndroidDependencyVerificationTest {
 
@@ -62,22 +76,31 @@ class AndroidDependencyVerificationTest {
      * root, and {@code android-release.yml}'s folder of the signed APK.
      */
     private static final Set<String> DIRECTORIES = Set.of("android", ".", "release");
+    /** The actions a file that calls Gradle may use: those the workflows use; another one may run Gradle itself. */
+    private static final Set<String> ACTIONS = Set.of("actions/checkout", "actions/setup-java",
+            "actions/upload-artifact", "actions/download-artifact", "actions/attest-build-provenance",
+            "gradle/actions/setup-gradle", "reactivecircus/android-emulator-runner");
+    private static final String EMULATOR = "reactivecircus/android-emulator-runner";
+    /** The emulator action's inputs that it runs as shell lines. */
+    private static final Set<String> SCRIPT_INPUTS = Set.of("script", "pre-emulator-launch-script");
+    /** The inputs of Gradle's former actions that hand Gradle its arguments or another root build. */
+    private static final Set<String> GRADLE_INPUTS = Set.of("arguments", "build-root-directory");
 
-    /** The wrapper written plainly, as a command of its own: not quoted, not after a path, no more name after it. */
-    private static final Pattern CALL = Pattern.compile("(?<![^\\s(;&|])\\./gradlew(?![^\\s)])");
+    /**
+     * YAML 1.2's core schema, in which {@code on} is a key, as GitHub reads it; a duplicate key fails, as on GitHub; no
+     * variables are filled in. The parser makes maps, lists and scalars only, never a type a document names.
+     */
+    private static final LoadSettings YAML = LoadSettings.builder().setSchema(new CoreSchema())
+            .setAllowDuplicateKeys(false).setEnvConfig(Optional.empty()).build();
+
+    /** A shell line that calls Gradle as a whole: the wrapper and words, alone or in an assignment's {@code $(...)}. */
+    private static final Pattern CALL =
+            Pattern.compile("(?<name>[A-Za-z_]\\w*=\\$\\()?\\./gradlew"
+                    + "(?<words>(?:[ \\t]+[^\\s)]+)*)[ \\t]*(?<close>\\))?");
     /** The wrapper in any form, and Gradle as a command, but not a path through a folder such as {@code gradle/}. */
     private static final Pattern GRADLE = Pattern.compile("(?i:gradlew)|(?<![\\w.-])gradle(?:\\.bat)?(?![\\w/.-])");
     /** A {@code cd} or {@code pushd} and its target, up to the end of its command. */
     private static final Pattern CD = Pattern.compile("(?<![^\\s;&|(])(?:cd|pushd)(?![^\\s;&|)])\\s*([^\\s;&|)]*)");
-    /** The key as YAML reads it: plain, in quotes, with or without a space before its colon. */
-    private static final Pattern WORKING_DIRECTORY =
-            Pattern.compile("(?<![\\w-])working-directory[\"']?\\s*:(.*)");
-    /** A {@code run:} with its command on the same line, which YAML joins with a deeper line below it. */
-    private static final Pattern RUN = Pattern.compile("\\s*(?:- )?run: (?![|>]).*");
-    /** A key that opens a literal block, whose lines YAML keeps apart; a folded block ({@code >}) joins them. */
-    private static final Pattern LITERAL_BLOCK = Pattern.compile("\\s*(?:- )?(?:run|script):\\s+\\|[+-]?\\s*");
-    /** A value in quotes that goes on on the next line, where YAML joins its lines; a key written with a {@code ?}. */
-    private static final Pattern HIDES_STRUCTURE = Pattern.compile(":\\s+[\"'][^\"']*$|^\\s*(?:-\\s+)?\\?\\s");
 
     /**
      * The long flags, and the property {@code org.gradle.dependency.verification} however it is given: {@code -D},
@@ -88,36 +111,40 @@ class AndroidDependencyVerificationTest {
     /**
      * Another root build, another Gradle user home, or an init script: the long flags, the variable and the property of
      * the user home, an {@code init.d} folder or {@code init.gradle} file, but not the system's {@code /etc/init.d}.
-     * And Gradle run without its name as a command: the wrapper's jar, and an action's inputs for Gradle's arguments.
+     * And Gradle run without its name as a command: the wrapper's jar.
      */
     private static final Pattern ELSEWHERE = Pattern.compile("--project-dir|--init-script|--gradle-user-home"
-            + "|(?<![\\w-])(?:arguments|build-root-directory)[\"']?\\s*:|gradle-wrapper[.]jar"
-            + "|GRADLE_USER_HOME|gradle[.]user[.]home|(?<![\\w-])(?<!/etc/)init[.](?:d|gradle)\\b");
+            + "|gradle-wrapper[.]jar|GRADLE_USER_HOME|gradle[.]user[.]home"
+            + "|(?<![\\w-])(?<!/etc/)init[.](?:d|gradle)\\b");
     /** The refresh script, which runs Gradle in write mode. */
     private static final Pattern REFRESH = Pattern.compile("refresh-android-verification");
-    /** An {@code echo} of plain double-quoted text only: a message, which runs nothing it names. */
-    private static final Pattern MESSAGE = Pattern.compile("\\s*(-\\s+)?(run:\\s*)?echo(\\s+\"[^\"$`\\\\]*\")+\\s*");
-    /** A task name, with or without a project path. */
-    private static final Pattern TASK = Pattern.compile(":?[A-Za-z][\\w:-]*");
-    /** The options of the refresh script's Gradle call whose value is the next word. */
-    private static final Set<String> SCRIPT_OPTIONS_WITH_VALUE =
-            Set.of("--write-verification-metadata", "--init-script");
-
-    /** The words after which a call starts a command, so nothing before it hands it arguments. */
-    private static final Set<String> BEFORE_A_COMMAND = Set.of("&&", "||");
-    /** The actions a file that calls Gradle may use: those the workflows use; another one may run Gradle itself. */
-    private static final Set<String> ACTIONS = Set.of("actions/checkout", "actions/setup-java",
-            "actions/upload-artifact", "actions/download-artifact", "actions/attest-build-provenance",
-            "gradle/actions/setup-gradle", "reactivecircus/android-emulator-runner");
-    private static final Pattern USES = Pattern.compile("(?<![\\w-])uses[\"']?\\s*:\\s*[\"']?([^@\\s\"']*)");
     /**
      * What a step would name to change the check's inputs before a call: the metadata file, a folder of a Gradle user
      * home other than its caches, a script the shell reads first, the JVM's user home.
      */
     private static final Pattern INPUTS = Pattern.compile("(?<!--write-)verification-metadata"
             + "|(?<![\\w.*-])[.]gradle(?![\\w.-]|/caches(?![/\\w.-]))|BASH_ENV|(?<!gradle[.])user[.]home");
+    /** An {@code echo} of plain double-quoted text only: a message, which runs nothing it names. */
+    private static final Pattern MESSAGE = Pattern.compile("\\s*echo(\\s+\"[^\"$`\\\\]*\")+\\s*");
+    /** A task name, with or without a project path. */
+    private static final Pattern TASK = Pattern.compile(":?[A-Za-z][\\w:-]*");
+    /** The options of the refresh script's Gradle call whose value is the next word. */
+    private static final Set<String> SCRIPT_OPTIONS_WITH_VALUE =
+            Set.of("--write-verification-metadata", "--init-script");
 
     private static final Set<String> SOME_TASKS = Set.of("check", "lint", ":app:printReleaseVersion");
+
+    /** A position in a parsed list; any other part of a path is a key of a map. */
+    private record Index(int value) {
+    }
+
+    /** A key of a parsed map, with the value it holds, or a scalar value, each with the path that leads to it. */
+    private record Found(List<Object> path, String text, boolean key, Object value) {
+    }
+
+    /** A line of a command string, continued lines joined, by the number of its first line. */
+    private record ShellLine(int number, String text) {
+    }
 
     @Test
     void theWorkflowsAndTheAndroidBuildsPropertiesAreRead() throws IOException {
@@ -177,56 +204,296 @@ class AndroidDependencyVerificationTest {
 
     @Test
     void aGradleCallHasOnlyTheAllowedOptionsAndTheScriptsTasks() {
-        assertRefused("run: ./gradlew -p$DIR check", 1, "-p$DIR");
-        assertRefused("run: ./gradlew -F${MODE} check", 1, "-F${MODE}");
-        assertRefused("run: ./gradlew -pbuild-logic check", 1, "-pbuild-logic");
-        assertRefused("run: ./gradlew -Iweaker.gradle check", 1, "-Iweaker.gradle");
-        assertRefused("run: ./gradlew -I weaker.gradle check", 1, "-I", "weaker.gradle");
-        assertRefused("run: ./gradlew -F off check", 1, "-F", "off");
-        assertRefused("run: ./gradlew -M sha256 help", 1, "-M", "sha256", "help");
-        assertRefused("run: ./gradlew -Dorg.gradle.caching=false check", 1, "-Dorg.gradle.caching=false");
-        assertRefused("run: ./gradlew -PpitClasses=x check", 1, "-PpitClasses=x");
-        assertRefused("run: ./gradlew --console plain check", 1, "--console", "plain");
-        assertRefused("run: ./gradlew -x test check", 1, "-x", "test");
-        assertRefused("run: ./gradlew --offline check", 1, "--offline");
-        assertRefused("run: ./gradlew \"check\"", 1, "\"check\"");
-        assertRefused("run: ./gradlew 'lint'", 1, "'lint'");
-        assertRefused("run: ./gradlew ${{ matrix.task }}", 1, "${{", "matrix.task", "}}");
-        assertRefused("run: ./gradlew $TASKS", 1, "$TASKS");
-        assertRefused("run: ./gradlew :app:lint", 1, ":app:lint");
-        assertRefused("run: ./gradlew check # -F off", 1, "#", "-F", "off");
-        assertRefused("run: ./gradlew check || true", 1, "||", "true");
-        assertRefused("  run: ./gradlew check \\\n    -F off", 1, "-F", "off");
-        assertRefused("  - uses: actions/checkout@v6\n    run: out=$(./gradlew -q --info :app:printReleaseVersion)", 2,
-                "--info");
-        assertThat(problems("a.yml", "run: ./gradlew --stacktrace assembleRelease", SOME_TASKS)).singleElement()
+        assertRefused(run("./gradlew -p$DIR check"), "-p$DIR");
+        assertRefused(run("./gradlew -F${MODE} check"), "-F${MODE}");
+        assertRefused(run("./gradlew -pbuild-logic check"), "-pbuild-logic");
+        assertRefused(run("./gradlew -Iweaker.gradle check"), "-Iweaker.gradle");
+        assertRefused(run("./gradlew -I weaker.gradle check"), "-I", "weaker.gradle");
+        assertRefused(run("./gradlew -F off check"), "-F", "off");
+        assertRefused(run("./gradlew -M sha256 help"), "-M", "sha256", "help");
+        assertRefused(run("./gradlew -Dorg.gradle.caching=false check"), "-Dorg.gradle.caching=false");
+        assertRefused(run("./gradlew -PpitClasses=x check"), "-PpitClasses=x");
+        assertRefused(run("./gradlew --console plain check"), "--console", "plain");
+        assertRefused(run("./gradlew -x test check"), "-x", "test");
+        assertRefused(run("./gradlew --offline check"), "--offline");
+        assertRefused(run("./gradlew \"check\""), "\"check\"");
+        assertRefused(run("./gradlew 'lint'"), "'lint'");
+        assertRefused(run("./gradlew ${{ matrix.task }}"), "${{", "matrix.task", "}}");
+        assertRefused(run("./gradlew $TASKS"), "$TASKS");
+        assertRefused(run("./gradlew :app:lint"), ":app:lint");
+        assertRefused(run("./gradlew check # -F off"), "#", "-F", "off");
+        assertRefused(run("./gradlew check || true"), "||", "true");
+        assertRefused(run("./gradlew check && echo ok"), "&&", "echo", "ok");
+        assertRefused(run("./gradlew check | tee out"), "|", "tee", "out");
+        assertRefused(run("./gradlew check \\\n    -F off"), "-F", "off");
+        assertRefused(run("out=$(./gradlew -q --info :app:printReleaseVersion)"), "--info");
+        assertThat(problems("a.yml", run("./gradlew --stacktrace assembleRelease"), SOME_TASKS)).singleElement()
                 .asString().contains("assembleRelease", REFRESH_SCRIPT.toString(), "refresh the checksums");
 
-        assertThat(problems("a.yml", """
-                - run: ./gradlew --continue --stacktrace check
-                  if: failure()
-                - run: |
-                    out=$(./gradlew -q --console=plain :app:printReleaseVersion)
+        assertThat(problems("a.yml", workflow("run: ./gradlew --continue --stacktrace check\nif: failure()", """
+                run: |
+                  out=$(./gradlew -q --console=plain :app:printReleaseVersion)
 
-                    ./gradlew lint
+                  ./gradlew lint
+                  ./gradlew --continue \\
+                    check""", """
+                uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+                with:
+                  working-directory: android
+                  pre-emulator-launch-script: ./gradlew check
                   script: |-
-                    ./gradlew check
-                - run: ./gradlew --continue \\
-                    check
-                  run: mkdir -p build && ./gradlew check
-                """, SOME_TASKS)).isEmpty();
+                    ./gradlew --continue --stacktrace check"""), SOME_TASKS)).isEmpty();
     }
 
     @Test
-    void aGradleCallThatYamlJoinsWithAnotherLineIsRefused() {
-        var joins = "YAML joins this ./gradlew call";
-        for (var joined : List.of("run: ./gradlew check\n  -F off", "- run: ./gradlew check\n\n    -p build-logic",
-                "  run: ./gradlew check \\\n    lint\n    -F off", "run: >\n  ./gradlew check\n  -F off",
-                "run: >-\n  ./gradlew\n  -M sha256 check", "run:\n  ./gradlew check\n  -F off",
-                "./gradlew check\n-F off", "run: |\n  if true; then\n    ./gradlew check\n  fi")) {
-            assertThat(problems("a.yml", joined, SOME_TASKS)).as(joined).anySatisfy(problem -> assertThat(problem)
-                    .contains(joins));
+    void aShellLineThatNamesGradleIsOneOfTheAllowedFormsAsAWhole() {
+        var form = "is not ./gradlew WORDS";
+        for (var line : List.of("echo -F off | xargs ./gradlew check", "xargs -a ci/args ./gradlew check",
+                "env X=1 ./gradlew check", "sudo ./gradlew check", "time ./gradlew check", "`./gradlew check`",
+                "xargs -a ci/args -E run: ./gradlew check", "xargs -a ci/args -E \\; ./gradlew check",
+                "xargs -a ci/args -E \\( ./gradlew check", "if true; then ./gradlew check -F off; fi",
+                "mkdir -p build && ./gradlew check", "mkdir -p build || ./gradlew check",
+                "cd android; ./gradlew lint", "./gradlew check)", "out=$(./gradlew check", "./gradlew $(echo -F)")) {
+            assertRefused(run(line), form);
         }
+        assertRefused(run("if true; then\n  ./gradlew check -F off\nfi"), "-F", "off");
+    }
+
+    /** A value over several lines is one command when YAML reads it as one line, whatever it looks like. */
+    @Test
+    void aGradleCallIsReadAsYamlReadsIt() {
+        assertRefused(workflow("run: ./gradlew check\n  -F off"), "-F", "off");
+        assertRefused(workflow("run: ./gradlew check \\\n  lint\n  -F off"), "\\", "-F", "off");
+        assertRefused(workflow("run: >\n  ./gradlew check\n  -F off"), "-F", "off");
+        assertRefused(workflow("run: >-\n  ./gradlew\n  -M sha256 check"), "-M", "sha256");
+        assertRefused(workflow("run:\n  ./gradlew check\n  -F off"), "-F", "off");
+        assertRefused(workflow("run: \"./gradlew check\n  -F off\""), "-F", "off");
+        assertRefused(workflow("\"run\": ./gradlew check -F off"), "-F", "off");
+        assertRefused(workflow("? run\n: ./gradlew check -F off"), "-F", "off");
+        assertRefused(workflow("{run: ./gradlew check -F off}"), "-F", "off");
+        assertRefused(workflow("run: echo x:|\n  ./gradlew check\n  -F off"), "is not ./gradlew WORDS");
+        assertRefused(workflow("run: \"echo\n  run: |\n   ./gradlew check\n  -F off\""), "is not ./gradlew WORDS");
+        assertRefused(workflow("env:\n  CALL: &call ./gradlew check -F off\nrun: *call"), "outside a command string",
+                "-F", "off");
+        assertRefused("./gradlew check\n-F off", "outside a command string");
+        assertRefused(workflow("name: x\na: |\n  ./gradlew check"), "outside a command string");
+
+        // a blank line keeps the lines apart: the second runs on its own, without Gradle
+        assertThat(problems("a.yml", workflow("run: ./gradlew check\n\n  -p build-logic"), SOME_TASKS)).isEmpty();
+    }
+
+    @Test
+    void aFileThatDoesNotParseOrHidesWhatItHoldsIsRefused() {
+        assertRefused("run: [./gradlew check", "does not parse");
+        assertRefused(workflow("run: xargs -E run: ./gradlew check"), "does not parse");
+        assertRefused(workflow("run: ./gradlew check\nrun: ./gradlew check -F off"), "does not parse");
+        assertRefused(workflow("with: !gradle {arguments: -F off}"), "does not parse");
+        assertRefused(workflow("env: &loop [*loop]"), "holds itself");
+        assertRefused(workflow("uses: [x/y@v1]"), "holds no plain text");
+        assertRefused(workflow("run: ./gradlew check\nworking-directory: [android/build-logic]"),
+                "holds no plain text");
+    }
+
+    @Test
+    void aFileThatCallsGradleUsesOnlyTheListedActionsAndNoFileUsesAGradleAction() {
+        var call = "run: ./gradlew check";
+        assertRefused(workflow("uses: eskatos/gradle-command-action@v1", call), "eskatos/gradle-command-action");
+        assertRefused(workflow("uses: ./.github/actions/build", call), "./.github/actions/build");
+        assertRefused(workflow("\"uses\": 'burrunan/gradle-cache-action@v1'", call), "burrunan/gradle-cache-action");
+        assertRefused(workflow("? uses\n: x/y@v1", call), "'x/y'");
+        assertRefused(workflow("uses: eskatos/gradle-command-action@v1"), "eskatos/gradle-command-action");
+        assertRefused(workflow("uses: gradle/gradle-build-action@v3"), "gradle-build-action");
+        assertRefused("jobs:\n  call:\n    uses: x/y/.github/workflows/g.yml@v1\n", "x/y/.github/workflows/g.yml");
+        assertRefused(workflow("uses: some/action@v1\nwith:\n  arguments: check -F off"), "arguments");
+        assertRefused(workflow("uses: some/action@v1\nwith:\n  \"build-root-directory\": android"),
+                "build-root-directory");
+
+        assertThat(problems("a.yml", workflow("""
+                uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2""", """
+                uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+                with:
+                  cache-read-only: true""", "run: ./gradlew check"), SOME_TASKS)).isEmpty();
+        assertThat(problems("a.yml", workflow("uses: some/other-action@v1", "? uses\n: x/y@v1"), SOME_TASKS)).isEmpty();
+        assertThat(problems("a.yml", "jobs:\n  call:\n    uses: ./.github/workflows/build.yml\n", SOME_TASKS))
+                .isEmpty();
+    }
+
+    @Test
+    void aStepThatChangesTheChecksInputsIsRefused() {
+        assertRefused(run("rm gradle/verification-metadata.xml"), "verification-metadata");
+        assertRefused(run("mkdir -p ~/.gradle && cp ci/x.properties ~/.gradle/"), ".gradle", ".gradle");
+        assertRefused(run("cp -r ci/home/. \"$HOME/.gradle\""), ".gradle");
+        assertRefused(workflow("env:\n  BASH_ENV: ci/env.sh"), "BASH_ENV");
+        assertRefused(workflow("env:\n  JAVA_TOOL_OPTIONS: -Duser.home=ci/home"), "user.home");
+        assertRefused(run("cp ci/x.properties ~/.gradle/caches/../gradle.properties"), ".gradle");
+        assertRefused(run("cp ci/x.properties \"$HOME/\".gradle/"), ".gradle");
+        assertRefused(run("rm android/gradle/verification-metadata.*"), "verification-metadata");
+        assertRefused(run("java -jar gradle/wrapper/gradle-wrapper.jar -F off check"), "gradle-wrapper.jar");
+
+        assertThat(problems("a.yml", workflow("""
+                uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+                with:
+                  path: ~/.gradle/caches
+                  key: ${{ hashFiles('android/**/*.gradle', 'android/gradle/libs.versions.toml') }}"""),
+                SOME_TASKS)).isEmpty();
+    }
+
+    @Test
+    void gradleNamedAnyOtherWayAsACommandIsRefused() {
+        for (var other : List.of("\"./gradlew\"", "gradlew", "android/gradlew", "../gradlew", "gradlew.bat",
+                "./gradlew.bat", "./GRADLEW", "gradle", "/opt/gradle/bin/gradle", "gradle.bat")) {
+            assertRefused(run("sh " + other + " check"), other);
+        }
+        assertRefused(run("java -cp x org.gradle.wrapper.GradleWrapperMain check"), "GradleWrapperMain");
+        assertRefused(run("out=$(gradle -q help)"), "out=$(gradle");
+        assertRefused(workflow("env:\n  CALL: ./gradlew check"), "outside a command string");
+        assertRefused(workflow("name: then run gradle check"), "outside a command string");
+        assertRefused(workflow("uses: some/action@v1\nwith:\n  script: ./gradlew check"), "outside a command string");
+        assertRefused(workflow("run:\n  ./gradlew: check"), "outside a command string");
+        assertRefused(workflow("env:\n  run: ./gradlew check"), "outside a command string");
+        assertRefused("jobs:\n  build:\n    run: ./gradlew check\n", "outside a command string");
+
+        assertThat(problems("a.yml", workflow("""
+                uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+                with:
+                  key: gradle-${{ hashFiles('android/**/*.gradle.kts') }}
+                  path: ~/.gradle/caches""", """
+                name: Build with Gradle
+                run: |
+                  cp android/gradle/libs.versions.toml build/reports/
+                  cat android/gradle.properties
+                  echo "run ./gradlew check, or gradle check"
+                  echo "::error::It failed Gradle's verification," \\
+                    "run ./gradlew check"
+                  ./gradlew check"""), SOME_TASKS)).isEmpty();
+    }
+
+    @Test
+    void aFileThatCallsGradleRunsItsStepsOnlyInTheKnownFolders() {
+        var call = "run: ./gradlew check";
+        assertRefused(run("cd android/build-logic\n./gradlew check"), "android/build-logic");
+        assertRefused(run("cd android; cd build-logic\n./gradlew check"), "build-logic");
+        assertRefused(run("cd \"$DIR\"\n./gradlew check"), "\"$DIR\"");
+        assertRefused(run("cd\n./gradlew check"), "''");
+        assertRefused(run("cd ./android\n./gradlew check"), "./android");
+        assertRefused(run("cd android/\n./gradlew check"), "android/");
+        assertRefused(workflow("run: pushd android/build-logic", call), "android/build-logic");
+        assertRefused(workflow("working-directory: android/build-logic\n" + call), "android/build-logic");
+        assertRefused(workflow("working-directory: ./android\n" + call), "./android");
+        assertRefused(workflow("working-directory: ${{ inputs.directory }}\n" + call), "${{ inputs.directory }}");
+        assertRefused(workflow("\"working-directory\": android/build-logic\n" + call), "android/build-logic");
+        assertRefused(workflow("'working-directory' : android/build-logic\n" + call), "android/build-logic");
+        assertRefused("defaults:\n  run:\n    working-directory: build-logic\n" + workflow(call), "build-logic");
+        assertRefused("jobs:\n  build:\n    defaults:\n      run:\n        working-directory: build-logic\n"
+                + "    steps:\n      - " + call + "\n", "build-logic");
+        var merged = """
+                x-folder: &folder
+                  working-directory: android/build-logic
+                jobs:
+                  build:
+                    steps:
+                      - <<: *folder
+                        run: ./gradlew check
+                """;
+        assertRefused(merged, "android/build-logic", "android/build-logic");
+        assertThat(problems("a.yml", merged, SOME_TASKS)).anySatisfy(problem -> assertThat(problem)
+                .contains("job build, step 1, working-directory"));
+
+        assertThat(problems("a.yml", "defaults:\n  run:\n    working-directory: android\n" + workflow(
+                "working-directory: .\nrun: |\n  cd release", call), SOME_TASKS)).isEmpty();
+        assertThat(problems("a.yml", workflow("working-directory: desktop\nrun: cd target && ls"), SOME_TASKS))
+                .isEmpty();
+    }
+
+    @Test
+    void theModesPropertyAnotherHomeAnInitScriptAndTheRefreshScriptAreRefused() {
+        for (var weaker : Map.of("GRADLE_OPTS: -Dorg.gradle.dependency.verification=strict", "dependency.verification",
+                "ORG_GRADLE_PROJECT_org.gradle.dependency.verification: off", "dependency.verification",
+                "ORG_GRADLE_DEPENDENCY_VERIFICATION: off", "DEPENDENCY_VERIFICATION",
+                "dependencyVerification: lenient", "dependencyVerification",
+                "ARGS: --dependency-verification=off", "--dependency-verification",
+                "ARGS: --write-verification-metadata sha256", "--write-verification-metadata",
+                "ARGS: --project-dir build-logic", "--project-dir",
+                "ARGS: --init-script weaker.gradle", "--init-script",
+                "GRADLE_USER_HOME: ${{ runner.temp }}/home", "GRADLE_USER_HOME",
+                "GRADLE_OPTS: -Dgradle.user.home=home", "gradle.user.home").entrySet()) {
+            assertRefused(workflow("env:\n  " + weaker.getKey()), weaker.getValue());
+        }
+        for (var weaker : Map.of("echo org.gradle.dependency.verification=lenient >> x", "dependency.verification",
+                "cp weaker.gradle home/init.d/", "init.d",
+                "cp weaker.gradle \"$DIR/init.gradle\"", "init.gradle",
+                "cp weaker.gradle.kts home/init.gradle.kts", "init.gradle",
+                "sh tools/refresh-android-verification.sh", "refresh-android-verification",
+                "../tools/refresh-android-verification.sh --clean", "refresh-android-verification",
+                "echo \"refresh\" && sh tools/refresh-android-verification.sh", "refresh-android-verification",
+                "echo \"$(sh tools/refresh-android-verification.sh)\"", "refresh-android-verification",
+                "# sh tools/refresh-android-verification.sh", "refresh-android-verification").entrySet()) {
+            assertRefused(run(weaker.getKey()), weaker.getValue());
+        }
+        assertRefused("on:\n  push:\n    paths:\n      - \"tools/refresh-android-verification.sh\"\n",
+                "refresh-android-verification");
+        assertRefused("dependencyVerification: off\n", "dependencyVerification");
+        // the shell drops a backslash and its line break, so the two halves are one word
+        assertRefused(run("export GRADLE_OPTS=-Dorg.gradle.dependency\\\n.verification=off"),
+                "dependency.verification");
+
+        assertThat(problems("a.yml", run("""
+                if [ -d build/reports/dependency-verification ]; then
+                  echo "run sh tools/refresh-android-verification.sh"
+                  echo "::error::run sh tools/refresh-android-verification.sh," \\
+                    "read the diff of android/gradle/verification-metadata.xml"
+                fi
+                sudo /etc/init.d/docker restart
+                mvn -B -f pom.xml && grep -Fqx "$ref" tags"""), SOME_TASKS)).isEmpty();
+    }
+
+    @Test
+    void aGradlePropertiesFileNamesNoneOfIt() {
+        assertThat(problems("gradle.properties", "org.gradle.dependency.verification=lenient\n", SOME_TASKS))
+                .singleElement().asString().contains("gradle.properties line 1: ", "dependency.verification");
+        assertThat(problems("gradle.properties", "a=1\norg.gradle.dependency.\\\n    verification=off\n", SOME_TASKS))
+                .singleElement().asString().contains("gradle.properties line 2: ", "dependency.verification");
+        assertThat(problems("gradle.properties", "org.gradle.jvmargs=-Duser.home=ci\n", SOME_TASKS))
+                .singleElement().asString().contains("user.home");
+
+        assertThat(problems("gradle.properties", "# org.gradle.dependency.verification=lenient\n"
+                + "org.gradle.jvmargs=-Xmx2g\norg.gradle.configuration-cache=true\n", SOME_TASKS)).isEmpty();
+    }
+
+    /** What the line patterns refused although YAML reads it as a plain, allowed call (#494). */
+    @Test
+    void whatYamlReadsAsAnAllowedCallIsAccepted() {
+        assertThat(problems("a.yml", workflow("working-directory: \"android\"\nrun: ./gradlew check",
+                "working-directory: android # the root build\nrun: ./gradlew lint", """
+                run: |
+                  if [ -n "$CI" ]; then
+                    ./gradlew check
+                  fi
+                  for attempt in 1 2; do
+                    ./gradlew --continue lint
+                  done""", "run: |2\n    ./gradlew check", "\"run\": ./gradlew check", "? run\n: ./gradlew lint",
+                "run: ./gradlew check\n    # a comment below the call", """
+                uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+                with:
+                  script: ./gradlew check"""), SOME_TASKS)).isEmpty();
+        // a step's name and a message are no call, so the rules for the actions and folders of a file that calls
+        // Gradle stay off
+        assertThat(problems("a.yml", workflow("name: Build with Gradle\nuses: some/other-action@v1",
+                "run: echo \"run ./gradlew check\"",
+                "working-directory: desktop\nrun: mvn verify"), SOME_TASKS)).isEmpty();
+    }
+
+    @Test
+    void aProblemNamesTheFileTheJobTheStepAndTheLine() {
+        assertThat(problems("a.yml", workflow("name: Lint\nrun: |\n  echo hi\n  ./gradlew -F"), SOME_TASKS))
+                .singleElement().asString().startsWith("a.yml, job build, step 1 (Lint), run, line 2: ");
+        assertThat(problems("action.yml", "runs:\n  using: composite\n  steps:\n    - shell: bash\n      run: echo\n"
+                + "    - shell: bash\n      run: ./gradlew -F\n", SOME_TASKS))
+                .singleElement().asString().startsWith("action.yml, step 2, run, line 1: ");
+        assertThat(problems("a.yml", workflow("run: echo", "env:\n  CALL: gradle"), SOME_TASKS))
+                .singleElement().asString().startsWith("a.yml, job build, step 2, env.CALL: ");
+        assertThat(problems("a.yml", "on:\n  push:\n    paths: [x, tools/refresh-android-verification.sh]\n",
+                SOME_TASKS)).singleElement().asString().startsWith("a.yml, on.push.paths[1]: ");
     }
 
     @Test
@@ -253,137 +520,6 @@ class AndroidDependencyVerificationTest {
         assertThat(wrapper.getProperty("distributionUrl"))
                 .matches("https://services[.]gradle[.]org/distributions/gradle-[0-9.]+-bin[.]zip");
         assertThat(wrapper.getProperty("distributionSha256Sum")).matches("[0-9a-f]{64}");
-    }
-
-    @Test
-    void aCallThatDoesNotStartACommandAnotherActionAndAChangeOfTheChecksInputsAreRefused() {
-        var call = "\nrun: ./gradlew check";
-        assertRefused("run: echo -F off | xargs ./gradlew check", 1, "does not start a command");
-        assertRefused("run: xargs -a ci/args ./gradlew check", 1, "does not start a command");
-        assertRefused("run: env X=1 ./gradlew check", 1, "does not start a command");
-        assertRefused("- uses: eskatos/gradle-command-action@v1" + call, 1, "eskatos/gradle-command-action");
-        assertRefused("  uses: ./.github/actions/build" + call, 1, "./.github/actions/build");
-        assertRefused("  \"uses\": 'burrunan/gradle-cache-action@v1'" + call, 1, "burrunan/gradle-cache-action");
-        assertRefused("run: rm gradle/verification-metadata.xml", 1, "verification-metadata");
-        assertRefused("run: mkdir -p ~/.gradle && cp ci/x.properties ~/.gradle/", 1, ".gradle", ".gradle");
-        assertRefused("run: cp -r ci/home/. \"$HOME/.gradle\"", 1, ".gradle");
-        assertRefused("  BASH_ENV: ci/env.sh", 1, "BASH_ENV");
-        assertRefused("  JAVA_TOOL_OPTIONS: -Duser.home=ci/home", 1, "user.home");
-        assertRefused("- run: echo x:|\n    ./gradlew check\n    -F off", 2, "YAML joins");
-        assertRefused("- name: x\n  a: |\n    ./gradlew check", 3, "YAML joins");
-        assertRefused("- run: \"echo\n    run: |\n     ./gradlew check\n    -F off\"", 1, "hides from this test");
-        assertRefused("- ? uses\n  : x/y@v1", 1, "hides from this test");
-        assertRefused("run: xargs -a ci/args -E run: ./gradlew check", 1, "does not start a command");
-        assertRefused("run: xargs -a ci/args -E \\; ./gradlew check", 1, "does not start a command");
-        assertRefused("run: xargs -a ci/args -E \\( ./gradlew check", 1, "does not start a command");
-        assertRefused("  arguments: check -F off", 1, "arguments");
-        assertRefused("  \"build-root-directory\": android", 1, "build-root-directory");
-        assertRefused("- uses: eskatos/gradle-command-action@v1", 1, "eskatos/gradle-command-action");
-        assertRefused("    uses: x/y/.github/workflows/g.yml@v1", 1, "x/y/.github/workflows/g.yml");
-        assertRefused("run: cp ci/x.properties ~/.gradle/caches/../gradle.properties", 1, ".gradle");
-        assertRefused("run: cp ci/x.properties \"$HOME/\".gradle/", 1, ".gradle");
-        assertRefused("run: rm android/gradle/verification-metadata.*", 1, "verification-metadata");
-
-        assertThat(problems("a.yml", """
-                - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-                - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
-                  path: ~/.gradle/caches
-                  key: ${{ hashFiles('android/**/*.gradle', 'android/gradle/libs.versions.toml') }}
-                - run: |
-                    out=$(./gradlew -q check)
-                    cd android; ./gradlew lint
-                    mkdir -p build || ./gradlew check
-                """, SOME_TASKS)).isEmpty();
-        assertThat(problems("a.yml", "- uses: some/other-action@v1\n    uses: ./.github/workflows/build.yml\n",
-                SOME_TASKS)).isEmpty();
-    }
-
-    @Test
-    void gradleNamedAnyOtherWayAsACommandIsRefused() {
-        for (var other : List.of("\"./gradlew\"", "gradlew", "android/gradlew", "../gradlew", "gradlew.bat",
-                "./gradlew.bat", "./GRADLEW", "gradle", "/opt/gradle/bin/gradle", "gradle.bat")) {
-            assertRefused("run: sh " + other + " check", 1, other);
-        }
-        assertRefused("run: java -jar gradle/wrapper/gradle-wrapper.jar -F off check", 1, "gradle-wrapper.jar");
-        assertRefused("run: java -cp x org.gradle.wrapper.GradleWrapperMain check", 1, "GradleWrapperMain");
-        assertRefused("- uses: gradle/gradle-build-action@v3", 1, "gradle-build-action");
-        assertRefused("run: out=$(gradle -q help)", 1, "out=$(gradle");
-
-        assertThat(problems("a.yml", """
-                - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-                  key: gradle-${{ hashFiles('android/**/*.gradle.kts') }}
-                  path: ~/.gradle/caches
-                run: cp android/gradle/libs.versions.toml build/reports/
-                  cat android/gradle.properties
-                # run: gradle check
-                - name: Build with Gradle
-                - run: echo "run ./gradlew check, or gradle check"
-                  echo "::error::It failed Gradle's verification," \\
-                    "run ./gradlew check"
-                run: ./gradlew check
-                """, SOME_TASKS)).isEmpty();
-    }
-
-    @Test
-    void aFileThatCallsGradleRunsItsStepsOnlyInTheKnownFolders() {
-        var call = "\nrun: ./gradlew check";
-        assertRefused("run: cd android/build-logic && ./gradlew check", 1, "android/build-logic");
-        assertRefused("run: cd android; cd build-logic; ./gradlew check", 1, "build-logic");
-        assertRefused("run: cd \"$DIR\" && ./gradlew check", 1, "\"$DIR\"");
-        assertRefused("run: cd && ./gradlew check", 1, "''");
-        assertRefused("run: pushd android/build-logic" + call, 1, "android/build-logic");
-        assertRefused("working-directory: android/build-logic" + call, 1, "android/build-logic");
-        assertRefused("  working-directory: ./android" + call, 1, "./android");
-        assertRefused("  working-directory: ${{ inputs.directory }}" + call, 1, "${{ inputs.directory }}");
-        assertRefused("\"working-directory\": android/build-logic" + call, 1, "android/build-logic");
-        assertRefused("'working-directory' : android/build-logic" + call, 1, "android/build-logic");
-
-        assertThat(problems("a.yml", """
-                    working-directory: android
-                  working-directory: .
-                run: |
-                  cd release
-                run: mkdir -p build && cd android && ./gradlew check
-                """, SOME_TASKS)).isEmpty();
-        assertThat(problems("a.yml", "  working-directory: desktop\nrun: cd target && ls\n", SOME_TASKS)).isEmpty();
-    }
-
-    @Test
-    void theModesPropertyAnotherHomeAnInitScriptAndTheRefreshScriptAreRefused() {
-        for (var weaker : Map.of("org.gradle.dependency.verification=lenient", "dependency.verification",
-                "  GRADLE_OPTS: -Dorg.gradle.dependency.verification=strict", "dependency.verification",
-                "  ORG_GRADLE_PROJECT_org.gradle.dependency.verification: off", "dependency.verification",
-                "  ORG_GRADLE_DEPENDENCY_VERIFICATION: off", "DEPENDENCY_VERIFICATION",
-                "  dependencyVerification: lenient", "dependencyVerification",
-                "  ARGS: --dependency-verification=off", "--dependency-verification",
-                "  ARGS: --write-verification-metadata sha256", "--write-verification-metadata",
-                "  ARGS: --project-dir build-logic", "--project-dir",
-                "  ARGS: --init-script weaker.gradle", "--init-script").entrySet()) {
-            assertRefused(weaker.getKey(), 1, weaker.getValue());
-        }
-        for (var weaker : Map.of("run: cp weaker.gradle home/init.d/", "init.d",
-                "run: cp weaker.gradle \"$DIR/init.gradle\"", "init.gradle",
-                "run: cp weaker.gradle.kts home/init.gradle.kts", "init.gradle",
-                "  GRADLE_USER_HOME: ${{ runner.temp }}/home", "GRADLE_USER_HOME",
-                "  GRADLE_OPTS: -Dgradle.user.home=home", "gradle.user.home",
-                "run: sh tools/refresh-android-verification.sh", "refresh-android-verification",
-                "run: ../tools/refresh-android-verification.sh --clean", "refresh-android-verification",
-                "run: echo \"refresh\" && sh tools/refresh-android-verification.sh", "refresh-android-verification",
-                "run: echo \"$(sh tools/refresh-android-verification.sh)\"", "refresh-android-verification",
-                "      - \"tools/refresh-android-verification.sh\"", "refresh-android-verification").entrySet()) {
-            assertRefused(weaker.getKey(), 1, weaker.getValue());
-        }
-
-        assertThat(problems("a.yml", """
-                # org.gradle.dependency.verification=lenient
-                    # ./gradlew -F off
-                  if [ -d build/reports/dependency-verification ]; then
-                  run: sudo /etc/init.d/docker restart
-                - run: echo "run sh tools/refresh-android-verification.sh"
-                    echo "::error::run sh tools/refresh-android-verification.sh," \\
-                      "read the diff"
-                  run: mvn -B -f pom.xml && grep -Fqx "$ref" tags
-                """, SOME_TASKS)).isEmpty();
     }
 
     /**
@@ -444,104 +580,258 @@ class AndroidDependencyVerificationTest {
         assertThat(elements(configuration, "trusted-artifacts")).hasSize(1);
     }
 
-    /** {@code text}, as file {@code a.yml}, breaks the rules once for each of {@code words}, on line {@code line}. */
-    private static void assertRefused(String text, int line, String... words) {
+    /** {@code text}, as file {@code a.yml}, breaks the rules once for each of {@code words}, in that order. */
+    private static void assertRefused(String text, String... words) {
         var problems = problems("a.yml", text, SOME_TASKS);
         assertThat(problems).as(text).hasSize(words.length);
         for (int i = 0; i < words.length; i++) {
-            assertThat(problems.get(i)).as(text).contains("a.yml line " + line + ": ", words[i]);
+            assertThat(problems.get(i)).as(text).startsWith("a.yml").contains(words[i]);
         }
     }
 
+    /** A workflow with one job whose steps are {@code steps}, each a step's map written at the left margin. */
+    private static String workflow(String... steps) {
+        var text = new StringBuilder("on: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n");
+        for (var step : steps) {
+            var lines = step.lines().toList();
+            text.append("      - ").append(lines.getFirst()).append('\n');
+            lines.stream().skip(1).forEach(line -> text.append(line.isEmpty() ? "" : "        ").append(line)
+                    .append('\n'));
+        }
+        return text.toString();
+    }
+
+    /** A workflow with one step that runs {@code command}, written as a literal block. */
+    private static String run(String command) {
+        return workflow("run: |\n" + command.lines().map(line -> "  " + line).collect(Collectors.joining("\n")));
+    }
+
     /**
-     * What in {@code text}, the file {@code name}, breaks a rule, each naming the line and the word; {@code tasks} are
-     * the tasks a Gradle call may name.
+     * What in {@code text}, the file {@code name}, breaks a rule, each naming the file, where in it, and the word; a
+     * properties file is read by its lines, any other file as YAML. {@code tasks} are the tasks a Gradle call may name.
      */
     private static List<String> problems(String name, String text, Set<String> tasks) {
-        var raw = text.lines().toList();
-        var lines = commandLines(text);
-        var callsGradle = lines.values().stream().anyMatch(line -> GRADLE.matcher(line).find());
+        if (name.endsWith(".properties")) {
+            return propertiesProblems(name, text);
+        }
+        var documents = new ArrayList<>();
+        try {
+            new Load(YAML).loadAllFromString(text).forEach(documents::add);
+        } catch (YamlEngineException e) {
+            return List.of(name + ": does not parse as YAML, so this test cannot read it: "
+                    + String.valueOf(e.getMessage()).lines().findFirst().orElse(""));
+        }
         var problems = new ArrayList<String>();
-        lines.forEach((number, line) -> {
-            var at = "%s line %d: ".formatted(name, number);
-            Stream.of(WEAKENS, ELSEWHERE, REFRESH, INPUTS).flatMap(pattern -> pattern.matcher(line).results())
-                    .forEach(found -> problems.add(at + found.group()
-                            + " weakens or gets around the dependency verification, or writes the checksums"));
-            var calls = CALL.matcher(line).results().toList();
-            var wrappers = calls.stream().map(call -> call.start() + "./".length()).collect(Collectors.toSet());
-            GRADLE.matcher(line).results().filter(found -> !wrappers.contains(found.start()))
-                    .forEach(found -> problems.add(at + wordAround(line, found)
-                            + " names Gradle otherwise than as a plain ./gradlew call"));
-            if (!calls.isEmpty() && joinedByYaml(raw, number - 1)) {
-                problems.add(at + "YAML joins this ./gradlew call with another line: write it on its run: line with"
-                        + " nothing deeper below it, or in a literal block (run: |)");
-            }
-            for (var call : calls) {
-                if (!startsCommand(line.substring(0, call.start()))) {
-                    problems.add(at + "./gradlew does not start a command, so what stands before it may hand it"
-                            + " arguments");
-                }
-                var rest = line.substring(call.end());
-                var end = rest.indexOf(')');
-                for (var word : (end < 0 ? rest : rest.substring(0, end)).strip().split("\\s+")) {
-                    if (!word.isEmpty() && !OPTIONS.contains(word) && !tasks.contains(word)) {
-                        problems.add(at + ("./gradlew is followed by %s, which is neither an option this test allows"
-                                + " nor a task %s runs: add the option to OPTIONS of this test, or the task to the"
-                                + " script's Gradle call and refresh the checksums").formatted(word, REFRESH_SCRIPT));
-                    }
-                }
-            }
-            USES.matcher(line).results().map(found -> found.group(1)).filter(action -> !ACTIONS.contains(action))
-                    .filter(action -> callsGradle || action.toLowerCase(Locale.ROOT).contains("gradle")
-                            || action.contains(".github/workflows/") && !action.startsWith("./"))
-                    .forEach(action -> problems.add(at + ("'%s' is used, not one of the actions %s, and it may run"
-                            + " Gradle itself").formatted(action, ACTIONS)));
-            if (HIDES_STRUCTURE.matcher(line).find()) {
-                problems.add(at + "a value in quotes over several lines, or a key written with a ?, hides from this"
-                        + " test what YAML reads");
-            }
-            if (callsGradle) {
-                Stream.of(CD, WORKING_DIRECTORY).flatMap(pattern -> pattern.matcher(line).results())
-                        .map(found -> found.group(1).strip()).filter(folder -> !DIRECTORIES.contains(folder))
-                        .forEach(folder -> problems.add(at + ("a step of a file that calls Gradle runs in '%s', not"
-                                + " in one of the folders %s").formatted(folder, DIRECTORIES)));
-            }
-        });
+        for (var document : documents) {
+            var found = new ArrayList<Found>();
+            walk(document, List.of(), Collections.newSetFromMap(new IdentityHashMap<>()), name, found, problems);
+            problems.addAll(documentProblems(name, document, found, tasks));
+        }
         return problems;
     }
 
-    /** Whether a call after {@code before} starts a command: first, in a {@code (} or after a separator. */
-    private static boolean startsCommand(String before) {
-        var words = before.strip().split("\\s+");
-        var last = words[words.length - 1];
-        if (last.isEmpty() || before.strip().matches("(?:-\\s+)?run:")) {
-            return true;
+    /**
+     * Each key and scalar of {@code node}, at {@code path}, into {@code found}, aliases followed: an alias stands for
+     * what its anchor holds, so it is read once in each place it is used. {@code open} holds the maps and lists the
+     * path goes through.
+     */
+    private static void walk(Object node, List<Object> path, Set<Object> open, String name, List<Found> found,
+            List<String> problems) {
+        if (node instanceof Map<?, ?> || node instanceof List<?>) {
+            if (!open.add(node)) {
+                problems.add(name + ", " + keyPath(path) + ": an alias holds itself, which no workflow needs");
+                return;
+            }
+            if (node instanceof Map<?, ?> map) {
+                map.forEach((key, value) -> {
+                    var at = append(path, key);
+                    found.add(new Found(at, String.valueOf(key), true, value));
+                    walk(value, at, open, name, found, problems);
+                });
+            } else {
+                var list = (List<?>) node;
+                for (int i = 0; i < list.size(); i++) {
+                    walk(list.get(i), append(path, new Index(i)), open, name, found, problems);
+                }
+            }
+            open.remove(node);
+        } else {
+            found.add(new Found(path, node == null ? "" : node.toString(), false, node));
         }
-        var separated = last.matches(".*(?<!\\\\)[;(]");
-        return last.endsWith("(") ? separated : separated || BEFORE_A_COMMAND.contains(last);
+    }
+
+    private static List<String> documentProblems(String name, Object document, List<Found> found, Set<String> tasks) {
+        var commands = new HashSet<Found>();
+        var callsGradle = false;
+        for (var scalar : found) {
+            if (!scalar.key() && isCommand(document, scalar.path())) {
+                commands.add(scalar);
+                callsGradle |= shellLines(scalar.text()).stream()
+                        .anyMatch(line -> !MESSAGE.matcher(line.text()).matches()
+                                && GRADLE.matcher(line.text()).find());
+            }
+        }
+        var problems = new ArrayList<String>();
+        for (var item : found) {
+            var place = name + ", " + where(document, item.path());
+            var at = place + ": ";
+            var text = item.text();
+            if (item.key()) {
+                problems.addAll(denied(at, text));
+                gradleNamed(text).forEach(word -> problems.add(at + word + " names Gradle outside a command string"));
+                if (GRADLE_INPUTS.contains(text)) {
+                    problems.add(at + "an input '" + text + "' would hand Gradle its arguments or another root build");
+                }
+                if ((text.equals("uses") || text.equals("working-directory"))
+                        && (item.value() instanceof Map<?, ?> || item.value() instanceof List<?>)) {
+                    problems.add(at + text + " holds no plain text, so this test cannot read it");
+                }
+            } else if (commands.contains(item)) {
+                for (var line : shellLines(text)) {
+                    var lineAt = place + ", line " + line.number() + ": ";
+                    if (MESSAGE.matcher(line.text()).matches()) {
+                        continue;
+                    }
+                    problems.addAll(denied(lineAt, line.text()));
+                    if (GRADLE.matcher(line.text()).find()) {
+                        callProblems(line.text(), tasks).forEach(problem -> problems.add(lineAt + problem));
+                    }
+                    if (callsGradle) {
+                        CD.matcher(line.text()).results().map(cd -> cd.group(1))
+                                .filter(folder -> !DIRECTORIES.contains(folder))
+                                .forEach(folder -> problems.add(lineAt + outsideTheFolders(folder)));
+                    }
+                }
+            } else {
+                problems.addAll(denied(at, text));
+                gradleNamed(text).forEach(word -> problems.add(at + word + " names Gradle outside a command string (a"
+                        + " step's run, or the emulator action's script), where this test does not check a call"));
+                var key = item.path().isEmpty() ? null : item.path().getLast();
+                if ("uses".equals(key)) {
+                    var action = action(text);
+                    if (!ACTIONS.contains(action) && (callsGradle || action.toLowerCase(Locale.ROOT).contains("gradle")
+                            || action.contains(".github/workflows/") && !action.startsWith("./"))) {
+                        problems.add(at + ("'%s' is used, not one of the actions %s, and it may run Gradle itself")
+                                .formatted(action, ACTIONS));
+                    }
+                }
+                if ("working-directory".equals(key) && callsGradle && !DIRECTORIES.contains(text)) {
+                    problems.add(at + outsideTheFolders(text));
+                }
+            }
+        }
+        return problems;
+    }
+
+    /** What is wrong with {@code line}, a shell line that names Gradle, against the allowed forms of a call. */
+    private static List<String> callProblems(String line, Set<String> tasks) {
+        var call = CALL.matcher(line.strip());
+        if (!call.matches() || (call.group("name") == null) != (call.group("close") == null)) {
+            return List.of(("'%s' names Gradle, but the line is not ./gradlew WORDS or NAME=$(./gradlew WORDS) as a"
+                    + " whole, so what else is on it may change the call").formatted(line.strip()));
+        }
+        var problems = new ArrayList<String>();
+        for (var word : call.group("words").strip().split("\\s+")) {
+            if (!word.isEmpty() && !OPTIONS.contains(word) && !tasks.contains(word)) {
+                problems.add(("./gradlew is followed by %s, which is neither an option this test allows nor a task %s"
+                        + " runs: add the option to OPTIONS of this test, or the task to the script's Gradle call and"
+                        + " refresh the checksums").formatted(word, REFRESH_SCRIPT));
+            }
+        }
+        return problems;
+    }
+
+    private static List<String> denied(String at, String text) {
+        return Stream.of(WEAKENS, ELSEWHERE, REFRESH, INPUTS).flatMap(pattern -> pattern.matcher(text).results())
+                .map(found -> at + found.group()
+                        + " weakens or gets around the dependency verification, or writes the checksums")
+                .toList();
+    }
+
+    /** The words of {@code text} that name the wrapper or Gradle as a command. */
+    private static List<String> gradleNamed(String text) {
+        return GRADLE.matcher(text).results().map(found -> wordAround(text, found)).toList();
+    }
+
+    private static String outsideTheFolders(String folder) {
+        return "a step of a file that calls Gradle runs in '%s', not in one of the folders %s"
+                .formatted(folder, DIRECTORIES);
     }
 
     /**
-     * Whether YAML may read the command that starts on line {@code index} of {@code lines} together with another line:
-     * it is on its {@code run:} line with a deeper line below it, or in anything but a literal block.
+     * Whether the scalar at {@code path} is a command string: the {@code run} of a step, or a script input of the
+     * emulator action.
      */
-    private static boolean joinedByYaml(List<String> lines, int index) {
-        var line = lines.get(index);
-        if (RUN.matcher(line).matches()) {
-            int next = index;
-            while (lines.get(next).endsWith("\\") && next + 1 < lines.size()) {
-                next++;
-            }
-            return lines.stream().skip(next + 1).filter(below -> !below.isBlank()).findFirst()
-                    .filter(below -> indent(below) > line.indexOf("run:")).isPresent();
+    private static boolean isCommand(Object document, List<Object> path) {
+        int step = stepLength(path);
+        if (step == 0) {
+            return false;
         }
-        return IntStream.iterate(index - 1, above -> above >= 0, above -> above - 1).mapToObj(lines::get)
-                .filter(above -> !above.isBlank() && indent(above) < indent(line)).findFirst()
-                .filter(above -> LITERAL_BLOCK.matcher(above).matches()).isEmpty();
+        var rest = path.subList(step, path.size());
+        if (rest.equals(List.of("run"))) {
+            return true;
+        }
+        return rest.size() == 2 && "with".equals(rest.getFirst()) && SCRIPT_INPUTS.contains(rest.getLast())
+                && node(document, path.subList(0, step)) instanceof Map<?, ?> map
+                && map.get("uses") instanceof String uses && action(uses).equals(EMULATOR);
     }
 
-    private static int indent(String line) {
-        return line.length() - line.stripLeading().length();
+    /** How long the part of {@code path} is that leads to a step of a job or of a composite action; 0 for none. */
+    private static int stepLength(List<Object> path) {
+        if (path.size() >= 4 && "jobs".equals(path.get(0)) && "steps".equals(path.get(2))
+                && path.get(3) instanceof Index) {
+            return 4;
+        }
+        if (path.size() >= 3 && "runs".equals(path.get(0)) && "steps".equals(path.get(1))
+                && path.get(2) instanceof Index) {
+            return 3;
+        }
+        return 0;
+    }
+
+    /** Where {@code path} is, for a message: the job and the step, with its name, then the keys below it. */
+    private static String where(Object document, List<Object> path) {
+        int step = stepLength(path);
+        if (step == 0) {
+            return keyPath(path);
+        }
+        var name = node(document, path.subList(0, step)) instanceof Map<?, ?> map && map.get("name") instanceof String s
+                ? " (" + s + ")" : "";
+        var job = step == 4 ? "job " + path.get(1) + ", " : "";
+        var rest = path.subList(step, path.size());
+        return job + "step " + (((Index) path.get(step - 1)).value() + 1) + name
+                + (rest.isEmpty() ? "" : ", " + keyPath(rest));
+    }
+
+    private static String keyPath(List<Object> path) {
+        var text = new StringBuilder();
+        for (var part : path) {
+            if (part instanceof Index index) {
+                text.append('[').append(index.value()).append(']');
+            } else {
+                text.append(text.isEmpty() ? "" : ".").append(part);
+            }
+        }
+        return text.isEmpty() ? "the document" : text.toString();
+    }
+
+    private static Object node(Object document, List<Object> path) {
+        var node = document;
+        for (var part : path) {
+            node = part instanceof Index index ? ((List<?>) node).get(index.value()) : ((Map<?, ?>) node).get(part);
+        }
+        return node;
+    }
+
+    private static String action(String uses) {
+        int at = uses.indexOf('@');
+        return at < 0 ? uses : uses.substring(0, at);
+    }
+
+    private static List<Object> append(List<Object> path, Object part) {
+        var longer = new ArrayList<>(path);
+        longer.add(part);
+        return List.copyOf(longer);
     }
 
     /** The word of {@code line}, up to whitespace on either side, that holds {@code found}. */
@@ -558,25 +848,46 @@ class AndroidDependencyVerificationTest {
     }
 
     /**
-     * The lines of {@code text} by their number, a line continued with a backslash joined with the next, without
-     * comment lines and messages.
+     * The lines of a shell text: a line that ends in a backslash joined with the next, as the shell drops both, with
+     * the number of its first line.
      */
-    private static Map<Integer, String> commandLines(String text) {
+    private static List<ShellLine> shellLines(String text) {
         var raw = text.lines().toList();
-        var lines = new LinkedHashMap<Integer, String>();
+        var lines = new ArrayList<ShellLine>();
         for (int i = 0; i < raw.size(); i++) {
             int first = i;
             var line = new StringBuilder(raw.get(i));
             while (line.toString().endsWith("\\") && i + 1 < raw.size()) {
                 line.setLength(line.length() - 1);
-                line.append(' ').append(raw.get(++i));
+                line.append(raw.get(++i));
             }
-            var joined = line.toString();
-            if (!joined.strip().startsWith("#") && !MESSAGE.matcher(joined).matches()) {
-                lines.put(first + 1, joined);
-            }
+            lines.add(new ShellLine(first + 1, line.toString()));
         }
         return lines;
+    }
+
+    /**
+     * What in a properties file breaks a rule: a line, continued as {@link Properties} reads it, that names a deny
+     * pattern or Gradle as a command. Comment lines are left out.
+     */
+    private static List<String> propertiesProblems(String name, String text) {
+        var raw = text.lines().toList();
+        var problems = new ArrayList<String>();
+        for (int i = 0; i < raw.size(); i++) {
+            int first = i;
+            var line = new StringBuilder(raw.get(i));
+            while (line.toString().endsWith("\\") && i + 1 < raw.size()) {
+                line.setLength(line.length() - 1);
+                line.append(raw.get(++i).stripLeading());
+            }
+            if (line.toString().strip().startsWith("#")) {
+                continue;
+            }
+            var at = "%s line %d: ".formatted(name, first + 1);
+            problems.addAll(denied(at, line.toString()));
+            gradleNamed(line.toString()).forEach(word -> problems.add(at + word + " names Gradle as a command"));
+        }
+        return problems;
     }
 
     /** The lines of a build script or source that name the verification mode or switch it off, comments too. */
@@ -590,7 +901,7 @@ class AndroidDependencyVerificationTest {
      * {@code :app:connectedTestInputs}, which resolves that task's input files, in its place.
      */
     private static Set<String> scriptTasks(String script) {
-        var calls = commandLines(script).values().stream()
+        var calls = shellLines(script).stream().map(ShellLine::text).filter(line -> !line.strip().startsWith("#"))
                 .filter(line -> line.contains("./gradlew") && line.contains("--write-verification-metadata")).toList();
         assertThat(calls).as("the Gradle call of the refresh script").hasSize(1);
         var call = calls.getFirst();
