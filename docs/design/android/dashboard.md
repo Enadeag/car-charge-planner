@@ -85,5 +85,5 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - An Undo tapped while another change runs waits for it and for its outcome to show, then runs, with "Saved: …" and the focus on the restored row (#375).
 - `EngineOnDispatcher` holds no lock for away and trip changes, as the engine's file changes are atomic (#382).
 - The entries share one `SaveState` (`Idle`, `Saving`, `Failed(detail)`) and `EntryFlow` ("Discard changes?", the save, the refusals count); Settings keeps its own `SaveState` with `Saved` and `KeysNotSaved` (#393).
-- An entry is `Idle` when it opens. While its save runs, edits are ignored, Discard and Cancel do nothing, and Save is held, not off, so it keeps the focus. A question kept in the saved state shows only with an entry that came back open (#393).
+- An entry is `Idle` when it opens. While its save runs, edits are ignored, Discard and Cancel do nothing, and Save is held, not off, so it keeps the focus. A question kept in the saved state shows only with an entry that came back open (#393). An away or battery entry kept there with a value of another kind than the entry puts is closed and forgotten, as the trip entry is (#414).
 - A snackbar names a period or trip with days from the shown plan's today, not the clock; before any plan was shown, from the entry's zone and the clock at Save (#404).

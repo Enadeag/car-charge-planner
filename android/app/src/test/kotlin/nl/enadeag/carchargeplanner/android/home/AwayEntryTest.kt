@@ -459,6 +459,22 @@ class AwayEntryTest {
             assertThat(kept.keys().filter { it.startsWith("oneOffAway") }).isEmpty()
         }
 
+    @ParameterizedTest
+    @CsvSource("day", "zone", "part", "start", "end", "discard")
+    fun anEntryWithAValueOfTheWrongKindUnderAKeyIsClosedAndForgotten(wrong: String) = runTest {
+        val values = mutableMapOf<String, Any>("oneOffAway.day" to "2026-06-02",
+            "oneOffAway.zone" to "Europe/Amsterdam", "oneOffAway.part" to true, "oneOffAway.start" to 32400,
+            "oneOffAway.end" to 61200, "oneOffAway.discard" to true)
+        values["oneOffAway.$wrong"] = 7.5
+        val kept = SavedStateHandle(values)
+
+        val again = entry(kept)
+
+        assertThat(again.draft.value).isNull()
+        assertThat(again.discardAsked.value).isFalse()
+        assertThat(kept.keys().filter { it.startsWith("oneOffAway") }).isEmpty()
+    }
+
     @Test
     fun aClosedEntryStaysClosedAfterTheSystemEndedTheApp() = runTest {
         entry()

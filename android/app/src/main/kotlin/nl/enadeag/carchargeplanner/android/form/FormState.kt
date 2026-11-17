@@ -37,7 +37,7 @@ class FormState<F : Enum<F>>(private val handle: SavedStateHandle, private val p
      * @param field the field
      * @return what it holds; empty before it was filled
      */
-    fun text(field: F): String = handle.get<String>(textKey(field)) ?: ""
+    fun text(field: F): String = handle.get<Any?>(textKey(field)) as? String ?: ""
 
     /**
      * Puts a value the app filled in, such as a stored one: not an edit of the owner's, so the field still stands
@@ -148,7 +148,22 @@ class FormState<F : Enum<F>>(private val handle: SavedStateHandle, private val p
 
     private fun edited(): Set<String> = names("edited")
 
-    private fun names(name: String): Set<String> = handle.get<ArrayList<String>>(key(name))?.toSet().orEmpty()
+    /**
+     * Whether everything the form keeps in the handle is of the kind this form puts there. A value of another kind is
+     * read as missing: an empty text, no edit, no mark.
+     *
+     * @return false when a text, a mark or the filled flag is of another kind
+     */
+    internal fun isReadable(): Boolean {
+        fun ofKind(key: String, fits: (Any) -> Boolean) = handle.get<Any?>(key)?.let(fits) != false
+        return fields.all { field -> ofKind(textKey(field)) { it is String } } &&
+            listOf("edited", "typical").all { name ->
+                ofKind(key(name)) { it is List<*> && it.all { n -> n is String } }
+            } && ofKind(key("filled")) { it is Boolean }
+    }
+
+    private fun names(name: String): Set<String> =
+        (handle.get<Any?>(key(name)) as? List<*>)?.filterIsInstance<String>()?.toSet().orEmpty()
 
     private fun setNames(name: String, names: Set<String>) {
         handle[key(name)] = ArrayList(names.sorted())
@@ -168,4 +183,17 @@ class FormState<F : Enum<F>>(private val handle: SavedStateHandle, private val p
  */
 fun SavedStateHandle.forget(prefixes: Collection<String>) {
     keys().filter { key -> prefixes.any { key == it || key.startsWith("$it.") } }.forEach { remove<Any>(it) }
+}
+
+/**
+ * A value the screen's own code put in the handle, read without trusting its kind.
+ *
+ * @param T the kind the entry puts under the key
+ * @param key the key
+ * @return the value; null when there is none
+ * @throws IllegalArgumentException when the value is of another kind
+ */
+internal inline fun <reified T : Any> SavedStateHandle.readKept(key: String): T? {
+    val value = get<Any?>(key) ?: return null
+    return value as? T ?: throw IllegalArgumentException("$key cannot be read")
 }
