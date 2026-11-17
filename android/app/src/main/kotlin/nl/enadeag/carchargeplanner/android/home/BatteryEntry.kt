@@ -62,7 +62,7 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
     }
 
     private val form = FormState(handle, PREFIX, Field.entries)
-    private val openNow = MutableStateFlow(handle.get<Boolean>(OPEN) == true)
+    private val openNow = MutableStateFlow(keptOpen())
     private val textNow = MutableStateFlow(form.text(Field.LEVEL))
     private val changes = ChangeQueue<Notice>(scope)
     private val flow = EntryFlow(handle, DISCARD, changes, { openNow.value }, { textNow.value.isNotEmpty() }, ::closed)
@@ -154,6 +154,17 @@ class BatteryEntry(private val handle: SavedStateHandle, private val numbers: Nu
         }
         form.show(mapOf(Field.LEVEL to problem))
         return null
+    }
+
+    private fun keptOpen(): Boolean {
+        val open = handle.get<Any?>(OPEN)
+        val question = handle.get<Any?>(DISCARD)
+        if ((open == null || open is Boolean) && (question == null || question is Boolean) && form.isReadable()) {
+            return open == true
+        }
+        // a value of another kind than the entry puts: the entry is closed
+        forget(handle)
+        return false
     }
 
     private fun closed() {

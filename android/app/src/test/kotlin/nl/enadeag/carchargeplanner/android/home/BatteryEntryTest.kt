@@ -453,6 +453,21 @@ class BatteryEntryTest {
         assertThat(entry.discardAsked.value).isFalse()
     }
 
+    @ParameterizedTest
+    @CsvSource("open", "discard", "text.LEVEL", "filled", "edited", "typical")
+    fun anEntryWithAValueOfTheWrongKindUnderAKeyIsClosedAndForgotten(wrong: String) = runTest {
+        val kept = SavedStateHandle(mapOf("battery.open" to true, "battery.discard" to true,
+            "battery.text.LEVEL" to "64", "battery.filled" to true, "battery.edited" to arrayListOf("LEVEL"),
+            "battery.typical" to arrayListOf<String>(), "battery.$wrong" to 7.5))
+
+        val again = entry(kept)
+
+        assertThat(again.open.value).isFalse()
+        assertThat(again.text.value).isEmpty()
+        assertThat(again.discardAsked.value).isFalse()
+        assertThat(kept.keys().filter { it.startsWith("battery") }).isEmpty()
+    }
+
     @Test
     fun theSavedNoticeComesWithTheEndOfTheSave() = runTest {
         val gate = CompletableDeferred<Unit>()

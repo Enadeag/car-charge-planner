@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import nl.enadeag.carchargeplanner.android.form.forget
+import nl.enadeag.carchargeplanner.android.form.readKept
 import nl.enadeag.carchargeplanner.android.store.AwaySave
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
@@ -346,19 +347,25 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         draftNow.value = draft
     }
 
-    private fun kept(): Draft? {
-        val day = handle.get<String>(DAY) ?: return null
-        val zone = handle.get<String>(ZONE) ?: return null
-        return try {
-            Draft(LocalDate.parse(day), ZoneId.of(zone),
-                if (handle.get<Boolean>(PART) == true) Kind.PART_OF_DAY else Kind.ALL_DAY,
-                handle.get<Int>(START)?.let { LocalTime.ofSecondOfDay(it.toLong()) } ?: FIRST_START,
-                handle.get<Int>(END)?.let { LocalTime.ofSecondOfDay(it.toLong()) } ?: FIRST_END)
-        } catch (_: DateTimeException) {
-            // a zone a time-zone update removed, or a value that is no date or time: the entry is closed
-            forget(handle)
-            null
-        }
+    private fun kept(): Draft? = try {
+        val day = handle.readKept<String>(DAY)
+        val zone = handle.readKept<String>(ZONE)
+        val part = handle.readKept<Boolean>(PART)
+        val start = handle.readKept<Int>(START)
+        val end = handle.readKept<Int>(END)
+        handle.readKept<Boolean>(DISCARD) // only its kind matters here: EntryFlow reads the question
+        if (day == null || zone == null) null else Draft(LocalDate.parse(day), ZoneId.of(zone),
+            if (part == true) Kind.PART_OF_DAY else Kind.ALL_DAY,
+            start?.let { LocalTime.ofSecondOfDay(it.toLong()) } ?: FIRST_START,
+            end?.let { LocalTime.ofSecondOfDay(it.toLong()) } ?: FIRST_END)
+    } catch (_: DateTimeException) {
+        // a zone a time-zone update removed, or a value that is no date or time: the entry is closed
+        forget(handle)
+        null
+    } catch (_: IllegalArgumentException) {
+        // a value of another kind than the entry puts
+        forget(handle)
+        null
     }
 
     private fun closed() {
