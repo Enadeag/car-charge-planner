@@ -117,12 +117,13 @@ jobs:
       - name: Unit tests and the build's checks
         if: ${{ !cancelled() && steps.sdk.outcome == 'success' }}
         run: ./gradlew --continue --stacktrace check
-      # Gradle writes a dependency-verification report only when a file it downloaded has no checksum, or another one,
-      # in android/gradle/verification-metadata.xml (#484); the failing step above names the file.
+      # Gradle writes a dependency-verification report, into the root build's build/reports/, only when a file it
+      # downloaded has no checksum, or another one, in android/gradle/verification-metadata.xml (#484); the failing step
+      # above names the file.
       - name: How to refresh the checksums
         if: failure()
         run: |
-          if find . -path '*/build/reports/dependency-verification' -type d | grep -q .; then
+          if [ -d build/reports/dependency-verification ]; then
             echo "::error::A downloaded file failed Gradle's dependency verification. After a change of a dependency," \
               "a plugin or a version in pom.xml, run sh tools/refresh-android-verification.sh, read the diff of" \
               "android/gradle/verification-metadata.xml and commit it (docs/dev/android.md). A recorded file with" \
@@ -231,12 +232,13 @@ jobs:
             mkdir -p build
             adb logcat -v threadtime < /dev/null > build/logcat.txt 2>&1 &
             ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest
-      # as in android-build
+      # After a dependency-verification failure of the instrumented tests' build, says how to refresh the checksums; the
+      # same step as in android-build.
       - name: How to refresh the checksums
         if: failure()
         working-directory: android
         run: |
-          if find . -path '*/build/reports/dependency-verification' -type d | grep -q .; then
+          if [ -d build/reports/dependency-verification ]; then
             echo "::error::A downloaded file failed Gradle's dependency verification. After a change of a dependency," \
               "a plugin or a version in pom.xml, run sh tools/refresh-android-verification.sh, read the diff of" \
               "android/gradle/verification-metadata.xml and commit it (docs/dev/android.md). A recorded file with" \

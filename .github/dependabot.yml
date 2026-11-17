@@ -14,10 +14,8 @@ updates:
   # from pom.xml while it configures (android/maven-poms, MavenVersions), so a Maven update reaches it too and the
   # catalog has no version of theirs to update. The same holds for PIT's and pitest-junit5's versions, which come from
   # pom.xml too; the Gradle ecosystem updates only droidsonroids-pitest. Robolectric's Android jars follow Robolectric's
-  # version, not a release of their own (RobolectricSdkJarsTest). An update of the Android build, here or through
-  # pom.xml, fails Gradle's dependency verification until its pull request carries the refreshed
-  # android/gradle/verification-metadata.xml: run sh tools/refresh-android-verification.sh on its branch and commit the
-  # file, by hand, as no workflow may write to a pull request (#484).
+  # version, not a release of their own (RobolectricSdkJarsTest). Such a pull request needs the refreshed
+  # android/gradle/verification-metadata.xml, by hand (docs/dev/android.md, Dependency verification; #484).
   - package-ecosystem: gradle
     directory: /android
     schedule:

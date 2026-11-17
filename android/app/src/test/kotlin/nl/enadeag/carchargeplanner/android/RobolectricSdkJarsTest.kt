@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.android
 
 import java.io.File
-import java.net.URL
 import java.util.Properties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -21,7 +20,9 @@ class RobolectricSdkJarsTest {
     lateinit var folder: File
 
     /** The jars the build declares, `group:name:version` by SDK. */
-    private val declared: Map<Int, String> = System.getProperty("robolectric.sdk.jars").split(",").associate {
+    private val declared: Map<Int, String> = checkNotNull(System.getProperty("robolectric.sdk.jars")) {
+        "the system property robolectric.sdk.jars is not set: run the test through Gradle, whose test task sets it"
+    }.split(",").associate {
         val (sdk, jar) = it.split("=", limit = 2)
         sdk.toInt() to jar
     }
@@ -32,7 +33,7 @@ class RobolectricSdkJarsTest {
         val file = File(folder, "android-all.jar").apply { createNewFile() }
         val resolver = DependencyResolver { jar: DependencyJar ->
             asked = jar
-            file.toURI().toURL() as URL
+            file.toURI().toURL()
         }
         DefaultSdkProvider(resolver).sdks.single { it.apiLevel == sdk }.jarPath
         return asked!!.let { "${it.groupId}:${it.artifactId}:${it.version}" }

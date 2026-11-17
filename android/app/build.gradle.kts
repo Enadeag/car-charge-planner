@@ -41,20 +41,23 @@ val debugBuildLabel: Provider<String> = providers.environmentVariable("BUILD_COM
 val robolectricSdkJars = mapOf(32 to libs.robolectric.android.sdk32, 33 to libs.robolectric.android.sdk33,
     36 to libs.robolectric.android.sdk36, 37 to libs.robolectric.android.sdk37)
 // a configuration per SDK, as in one Gradle would keep only the newest version of the one module
-val robolectricAndroid: Map<Int, Configuration> = robolectricSdkJars.mapValues { (sdk, jar) ->
-    configurations.create("robolectricAndroid$sdk") {
-        isCanBeConsumed = false
+val robolectricAndroid = robolectricSdkJars.map { (sdk, jar) ->
+    val declared = configurations.dependencyScope("robolectricAndroid$sdk")
+    project.dependencies.add(declared.name, jar)
+    configurations.resolvable("robolectricAndroid${sdk}Jar") {
+        extendsFrom(declared.get())
         isTransitive = false
-    }.also { project.dependencies.add(it.name, jar) }
+    }
 }
 val robolectricJarsDir: Provider<Directory> = layout.buildDirectory.dir("robolectric-jars")
 val robolectricJars = tasks.register<Sync>("robolectricJars") {
-    from(robolectricAndroid.values)
+    from(robolectricAndroid)
     into(robolectricJarsDir)
 }
 // for the unit-test task and for PIT's test JVMs alike
-val robolectricOffline: List<String> = listOf("-Drobolectric.offline=true",
-    "-Drobolectric.dependency.dir=" + robolectricJarsDir.get().asFile)
+val robolectricOffline: Provider<List<String>> = robolectricJarsDir.map {
+    listOf("-Drobolectric.offline=true", "-Drobolectric.dependency.dir=${it.asFile}")
+}
 
 android {
     namespace = "nl.enadeag.carchargeplanner.android"
@@ -166,7 +169,7 @@ android {
             it.inputs.files(robolectricJars).withPropertyName("robolectricJars")
                 .withPathSensitivity(PathSensitivity.NAME_ONLY)
             val offline = robolectricOffline
-            it.jvmArgumentProviders.add(CommandLineArgumentProvider { offline })
+            it.jvmArgumentProviders.add(CommandLineArgumentProvider { offline.get() })
             it.systemProperty("robolectric.sdk.jars", robolectricSdkJars.entries.joinToString(",") { (sdk, jar) ->
                 jar.get().let { "$sdk=${it.group}:${it.name}:${it.version}" }
             })
@@ -392,7 +395,9 @@ pitest {
     // as the Maven runs: two test JVMs at once, each with a heap of 512 MB, and PIT's own JVM with as much
     threads = 2
     // Robolectric offline too, should one of its tests come to run here
-    jvmArgs = listOf("-Xmx512m") + logicTestProperties.map { (name, value) -> "-D$name=$value" } + robolectricOffline
+    jvmArgs = robolectricOffline.map { offline ->
+        listOf("-Xmx512m") + logicTestProperties.map { (name, value) -> "-D$name=$value" } + offline
+    }
     mainProcessJvmArgs = listOf("-Xmx512m")
     outputFormats = setOf("HTML", "XML")
     timestampedReports = false
