@@ -35,7 +35,8 @@ import org.w3c.dom.Node;
  * <p>The Gradle calls of the workflows and composite actions are held to an allowlist, as deny patterns kept having
  * ways around: a call is the wrapper written plainly as {@code ./gradlew}, followed only by words of {@link #OPTIONS}
  * and tasks the refresh script runs too, up to the end of the line or the {@code )} of a {@code $(...)}. Any other word
- * fails, and so does any other way of naming the wrapper or Gradle as a command. In a file that calls Gradle, every
+ * fails, and so does any other way of naming the wrapper or Gradle as a command, and a call YAML would join with
+ * another line: it stands on its {@code run:} line or in a literal block. In a file that calls Gradle, every
  * {@code working-directory} and every {@code cd} goes to a folder of {@link #DIRECTORIES}. Beside that, no workflow,
  * composite action or {@code gradle.properties} names the verification flags or the mode's property in any spelling,
  * another Gradle user home, an init script, or the refresh script, which writes the checksums instead of checking them;
@@ -63,7 +64,13 @@ class AndroidDependencyVerificationTest {
     private static final Pattern GRADLE = Pattern.compile("(?i:gradlew)|(?<![\\w.-])gradle(?:\\.bat)?(?![\\w/.-])");
     /** A {@code cd} or {@code pushd} and its target, up to the end of its command. */
     private static final Pattern CD = Pattern.compile("(?<![^\\s;&|(])(?:cd|pushd)(?![^\\s;&|)])\\s*([^\\s;&|)]*)");
-    private static final Pattern WORKING_DIRECTORY = Pattern.compile("(?<![\\w-])working-directory:(.*)");
+    /** The key as YAML reads it: plain, in quotes, with or without a space before its colon. */
+    private static final Pattern WORKING_DIRECTORY =
+            Pattern.compile("(?<![\\w-])working-directory[\"']?\\s*:(.*)");
+    /** A {@code run:} with its command on the same line, which YAML joins with a deeper line below it. */
+    private static final Pattern RUN = Pattern.compile("\\s*(?:- )?run: (?![|>]).*");
+    /** A key that opens a literal block, whose lines YAML keeps apart; a folded block ({@code >}) joins them. */
+    private static final Pattern LITERAL_BLOCK = Pattern.compile(".*:\\s*\\|[+-]?\\s*");
 
     /**
      * The long flags, and the property {@code org.gradle.dependency.verification} however it is given: {@code -D},
@@ -74,8 +81,10 @@ class AndroidDependencyVerificationTest {
     /**
      * Another root build, another Gradle user home, or an init script: the long flags, the variable and the property of
      * the user home, an {@code init.d} folder or {@code init.gradle} file, but not the system's {@code /etc/init.d}.
+     * And Gradle run without its name as a command: the wrapper's jar, and the action that takes Gradle's arguments.
      */
     private static final Pattern ELSEWHERE = Pattern.compile("--project-dir|--init-script|--gradle-user-home"
+            + "|gradle-wrapper[.]jar|gradle-build-action"
             + "|GRADLE_USER_HOME|gradle[.]user[.]home|(?<![\\w-])(?<!/etc/)init[.](?:d|gradle)\\b");
     /** The refresh script, which runs Gradle in write mode. */
     private static final Pattern REFRESH = Pattern.compile("refresh-android-verification");
@@ -172,11 +181,30 @@ class AndroidDependencyVerificationTest {
                 .asString().contains("assembleRelease", REFRESH_SCRIPT.toString(), "refresh the checksums");
 
         assertThat(problems("a.yml", """
-                run: ./gradlew --continue --stacktrace check
+                - run: ./gradlew --continue --stacktrace check
+                  if: failure()
+                - run: |
                     out=$(./gradlew -q --console=plain :app:printReleaseVersion)
+
                     ./gradlew lint
-                run: mkdir -p build && ./gradlew check
+                  "script": |-
+                    ./gradlew check
+                - run: ./gradlew --continue \\
+                    check
+                  run: mkdir -p build && ./gradlew check
                 """, SOME_TASKS)).isEmpty();
+    }
+
+    @Test
+    void aGradleCallThatYamlJoinsWithAnotherLineIsRefused() {
+        var joins = "YAML joins this ./gradlew call";
+        for (var joined : List.of("run: ./gradlew check\n  -F off", "- run: ./gradlew check\n\n    -p build-logic",
+                "  run: ./gradlew check \\\n    lint\n    -F off", "run: >\n  ./gradlew check\n  -F off",
+                "run: >-\n  ./gradlew\n  -M sha256 check", "run:\n  ./gradlew check\n  -F off",
+                "./gradlew check\n-F off", "run: |\n  if true; then\n    ./gradlew check\n  fi")) {
+            assertThat(problems("a.yml", joined, SOME_TASKS)).as(joined).anySatisfy(problem -> assertThat(problem)
+                    .contains(joins));
+        }
     }
 
     @Test
@@ -185,6 +213,9 @@ class AndroidDependencyVerificationTest {
                 "./gradlew.bat", "./GRADLEW", "gradle", "/opt/gradle/bin/gradle", "gradle.bat")) {
             assertRefused("run: sh " + other + " check", 1, other);
         }
+        assertRefused("run: java -jar gradle/wrapper/gradle-wrapper.jar -F off check", 1, "gradle-wrapper.jar");
+        assertRefused("run: java -cp x org.gradle.wrapper.GradleWrapperMain check", 1, "GradleWrapperMain");
+        assertRefused("- uses: gradle/gradle-build-action@v3", 1, "gradle-build-action");
         assertRefused("run: out=$(gradle -q help)", 1, "out=$(gradle");
 
         assertThat(problems("a.yml", """
@@ -213,12 +244,15 @@ class AndroidDependencyVerificationTest {
         assertRefused("working-directory: android/build-logic" + call, 1, "android/build-logic");
         assertRefused("  working-directory: ./android" + call, 1, "./android");
         assertRefused("  working-directory: ${{ inputs.directory }}" + call, 1, "${{ inputs.directory }}");
+        assertRefused("\"working-directory\": android/build-logic" + call, 1, "android/build-logic");
+        assertRefused("'working-directory' : android/build-logic" + call, 1, "android/build-logic");
 
         assertThat(problems("a.yml", """
                     working-directory: android
                   working-directory: .
-                run: mkdir -p build && cd android && ./gradlew check
+                run: |
                   cd release
+                run: mkdir -p build && cd android && ./gradlew check
                 """, SOME_TASKS)).isEmpty();
         assertThat(problems("a.yml", "  working-directory: desktop\nrun: cd target && ls\n", SOME_TASKS)).isEmpty();
     }
@@ -329,6 +363,7 @@ class AndroidDependencyVerificationTest {
      * the tasks a Gradle call may name.
      */
     private static List<String> problems(String name, String text, Set<String> tasks) {
+        var raw = text.lines().toList();
         var lines = commandLines(text);
         var callsGradle = lines.values().stream().anyMatch(line -> GRADLE.matcher(line).find());
         var problems = new ArrayList<String>();
@@ -342,6 +377,10 @@ class AndroidDependencyVerificationTest {
             GRADLE.matcher(line).results().filter(found -> !wrappers.contains(found.start()))
                     .forEach(found -> problems.add(at + wordAround(line, found)
                             + " names Gradle otherwise than as a plain ./gradlew call"));
+            if (!calls.isEmpty() && joinedByYaml(raw, number - 1)) {
+                problems.add(at + "YAML joins this ./gradlew call with another line: write it on its run: line with"
+                        + " nothing deeper below it, or in a literal block (run: |)");
+            }
             for (var call : calls) {
                 var rest = line.substring(call.end());
                 var end = rest.indexOf(')');
@@ -361,6 +400,29 @@ class AndroidDependencyVerificationTest {
             }
         });
         return problems;
+    }
+
+    /**
+     * Whether YAML may read the command that starts on line {@code index} of {@code lines} together with another line:
+     * it is on its {@code run:} line with a deeper line below it, or in anything but a literal block.
+     */
+    private static boolean joinedByYaml(List<String> lines, int index) {
+        var line = lines.get(index);
+        if (RUN.matcher(line).matches()) {
+            int next = index;
+            while (lines.get(next).endsWith("\\") && next + 1 < lines.size()) {
+                next++;
+            }
+            return lines.stream().skip(next + 1).filter(below -> !below.isBlank()).findFirst()
+                    .filter(below -> indent(below) > line.indexOf("run:")).isPresent();
+        }
+        return IntStream.iterate(index - 1, above -> above >= 0, above -> above - 1).mapToObj(lines::get)
+                .filter(above -> !above.isBlank() && indent(above) < indent(line)).findFirst()
+                .filter(above -> LITERAL_BLOCK.matcher(above).matches()).isEmpty();
+    }
+
+    private static int indent(String line) {
+        return line.length() - line.stripLeading().length();
     }
 
     /** The word of {@code line}, up to whitespace on either side, that holds {@code found}. */
