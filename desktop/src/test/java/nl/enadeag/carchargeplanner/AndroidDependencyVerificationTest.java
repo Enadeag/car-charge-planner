@@ -36,14 +36,16 @@ import org.w3c.dom.Node;
  * ways around: a call is the wrapper written plainly as {@code ./gradlew}, followed only by words of {@link #OPTIONS}
  * and tasks the refresh script runs too, up to the end of the line or the {@code )} of a {@code $(...)}. Any other word
  * fails, and so does any other way of naming the wrapper or Gradle as a command, and a call YAML would join with
- * another line: it stands on its {@code run:} line or in a literal block. In a file that calls Gradle, every
+ * another line, or that does not start a command: it stands on its {@code run:} line or in a literal block. A file
+ * that calls Gradle uses only the actions of {@link #ACTIONS}, and no step names the check's inputs to change them (the
+ * metadata file, a Gradle user home's folder, {@code BASH_ENV}, {@code user.home}). In a file that calls Gradle, every
  * {@code working-directory} and every {@code cd} goes to a folder of {@link #DIRECTORIES}. Beside that, no workflow,
  * composite action or {@code gradle.properties} names the verification flags or the mode's property in any spelling,
  * another Gradle user home, an init script, or the refresh script, which writes the checksums instead of checking them;
- * no build file or source of the Android build sets the mode; and {@code verification-metadata.xml} checks poms too,
- * SHA-256 only, without keys, and trusts only an IDE's sources and Javadoc. Comment lines, and a line that only echoes
- * plain double-quoted text, are left out. Not seen: a Gradle call through a shell variable, or from a script file that
- * a workflow runs.
+ * no build file, source, properties file or wrapper script of the Android build sets the mode; and
+ * {@code verification-metadata.xml} checks poms too, SHA-256 only, without keys, and trusts only an IDE's sources and
+ * Javadoc. Comment lines, and a line that only echoes plain double-quoted text, are left out. Not seen: a Gradle call
+ * through a shell variable, or from a script file that a workflow runs.
  */
 class AndroidDependencyVerificationTest {
 
@@ -70,7 +72,7 @@ class AndroidDependencyVerificationTest {
     /** A {@code run:} with its command on the same line, which YAML joins with a deeper line below it. */
     private static final Pattern RUN = Pattern.compile("\\s*(?:- )?run: (?![|>]).*");
     /** A key that opens a literal block, whose lines YAML keeps apart; a folded block ({@code >}) joins them. */
-    private static final Pattern LITERAL_BLOCK = Pattern.compile(".*:\\s*\\|[+-]?\\s*");
+    private static final Pattern LITERAL_BLOCK = Pattern.compile("\\s*(?:- )?[\\w-]+:\\s+\\|[+-]?\\s*");
 
     /**
      * The long flags, and the property {@code org.gradle.dependency.verification} however it is given: {@code -D},
@@ -95,6 +97,20 @@ class AndroidDependencyVerificationTest {
     /** The options of the refresh script's Gradle call whose value is the next word. */
     private static final Set<String> SCRIPT_OPTIONS_WITH_VALUE =
             Set.of("--write-verification-metadata", "--init-script");
+
+    /** The words after which a call starts a command, so nothing before it hands it arguments. */
+    private static final Set<String> BEFORE_A_COMMAND = Set.of("run:", "&&", "||");
+    /** The actions a file that calls Gradle may use: those the workflows use; another one may run Gradle itself. */
+    private static final Set<String> ACTIONS = Set.of("actions/checkout", "actions/setup-java",
+            "actions/upload-artifact", "actions/download-artifact", "actions/attest-build-provenance",
+            "gradle/actions/setup-gradle", "reactivecircus/android-emulator-runner");
+    private static final Pattern USES = Pattern.compile("(?<![\\w-])uses[\"']?\\s*:\\s*[\"']?([^@\\s\"']*)");
+    /**
+     * What a step would name to change the check's inputs before a call: the metadata file, a folder of a Gradle user
+     * home other than its caches, a script the shell reads first, the JVM's user home.
+     */
+    private static final Pattern INPUTS = Pattern.compile("verification-metadata[.]xml"
+            + "|(?<=/)[.]gradle(?![\\w.-]|/caches\\b)|BASH_ENV|(?<!gradle[.])user[.]home");
 
     private static final Set<String> SOME_TASKS = Set.of("check", "lint", ":app:printReleaseVersion");
 
@@ -176,7 +192,8 @@ class AndroidDependencyVerificationTest {
         assertRefused("run: ./gradlew check # -F off", 1, "#", "-F", "off");
         assertRefused("run: ./gradlew check || true", 1, "||", "true");
         assertRefused("  run: ./gradlew check \\\n    -F off", 1, "-F", "off");
-        assertRefused("  - uses: x\n    run: out=$(./gradlew -q --info :app:printReleaseVersion)", 2, "--info");
+        assertRefused("  - uses: actions/checkout@v6\n    run: out=$(./gradlew -q --info :app:printReleaseVersion)", 2,
+                "--info");
         assertThat(problems("a.yml", "run: ./gradlew --stacktrace assembleRelease", SOME_TASKS)).singleElement()
                 .asString().contains("assembleRelease", REFRESH_SCRIPT.toString(), "refresh the checksums");
 
@@ -187,7 +204,7 @@ class AndroidDependencyVerificationTest {
                     out=$(./gradlew -q --console=plain :app:printReleaseVersion)
 
                     ./gradlew lint
-                  "script": |-
+                  script: |-
                     ./gradlew check
                 - run: ./gradlew --continue \\
                     check
@@ -208,6 +225,55 @@ class AndroidDependencyVerificationTest {
     }
 
     @Test
+    void aSourceFolderNamedBuildIsReadAndABuildsOutputIsNot(@TempDir Path android) throws IOException {
+        var source = android.resolve(Path.of("build-logic", "src", "main", "kotlin", "build", "Weaker.kt"));
+        var output = android.resolve(Path.of("build-logic", "build", "generated", "Made.kt"));
+        for (var file : List.of(source, output, android.resolve(Path.of("build-logic", "build.gradle.kts")))) {
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, "");
+        }
+
+        assertThat(buildSources(android)).contains(source).doesNotContain(output);
+    }
+
+    @Test
+    void theWrapperDownloadsGradleFromGradleWithARecordedChecksum() throws IOException {
+        assertThat(Files.readAllLines(Path.of("android", "gradle", "wrapper", "gradle-wrapper.properties")))
+                .anyMatch(line -> line.matches("distributionUrl=https\\\\://services[.]gradle[.]org/distributions/"
+                        + "gradle-[0-9.]+-bin[.]zip"))
+                .anyMatch(line -> line.matches("distributionSha256Sum=[0-9a-f]{64}"));
+    }
+
+    @Test
+    void aCallThatDoesNotStartACommandAnotherActionAndAChangeOfTheChecksInputsAreRefused() {
+        var call = "\nrun: ./gradlew check";
+        assertRefused("run: echo -F off | xargs ./gradlew check", 1, "does not start a command");
+        assertRefused("run: xargs -a ci/args ./gradlew check", 1, "does not start a command");
+        assertRefused("run: env X=1 ./gradlew check", 1, "does not start a command");
+        assertRefused("- uses: eskatos/gradle-command-action@v1" + call, 1, "eskatos/gradle-command-action");
+        assertRefused("  uses: ./.github/actions/build" + call, 1, "./.github/actions/build");
+        assertRefused("  \"uses\": 'burrunan/gradle-cache-action@v1'" + call, 1, "burrunan/gradle-cache-action");
+        assertRefused("run: rm gradle/verification-metadata.xml", 1, "verification-metadata");
+        assertRefused("run: mkdir -p ~/.gradle && cp ci/x.properties ~/.gradle/", 1, ".gradle", ".gradle");
+        assertRefused("run: cp -r ci/home/. \"$HOME/.gradle\"", 1, ".gradle");
+        assertRefused("  BASH_ENV: ci/env.sh", 1, "BASH_ENV");
+        assertRefused("  JAVA_TOOL_OPTIONS: -Duser.home=ci/home", 1, "user.home");
+        assertRefused("- run: echo x:|\n    ./gradlew check\n    -F off", 2, "YAML joins");
+
+        assertThat(problems("a.yml", """
+                - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+                - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+                  path: ~/.gradle/caches
+                  key: ${{ hashFiles('android/**/*.gradle', 'android/gradle/libs.versions.toml') }}
+                - run: |
+                    out=$(./gradlew -q check)
+                    cd android; ./gradlew lint
+                    mkdir -p build || ./gradlew check
+                """, SOME_TASKS)).isEmpty();
+        assertThat(problems("a.yml", "- uses: some/other-action@v1\n", SOME_TASKS)).isEmpty();
+    }
+
+    @Test
     void gradleNamedAnyOtherWayAsACommandIsRefused() {
         for (var other : List.of("\"./gradlew\"", "gradlew", "android/gradlew", "../gradlew", "gradlew.bat",
                 "./gradlew.bat", "./GRADLEW", "gradle", "/opt/gradle/bin/gradle", "gradle.bat")) {
@@ -222,7 +288,7 @@ class AndroidDependencyVerificationTest {
                 - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
                   key: gradle-${{ hashFiles('android/**/*.gradle.kts') }}
                   path: ~/.gradle/caches
-                run: cp android/gradle/verification-metadata.xml build/reports/
+                run: cp android/gradle/libs.versions.toml build/reports/
                   cat android/gradle.properties
                 # run: gradle check
                 - name: Build with Gradle
@@ -270,9 +336,9 @@ class AndroidDependencyVerificationTest {
                 "  ARGS: --init-script weaker.gradle", "--init-script").entrySet()) {
             assertRefused(weaker.getKey(), 1, weaker.getValue());
         }
-        for (var weaker : Map.of("run: cp weaker.gradle ~/.gradle/init.d/", "init.d",
-                "run: cp weaker.gradle \"$HOME/.gradle/init.gradle\"", "init.gradle",
-                "run: cp weaker.gradle.kts ~/.gradle/init.gradle.kts", "init.gradle",
+        for (var weaker : Map.of("run: cp weaker.gradle home/init.d/", "init.d",
+                "run: cp weaker.gradle \"$DIR/init.gradle\"", "init.gradle",
+                "run: cp weaker.gradle.kts home/init.gradle.kts", "init.gradle",
                 "  GRADLE_USER_HOME: ${{ runner.temp }}/home", "GRADLE_USER_HOME",
                 "  GRADLE_OPTS: -Dgradle.user.home=home", "gradle.user.home",
                 "run: sh tools/refresh-android-verification.sh", "refresh-android-verification",
@@ -301,16 +367,20 @@ class AndroidDependencyVerificationTest {
      */
     @Test
     void noAndroidBuildFileSetsTheModeOrSwitchesTheVerificationOffForAConfiguration() throws IOException {
-        var sources = buildSources();
+        var sources = buildSources(Path.of("android"));
         assertThat(sources).contains(Path.of("android", "app", "build.gradle.kts"),
-                Path.of("android", "settings.gradle.kts"), Path.of("android", "build-logic", "build.gradle.kts"));
+                Path.of("android", "settings.gradle.kts"), Path.of("android", "build-logic", "build.gradle.kts"),
+                Path.of("android", "gradlew"), Path.of("android", "gradlew.bat"),
+                Path.of("android", "gradle", "wrapper", "gradle-wrapper.properties"));
         for (var file : sources) {
             assertThat(modeLines(Files.readString(file))).as("lines of %s that set the verification mode", file)
                     .isEmpty();
         }
         for (var weaker : List.of("    resolutionStrategy.disableDependencyVerification()",
                 "gradle.startParameter.dependencyVerificationMode = DependencyVerificationMode.OFF",
-                "    // startParameter.setDependencyVerificationMode(LENIENT)")) {
+                "    // startParameter.setDependencyVerificationMode(LENIENT)",
+                "DEFAULT_JVM_OPTS='\"-Xmx64m\" \"-Dorg.gradle.dependency.verification=off\"'",
+                "systemProp.org.gradle.dependency.verification=lenient")) {
             assertThat(modeLines(weaker)).as(weaker).hasSize(1);
         }
     }
@@ -369,7 +439,7 @@ class AndroidDependencyVerificationTest {
         var problems = new ArrayList<String>();
         lines.forEach((number, line) -> {
             var at = "%s line %d: ".formatted(name, number);
-            Stream.of(WEAKENS, ELSEWHERE, REFRESH).flatMap(pattern -> pattern.matcher(line).results())
+            Stream.of(WEAKENS, ELSEWHERE, REFRESH, INPUTS).flatMap(pattern -> pattern.matcher(line).results())
                     .forEach(found -> problems.add(at + found.group()
                             + " weakens or gets around the dependency verification, or writes the checksums"));
             var calls = CALL.matcher(line).results().toList();
@@ -382,6 +452,10 @@ class AndroidDependencyVerificationTest {
                         + " nothing deeper below it, or in a literal block (run: |)");
             }
             for (var call : calls) {
+                if (!startsCommand(line.substring(0, call.start()))) {
+                    problems.add(at + "./gradlew does not start a command, so what stands before it may hand it"
+                            + " arguments");
+                }
                 var rest = line.substring(call.end());
                 var end = rest.indexOf(')');
                 for (var word : (end < 0 ? rest : rest.substring(0, end)).strip().split("\\s+")) {
@@ -393,6 +467,9 @@ class AndroidDependencyVerificationTest {
                 }
             }
             if (callsGradle) {
+                USES.matcher(line).results().map(found -> found.group(1)).filter(action -> !ACTIONS.contains(action))
+                        .forEach(action -> problems.add(at + ("a file that calls Gradle uses the action '%s', not one"
+                                + " of %s, and it may run Gradle itself").formatted(action, ACTIONS)));
                 Stream.of(CD, WORKING_DIRECTORY).flatMap(pattern -> pattern.matcher(line).results())
                         .map(found -> found.group(1).strip()).filter(folder -> !DIRECTORIES.contains(folder))
                         .forEach(folder -> problems.add(at + ("a step of a file that calls Gradle runs in '%s', not"
@@ -400,6 +477,14 @@ class AndroidDependencyVerificationTest {
             }
         });
         return problems;
+    }
+
+    /** Whether a call after {@code before} starts a command: first, in a {@code (} or after a separator. */
+    private static boolean startsCommand(String before) {
+        var words = before.strip().split("\\s+");
+        var last = words[words.length - 1];
+        return last.isEmpty() || last.endsWith("(")
+                || !before.equals(before.stripTrailing()) && (BEFORE_A_COMMAND.contains(last) || last.endsWith(";"));
     }
 
     /**
@@ -514,16 +599,23 @@ class AndroidDependencyVerificationTest {
         return files;
     }
 
-    /** The Android build's Gradle scripts and the Java and Kotlin sources of its builds, without what a build wrote. */
-    private static List<Path> buildSources() throws IOException {
-        var kinds = Pattern.compile(".*\\.(gradle|gradle\\.kts|java|kt)");
-        var written = List.of("build", ".gradle", ".kotlin");
+    /**
+     * The Android build's Gradle scripts, the Java and Kotlin sources of its builds, its properties files in any folder
+     * and the wrapper's scripts, whose JVM options reach Gradle, without what a build wrote: a {@code build} folder
+     * beside a build or settings script.
+     */
+    private static List<Path> buildSources(Path android) throws IOException {
+        var kinds = Pattern.compile(".*\\.(gradle|gradle\\.kts|java|kt|properties)|gradlew(\\.bat)?");
+        var written = List.of(".gradle", ".kotlin");
+        var project = List.of("build.gradle.kts", "settings.gradle.kts", "build.gradle", "settings.gradle");
         var sources = new ArrayList<Path>();
-        Files.walkFileTree(Path.of("android"), new SimpleFileVisitor<>() {
+        Files.walkFileTree(android, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult preVisitDirectory(Path folder, BasicFileAttributes attributes) {
-                return written.contains(folder.getFileName().toString()) ? FileVisitResult.SKIP_SUBTREE
-                        : FileVisitResult.CONTINUE;
+                var name = folder.getFileName().toString();
+                var output = name.equals("build")
+                        && project.stream().anyMatch(file -> Files.exists(folder.resolveSibling(file)));
+                return written.contains(name) || output ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
             }
 
             @Override
