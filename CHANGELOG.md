@@ -5,6 +5,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Android
+- The APK is built only from libraries and plugins whose SHA-256 checksums are recorded in the repository: the build stops on any other file (#484).
 
 ## [0.7.0] - 2026-11-13
 

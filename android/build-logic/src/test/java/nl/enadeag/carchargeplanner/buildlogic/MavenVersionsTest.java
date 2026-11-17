@@ -12,7 +12,10 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** A Gradle build of its own, laid out as the repository is: the pom at the root, the Gradle build in android/. */
+/**
+ * A Gradle build of its own, laid out as the repository is: the pom at the root, the Gradle build in android/. It has
+ * no gradle/verification-metadata.xml, on purpose: it downloads nothing (#484).
+ */
 class MavenVersionsTest {
 
     private static final String PARENT = """

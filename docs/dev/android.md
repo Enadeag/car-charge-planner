@@ -2,7 +2,7 @@
 
 The Android app ([ADR 0010](../adr/0010-android-app.md)) is built with Gradle in `android/`, apart from Maven. Gradle runs on a JDK 21 (`JAVA_HOME`); the engine is still compiled with `--release 17`. The build needs the Android SDK with platform 37 (`android-37.0` in the SDK manager, not a later 37.x) and build-tools 36.0.0, which Android Studio installs: name its folder in `sdk.dir` in `android/local.properties` (git ignores the file) or in `ANDROID_HOME`.
 
-The Gradle wrapper checks the Gradle it downloads against `distributionSha256Sum` in `android/gradle/wrapper/gradle-wrapper.properties`. Every version the build uses is in `android/gradle/libs.versions.toml`, except the versions it shares with the Maven build (those of the engine's libraries and of PIT), which come from the parent `pom.xml` (see [Dependencies](ci-and-releasing.md#dependencies)). Plugins and libraries come only from Google's repository and Maven Central (`android/settings.gradle.kts`); the Gradle Plugin Portal is left out, so a plugin found only there brings it back in its own pull request, with the reason.
+The Gradle wrapper checks the Gradle it downloads against `distributionSha256Sum` in `android/gradle/wrapper/gradle-wrapper.properties`. Every version the build uses is in `android/gradle/libs.versions.toml`, except the versions it shares with the Maven build (those of the engine's libraries and of PIT), which come from the parent `pom.xml` (see [Dependencies](ci-and-releasing.md#dependencies)). Plugins and libraries come only from Google's repository and Maven Central (`android/settings.gradle.kts`); the Gradle Plugin Portal is left out, so a plugin found only there brings it back in its own pull request, with the reason. Gradle checks every file it downloads against `android/gradle/verification-metadata.xml`, so a change of a library, a plugin or a version also refreshes that file: see [Dependency verification](#dependency-verification).
 
 ```bash
 cd android && ./gradlew check assembleDebug    # build, lint and test; the APK is app/build/outputs/apk/debug/app-debug.apk
@@ -22,6 +22,32 @@ cd android && ./gradlew check assembleDebug    # build, lint and test; the APK i
 - `checkNoGoogleLibraries`, in each module, fails when a configuration resolves to Play Services, Firebase or the Play libraries (the groups `com.google.android.gms`, `com.google.firebase` and `com.google.android.play`), which F-Droid does not allow.
 - `android/build-logic/` holds these checks, with the tests that show they fail when they should. `android/maven-poms/` holds what reads the poms: the settings plugin that puts the Maven build's versions in the catalog, of the Android build and of `build-logic` alike, and the reader `checkMavenDrift` uses; it is a build of its own, as `build-logic` cannot fill its own catalog, and its tests are in `build-logic`.
 
+## Dependency verification
+
+Gradle checks every file the build downloads (plugins, libraries, their poms and Gradle's `.module` files) against its SHA-256 in `android/gradle/verification-metadata.xml`, and fails on a file the list lacks or records with another checksum (#484). A file from Gradle's cache is checked as well as a new download, so a cache restored by CI or a file changed on disk is caught too; the release builds without a cache. The check is Gradle's default, strict, everywhere: no workflow and no `gradle.properties` makes it lenient or turns it off (`AndroidDependencyVerificationTest`, in the Maven build).
+
+- One file covers the build in `android/`, its plugins, `build-logic` and `maven-poms`: Gradle uses the file of the build it runs and ignores one in an included build, so a second file would never be read. The temporary builds of `MavenVersionsTest` (TestKit) have none, on purpose, as they download nothing.
+- Checksums only, SHA-256, without PGP signatures. Only `*-sources.jar` and `*-javadoc.jar` pass without a checksum, as an IDE downloads them to show a library's code and the build never uses them.
+- Robolectric's Android jars (`org.robolectric:android-all-instrumented`, one for each SDK the tests run on) come through Gradle, a configuration per SDK in `:app`, and the unit tests and PIT run Robolectric offline on them (`robolectric.offline`, `robolectric.dependency.dir`), so Robolectric downloads nothing itself. `RobolectricSdkJarsTest` holds them to what the Robolectric version asks for; a test on another SDK needs its jar in the catalog and in `robolectricSdkJars` in `app/build.gradle.kts`, or it fails.
+- The file records what a Linux build downloads, as CI builds on Linux. A build on Windows or macOS fails on the files only that system gets (such as AAPT2's): run the refresh script there and leave what it adds out of your pull request.
+
+After a change of a library or a plugin, of Gradle's version, of Robolectric's jars or of a version the build reads from `pom.xml` (Jackson, slf4j, JUnit, AssertJ, ArchUnit, PIT), refresh the file and commit it with the change:
+
+```bash
+sh tools/refresh-android-verification.sh           # from the repository's root; adds what is missing
+sh tools/refresh-android-verification.sh --clean   # now and then: writes every entry again
+```
+
+The script runs every task CI, the release and the weekly mutation run use, with Gradle's `--write-verification-metadata sha256`; the list of tasks is in the script only. It only adds entries, so read its diff: a new entry is trusted as the repository served it, so check that it is the version and the files you expect. The file grows with each update, as Gradle never removes an entry. Now and then run it with `--clean`: it keeps the file's header and configuration, writes the entries again from nothing, and keeps the old file as `android/build/verification-metadata.old.xml`. Compare the two: on the same commit the new file should only lack entries, so an entry it adds or a checksum it changes is to be looked into.
+
+What the check shows is that every build uses the files recorded when the file was written. It cannot tell that a file was already wrong when it was first recorded: a new entry is only as good as the download it came from, which is why the diff is read and a doubtful entry is compared with a checksum from another source, such as the `.sha256` file Maven Central serves beside most files. Nor does it say anything about a library's known vulnerabilities, which Dependabot's security updates report.
+
+Outside Gradle's check, and what covers each (not closed by #484):
+
+- the Gradle distribution: the wrapper checks it against `distributionSha256Sum`, and `gradle/actions/setup-gradle` checks `gradle-wrapper.jar` in CI;
+- the Android SDK's platform and build-tools: `sdkmanager` downloads them from Google over HTTPS; the repository records no checksum of them;
+- the JDK: `actions/setup-java` downloads Temurin over HTTPS, the release one exact version; the repository records no checksum of it, and on your own machine it is the JDK you installed.
+
 ## The app's unit tests
 
 The app's own tests, in `app/src/test/`, run on the JVM in one task. Its logic, in plain Kotlin classes, is tested with JUnit 5 against the stubs of Android's classes that the Android Gradle plugin provides. Its screens are tested on Robolectric, in JUnit 4, which JUnit's vintage engine runs beside JUnit 5:
@@ -29,6 +55,7 @@ The app's own tests, in `app/src/test/`, run on the JVM in one task. Its logic, 
 - Android 17 only (SDK 37, the SDK the app is compiled against; `src/test/resources/robolectric.properties`), with Espresso 3.7.0 in place of the 3.5.0 that Compose's test rule brings, which fails on Android 17. The exceptions: a test of the notification card's refusal runs on Android 16, as Robolectric answers Android 17's permission question itself, and `AndroidKeystoreKeysOnRobolectricTest` runs on Android 12L and 13 (SDK 32 and 33), either side of the version that decides what a Keystore failure means.
 - With Android's own text and graphics (`graphicsMode=NATIVE`, so a text and a control are as tall as on a phone) and with the app's resources.
 - On JDK 21 Robolectric's Android 17 needs `jdk.internal.access` opened (`app/build.gradle.kts`).
+- Robolectric runs offline, on Android jars that Gradle downloads and checks (see [Dependency verification](#dependency-verification)).
 
 **Start-up and StrictMode**
 

@@ -7,3 +7,5 @@
 *.cmd text eol=crlf
 *.bat text eol=crlf
 *.keystore binary
+# written by tools/refresh-android-verification.sh, not by hand: GitHub folds its diff in a pull request (#484)
+android/gradle/verification-metadata.xml linguist-generated=true
