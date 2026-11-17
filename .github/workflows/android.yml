@@ -125,9 +125,9 @@ jobs:
         run: |
           if [ -d build/reports/dependency-verification ]; then
             echo "::error::A downloaded file failed Gradle's dependency verification. After a change of a dependency," \
-              "a plugin or a version in pom.xml, run sh tools/refresh-android-verification.sh, read the diff of" \
-              "android/gradle/verification-metadata.xml and commit it (docs/dev/android.md). A recorded file with" \
-              "another checksum is no update: find out why first."
+              "a plugin or a version in pom.xml, run sh tools/refresh-android-verification.sh from the repository's" \
+              "root, read the diff of android/gradle/verification-metadata.xml and commit it (docs/dev/android.md)." \
+              "A recorded file with another checksum is no update: find out why first."
           fi
       # The debug APK to install on a phone (CONTRIBUTING.md, The Android app), kept even when lint or the tests failed;
       # the step fails when the build left no APK. Not for a pull request from a fork, which runs code from outside the
@@ -240,9 +240,9 @@ jobs:
         run: |
           if [ -d build/reports/dependency-verification ]; then
             echo "::error::A downloaded file failed Gradle's dependency verification. After a change of a dependency," \
-              "a plugin or a version in pom.xml, run sh tools/refresh-android-verification.sh, read the diff of" \
-              "android/gradle/verification-metadata.xml and commit it (docs/dev/android.md). A recorded file with" \
-              "another checksum is no update: find out why first."
+              "a plugin or a version in pom.xml, run sh tools/refresh-android-verification.sh from the repository's" \
+              "root, read the diff of android/gradle/verification-metadata.xml and commit it (docs/dev/android.md)." \
+              "A recorded file with another checksum is no update: find out why first."
           fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

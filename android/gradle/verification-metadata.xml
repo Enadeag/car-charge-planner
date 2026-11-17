@@ -3,7 +3,7 @@
   Generated: the SHA-256 of every file the Android build downloads (the root build, its plugins, build-logic and
   maven-poms), which Gradle checks on every build, cached files too (#484). Do not edit it by hand: after a change of a
   dependency or a plugin, of a version in pom.xml that the build reads, or of Robolectric's jars, run
-  sh tools/refresh-android-verification.sh from anywhere in the repository, read the diff and commit it with the
+  sh tools/refresh-android-verification.sh from the repository's root, read the diff and commit it with the
   change. It records the files a Linux build downloads on a fresh machine; docs/dev/android.md says more.
 -->
 <verification-metadata xmlns="https://schema.gradle.org/dependency-verification" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://schema.gradle.org/dependency-verification https://schema.gradle.org/dependency-verification/dependency-verification-1.4.xsd">

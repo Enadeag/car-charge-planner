@@ -171,7 +171,7 @@ android {
             val offline = robolectricOffline
             it.jvmArgumentProviders.add(CommandLineArgumentProvider { offline.get() })
             it.systemProperty("robolectric.sdk.jars", robolectricSdkJars.entries.joinToString(",") { (sdk, jar) ->
-                jar.get().let { "$sdk=${it.group}:${it.name}:${it.version}" }
+                jar.get().let { library -> "$sdk=${library.group}:${library.name}:${library.version}" }
             })
         }
     }
