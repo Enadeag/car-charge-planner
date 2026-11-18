@@ -6,7 +6,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Android
 - The APK is built only from libraries and plugins whose SHA-256 checksums are recorded in the repository: the build stops on any other file (#484).
-- The APK is about 5 MB instead of 30 MB: R8 now shrinks and optimises the app's code, and keeps its class names, so the log stays readable (#485).
+- The APK is about 9 MB instead of 30 MB: R8 now leaves out the code the app does not use, and keeps the class names, files and lines, so the log stays readable (#485).
 
 ## [0.7.0] - 2026-11-13
 
