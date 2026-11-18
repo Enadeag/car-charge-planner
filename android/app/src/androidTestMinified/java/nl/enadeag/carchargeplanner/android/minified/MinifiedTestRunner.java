@@ -23,8 +23,6 @@ public final class MinifiedTestRunner extends Instrumentation {
     private static final int START = 1;
     private static final int OK = 0;
     private static final int FAILURE = -2;
-    private static final int IGNORED = -3;
-    private static final int ASSUMPTION_FAILURE = -4;
 
     /** The one runner of the process, for the tests; set before they run. */
     private static volatile Instrumentation running;
@@ -89,26 +87,25 @@ public final class MinifiedTestRunner extends Instrumentation {
             if (outside) {
                 testStarted(failure.getDescription());
             }
+            // a second failure of the test, such as its @After's, follows the first
+            var stack = (code == FAILURE ? status.getString("stack") + "\nThen:\n" : "") + failure.getTrace();
             code = FAILURE;
-            status.putString("stack", failure.getTrace());
-            status.putString(REPORT_KEY_STREAMRESULT, "\nError in " + status.getString("test") + ":\n"
-                    + failure.getTrace());
+            status.putString("stack", stack);
+            status.putString(REPORT_KEY_STREAMRESULT, "\nError in " + status.getString("test") + ":\n" + stack);
             if (outside) {
                 testFinished(failure.getDescription());
             }
         }
 
+        // the suite skips nothing: a test that does not check what it should fails
         @Override
         public void testAssumptionFailure(Failure failure) {
-            code = ASSUMPTION_FAILURE;
-            status.putString("stack", failure.getTrace());
+            testFailure(failure);
         }
 
         @Override
         public void testIgnored(Description description) {
-            testStarted(description);
-            code = IGNORED;
-            testFinished(description);
+            testFailure(new Failure(description, new AssertionError("the minified suite ignores no test")));
         }
 
         @Override

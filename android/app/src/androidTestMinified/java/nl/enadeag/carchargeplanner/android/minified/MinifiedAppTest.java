@@ -1,6 +1,8 @@
 package nl.enadeag.carchargeplanner.android.minified;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import android.Manifest;
@@ -12,14 +14,14 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
-import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
@@ -32,8 +34,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import org.junit.After;
 import org.junit.Before;
+import org.json.JSONObject;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,13 +47,18 @@ import org.slf4j.LoggerFactory;
  * the activity on a settings file (Compose, Jackson and the planner), and a round on WorkManager. The tests touch the
  * app only from outside, by class name, intent, resource name, Logcat and the accessibility tree, as the app's classes
  * keep only what the app itself uses. In Java, so the test APK calls nothing of Kotlin's library, which the app keeps
- * only in part too. Run with {@code -PtestBuildType=minified} (docs/dev/android.md).
+ * only in part too. Run with {@code -PtestBuildType=minified} (docs/dev/android.md). What earlier runs leave on the
+ * installation (the keychain's file, the Keystore's key, WorkManager's work) changes nothing: each test writes the
+ * settings and forecast it starts on, types a key of its own and counts only the rounds that end after it starts.
  */
 public class MinifiedAppTest {
 
     private static final String APP_PACKAGE = "nl.enadeag.carchargeplanner.android";
     private static final String ROUND_WORKER = APP_PACKAGE + ".background.RoundWorker";
     private static final ZoneId ZONE = ZoneId.of("Europe/Brussels");
+    /** The alias of the app's first Keystore key, and of later ones with -2, -3 (AndroidKeystoreKeys.ALIAS). */
+    private static final Pattern APP_ALIAS = Pattern.compile("keychain(-[0-9]+)?");
+    private static final String TAG = "MinifiedAppTest";
 
     private final Instrumentation instrumentation = MinifiedTestRunner.instrumentation();
     private final Context app = instrumentation.getTargetContext();
@@ -57,12 +66,9 @@ public class MinifiedAppTest {
 
     @Before
     public void prepareTheSettingsFileAndAForecast() throws IOException {
-        try (InputStream example = instrumentation.getContext().getAssets().open("example-engine.json");
-                OutputStream out = new FileOutputStream(new File(app.getFilesDir(), "engine.json"))) {
-            byte[] buffer = new byte[8192];
-            for (int read = example.read(buffer); read >= 0; read = example.read(buffer)) {
-                out.write(buffer, 0, read);
-            }
+        byte[] example = bytes(instrumentation.getContext().getAssets().open("example-engine.json"));
+        try (OutputStream out = new FileOutputStream(new File(app.getFilesDir(), "engine.json"))) {
+            out.write(example);
         }
         File forecasts = new File(app.getFilesDir(), "forecasts");
         if (!forecasts.isDirectory() && !forecasts.mkdirs()) {
@@ -73,11 +79,21 @@ public class MinifiedAppTest {
         }
     }
 
+    /** Finishes the started activities and waits until they are destroyed, before the next test writes its files. */
     @After
     public void finishTheActivity() {
         for (Activity activity : started) {
             instrumentation.runOnMainSync(activity::finish);
         }
+        long deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(10);
+        for (Activity activity : started) {
+            boolean[] destroyed = new boolean[1];
+            do {
+                instrumentation.runOnMainSync(() -> destroyed[0] = activity.isDestroyed());
+            } while (!destroyed[0] && SystemClock.uptimeMillis() < deadline && sleep());
+            assertTrue("the activity is destroyed", destroyed[0]);
+        }
+        started.clear();
     }
 
     /**
@@ -103,27 +119,22 @@ public class MinifiedAppTest {
 
         String logger = APP_PACKAGE + ".logging.LogcatLogger";
         assertEquals(logger, log.getClass().getName());
-        assertTrue("the logger wrote the exception", trace[0] != null);
+        assertNotNull("the logger wrote the exception", trace[0]);
         StackTraceElement frame = null;
         for (StackTraceElement element : trace[0]) {
-            if (frame == null && element.getClassName().equals(logger)) {
+            if (element.getClassName().equals(logger)) {
                 frame = element;
+                break;
             }
         }
-        assertTrue("a frame of the logger in " + Arrays.toString(trace[0]), frame != null);
+        assertNotNull("a frame of the logger in " + Arrays.toString(trace[0]), frame);
         assertEquals("handleNormalizedLoggingCall", frame.getMethodName());
         assertEquals("LogcatLogger.java", frame.getFileName());
-        List<String> source = new ArrayList<>();
-        try (BufferedReader lines = new BufferedReader(new InputStreamReader(
-                instrumentation.getContext().getAssets().open("LogcatLogger.java"), StandardCharsets.UTF_8))) {
-            for (String line = lines.readLine(); line != null; line = lines.readLine()) {
-                source.add(line);
-            }
-        }
+        String[] source = text(instrumentation.getContext().getAssets().open("LogcatLogger.java")).split("\n", -1);
         int line = frame.getLineNumber();
-        assertTrue("line " + line + " of " + source.size(), line >= 1 && line <= source.size());
-        assertTrue("the trace is written on line " + line + ": " + source.get(line - 1),
-                source.get(line - 1).contains("printStackTrace"));
+        assertTrue("line " + line + " of " + source.length, line >= 1 && line <= source.length);
+        assertTrue("the trace is written on line " + line + ": " + source[line - 1],
+                source[line - 1].contains("printStackTrace"));
     }
 
     /** The plan's note on the battery level, which only a made plan shows, is read from the screen. */
@@ -156,16 +167,16 @@ public class MinifiedAppTest {
         click(waitFor("Save", node -> same(node.getText(), text("action_save")) && tappable(node) != null));
         waitFor("the saved message", node -> same(node.getText(), text("settings_saved")));
 
-        File keychain = new File(app.getNoBackupFilesDir(), "keychain.json");
-        String stored = read(keychain);
+        String stored = text(new FileInputStream(new File(app.getNoBackupFilesDir(), "keychain.json")));
         assertTrue("the keychain's file names the entry: " + stored, stored.contains("forecast/open-meteo/api_key"));
-        assertTrue("the keychain's file does not hold the key itself", !stored.contains(key));
+        assertFalse("the keychain's file does not hold the key itself", stored.contains(key));
+        String alias = new JSONObject(stored).getString("key");
+        assertTrue("the app's own alias: " + alias, APP_ALIAS.matcher(alias).matches());
         KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
         keyStore.load(null);
-        assertTrue("the Android Keystore holds the app's key", keyStore.aliases().hasMoreElements());
+        assertTrue("the Android Keystore holds the app's key " + alias, keyStore.containsAlias(alias));
 
         finishTheActivity();
-        started.clear();
         start();
         waitFor("the plan's note", node -> has(node.getText(), prefix("day_battery_assumed")));
         openTheApiKeyOfOpenMeteo();
@@ -173,23 +184,37 @@ public class MinifiedAppTest {
                 && has(node.getContentDescription(), "Open-Meteo") && tappable(node) != null));
         waitFor("the key, shown", node -> isTheApiKeyOfOpenMeteo(node) && same(node.getText(), key));
 
-        assertTrue("the app's Logcat lines do not hold the key", !logcat().contains(key));
+        assertFalse("the app's Logcat lines do not hold the key", logcat().contains(key));
     }
 
-    /** The start of the activity with a usable settings file asks a round now, which WorkManager runs. */
+    /**
+     * The start of the activity with a usable settings file asks a round now, which WorkManager runs. Only the rounds
+     * that end after a marker line count, written once the rounds of earlier starts have stopped ending; a round of an
+     * earlier start that waits longer than that and ends after the marker would still count.
+     */
     @Test
     public void aRoundRunsOnWorkManager() throws IOException {
-        int before = roundsDone();
+        String marker = "rounds counted from here " + System.nanoTime();
+        int settled = roundsDone(null);
+        long quiet = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(5);
+        long settling = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(30);
+        while (SystemClock.uptimeMillis() < quiet && SystemClock.uptimeMillis() < settling && sleep()) {
+            int now = roundsDone(null);
+            if (now != settled) {
+                settled = now;
+                quiet = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(5);
+            }
+        }
+        Log.i(TAG, marker);
 
         start();
 
         long deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(60);
-        int after = before;
-        while (after == before && SystemClock.uptimeMillis() < deadline) {
-            SystemClock.sleep(500);
-            after = roundsDone();
+        int done = roundsDone(marker);
+        while (done == 0 && SystemClock.uptimeMillis() < deadline && sleep()) {
+            done = roundsDone(marker);
         }
-        assertTrue("a round ended as a success, " + before + " before the start", after > before);
+        assertTrue("a round ended as a success after the start", done > 0);
     }
 
     /** Starts the app's activity as the launcher does; notifications are allowed, so the start schedules the work. */
@@ -225,10 +250,17 @@ public class MinifiedAppTest {
                 && tappable(node) != null));
         AccessibilityNodeInfo fold = waitFor("the fold of the API key and server",
                 node -> same(node.getText(), text("provider_fold_key_and_server")) && tappable(node) != null);
-        // open once a key is stored, and drawn with its fields, so a closed one has no field of the key
+        // The fold shows closed until the stored keys are read, and opens then if a key is stored, so it is clicked
+        // only once they are read and only when no field of the key shows
+        String reading = text("keys_reading");
+        long deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(30);
+        while (onScreen(node -> same(node.getText(), reading))) {
+            assertTrue("the API keys are still being read", SystemClock.uptimeMillis() < deadline && sleep());
+        }
         if (!onScreen(this::isTheApiKeyOfOpenMeteo)) {
             click(fold);
         }
+        waitFor("the API key's field", this::isTheApiKeyOfOpenMeteo);
     }
 
     /** Whether [node] is the field of Open-Meteo's API key: Compose puts the field's label inside it. */
@@ -262,7 +294,7 @@ public class MinifiedAppTest {
     private AccessibilityNodeInfo waitFor(String what, Predicate<AccessibilityNodeInfo> wanted) {
         long deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(30);
         StringBuilder tree = new StringBuilder();
-        while (SystemClock.uptimeMillis() < deadline) {
+        for (int look = 0; SystemClock.uptimeMillis() < deadline; look++) {
             AccessibilityNodeInfo root = instrumentation.getUiAutomation().getRootInActiveWindow();
             if (root != null) {
                 List<AccessibilityNodeInfo> nodes = new ArrayList<>();
@@ -277,12 +309,13 @@ public class MinifiedAppTest {
                     tree.append("\n").append(node.getClassName()).append(" text=").append(node.getText())
                             .append(" description=").append(node.getContentDescription())
                             .append(" hint=").append(node.getHintText());
-                    if (node.isScrollable()) {
+                    // only after a second of looks, so a node that is just being drawn is not scrolled away
+                    if (look >= 4 && node.isScrollable()) {
                         node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
                     }
                 }
             }
-            SystemClock.sleep(250); // the next look at the tree, not a wait for something to happen
+            sleep();
         }
         throw new AssertionError("no " + what + " on the screen:" + tree);
     }
@@ -326,35 +359,54 @@ public class MinifiedAppTest {
         assertTrue("clicked " + node.getText(), tappable(node).performAction(AccessibilityNodeInfo.ACTION_CLICK));
     }
 
-    private static String read(File file) throws IOException {
-        StringBuilder text = new StringBuilder();
-        try (BufferedReader lines = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
-            for (String line = lines.readLine(); line != null; line = lines.readLine()) {
-                text.append(line).append('\n');
+    /** Waits a quarter of a second before the next look, not for something to happen; always true, for a loop. */
+    private static boolean sleep() {
+        SystemClock.sleep(250);
+        return true;
+    }
+
+    /** All of [stream]'s bytes; closes it. */
+    private static byte[] bytes(InputStream stream) throws IOException {
+        try (InputStream in = stream) {
+            ByteArrayOutputStream all = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            for (int read = in.read(buffer); read >= 0; read = in.read(buffer)) {
+                all.write(buffer, 0, read);
             }
+            return all.toByteArray();
         }
-        return text.toString();
+    }
+
+    /** All of [stream] as UTF-8 text; closes it. */
+    private static String text(InputStream stream) throws IOException {
+        return new String(bytes(stream), StandardCharsets.UTF_8);
     }
 
     /** The app's own Logcat lines so far, as Android shows an app only its own. */
     private static String logcat() throws IOException {
         Process logcat = new ProcessBuilder("logcat", "-d", "-v", "tag").redirectErrorStream(true).start();
-        StringBuilder text = new StringBuilder();
-        try (BufferedReader lines = new BufferedReader(
-                new InputStreamReader(logcat.getInputStream(), StandardCharsets.UTF_8))) {
-            for (String line = lines.readLine(); line != null; line = lines.readLine()) {
-                text.append(line).append('\n');
-            }
-        }
-        return text.toString();
+        return text(logcat.getInputStream());
     }
 
-    /** How many of the round's works ended as a success, by WorkManager's own Logcat line for each. */
-    private static int roundsDone() throws IOException {
+    /**
+     * How many of the round's works ended as a success, by WorkManager's own Logcat line for each: after the line
+     * [marker], or in the whole buffer when it is null. Fails when the marker is not in the buffer.
+     */
+    private static int roundsDone(String marker) throws IOException {
+        String[] lines = logcat().split("\n");
+        int from = 0;
+        if (marker != null) {
+            from = -1;
+            for (int i = 0; i < lines.length && from < 0; i++) {
+                if (lines[i].contains(marker)) {
+                    from = i + 1;
+                }
+            }
+            assertTrue("the marker line is in the Logcat buffer: " + marker, from >= 0);
+        }
         int done = 0;
-        for (String line : logcat().split("\n")) {
-            if (line.contains("Worker result SUCCESS for") && line.contains(ROUND_WORKER)) {
+        for (int i = from; i < lines.length; i++) {
+            if (lines[i].contains("Worker result SUCCESS for") && lines[i].contains(ROUND_WORKER)) {
                 done++;
             }
         }
