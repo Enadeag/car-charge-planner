@@ -7,8 +7,9 @@ name: Android
 # checkMavenDrift holds it to the libraries of engine/pom.xml) or this file, and always on a push, weekly and by hand.
 # The emulator job runs the instrumented tests on an Android 10 (API 29) emulator, and then the minified suite on the
 # release build as R8 makes it, signed with a key made for the run (#485): for release/android-* branches and the pull
-# requests into them, weekly, by hand, and for a pull request that changes this file. (CONTRIBUTING.md, What is tested
-# where)
+# requests into them, weekly, by hand, and for a pull request that changes this file, the root pom.xml, engine/pom.xml,
+# android/gradle/libs.versions.toml or android/gradle/verification-metadata.xml, as a library can pass the build and
+# fail on the device (#497). (CONTRIBUTING.md, What is tested where)
 on:
   push:
     branches: [main, "release/android-*"]
@@ -62,8 +63,11 @@ jobs:
                   # after a fixed word and shell-quoted, so that no name can start a line with :: (a workflow command)
                   printf 'changed: %q\n' "$file"
                   case "$file" in
-                    .github/workflows/android.yml) build=true; emulator=true ;;
-                    android/*|engine/src/*|pom.xml|*/pom.xml) build=true ;;
+                    # what decides the libraries and build tools of the app: a library that passes the build and the
+                    # unit tests can still fail on the device (Jackson 3.3.0, #489, #497)
+                    .github/workflows/android.yml|pom.xml|engine/pom.xml) build=true; emulator=true ;;
+                    android/gradle/libs.versions.toml|android/gradle/verification-metadata.xml) build=true; emulator=true ;;
+                    android/*|engine/src/*|*/pom.xml) build=true ;;
                   esac
                 done < "$list"
               fi
