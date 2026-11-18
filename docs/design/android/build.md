@@ -1,6 +1,6 @@
 # Android: build, tests and CI
 
-Decisions about building, testing and checking the Android app: SDK levels, dependencies, the debug build, StrictMode, the tests, mutation testing, the licence files, the emulator job and the release.
+Decisions about building, testing and checking the Android app: SDK levels, dependencies, the debug build, StrictMode, the tests, mutation testing, the licence files, the emulator job, the release and dependency verification.
 
 What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken names, saved state) is in [screens.md](screens.md); read it too.
 
@@ -59,7 +59,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 ### Release
 
-How a release is built, signed and published (`android-release.yml`, `tools/android-sign.sh`; the steps are in [Releasing the Android app](../../dev/ci-and-releasing.md#releasing-the-android-app)). The release key and the environment are the maintainer's (#271); a reproducible build, R8 and Gradle's dependency verification wait for #424.
+How a release is built, signed and published (`android-release.yml`, `tools/android-sign.sh`; the steps are in [Releasing the Android app](../../dev/ci-and-releasing.md#releasing-the-android-app)). The release key and the environment are the maintainer's (#271); R8 waits for #485 and a reproducible build for #424; Gradle's dependency verification is under [Dependency verification](#dependency-verification) (#484).
 
 - The release commit sets `versionName` in `android/app/build.gradle.kts`, and a tag that is not `android-v` plus that version, or a version that still ends in `-SNAPSHOT`, stops the run, so the tag, the APK and the notes can never disagree (#272).
 - `versionCode` is major × 10000 + minor × 100 + patch (0.1.0 is 100), worked out only in `AppVersion` with its tests; a minor or patch above 99, any other form of the name and a code of 0 or above Play's 2,100,000,000 fail the build, as two versions could otherwise share a code (#272).
@@ -93,3 +93,26 @@ How a release is built, signed and published (`android-release.yml`, `tools/andr
 - `AndroidReleaseWorkflowTest` holds the workflow's text to these rules, in the Maven build, so every pull request that changes the workflow runs it (#272).
 - `assembleRelease` builds as it is, without a release block (#272).
 - No check that the tag is reachable from `main`, as on the desktop: a release branch may carry a fix (#272).
+
+### Dependency verification
+
+Every file Gradle downloads is checked against its SHA-256 in `android/gradle/verification-metadata.xml`, so the signed release holds only recorded files ([Dependency verification](../../dev/android.md#dependency-verification); #484).
+
+- Checksums only, SHA-256, with poms and `.module` files checked too (`verify-metadata`) and no PGP signatures or keyring (`verify-signatures` off) (#484).
+- One file, for the root build, its plugins, `build-logic` and `maven-poms`, as Gradle reads only the file of the build it runs; `MavenVersionsTest`'s TestKit builds have none, as they download nothing (#484).
+- Only `*-sources.jar` and `*-javadoc.jar` are trusted without a checksum, for an IDE, as the build never uses them; nothing else is trusted by a pattern (#484).
+- Strict, Gradle's default, in every job (build, emulator, release, weekly mutation run); `AndroidDependencyVerificationTest` is a tripwire beside it, which Gradle's strict default does not depend on. It checks the settings of this file below; that no build script, source, properties file or wrapper script of the Android build names the mode's property or the API that sets the mode or switches it off; that the wrapper is the recorded one; that the repository's root and `release/` hold no `gradlew` or `settings.gradle(.kts)`, as a build there would run without this file; and, as plain text line by line, that no workflow or composite action under `.github/` gives Gradle `--dependency-verification` or `-F`, the property `org.gradle.dependency.verification`, `--write-verification-metadata` or `-M`, `--refresh-keys` or `--export-keys` (#484).
+- `tools/refresh-android-verification.sh` is the one place with the list of tasks (those of CI, the release and the weekly mutation run, `assembleRelease` included, and the input files of the emulator job's `connectedDebugAndroidTest`, resolved without a device), and writes the file incrementally; its diff is read. It runs Gradle with an empty Gradle user home of its own, as Gradle leaves out parent poms and BOMs it has cached (gradle/gradle#19228), so the file holds what a fresh machine downloads. PIT runs narrowed to one class there, as its classpath is the full run's and the full run takes far longer. `--clean` rebuilds it from its header and configuration now and then, with the old file kept to compare; it fails and puts the old file back when a recorded file has another checksum, which a folded diff would hardly show (#484).
+- Every task a `./gradlew` call of a workflow names belongs in the script's list, as the release and the weekly mutation run never run on a pull request; `:app:connectedTestInputs` stands for `connectedDebugAndroidTest`. The review of a workflow change checks it (#484).
+- Linux entries only, as CI builds on Linux; a Windows or macOS build fails on its own files, and such a developer runs the script on their own system (#484).
+- Dependabot's pull requests for `/android`, and a version that reaches the build through `pom.xml`, are refreshed by hand: a step of `android.yml` says how after a verification failure, known by the report folder Gradle writes only then, and no workflow gets write rights (#484).
+- Robolectric's `android-all-instrumented` jars come through a Gradle configuration per SDK the tests use, and the tests and PIT run Robolectric offline on them; `RobolectricSdkJarsTest` holds the jars to the Robolectric version, and Dependabot leaves them to a Robolectric update, as a lone bump would only fail that test (#484).
+- The test is a tripwire against a mistake, not a guard against intent (decided 2026-11-18; #484). It had grown into a YAML parser with allowlists of Gradle calls, actions, inputs, variables and shell rules, and each round of review found a new way around it. A shell step can do anything, and whoever may edit a workflow may edit the test too, so that work could not be finished.
+- Its limit: it catches a mistake, not intent. A workflow can switch the check off in ways the test does not see, such as a script it runs or a variable it builds. The review of a pull request that touches `.github/`, the Android build's files or the test is what protects against that (decided 2026-11-18; #484).
+- The Android build's sources are read for the mode's property and API: Gradle and Kotlin scripts (`.gradle`, any `.kts`), Java, Kotlin and Groovy sources, every properties file and the wrapper scripts; a source folder named `build` is read, and only a `build` folder beside a build or settings script and outside `src` is skipped as output (#484).
+- The wrapper is pinned: the SHA-256 of `gradlew` and `gradlew.bat`, with every line end read as LF, as the Windows job and a local checkout may have other line ends, and of `gradle-wrapper.jar` as it is; a Gradle update records the new values. The wrapper downloads Gradle from `services.gradle.org` with a recorded checksum into Gradle's user home (`distributionBase` and `zipStoreBase` `GRADLE_USER_HOME`, the paths `wrapper/dists`), as its scripts and jar run before Gradle reads any setting (decided 2026-11-17; #484).
+- The short flags `-F` and `-M` count only on a line that names Gradle, a backslash's continuation joined, so `grep -F` or `tar -xf` elsewhere is no alarm. The hint after a failed check may name the refresh script and the metadata file, as the patterns are the flags, not those names (decided 2026-11-18; #484).
+- The comparison of `--clean` was tried only with bash as `sh`, a known limit (decided 2026-11-17; #484).
+- The cache of `android.yml` stays, as cached files are checked too; the release keeps building without a cache (#484).
+- Outside the check, and not closed here: the Gradle distribution (the wrapper's `distributionSha256Sum`), the Android SDK and build-tools (`sdkmanager`, over HTTPS) and the JDK (`setup-java`, over HTTPS) (#484).
+- The file is marked as generated in `.gitattributes` (#484).

@@ -20,6 +20,14 @@ androidx-test-espresso = "3.7.0"
 lifecycle = "2.11.0"
 coroutines = "1.11.0"
 robolectric = "4.17"
+# Robolectric's Android for each SDK the tests run on (robolectric.properties and @Config(sdk = ...)), named as
+# the Robolectric version above asks for it: Gradle downloads and checks these jars, and the tests run with
+# Robolectric offline (#484). RobolectricSdkJarsTest holds them to the Robolectric version; a Robolectric update may
+# need new ones.
+robolectric-android-sdk32 = "12.1-robolectric-8229987-i7"
+robolectric-android-sdk33 = "13-robolectric-9030017-i7"
+robolectric-android-sdk36 = "16-robolectric-13921718-i7"
+robolectric-android-sdk37 = "17-robolectric-15733970-i7"
 # the phone-only preferences (the "Wi-Fi only" switch, and the notifications' state), #361
 datastore = "1.3.0"
 # NotificationCompat and NotificationManagerCompat; above the 1.18.0 activity-compose asks for, taken with SDK 37 (#321)
@@ -69,6 +77,10 @@ kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutine
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 # the screens' tests on the JVM: Android's classes from Robolectric, Compose's test rule and the manifest it needs
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+robolectric-android-sdk32 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-android-sdk32" }
+robolectric-android-sdk33 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-android-sdk33" }
+robolectric-android-sdk36 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-android-sdk36" }
+robolectric-android-sdk37 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-android-sdk37" }
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-test-espresso" }

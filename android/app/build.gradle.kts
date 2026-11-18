@@ -34,6 +34,31 @@ fun languageFolders(res: File): List<String> = res.listFiles().orEmpty().map { i
 val debugBuildLabel: Provider<String> = providers.environmentVariable("BUILD_COMMIT")
     .filter { it.isNotEmpty() }.map { it.take(7) }.orElse("dev")
 
+// Robolectric's Android for each SDK the tests run on, by SDK: Gradle downloads these jars and checks them against
+// gradle/verification-metadata.xml, and the tests run with Robolectric offline, finding them in one folder by their
+// Maven names, so Robolectric downloads nothing itself (#484). RobolectricSdkJarsTest holds them to what Robolectric
+// asks for; a test on an SDK left out here fails, as Robolectric finds no jar for it.
+val robolectricSdkJars = mapOf(32 to libs.robolectric.android.sdk32, 33 to libs.robolectric.android.sdk33,
+    36 to libs.robolectric.android.sdk36, 37 to libs.robolectric.android.sdk37)
+// a configuration per SDK, as in one Gradle would keep only the newest version of the one module
+val robolectricAndroid = robolectricSdkJars.map { (sdk, jar) ->
+    val declared = configurations.dependencyScope("robolectricAndroid$sdk")
+    project.dependencies.add(declared.name, jar)
+    configurations.resolvable("robolectricAndroid${sdk}Jar") {
+        extendsFrom(declared.get())
+        isTransitive = false
+    }
+}
+val robolectricJarsDir: Provider<Directory> = layout.buildDirectory.dir("robolectric-jars")
+val robolectricJars = tasks.register<Sync>("robolectricJars") {
+    from(robolectricAndroid)
+    into(robolectricJarsDir)
+}
+// for the unit-test task and for PIT's test JVMs alike
+val robolectricOffline: Provider<List<String>> = robolectricJarsDir.map {
+    listOf("-Drobolectric.offline=true", "-Drobolectric.dependency.dir=${it.asFile}")
+}
+
 android {
     namespace = "nl.enadeag.carchargeplanner.android"
     compileSdk = libs.versions.android.compile.sdk.get().toInt()
@@ -140,6 +165,13 @@ android {
             it.inputs.file(example).withPropertyName("exampleConfig").withPathSensitivity(PathSensitivity.NONE)
             it.jvmArgumentProviders.add(CommandLineArgumentProvider {
                 listOf("-Drelease.locale.config.dir=${localeConfig.singleFile}", "-Dexample.config=$example")
+            })
+            it.inputs.files(robolectricJars).withPropertyName("robolectricJars")
+                .withPathSensitivity(PathSensitivity.NAME_ONLY)
+            val offline = robolectricOffline
+            it.jvmArgumentProviders.add(CommandLineArgumentProvider { offline.get() })
+            it.systemProperty("robolectric.sdk.jars", robolectricSdkJars.entries.joinToString(",") { (sdk, jar) ->
+                jar.get().let { library -> "$sdk=${library.group}:${library.name}:${library.version}" }
             })
         }
     }
@@ -362,7 +394,10 @@ pitest {
     junit5PluginVersion = libs.versions.pitest.junit5
     // as the Maven runs: two test JVMs at once, each with a heap of 512 MB, and PIT's own JVM with as much
     threads = 2
-    jvmArgs = listOf("-Xmx512m") + logicTestProperties.map { (name, value) -> "-D$name=$value" }
+    // Robolectric offline too, should one of its tests come to run here
+    jvmArgs = robolectricOffline.map { offline ->
+        listOf("-Xmx512m") + logicTestProperties.map { (name, value) -> "-D$name=$value" } + offline
+    }
     mainProcessJvmArgs = listOf("-Xmx512m")
     outputFormats = setOf("HTML", "XML")
     timestampedReports = false
@@ -384,6 +419,8 @@ pitest {
         // the example settings file; and the ArchUnit rules, which read the classes' structure and kill no mutant
         "StringsResourcesTest", "DataExtractionRulesTest", "ManifestTest", "MergedManifestTest",
         "NetworkSecurityConfigTest", "licences.LicencesInTheApkTest", "AppEngineTest", "AppArchitectureTest",
+        // the build's Robolectric jars, against what Robolectric asks for
+        "RobolectricSdkJarsTest",
     ).map { "nl.enadeag.carchargeplanner.android.$it" }.toSet()
 }
 
@@ -498,7 +535,10 @@ val checkPitScore = tasks.register<PitScore>("checkPitScore") {
 }
 
 // the Android PIT plugin adds the variants' tasks after this script has run
-tasks.matching { it.name == "pitestDebug" }.configureEach { finalizedBy(checkPitScore) }
+tasks.matching { it.name == "pitestDebug" }.configureEach {
+    finalizedBy(checkPitScore)
+    dependsOn(robolectricJars)
+}
 
 /**
  * The floor of the unit tests' coverage (CONTRIBUTING.md, Coverage): JaCoCo's report of `:app`, as AGP makes it from
