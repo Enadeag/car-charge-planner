@@ -277,15 +277,13 @@ jobs:
 
   # Builds the same commit again, on a runner of its own, in another folder, with a fresh Gradle home and another time
   # zone and locale, and compares its unsigned APK byte for byte with the build job's, so a release whose APK cannot
-  # be built again stops before the key is asked for (#424). It writes nothing and never sees the key.
+  # be built again stops before the key is asked for (#424). It writes nothing and never sees the key. The time zone
+  # and locale are set on the Gradle step and the step that checks them only: the build is what must not depend on
+  # them, and the checkout, sdkmanager and locale-gen keep the runner's own.
   reproduce:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      TZ: Pacific/Auckland
-      LANG: tr_TR.UTF-8
-      LC_ALL: tr_TR.UTF-8
     defaults:
       run:
         working-directory: reproduce/car-charge-planner/android
@@ -312,6 +310,10 @@ jobs:
           distribution: temurin
           java-version: "21.0.13+9"
       - name: Check that Java sees the other time zone and locale
+        env:
+          TZ: Pacific/Auckland
+          LANG: tr_TR.UTF-8
+          LC_ALL: tr_TR.UTF-8
         run: |
           settings=$(java -XshowSettings:properties -version 2>&1)
           printf '%s\n' "$settings" | grep -E 'user\.(language|country) = '
@@ -328,6 +330,10 @@ jobs:
           (yes || true) | "$sdkmanager" --licenses > /dev/null
           "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
       - name: Android Lint, the unit tests and the build's checks, and the unsigned release APK
+        env:
+          TZ: Pacific/Auckland
+          LANG: tr_TR.UTF-8
+          LC_ALL: tr_TR.UTF-8
         run: ./gradlew --stacktrace lint check assembleRelease
       - name: Record the versions of the build-tools, the platform and Java
         run: |
@@ -347,20 +353,37 @@ jobs:
         with:
           name: android-build-versions
           path: ${{ runner.temp }}/first
-      # Only the APKs decide; the versions are there to explain a difference.
+      # The first build's APK must be the one whose SHA-256 the build job reported and sign checks, so build, reproduce
+      # and sign agree on one APK. Only the APKs decide; the versions are there to explain a difference.
       - name: Compare the APK with the build job's
         id: compare
         working-directory: .
+        env:
+          APK_SHA256: ${{ needs.build.outputs.apk-sha256 }}
         run: |
           first="$RUNNER_TEMP/first/app-release-unsigned.apk"
           second=reproduce/car-charge-planner/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if ! sum=$(sha256sum "$first"); then
+            echo "::error::the build job's APK $first cannot be read, so nothing is signed"; exit 1
+          fi
+          if [ "${sum%% *}" != "$APK_SHA256" ]; then
+            echo "::error::$first is not the APK the build job checked (SHA-256 $APK_SHA256), so nothing is signed"
+            exit 1
+          fi
           echo "The build job's versions:"; cat "$RUNNER_TEMP/first/build-versions.txt"
           echo "This job's versions:"; cat "$RUNNER_TEMP/versions/build-versions.txt"
           if ! cmp -s "$RUNNER_TEMP/first/build-versions.txt" "$RUNNER_TEMP/versions/build-versions.txt"; then
             echo "::warning::the two builds used other versions of the build-tools, the platform or Java (above)"
           fi
-          if cmp "$first" "$second"; then
-            echo "The unsigned APK built again is byte for byte the build job's."; exit 0
+          status=0
+          cmp "$first" "$second" || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "The unsigned APK built again is byte for byte the build job's (SHA-256 $APK_SHA256)."; exit 0
+          fi
+          if [ "$status" -ne 1 ]; then
+            echo "::error::cmp cannot compare the two APKs (exit $status: one is missing or unreadable)," \
+              "so nothing is signed"
+            exit 1
           fi
           mkdir "$RUNNER_TEMP/difference"
           cp "$first" "$RUNNER_TEMP/difference/build-job.apk"
@@ -368,7 +391,8 @@ jobs:
           unzip -v "$first" > "$RUNNER_TEMP/difference/build-job.txt"
           unzip -v "$second" > "$RUNNER_TEMP/difference/reproduce-job.txt"
           echo "::error::the unsigned APK built again differs from the build job's, so nothing is signed; the" \
-            "artifact android-reproduce-difference holds both APKs and their unzip -v listings"
+            "artifact android-reproduce-difference-$GITHUB_RUN_NUMBER-$GITHUB_RUN_ATTEMPT holds both APKs and" \
+            "their unzip -v listings"
           exit 1
       # the attempt is in the name, so a re-run of failed jobs does not meet the artifact of the first attempt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
