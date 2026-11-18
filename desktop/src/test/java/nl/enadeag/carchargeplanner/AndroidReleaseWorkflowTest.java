@@ -16,8 +16,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * What {@code android-release.yml} keeps apart (#272): the release key reaches one job and one step of it, which runs
- * no Gradle; only the release job writes and attests; nothing caches; and the build runs on one exact Java 21. Here,
- * with the Maven build, so every pull request that changes the workflow runs it.
+ * no Gradle; only the release job writes and attests; nothing caches; the build runs on one exact Java 21; and no key
+ * is asked for before a second build has given the same unsigned APK (#424). Here, with the Maven build, so every pull
+ * request that changes the workflow runs it.
  */
 class AndroidReleaseWorkflowTest {
 
@@ -140,6 +141,27 @@ class AndroidReleaseWorkflowTest {
             cat SHA256SUMS
             """;
 
+    private static final String COMPARE = """
+            first="$RUNNER_TEMP/first/app-release-unsigned.apk"
+            second=reproduce/car-charge-planner/android/app/build/outputs/apk/release/app-release-unsigned.apk
+            echo "The build job's versions:"; cat "$RUNNER_TEMP/first/build-versions.txt"
+            echo "This job's versions:"; cat "$RUNNER_TEMP/versions/build-versions.txt"
+            if ! cmp -s "$RUNNER_TEMP/first/build-versions.txt" "$RUNNER_TEMP/versions/build-versions.txt"; then
+              echo "::warning::the two builds used other versions of the build-tools, the platform or Java (above)"
+            fi
+            if cmp "$first" "$second"; then
+              echo "The unsigned APK built again is byte for byte the build job's."; exit 0
+            fi
+            mkdir "$RUNNER_TEMP/difference"
+            cp "$first" "$RUNNER_TEMP/difference/build-job.apk"
+            cp "$second" "$RUNNER_TEMP/difference/reproduce-job.apk"
+            unzip -v "$first" > "$RUNNER_TEMP/difference/build-job.txt"
+            unzip -v "$second" > "$RUNNER_TEMP/difference/reproduce-job.txt"
+            echo "::error::the unsigned APK built again differs from the build job's, so nothing is signed; the" \\
+              "artifact android-reproduce-difference holds both APKs and their unzip -v listings"
+            exit 1
+            """;
+
     private static String workflow;
     private static String code;
     private static Map<String, String> jobs;
@@ -155,8 +177,8 @@ class AndroidReleaseWorkflowTest {
 
     @Test
     void theJobsAreTheOnesTheChecksBelowKnow() {
-        assertThat(jobs).containsOnlyKeys("prepare", "tag-checks", "no-release-yet", "build", "sign", "sign-dry-run",
-                "release");
+        assertThat(jobs).containsOnlyKeys("prepare", "tag-checks", "no-release-yet", "build", "reproduce", "sign",
+                "sign-dry-run", "release");
     }
 
     @Test
@@ -178,7 +200,9 @@ class AndroidReleaseWorkflowTest {
     @Test
     void theKeyIsAskedForOnlyAfterEveryCheckOfTheTag() {
         assertThat(linesStarting(jobs.get("sign"), "    needs:"))
-                .containsExactly("    needs: [prepare, build, tag-checks, no-release-yet]");
+                .containsExactly("    needs: [prepare, build, reproduce, tag-checks, no-release-yet]");
+        assertThat(linesStarting(jobs.get("sign-dry-run"), "    needs:"))
+                .containsExactly("    needs: [prepare, build, reproduce]");
         for (var job : List.of("tag-checks", "no-release-yet")) {
             assertThat(linesStarting(jobs.get(job), "    if:")).as(job)
                     .containsExactly("    if: github.event_name == 'push'");
@@ -250,15 +274,15 @@ class AndroidReleaseWorkflowTest {
     void noCheckoutKeepsTheToken() {
         var checkouts = stepsUsing("actions/checkout@");
 
-        assertThat(checkouts).hasSize(4).allSatisfy(step -> assertThat(step).contains("persist-credentials: false\n"));
+        assertThat(checkouts).hasSize(5).allSatisfy(step -> assertThat(step).contains("persist-credentials: false\n"));
     }
 
     @Test
     void javaIsTemurinAndNeverTheLatest() {
         var setups = stepsUsing("actions/setup-java@");
 
-        assertThat(setups).hasSize(2).allSatisfy(step -> assertThat(step).contains("distribution: temurin\n"));
-        assertThat(linesContaining(workflow, "distribution:")).hasSize(2);
+        assertThat(setups).hasSize(3).allSatisfy(step -> assertThat(step).contains("distribution: temurin\n"));
+        assertThat(linesContaining(workflow, "distribution:")).hasSize(3);
         assertThat(code).doesNotContain("check-latest");
     }
 
@@ -380,7 +404,7 @@ class AndroidReleaseWorkflowTest {
         assertThat(linesContaining(jobs.get("no-release-yet"), ": write")).containsExactly(
                 "      contents: write  # to list draft releases too; nothing is written here");
         assertThat(jobCode.get("no-release-yet")).doesNotContain("uses:", "sh tools/", "gradlew");
-        for (var job : List.of("prepare", "tag-checks", "build", "sign", "sign-dry-run")) {
+        for (var job : List.of("prepare", "tag-checks", "build", "reproduce", "sign", "sign-dry-run")) {
             assertThat(linesContaining(jobs.get(job), ": write")).as(job).isEmpty();
             assertThat(jobCode.get(job)).as(job).doesNotContain("id-token", "attestations");
         }
@@ -390,9 +414,69 @@ class AndroidReleaseWorkflowTest {
     void theBuildUsesOneExactJava21() {
         var versions = JAVA_VERSION.matcher(workflow).results().map(match -> match.group(1)).toList();
 
-        assertThat(versions).hasSize(2).allMatch(version -> version.matches("21(\\.\\d+){2,}\\+\\d+"),
+        assertThat(versions).hasSize(3).allMatch(version -> version.matches("21(\\.\\d+){2,}\\+\\d+"),
                 "an exact Java 21 version with its build number, such as 21.0.13+9");
         assertThat(versions).containsOnly(versions.getFirst());
+    }
+
+    @Test
+    void reproduceRunsOnEveryRunAndOnlyGitHubsOwnActionsAndGradlesSetUp() {
+        var reproduce = jobs.get("reproduce");
+
+        assertThat(linesStarting(reproduce, "    needs:")).containsExactly("    needs: [prepare, build]");
+        assertThat(linesStarting(reproduce, "    if:")).isEmpty();
+        assertThat(USES.matcher(reproduce).results().map(match -> match.group(1).replaceAll("@.*", "")))
+                .containsOnly("actions/checkout", "actions/setup-java", "gradle/actions/setup-gradle",
+                        "actions/download-artifact", "actions/upload-artifact");
+        assertThat(jobCode.get("reproduce").toLowerCase(Locale.ROOT)).doesNotContain("secrets", "environment:",
+                "github.token", "gh_token");
+    }
+
+    @Test
+    void reproduceBuildsTheSameCommitTheSameWayAsTheBuildJob() {
+        var build = jobs.get("build");
+        var reproduce = jobs.get("reproduce");
+
+        assertThat(steps(reproduce).get(1)).startsWith("      - name: Check that this is the commit that was built\n")
+                .contains("COMMIT: ${{ needs.prepare.outputs.commit }}\n", "if [ \"$head\" != \"$COMMIT\" ]; then",
+                        "exit 1");
+        for (var name : List.of("Android SDK platform 37 and build-tools 36.0.0",
+                "Android Lint, the unit tests and the build's checks, and the unsigned release APK",
+                "Record the versions of the build-tools, the platform and Java")) {
+            assertThat(withoutComments(step(reproduce, name))).as(name)
+                    .isEqualTo(withoutComments(step(build, name)));
+        }
+    }
+
+    @Test
+    void reproduceDiffersFromTheBuildJobInFolderGradleHomeTimeZoneAndLocale() {
+        var reproduce = jobs.get("reproduce");
+
+        assertThat(reproduce).contains("\n    env:\n      TZ: Pacific/Auckland\n      LANG: tr_TR.UTF-8\n"
+                        + "      LC_ALL: tr_TR.UTF-8\n",
+                "\n          path: reproduce/car-charge-planner\n",
+                "\n        working-directory: reproduce/car-charge-planner/android\n",
+                "run: sudo locale-gen tr_TR.UTF-8\n",
+                "run: echo \"GRADLE_USER_HOME=$RUNNER_TEMP/gradle-home\" >> \"$GITHUB_ENV\"\n",
+                "grep -Fqx '    user.language = tr'");
+        assertThat(code.replace(jobCode.get("reproduce"), "")).doesNotContain("TZ:", "LANG", "LC_ALL",
+                "GRADLE_USER_HOME", "path: reproduce");
+    }
+
+    @Test
+    void reproduceComparesTheApksAndKeepsBothWhenTheyDiffer() {
+        var reproduce = jobs.get("reproduce");
+        var compare = step(reproduce, "Compare the APK with the build job's");
+
+        assertThat(compare).contains("        id: compare\n");
+        assertThat(runBody(compare)).isEqualTo(COMPARE.strip());
+        var steps = steps(reproduce);
+        assertThat(steps.getLast()).contains("actions/upload-artifact@",
+                "        if: failure() && steps.compare.outcome == 'failure'\n",
+                "          name: android-reproduce-difference-${{ github.run_number }}-${{ github.run_attempt }}\n",
+                "          path: ${{ runner.temp }}/difference/\n", "          if-no-files-found: error\n",
+                "          retention-days: 14\n");
+        assertThat(steps.indexOf(compare)).isEqualTo(steps.size() - 2);
     }
 
     @Test
