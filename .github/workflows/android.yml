@@ -191,15 +191,22 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       # The minified build is signed with a key made for this run and thrown away with the runner; its password is
-      # random and masked. Gradle reads ORG_GRADLE_PROJECT_minifiedKeystore as -PminifiedKeystore, which only the
-      # minified build type uses (#485).
+      # random and masked, in a variable of its own that the build reads only with -PminifiedKeystore. Gradle reads
+      # ORG_GRADLE_PROJECT_minifiedKeystore as -PminifiedKeystore, which only the minified build type uses (#485).
       - name: A throw-away key for the minified build
         run: |
           password=$(openssl rand -hex 24)
           echo "::add-mask::$password"
-          echo "ANDROID_KEYSTORE_PASSWORD=$password" >> "$GITHUB_ENV"
+          echo "MINIFIED_KEYSTORE_PASSWORD=$password" >> "$GITHUB_ENV"
           ANDROID_KEYSTORE_PASSWORD=$password sh tools/android-sign.sh throwaway-key "$RUNNER_TEMP/minified.p12"
           echo "ORG_GRADLE_PROJECT_minifiedKeystore=$RUNNER_TEMP/minified.p12" >> "$GITHUB_ENV"
+      # Everything the emulator step installs, built before the emulator boots, with the same properties as the
+      # connected calls there, so they find it up to date and the emulator step's timeout covers only the tests (#485)
+      - name: Build the apps and their test APKs
+        working-directory: android
+        run: |
+          ./gradlew --stacktrace assembleDebug assembleDebugAndroidTest
+          ./gradlew --stacktrace -PtestBuildType=minified :app:assembleMinified :app:assembleMinifiedAndroidTest
       # whether failed boots cluster on one CPU model
       - name: Runner CPU
         run: lscpu | grep -m1 '^Model name' || echo "lscpu names no CPU model"
@@ -209,7 +216,8 @@ jobs:
       # are up, and logs the time, so a cold boot that comes up short shows. Each script line runs in its own shell.
       # Upstream: https://github.com/ReactiveCircus/android-emulator-runner/pull/495 waits for the service.
       #
-      # The step's timeout ends a hang on shutdown, should one come back; it was seen only on snapshot boots
+      # The step's timeout covers the boot and the tests, as the step before built the APKs; it ends a hang on
+      # shutdown, should one come back, which was seen only on snapshot boots
       # (https://github.com/ReactiveCircus/android-emulator-runner/issues/385).
       - name: Instrumented tests on API 29
         timeout-minutes: 15

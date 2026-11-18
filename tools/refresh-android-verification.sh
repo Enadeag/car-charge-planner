@@ -107,10 +107,11 @@ GRADLE_USER_HOME="$home" ./gradlew --no-daemon --write-verification-metadata sha
   assembleDebug assembleDebugAndroidTest assembleRelease lint check :app:printReleaseVersion :app:pitestDebug \
   :app:connectedTestInputs -PpitClasses='nl.enadeag.carchargeplanner.android.OwnCode*'
 
-# The minified build and its test APK, as the emulator job's second Gradle call builds them, with a key of its own.
-ANDROID_KEYSTORE_PASSWORD=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
-export ANDROID_KEYSTORE_PASSWORD
-sh ../tools/android-sign.sh throwaway-key "$home/minified.p12" > /dev/null
+# The minified build and its test APK, as the emulator job builds them before the boot, with a key of its own.
+MINIFIED_KEYSTORE_PASSWORD=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
+export MINIFIED_KEYSTORE_PASSWORD
+ANDROID_KEYSTORE_PASSWORD=$MINIFIED_KEYSTORE_PASSWORD sh ../tools/android-sign.sh throwaway-key "$home/minified.p12" \
+  > /dev/null
 GRADLE_USER_HOME="$home" ./gradlew --no-daemon --write-verification-metadata sha256 --no-configuration-cache \
   --continue --init-script "$home/connected-test-inputs.gradle" -PtestBuildType=minified \
   -PminifiedKeystore="$home/minified.p12" :app:assembleMinified :app:assembleMinifiedAndroidTest :app:connectedTestInputs
