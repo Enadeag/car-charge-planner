@@ -1,6 +1,6 @@
 # The app's own R8 rules, after AGP's proguard-android-optimize.txt and the libraries' consumer rules
 # (docs/dev/android.md, R8 and the keep rules). Each rule says what needs it: R8 itself (the build fails without it),
-# checkReleaseShrunk, or the minified suite; one is a second safeguard that nothing fails without.
+# checkReleaseShrunk, or the minified suite; a rule that nothing fails without does not belong here.
 
 # names stay as they are: the log's stack traces, its tags and the texts that name a class stay readable
 # (checkReleaseShrunk and the minified suite)
@@ -14,9 +14,3 @@
 # does without, and the engine reads its files as trees, never through them (R8 fails the build without these)
 -dontwarn java.beans.ConstructorProperties
 -dontwarn java.beans.Transient
-
-# slf4j finds its provider through META-INF/services and makes it with its no-argument constructor. R8 keeps it through
-# that file already, so nothing fails without this rule: a second safeguard, kept by the maintainer's choice (#485)
--keep class nl.enadeag.carchargeplanner.android.logging.LogcatServiceProvider {
-    public <init>();
-}
