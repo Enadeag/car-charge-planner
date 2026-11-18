@@ -118,7 +118,7 @@ The app's own tests, in `app/src/test/`, run on the JVM in one task. Its logic, 
 
 ## The instrumented tests
 
-The instrumented tests, in `app/src/androidTest/`, run on a device or an emulator with AndroidX Test, which is in their test APK only, never in the app:
+The debug build's instrumented tests, in `app/src/androidTestDebug/`, run on a device or an emulator with AndroidX Test, which is in their test APK only, never in the app:
 
 - `OnTheDeviceTest` starts the app and has the engine plan the made-up sunny day on the device, through a `java.time` method that desugaring adds.
 - `HttpOnTheDeviceTest` checks what Android's own `HttpURLConnection`, built on OkHttp, could do differently from the JVM's (compression, a connection that ends too soon, redirects, a repeated header, the network security config), against a small server on the device's loopback address.
@@ -129,7 +129,24 @@ The instrumented tests, in `app/src/androidTest/`, run on a device or an emulato
 - `KeysNotInLogcatOnTheDeviceTest` stores, reads and loses a made-up API key and checks that the app's own Logcat lines never hold it, as the emulator job publishes them.
 - `NoticeAlarmInDozeOnTheDeviceTest` sets the app's real alarm about ten seconds ahead with the device forced into Doze (`dumpsys deviceidle force-idle`) and the app in the rare standby bucket, and checks that the notice shows. API 29 does not have the alarm limits of Android 12 and later; the check on a real phone covers those.
 
-The device tests use a Keystore alias of their own, never the app's. The app refuses plain http, except in the debug build, to `localhost` and `127.0.0.1` only, for that server (`src/debug/res/xml/network_security_config.xml`). `./gradlew assembleDebugAndroidTest` builds their APK, and `./gradlew connectedDebugAndroidTest` runs them on the emulator or phone that `adb` sees.
+The device tests use a Keystore alias of their own, never the app's. The app refuses plain http, except in the debug build, to `localhost` and `127.0.0.1` only, for that server (`src/debug/res/xml/network_security_config.xml`). `./gradlew assembleDebugAndroidTest` builds their APK, and `./gradlew connectedDebugAndroidTest` runs them on the emulator or phone that `adb` sees. `checkInstrumentedResults` follows it and fails when the results hold a failure or no test, as the connected task passes when the app's process crashes before the first test.
+
+## R8 and the keep rules
+
+The release build is shrunk and optimised by R8, without renaming (`-dontobfuscate`), so class and method names in the log stay as they are; the debug build is not shrunk ([R8](../design/android/build.md#r8)). `assembleRelease` runs R8, and `checkReleaseShrunk`, under `check`, fails when the release build stops being shrunk or would rename. The rules are AGP's `proguard-android-optimize.txt`, the libraries' own consumer rules, and `app/proguard-rules.pro`, which holds only what the build or the minified suite shows is needed, each rule with its reason.
+
+The minified suite, `MinifiedAppTest` in `app/src/androidTestMinified/`, runs against the build type `minified`: the release build with an id of its own (`.minified`), signed with a key made for the run. It reaches the app only as Android and slf4j do: slf4j's logger (`LogcatLogger`, its frames with their names and a line), `MainActivity` on a prepared settings file and forecast until the screen shows the plan (Compose, Jackson, the planner), and one round of `RoundWorker` on WorkManager. The test APK leaves out every library the app has, so the tests run against the app's shrunk copies: a test that called the app's own code, or a library's, could fail where the app does not. So the suite is in Java and runs on `MinifiedTestRunner`, on JUnit 4 alone, and touches the app by class name, intent, resource name, Logcat and the accessibility tree. AGP does not keep what the test APK refers to, so a test cannot hide a missing rule by naming a class.
+
+```bash
+cd android
+export ANDROID_KEYSTORE_PASSWORD=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
+sh ../tools/android-sign.sh throwaway-key /tmp/minified.p12     # a new file; remove it afterwards
+./gradlew -PtestBuildType=minified -PminifiedKeystore=/tmp/minified.p12 connectedMinifiedAndroidTest
+```
+
+`-PtestBuildType=minified` makes `minified` the tested build type for that call; without it the instrumented tests are the debug build's. Any device from Android 10 runs it; the emulator job runs it after the debug build's tests.
+
+To add a keep rule: build with `./gradlew assembleRelease` and run the minified suite; a class R8 misses fails the build with the rule it would need in `app/build/outputs/mapping/release/missing_rules.txt`, and a class R8 removed but the app reaches by name (by reflection, a service file or the manifest of a library) fails a test or crashes the app, which `checkInstrumentedResults` and the emulator's logcat show. Prefer a library's update or its own consumer rules, then the narrowest rule that names the class and the member, with a comment saying why; a `-dontwarn` names the class and why it may be missing. Then take the rule out once and run the suite again, to see that it fails without it, and say so in the pull request. A new entry point the app reaches by name gets a test in the minified suite, from outside the app as the others.
 
 ## CI for the app
 
@@ -149,4 +166,4 @@ To install the CI's build on a phone without a cable: open the pull request's `a
 
 Every debug build is signed with the same key, `android/app/debug.keystore` (password `android`, alias `androiddebugkey`): it is public and no secret, made for this project and no one's own, so a newer debug build updates an older one. Install a debug APK only from this repository's own runs; the debug app's data is only as safe as the public debug key, so keep real provider keys out of it or accept that.
 
-The release build is not signed by Gradle: `assembleRelease` makes an unsigned APK, and `android-release.yml` signs it with the release key, in a job of its own that runs no Gradle (#272; see [Releasing the Android app](ci-and-releasing.md#releasing-the-android-app)). `checkReleaseNotDebugSigned`, in `check` and before every build of a build type other than debug, fails when such a build type, with the signing config it ends up with (its own, a product flavor's or the default config's), is signed with the debug key. The release build's `versionCode` follows from its `versionName` (`AppVersion` in `android/build-logic`), and `./gradlew -q :app:printReleaseVersion` prints both.
+The release build is not signed by Gradle: `assembleRelease` makes an unsigned APK, shrunk by R8 (see [R8 and the keep rules](#r8-and-the-keep-rules)), and `android-release.yml` signs it with the release key, in a job of its own that runs no Gradle (#272; see [Releasing the Android app](ci-and-releasing.md#releasing-the-android-app)). `checkReleaseNotDebugSigned`, in `check` and before every build of a build type other than debug, fails when such a build type, with the signing config it ends up with (its own, a product flavor's or the default config's), is signed with the debug key. The release build's `versionCode` follows from its `versionName` (`AppVersion` in `android/build-logic`), and `./gradlew -q :app:printReleaseVersion` prints both.
