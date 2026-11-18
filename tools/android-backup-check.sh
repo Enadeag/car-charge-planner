@@ -8,7 +8,7 @@
 # On Android 10 and 11 every include of backup_rules.xml requires deviceToDeviceTransfer. The local transport sets no
 # such flag there (it can from Android 12 on), as neither the cloud's transport nor adb's does, so its backup is one
 # whose transport sets no flag. The script installs the debug build (run-as needs a debuggable app, to put files in
-# its folders), puts made-up files in every place the rules name and in some they leave out, starts the app (a stopped
+# its folders), puts made-up files in every file the rules name and in some they leave out, starts the app (a stopped
 # package gives "Backup is not allowed"), backs it up with the local transport and fails unless the transport declined
 # it as empty. It does not show that a transfer with the flag moves the files: no transport on Android 10 or 11 sets
 # the flag on an emulator. Nor does it back up a second app with data as a positive control: the AOSP image has no
@@ -40,7 +40,8 @@ activity=nl.enadeag.carchargeplanner.android.MainActivity
 rules="$(dirname "$0")/../android/app/src/main/res/xml/backup_rules.xml"
 
 # adb shell joins its arguments into one command for the device's shell, so a command with quotes is one argument;
-# older systems end its lines with CR
+# older systems end its lines with CR. The pipe hides adb's own status; the checks on the output are what catch a
+# failed call
 on_device() { $adb shell "$@" | tr -d '\r'; }
 
 # the files the rules name, all in the domain "file"; and some they leave out
@@ -49,7 +50,7 @@ listed=$(sed -n 's/.*<include domain="file" path="\([^"]*\)".*/\1/p' "$rules")
 seeded="$listed datastore/state.preferences_pb engine.json.tmp engine.json.damaged-20261118-120000"
 
 app_files() {
-  on_device "run-as $package sh -c 'find files databases shared_prefs no_backup -type f 2> /dev/null'" || true
+  on_device "run-as $package sh -c 'find files databases shared_prefs no_backup -type f 2> /dev/null'"
 }
 
 was_enabled=$(on_device bmgr enabled)
@@ -66,8 +67,10 @@ put_back() {
   case "$was_enabled" in *disabled*) $adb shell bmgr enable false > /dev/null || true ;; esac
 }
 trap put_back EXIT
-trap 'exit 130' INT TERM
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
+$adb uninstall "$package" > /dev/null 2>&1 || true
 $adb install -r "$apk" > /dev/null || fail "the debug APK could not be installed"
 for file in $seeded no_backup/keychain.json; do
   case "$file" in no_backup/*) path=$file ;; *) path=files/$file ;; esac
@@ -87,7 +90,8 @@ $adb shell bmgr transport "$local_transport" > /dev/null
 $adb shell settings delete secure backup_local_transport_parameters > /dev/null
 $adb shell bmgr wipe "$local_transport" "$package" > /dev/null 2>&1 || true
 
-$adb shell am start -W -n "$package/$activity" > /dev/null || fail "the app could not be started"
+started=$($adb shell am start -W -n "$package/$activity" | tr -d '\r') || fail "the app could not be started"
+case "$started" in *Error*) fail "the app could not be started: $started" ;; esac
 sleep 3
 $adb shell input keyevent KEYCODE_HOME
 sleep 1
