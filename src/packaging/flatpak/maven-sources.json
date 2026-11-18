@@ -2934,20 +2934,6 @@
   },
   {
     "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/snakeyaml/snakeyaml-engine/3.2/snakeyaml-engine-3.2.jar",
-    "sha256": "88d816316a19c6e7c48b04dc7374522ad436fa51ab105407e95b991f86d21167",
-    "dest": "maven-local/org/snakeyaml/snakeyaml-engine/3.2",
-    "dest-filename": "snakeyaml-engine-3.2.jar"
-  },
-  {
-    "type": "file",
-    "url": "https://repo.maven.apache.org/maven2/org/snakeyaml/snakeyaml-engine/3.2/snakeyaml-engine-3.2.pom",
-    "sha256": "a9d99fd7ba9c27aad1bf093268079c46e0199fa7814c6e9283094586b8b41568",
-    "dest": "maven-local/org/snakeyaml/snakeyaml-engine/3.2",
-    "dest-filename": "snakeyaml-engine-3.2.pom"
-  },
-  {
-    "type": "file",
     "url": "https://repo.maven.apache.org/maven2/org/sonatype/forge/forge-parent/5/forge-parent-5.pom",
     "sha256": "e56188aa8ce51278006aa90bc7e0f304a81e2f1219f462e7d21f262535cd2795",
     "dest": "maven-local/org/sonatype/forge/forge-parent/5",

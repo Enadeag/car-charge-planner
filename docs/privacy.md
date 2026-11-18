@@ -89,6 +89,6 @@ The downloads bring these with them:
 | [Jackson](https://github.com/FasterXML/jackson) | Reading and writing the JSON files and the providers' answers | Apache-2.0 |
 | [SLF4J](https://www.slf4j.org) | the log of dbus-java and of the engine, passed on to the app's | MIT |
 
-Their licence texts are in the `legal` folder of the Linux folder and of the Windows install folder, one file per library; the runtime's own notices, for OpenJDK and JavaFX, are in `lib/runtime/legal` of the Linux folder (`runtime\legal` in the Windows install folder). For development only: [JUnit](https://junit.org) (EPL-2.0), [AssertJ](https://assertj.github.io/doc/), [ArchUnit](https://www.archunit.org) and [SnakeYAML Engine](https://codeberg.org/snakeyaml/snakeyaml-engine) (all three Apache-2.0).
+Their licence texts are in the `legal` folder of the Linux folder and of the Windows install folder, one file per library; the runtime's own notices, for OpenJDK and JavaFX, are in `lib/runtime/legal` of the Linux folder (`runtime\legal` in the Windows install folder). For development only: [JUnit](https://junit.org) (EPL-2.0), [AssertJ](https://assertj.github.io/doc/) and [ArchUnit](https://www.archunit.org) (both Apache-2.0).
 
 The weather and solar data come from the providers above under their own terms. The recorded answers the tests use are credited in [`engine/src/test/resources/.../forecast/providers/NOTICE.md`](../engine/src/test/resources/nl/enadeag/carchargeplanner/engine/forecast/providers/NOTICE.md).
