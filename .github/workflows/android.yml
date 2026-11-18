@@ -64,7 +64,8 @@ jobs:
                   case "$file" in
                     # what decides the libraries and build tools of the app: a library that passes the build and the
                     # unit tests can still fail on the device (Jackson 3.3.0, #489, #497)
-                    .github/workflows/android.yml|pom.xml|engine/pom.xml|android/gradle/libs.versions.toml|android/gradle/verification-metadata.xml) build=true; emulator=true ;;
+                    .github/workflows/android.yml|pom.xml|engine/pom.xml) build=true; emulator=true ;;
+                    android/gradle/libs.versions.toml|android/gradle/verification-metadata.xml) build=true; emulator=true ;;
                     android/*|engine/src/*|*/pom.xml) build=true ;;
                   esac
                 done < "$list"
