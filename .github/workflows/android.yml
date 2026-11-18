@@ -115,7 +115,8 @@ jobs:
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           (yes || true) | "$sdkmanager" --licenses > /dev/null
           "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
-      # assembleRelease runs R8, so a missing class or keep rule fails here on every pull request (#485)
+      # assembleRelease runs R8, so a class R8 misses fails here on every pull request; a missing keep rule shows in
+      # the minified suite (#485)
       - name: Build the app, its test APK and the release build
         run: ./gradlew --continue --stacktrace assembleDebug assembleDebugAndroidTest assembleRelease
       - name: Android Lint
