@@ -1,12 +1,14 @@
 name: Android
 
-# The Android app (android/, ADR 0010). The build job builds the app and its test APK, runs Android Lint and then
-# check (the unit tests and the build's own checks), and keeps the debug APK for 14 days, to install on a phone (not
-# for a pull request from a fork). It runs for a pull request that touches android/, the engine's sources, a pom.xml
-# (the build takes the versions of the engine's libraries from pom.xml, and checkMavenDrift holds it to the libraries
-# of engine/pom.xml) or this file, and always on a push, weekly and by hand. The emulator job runs the instrumented
-# tests on an Android 10 (API 29) emulator: for release/android-* branches and the pull requests into them, weekly, by
-# hand, and for a pull request that changes this file. (CONTRIBUTING.md, What is tested where)
+# The Android app (android/, ADR 0010). The build job builds the app, its test APK and the release build, which R8
+# shrinks, runs Android Lint and then check (the unit tests and the build's own checks), and keeps the debug APK for 14
+# days, to install on a phone (not for a pull request from a fork). It runs for a pull request that touches android/,
+# the engine's sources, a pom.xml (the build takes the versions of the engine's libraries from pom.xml, and
+# checkMavenDrift holds it to the libraries of engine/pom.xml) or this file, and always on a push, weekly and by hand.
+# The emulator job runs the instrumented tests on an Android 10 (API 29) emulator, and then the minified suite on the
+# release build as R8 makes it, signed with a key made for the run (#485): for release/android-* branches and the pull
+# requests into them, weekly, by hand, and for a pull request that changes this file. (CONTRIBUTING.md, What is tested
+# where)
 on:
   push:
     branches: [main, "release/android-*"]
@@ -109,8 +111,9 @@ jobs:
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           (yes || true) | "$sdkmanager" --licenses > /dev/null
           "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
-      - name: Build the app and its test APK
-        run: ./gradlew --continue --stacktrace assembleDebug assembleDebugAndroidTest
+      # assembleRelease runs R8, so a missing class or keep rule fails here on every pull request (#485)
+      - name: Build the app, its test APK and the release build
+        run: ./gradlew --continue --stacktrace assembleDebug assembleDebugAndroidTest assembleRelease
       - name: Android Lint
         if: ${{ !cancelled() && steps.sdk.outcome == 'success' }}
         run: ./gradlew --continue --stacktrace lint
@@ -183,6 +186,16 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      # The minified build is signed with a key made for this run and thrown away with the runner; its password is
+      # random and masked. Gradle reads ORG_GRADLE_PROJECT_minifiedKeystore as -PminifiedKeystore, which only the
+      # minified build type uses (#485).
+      - name: A throw-away key for the minified build
+        run: |
+          password=$(openssl rand -hex 24)
+          echo "::add-mask::$password"
+          echo "ANDROID_KEYSTORE_PASSWORD=$password" >> "$GITHUB_ENV"
+          ANDROID_KEYSTORE_PASSWORD=$password sh tools/android-sign.sh throwaway-key "$RUNNER_TEMP/minified.p12"
+          echo "ORG_GRADLE_PROJECT_minifiedKeystore=$RUNNER_TEMP/minified.p12" >> "$GITHUB_ENV"
       # whether failed boots cluster on one CPU model
       - name: Runner CPU
         run: lscpu | grep -m1 '^Model name' || echo "lscpu names no CPU model"
@@ -232,6 +245,7 @@ jobs:
             mkdir -p build
             adb logcat -v threadtime < /dev/null > build/logcat.txt 2>&1 &
             ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest
+            ./gradlew --stacktrace -PtestBuildType=minified :app:connectedMinifiedAndroidTest
       # After a dependency-verification failure of the instrumented tests' build, says how to refresh the checksums; the
       # same step as in android-build.
       - name: How to refresh the checksums
