@@ -9,7 +9,8 @@ name: Android
 # release build as R8 makes it, signed with a key made for the run (#485): for release/android-* branches and the pull
 # requests into them, weekly, by hand, and for a pull request that changes this file, the root pom.xml, engine/pom.xml,
 # android/gradle/libs.versions.toml or android/gradle/verification-metadata.xml, as a library can pass the build and
-# fail on the device (#497). (CONTRIBUTING.md, What is tested where)
+# fail on the device (#497), or tools/android-backup-check.sh, the app's AndroidManifest.xml or one of its two backup
+# rule files, which that check guards (#397). (CONTRIBUTING.md, What is tested where)
 on:
   push:
     branches: [main, "release/android-*"]
@@ -67,6 +68,10 @@ jobs:
                     # unit tests can still fail on the device (Jackson 3.3.0, #489, #497)
                     .github/workflows/android.yml|pom.xml|engine/pom.xml) build=true; emulator=true ;;
                     android/gradle/libs.versions.toml|android/gradle/verification-metadata.xml) build=true; emulator=true ;;
+                    # what the emulator's backup check runs or guards (#397)
+                    tools/android-backup-check.sh|android/app/src/main/AndroidManifest.xml) build=true; emulator=true ;;
+                    android/app/src/main/res/xml/backup_rules.xml) build=true; emulator=true ;;
+                    android/app/src/main/res/xml/data_extraction_rules.xml) build=true; emulator=true ;;
                     android/*|engine/src/*|*/pom.xml) build=true ;;
                   esac
                 done < "$list"
