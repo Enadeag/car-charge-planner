@@ -90,7 +90,7 @@ class AppEngineTest {
      * Android 10 as on 16.
      */
     @Test
-    fun afterATransferWithoutTheKeychainTheSettingsAreReadyAndTheApiKeysAreAskedForAgain() = runTest {
+    fun afterATransferTheSettingsAreReadyTheKeysCountAsNoneARefusalNamesTheProviderAndAKeyTypedAgainIsKept() = runTest {
         Files.createDirectories(filesFolder)
         EXAMPLE.copyTo(filesFolder.resolve("engine.json"))
         val keystore = SoftwareKeys()

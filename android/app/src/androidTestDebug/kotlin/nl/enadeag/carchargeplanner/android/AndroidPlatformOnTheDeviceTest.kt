@@ -23,7 +23,10 @@ class AndroidPlatformOnTheDeviceTest {
         assertEquals(File(context.noBackupFilesDir, "keychain.json").toPath(), platform.keychainFile())
     }
 
-    /** The backup rules name the keychain's file as `no_backup/keychain.json` in the app's data folder. */
+    /**
+     * The keychain lies in `noBackupFilesDir`, which Android never backs up or transfers; the backup rules rely on that
+     * and name no file there.
+     */
     @Test
     fun theFolderThatIsNeverBackedUpIsNoBackupInTheAppsDataFolder() {
         assertEquals(File(context.dataDir, "no_backup"), context.noBackupFilesDir)

@@ -5,8 +5,8 @@
   backup_rules.xml for Android 10 and 11: the engine's six files and the phone's settings store ("Wi-Fi only"). A file
   no include names stays on the phone: the forecast cache, as the next phone fetches its own, the keychain's file and
   WorkManager's database in noBackupFilesDir, which Android never takes along anyway, the notifications' state store,
-  which belongs to this phone, temporary files and copies set aside as damaged. DataExtractionRulesTest holds the two lists to each other
-  and to the files the engine and DataStore write.
+  which belongs to this phone, temporary files and copies set aside as damaged. DataExtractionRulesTest holds the two
+  lists to each other and to the files the engine and DataStore write.
 -->
 <data-extraction-rules>
   <cloud-backup>
