@@ -160,11 +160,13 @@ public class MinifiedAppTest {
         waitFor("the plan's note", node -> has(node.getText(), prefix("day_battery_assumed")));
 
         openTheApiKeyOfOpenMeteo();
-        AccessibilityNodeInfo field = waitFor("the API key's field", this::isTheApiKeyOfOpenMeteo);
+        // the field takes text only once the stored keys are read, and is shown disabled until then
+        AccessibilityNodeInfo field = waitFor("the API key's field",
+                node -> isTheApiKeyOfOpenMeteo(node) && node.isEnabled());
         Bundle typed = new Bundle();
         typed.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, key);
         assertTrue("the key is typed", field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, typed));
-        click(waitFor("Save", node -> same(node.getText(), text("action_save")) && tappable(node) != null));
+        clickOn("Save", node -> same(node.getText(), text("action_save")) && canClick(node));
         waitFor("the saved message", node -> same(node.getText(), text("settings_saved")));
 
         String stored = text(new FileInputStream(new File(app.getNoBackupFilesDir(), "keychain.json")));
@@ -180,8 +182,8 @@ public class MinifiedAppTest {
         start();
         waitFor("the plan's note", node -> has(node.getText(), prefix("day_battery_assumed")));
         openTheApiKeyOfOpenMeteo();
-        click(waitFor("Show", node -> has(node.getContentDescription(), prefix("key_show_of"))
-                && has(node.getContentDescription(), "Open-Meteo") && tappable(node) != null));
+        clickOn("Show", node -> has(node.getContentDescription(), prefix("key_show_of"))
+                && has(node.getContentDescription(), "Open-Meteo") && canClick(node));
         waitFor("the key, shown", node -> isTheApiKeyOfOpenMeteo(node) && same(node.getText(), key));
 
         assertFalse("the app's Logcat lines do not hold the key", logcat().contains(key));
@@ -244,23 +246,32 @@ public class MinifiedAppTest {
 
     /** From the dashboard: Settings, its Forecast page, and the fold of Open-Meteo's API key and server. */
     private void openTheApiKeyOfOpenMeteo() {
-        click(waitFor("Settings", node -> same(node.getContentDescription(), text("home_settings"))
-                && tappable(node) != null));
-        click(waitFor("the Forecast row", node -> same(node.getText(), text("settings_forecast"))
-                && tappable(node) != null));
-        AccessibilityNodeInfo fold = waitFor("the fold of the API key and server",
-                node -> same(node.getText(), text("provider_fold_key_and_server")) && tappable(node) != null);
-        // The fold shows closed until the stored keys are read, and opens then if a key is stored, so it is clicked
-        // only once they are read and only when no field of the key shows
+        clickOn("Settings", node -> same(node.getContentDescription(), text("home_settings"))
+                && canClick(node));
+        clickOn("the Forecast row", node -> same(node.getText(), text("settings_forecast"))
+                && canClick(node));
+        Predicate<AccessibilityNodeInfo> fold =
+                node -> same(node.getText(), text("provider_fold_key_and_server")) && canClick(node);
+        waitFor("the fold of the API key and server", fold);
         String reading = text("keys_reading");
         long deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(30);
         while (onScreen(node -> same(node.getText(), reading))) {
             assertTrue("the API keys are still being read", SystemClock.uptimeMillis() < deadline && sleep());
         }
-        if (!onScreen(this::isTheApiKeyOfOpenMeteo)) {
-            click(fold);
+        // The fold opens by itself a frame after the stored keys are read when a key is stored, and the tree shows only
+        // what is in view, a little after the screen, so a click on a fold that seems closed may shut it. So the
+        // field decides: the fold is clicked only when the field does not show within a few seconds of looking,
+        // scrolling, and a click that shut the fold is followed by another.
+        StringBuilder tree = new StringBuilder();
+        for (int clicks = 0; clicks < 3; clicks++) {
+            if (lookFor(this::isTheApiKeyOfOpenMeteo, TimeUnit.SECONDS.toMillis(3), tree) != null) {
+                return;
+            }
+            clickOn("the fold of the API key and server", fold);
         }
-        waitFor("the API key's field", this::isTheApiKeyOfOpenMeteo);
+        if (lookFor(this::isTheApiKeyOfOpenMeteo, TimeUnit.SECONDS.toMillis(10), tree) == null) {
+            throw new AssertionError("no field of the API key after three clicks on its fold:" + tree);
+        }
     }
 
     /** Whether [node] is the field of Open-Meteo's API key: Compose puts the field's label inside it. */
@@ -289,11 +300,25 @@ public class MinifiedAppTest {
 
     /**
      * The first node of the active window's accessibility tree that [wanted] accepts, once there is one; scrolls the
-     * window's lists forward while it looks, and fails after 30 seconds, showing the tree.
+     * window's lists while it looks, and fails after 30 seconds, showing the tree.
      */
     private AccessibilityNodeInfo waitFor(String what, Predicate<AccessibilityNodeInfo> wanted) {
-        long deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(30);
         StringBuilder tree = new StringBuilder();
+        AccessibilityNodeInfo found = lookFor(wanted, TimeUnit.SECONDS.toMillis(30), tree);
+        if (found == null) {
+            throw new AssertionError("no " + what + " on the screen:" + tree);
+        }
+        return found;
+    }
+
+    /**
+     * The first node of the active window's accessibility tree that [wanted] accepts within [millis], else null, with
+     * the last tree looked at in [tree]. The tree holds only what is in view, so after a second of looks it scrolls
+     * the window's lists forward, and back once they are at their end.
+     */
+    private AccessibilityNodeInfo lookFor(Predicate<AccessibilityNodeInfo> wanted, long millis, StringBuilder tree) {
+        long deadline = SystemClock.uptimeMillis() + millis;
+        int scroll = AccessibilityNodeInfo.ACTION_SCROLL_FORWARD;
         for (int look = 0; SystemClock.uptimeMillis() < deadline; look++) {
             AccessibilityNodeInfo root = instrumentation.getUiAutomation().getRootInActiveWindow();
             if (root != null) {
@@ -305,19 +330,25 @@ public class MinifiedAppTest {
                     }
                 }
                 tree.setLength(0);
+                boolean scrolled = false;
                 for (AccessibilityNodeInfo node : nodes) {
                     tree.append("\n").append(node.getClassName()).append(" text=").append(node.getText())
                             .append(" description=").append(node.getContentDescription())
                             .append(" hint=").append(node.getHintText());
                     // only after a second of looks, so a node that is just being drawn is not scrolled away
                     if (look >= 4 && node.isScrollable()) {
-                        node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+                        scrolled |= node.performAction(scroll);
                     }
+                }
+                if (look >= 4 && !scrolled) {
+                    scroll = scroll == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+                            ? AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+                            : AccessibilityNodeInfo.ACTION_SCROLL_FORWARD;
                 }
             }
             sleep();
         }
-        throw new AssertionError("no " + what + " on the screen:" + tree);
+        return null;
     }
 
     private static void collect(AccessibilityNodeInfo node, List<AccessibilityNodeInfo> into) {
@@ -354,9 +385,28 @@ public class MinifiedAppTest {
         return target;
     }
 
-    /** Clicks [node], or the nearest node above it that can be clicked, as a tap there would. */
-    private static void click(AccessibilityNodeInfo node) {
-        assertTrue("clicked " + node.getText(), tappable(node).performAction(AccessibilityNodeInfo.ACTION_CLICK));
+    /**
+     * Whether [node], or the nearest node above it that can be clicked, can be clicked now: a button such as the key's
+     * Show is disabled until the stored keys are read.
+     */
+    private static boolean canClick(AccessibilityNodeInfo node) {
+        AccessibilityNodeInfo target = tappable(node);
+        return target != null && target.isEnabled();
+    }
+
+    /**
+     * Clicks the first node [wanted] accepts, or the nearest node above it that can be clicked, as a tap there would.
+     * The tree follows the screen a little late, so a node just scrolled out of view or made anew refuses the click;
+     * it is then looked for again, up to three times.
+     */
+    private void clickOn(String what, Predicate<AccessibilityNodeInfo> wanted) {
+        for (int tries = 0; tries < 3; tries++) {
+            if (tappable(waitFor(what, wanted)).performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                return;
+            }
+            sleep();
+        }
+        throw new AssertionError(what + " refused three clicks");
     }
 
     /** Waits a quarter of a second before the next look, not for something to happen; always true, for a loop. */
@@ -390,7 +440,8 @@ public class MinifiedAppTest {
 
     /**
      * How many of the round's works ended as a success, by WorkManager's own Logcat line for each: after the line
-     * [marker], or in the whole buffer when it is null. Fails when the marker is not in the buffer.
+     * [marker], or in the whole buffer when it is null. Throws when the marker is not in the buffer, as the buffer
+     * then rotated past it and the rounds after it can no longer be counted.
      */
     private static int roundsDone(String marker) throws IOException {
         String[] lines = logcat().split("\n");
@@ -402,7 +453,10 @@ public class MinifiedAppTest {
                     from = i + 1;
                 }
             }
-            assertTrue("the marker line is in the Logcat buffer: " + marker, from >= 0);
+            if (from < 0) {
+                throw new IllegalStateException("the marker line \"" + marker + "\" is no longer in the Logcat buffer:"
+                        + " the buffer may have rotated past it, so the rounds after it cannot be counted");
+            }
         }
         int done = 0;
         for (int i = from; i < lines.length; i++) {

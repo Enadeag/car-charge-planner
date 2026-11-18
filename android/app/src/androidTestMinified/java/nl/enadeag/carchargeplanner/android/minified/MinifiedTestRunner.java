@@ -73,7 +73,8 @@ public final class MinifiedTestRunner extends Instrumentation {
             status.putString("id", "AndroidJUnitRunner");
             status.putString("class", description.getClassName());
             var method = description.getMethodName();
-            status.putString("test", method == null ? "classSetUp" : method);
+            // a failure outside a test, before or after the class's tests, has no method: a neutral name of its own
+            status.putString("test", method == null ? "outsideATest" : method);
             status.putInt("numtests", count);
             status.putInt("current", current);
             code = OK;
