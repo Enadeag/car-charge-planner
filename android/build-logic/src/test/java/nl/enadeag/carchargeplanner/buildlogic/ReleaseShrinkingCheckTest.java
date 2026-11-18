@@ -26,7 +26,8 @@ class ReleaseShrinkingCheckTest {
     @Test
     void aBuildThatShrinksResourcesFails() {
         assertThat(ReleaseShrinkingCheck.problems(true, true, List.of(RULES)))
-                .containsExactly("isShrinkResources is true, which waits for #424 and the minified suite's texts");
+                .containsExactly(
+                        "isShrinkResources is true, which is off until #503 decides, with the minified suite's texts");
     }
 
     @Test
@@ -77,7 +78,7 @@ class ReleaseShrinkingCheckTest {
     void everyProblemIsNamedAtOnce() {
         assertThat(ReleaseShrinkingCheck.problems(false, true, List.of("-dontshrink"))).containsExactly(
                 "isMinifyEnabled is false",
-                "isShrinkResources is true, which waits for #424 and the minified suite's texts",
+                "isShrinkResources is true, which is off until #503 decides, with the minified suite's texts",
                 "a rule file says -dontshrink",
                 "no rule file says -dontobfuscate, so R8 would rename the classes",
                 "no rule file says -dontoptimize, so R8 would number the lines anew",

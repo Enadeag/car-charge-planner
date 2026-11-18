@@ -7,7 +7,7 @@
 #       and version code, and is neither debuggable nor test-only
 #   sign UNSIGNED KEYSTORE SIGNED
 #       signs with the key "release" of KEYSTORE, whose password is in ANDROID_KEYSTORE_PASSWORD, with the APK
-#       Signature Schemes v2 and v3 only, for Android 10 (API 29) and newer
+#       Signature Schemes v2 and v3 only, for Android 10 (API 29) and newer, keeping the build's zip alignment
 #   check-signed APK APP_ID VERSION_NAME VERSION_CODE DEBUG_KEYSTORE [FINGERPRINT_FILE]
 #       the APK verifies with v2 and v3 and without v1, has exactly one signer, whose certificate is not that of
 #       DEBUG_KEYSTORE and, with FINGERPRINT_FILE, is the one recorded there; and it is zip-aligned, carries that app
@@ -159,10 +159,12 @@ case "$command" in
     need_apk "$1"
     [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ] || fail "ANDROID_KEYSTORE_PASSWORD is not set"
     [ -s "$2" ] || fail "the keystore $2 is missing or empty"
+    # --alignment-preserved keeps the build's zip alignment as it is: without it apksigner 35 and later pads the
+    # entries anew, so the signature can no longer be copied onto a rebuilt unsigned APK, as F-Droid does (#424).
     "$apksigner" sign --ks "$2" --ks-key-alias "$alias" \
       --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEYSTORE_PASSWORD \
       --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true --v4-signing-enabled false \
-      --min-sdk-version "$min_sdk" --out "$3" "$1"
+      --alignment-preserved true --min-sdk-version "$min_sdk" --out "$3" "$1"
     echo "signed $1 as $3"
     ;;
   check-signed)

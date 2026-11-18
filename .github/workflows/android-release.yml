@@ -5,10 +5,11 @@ name: Android release
 # maintainer reads and publishes by hand (docs/dev/ci-and-releasing.md, Releasing the Android app; #272). The tag must
 # be "android-v" plus the versionName of android/app/build.gradle.kts, which has no -SNAPSHOT at a release; the branch
 # release/android-X.Y.Z must be at the tag, the emulator job of android.yml green for its commit, and no release may
-# exist for the tag yet. All of that is checked before the key is asked for.
+# exist for the tag yet, and a second build of the commit (reproduce) must give the same unsigned APK byte for byte.
+# All of that is checked before the key is asked for.
 #
-# The jobs split what each may touch: prepare and build run Gradle with a read-only token and no secrets; sign has the
-# key (environment android-release) and runs no Gradle and no third-party action, only apksigner and
+# The jobs split what each may touch: prepare, build and reproduce run Gradle with a read-only token and no secrets;
+# sign has the key (environment android-release) and runs no Gradle and no third-party action, only apksigner and
 # tools/android-sign.sh; release has the token that writes the draft and the attestation, and no key. Nothing caches:
 # a cache another run filled could change what is built or signed.
 #
@@ -245,6 +246,25 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 14
+      # for reproduce, which shows them beside its own when the two APKs differ; an artifact of its own, so the one
+      # that is signed holds the APK alone
+      - name: Record the versions of the build-tools, the platform and Java
+        run: |
+          mkdir "$RUNNER_TEMP/versions"
+          {
+            for part in build-tools/36.0.0 platforms/android-37.0; do
+              printf '%s: ' "$part"; grep -E '^Pkg\.Revision=' "$ANDROID_HOME/$part/source.properties"
+            done
+            "$JAVA_HOME/bin/java" -version 2>&1
+          } > "$RUNNER_TEMP/versions/build-versions.txt"
+          cat "$RUNNER_TEMP/versions/build-versions.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-build-versions
+          overwrite: true
+          path: ${{ runner.temp }}/versions/build-versions.txt
+          if-no-files-found: error
+          retention-days: 14
       # the attempt is in the name, so a re-run of failed jobs does not meet the artifact of the first attempt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -255,10 +275,149 @@ jobs:
             android/*/build/test-results/
           retention-days: 7
 
+  # Builds the same commit again, on a runner of its own, in another folder, with a fresh Gradle home and another time
+  # zone and locale, and compares its unsigned APK byte for byte with the build job's, so a release whose APK cannot
+  # be built again stops before the key is asked for (#424). It writes nothing and never sees the key. The time zone
+  # and locale are set on the Gradle step and the step that checks the locale only: the build is what must not depend on
+  # them, and the checkout, sdkmanager and locale-gen keep the runner's own.
+  reproduce:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: reproduce/car-charge-planner/android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: reproduce/car-charge-planner
+      - name: Check that this is the commit that was built
+        env:
+          COMMIT: ${{ needs.prepare.outputs.commit }}
+        run: |
+          head=$(git rev-parse 'HEAD^{commit}')
+          if [ "$head" != "$COMMIT" ]; then
+            echo "::error::this checkout is at $head, not at the commit $COMMIT that prepare and build used"; exit 1
+          fi
+      # without the locale on the runner, LANG falls back to C and Java to en_US, as in the build job
+      - name: The Turkish locale, which the build job does not have
+        run: sudo locale-gen tr_TR.UTF-8
+      - name: A Gradle home of its own
+        run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-home" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      # the time zone is only shown, by date; the locale is checked, as Java falls back to en_US without it
+      - name: Check that Java sees the Turkish locale
+        env:
+          TZ: Pacific/Auckland
+          LANG: tr_TR.UTF-8
+          LC_ALL: tr_TR.UTF-8
+        run: |
+          settings=$(java -XshowSettings:properties -version 2>&1)
+          printf '%s\n' "$settings" | grep -E 'user\.(language|country) = '
+          date
+          if ! printf '%s\n' "$settings" | grep -Fqx '    user.language = tr'; then
+            echo "::error::Java does not see the locale $LC_ALL, so this build would not differ in locale"; exit 1
+          fi
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-disabled: true
+      - name: Android SDK platform 37 and build-tools 36.0.0
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$sdkmanager" --licenses > /dev/null
+          "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Android Lint, the unit tests and the build's checks, and the unsigned release APK
+        env:
+          TZ: Pacific/Auckland
+          LANG: tr_TR.UTF-8
+          LC_ALL: tr_TR.UTF-8
+        run: ./gradlew --stacktrace lint check assembleRelease
+      - name: Record the versions of the build-tools, the platform and Java
+        run: |
+          mkdir "$RUNNER_TEMP/versions"
+          {
+            for part in build-tools/36.0.0 platforms/android-37.0; do
+              printf '%s: ' "$part"; grep -E '^Pkg\.Revision=' "$ANDROID_HOME/$part/source.properties"
+            done
+            "$JAVA_HOME/bin/java" -version 2>&1
+          } > "$RUNNER_TEMP/versions/build-versions.txt"
+          cat "$RUNNER_TEMP/versions/build-versions.txt"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: android-unsigned-apk
+          path: ${{ runner.temp }}/first
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: android-build-versions
+          path: ${{ runner.temp }}/first
+      # The first build's APK must be the one whose SHA-256 the build job reported and sign checks, so build, reproduce
+      # and sign agree on one APK. Only the APKs decide; the versions are there to explain a difference.
+      - name: Compare the APK with the build job's
+        id: compare
+        working-directory: .
+        env:
+          APK_SHA256: ${{ needs.build.outputs.apk-sha256 }}
+        run: |
+          first="$RUNNER_TEMP/first/app-release-unsigned.apk"
+          second=reproduce/car-charge-planner/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if ! sum=$(sha256sum "$first"); then
+            echo "::error::the build job's APK $first cannot be read, so nothing is signed"; exit 1
+          fi
+          if [ "${sum%% *}" != "$APK_SHA256" ]; then
+            echo "::error::$first has the SHA-256 ${sum%% *}, not the build job's $APK_SHA256, so nothing is signed"
+            exit 1
+          fi
+          # The build job's file comes from another job, so neither file may give workflow commands while it is shown.
+          first_versions="$RUNNER_TEMP/first/build-versions.txt"
+          second_versions="$RUNNER_TEMP/versions/build-versions.txt"
+          token=$(cat /proc/sys/kernel/random/uuid)
+          echo "::stop-commands::$token"
+          echo "The build job's versions:"; printf '%s\n' "$(cat "$first_versions" 2>&1)"
+          echo "This job's versions:"; printf '%s\n' "$(cat "$second_versions" 2>&1)"
+          echo "::$token::"
+          if [ ! -f "$first_versions" ] || [ ! -f "$second_versions" ]; then
+            echo "::warning::a versions file is missing (above), so the versions are not compared; the APKs decide"
+          elif ! cmp -s "$first_versions" "$second_versions"; then
+            echo "::warning::the two builds used other versions of the build-tools, the platform or Java (above)"
+          fi
+          status=0
+          cmp "$first" "$second" || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "The unsigned APK built again is byte for byte the build job's (SHA-256 $APK_SHA256)."; exit 0
+          fi
+          if [ "$status" -ne 1 ]; then
+            echo "::error::cmp cannot compare the two APKs (exit $status: one is missing or unreadable)," \
+              "so nothing is signed"
+            exit 1
+          fi
+          echo "::error::the unsigned APK built again differs from the build job's, so nothing is signed; the" \
+            "artifact android-reproduce-difference-$GITHUB_RUN_NUMBER-$GITHUB_RUN_ATTEMPT holds both APKs and" \
+            "their unzip -v listings"
+          echo "difference=true" >> "$GITHUB_OUTPUT"
+          mkdir "$RUNNER_TEMP/difference"
+          cp "$first" "$RUNNER_TEMP/difference/build-job.apk"
+          cp "$second" "$RUNNER_TEMP/difference/reproduce-job.apk"
+          unzip -v "$first" > "$RUNNER_TEMP/difference/build-job.txt" || true
+          unzip -v "$second" > "$RUNNER_TEMP/difference/reproduce-job.txt" || true
+          exit 1
+      # only after a difference, as the comparing step says; the attempt is in the name, so a re-run of failed jobs does
+      # not meet the artifact of the first attempt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure() && steps.compare.outputs.difference == 'true'
+        with:
+          name: android-reproduce-difference-${{ github.run_number }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/difference/
+          if-no-files-found: error
+          retention-days: 14
+
   # Signs with the release key. The environment android-release asks the maintainer to approve,
   # holds the key's secrets and lets only android-v* tags in. The secrets are in the env of the signing step alone.
   sign:
-    needs: [prepare, build, tag-checks, no-release-yet]
+    needs: [prepare, build, reproduce, tag-checks, no-release-yet]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -333,7 +492,7 @@ jobs:
 
   # The dry run's signing: a job of its own, without the environment, so a dry run never asks for the release key.
   sign-dry-run:
-    needs: [prepare, build]
+    needs: [prepare, build, reproduce]
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
