@@ -7,7 +7,8 @@ import org.junit.jupiter.api.Test;
 
 class ReleaseShrinkingCheckTest {
 
-    private static final String RULES = "# names stay\n-dontobfuscate\n-keepattributes SourceFile,LineNumberTable\n";
+    private static final String RULES =
+            "# names stay\n-dontobfuscate\n-keepattributes SourceFile,LineNumberTable\n-dontoptimize\n";
 
     @Test
     void aShrunkBuildThatKeepsItsNamesPasses() {
@@ -21,11 +22,11 @@ class ReleaseShrinkingCheckTest {
 
     @Test
     void aBuildWithoutDontobfuscateFailsAlsoWhenOnlyACommentOrAnotherWordHasIt() {
-        var renaming = List.of("-keepattributes SourceFile # -dontobfuscate\n-dontobfuscated\n");
+        var renaming = List.of("-keepattributes SourceFile # -dontobfuscate\n-dontobfuscated\n-dontoptimize\n");
 
         assertThat(ReleaseShrinkingCheck.problems(true, renaming))
                 .containsExactly("no rule file says -dontobfuscate, so R8 would rename the classes");
-        assertThat(ReleaseShrinkingCheck.problems(true, List.of()))
+        assertThat(ReleaseShrinkingCheck.problems(true, List.of("-dontoptimize")))
                 .containsExactly("no rule file says -dontobfuscate, so R8 would rename the classes");
     }
 
@@ -36,7 +37,14 @@ class ReleaseShrinkingCheckTest {
     }
 
     @Test
-    void dontobfuscateCountsOnALineWithOtherOptions() {
-        assertThat(ReleaseShrinkingCheck.problems(true, List.of("-dontwarn a.B -dontobfuscate"))).isEmpty();
+    void aBuildWithoutDontoptimizeFails() {
+        assertThat(ReleaseShrinkingCheck.problems(true, List.of("-dontobfuscate\n# -dontoptimize\n")))
+                .containsExactly("no rule file says -dontoptimize, so R8 would number the lines anew");
+    }
+
+    @Test
+    void theOptionsCountOnALineWithOtherOptionsAndInAnyRuleFile() {
+        assertThat(ReleaseShrinkingCheck.problems(true, List.of("-dontwarn a.B -dontobfuscate", "-dontoptimize")))
+                .isEmpty();
     }
 }

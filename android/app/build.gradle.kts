@@ -126,8 +126,9 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug+" + debugBuildLabel.get()
         }
-        // R8 shrinks and optimises, but keeps the names, so the log's stack traces and tags stay readable
-        // (docs/design/android/build.md, R8); checkReleaseShrunk holds it to that
+        // R8 shrinks, but neither renames nor optimises, so the log's stack traces show the real files and lines
+        // (docs/design/android/build.md, R8); checkReleaseShrunk holds it to that. The optimize file only because
+        // AGP refuses proguard-android.txt; proguard-rules.pro switches optimising off.
         release {
             isMinifyEnabled = true
             isShrinkResources = false
@@ -225,7 +226,7 @@ kotlin {
     }
 }
 
-/** Puts the example settings file in the instrumented tests' assets, and nothing else of the docs. */
+/** Puts one file, under its own name, in the instrumented tests' assets, such as the docs' example settings file. */
 abstract class ExampleConfigAsset : DefaultTask() {
 
     @get:InputFile
@@ -237,12 +238,18 @@ abstract class ExampleConfigAsset : DefaultTask() {
 
     @TaskAction
     fun copy() {
-        example.get().asFile.copyTo(assets.get().file("example-engine.json").asFile, overwrite = true)
+        val file = example.get().asFile
+        file.copyTo(assets.get().file(file.name).asFile, overwrite = true)
     }
 }
 
 val exampleConfigAsset = tasks.register<ExampleConfigAsset>("exampleConfigAsset") {
     example = exampleConfig
+}
+
+// the logger's source, so the minified suite finds the line a stack frame of the logger names
+val loggerSourceAsset = tasks.register<ExampleConfigAsset>("loggerSourceAsset") {
+    example = file("src/main/java/nl/enadeag/carchargeplanner/android/logging/LogcatLogger.java")
 }
 
 // the licence texts of the app and of its libraries, which the screen of the licences shows (#331)
@@ -292,7 +299,7 @@ val checkReleaseNotDebugSigned = tasks.register<ReleaseSigningCheck>("checkRelea
 }
 tasks.named("check") { dependsOn(checkReleaseNotDebugSigned) }
 
-// the release build shrunk by R8, without renaming (#485)
+// the release build shrunk by R8, without renaming or optimising (#485)
 val checkReleaseShrunk = tasks.register<ReleaseShrinkingCheck>("checkReleaseShrunk")
 tasks.named("check") { dependsOn(checkReleaseShrunk) }
 
@@ -376,6 +383,10 @@ androidComponents {
         }
         variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::getAssets)
         variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(exampleConfigAsset, ExampleConfigAsset::assets)
+        if (variant.buildType == "minified") {
+            val testAssets = variant.androidTest?.sources?.assets
+            testAssets?.addGeneratedSourceDirectory(loggerSourceAsset, ExampleConfigAsset::assets)
+        }
         // MergedManifestTest reads the release build's manifest, with what the libraries add to it
         if (variant.name == "release") {
             val output = variant.outputs.single()

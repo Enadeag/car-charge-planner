@@ -18,17 +18,18 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
 /**
- * Fails when the release build is not shrunk by R8, or R8 may rename its classes: the log's stack traces and tags name
- * the app's classes, so they must stay as they are (docs/design/android/build.md, R8). A tripwire against a mistake
- * in the build script or the app's own rule files, not against intent: it reads only those files, not the libraries'
- * consumer rules, which cannot switch renaming back on once {@code -dontobfuscate} is given.
+ * Fails when the release build is not shrunk by R8, or R8 may rename or optimise its classes: the log's stack traces
+ * and tags name the app's classes, files and lines, so they must stay as they are (docs/design/android/build.md, R8).
+ * A tripwire against a mistake in the build script or the app's own rule files, not against intent: it reads only
+ * those files, not the libraries' consumer rules, which cannot switch renaming or optimising back on once
+ * {@code -dontobfuscate} and {@code -dontoptimize} are given.
  */
 public abstract class ReleaseShrinkingCheck extends DefaultTask {
 
     /** Makes the task; Gradle fills in its properties. */
     public ReleaseShrinkingCheck() {
         setGroup("verification");
-        setDescription("Checks that R8 shrinks the release build and keeps its names.");
+        setDescription("Checks that R8 shrinks the release build and keeps its names and lines.");
     }
 
     /**
@@ -65,7 +66,7 @@ public abstract class ReleaseShrinkingCheck extends DefaultTask {
         }
         var problems = problems(getMinified().get(), texts);
         if (!problems.isEmpty()) {
-            throw new GradleException("The release build must be shrunk by R8 and keep its names (#485): "
+            throw new GradleException("The release build must be shrunk by R8 and keep its names and lines (#485): "
                     + String.join("; ", problems));
         }
     }
@@ -89,6 +90,9 @@ public abstract class ReleaseShrinkingCheck extends DefaultTask {
         }
         if (!options.contains("-dontobfuscate")) {
             problems.add("no rule file says -dontobfuscate, so R8 would rename the classes");
+        }
+        if (!options.contains("-dontoptimize")) {
+            problems.add("no rule file says -dontoptimize, so R8 would number the lines anew");
         }
         return problems;
     }

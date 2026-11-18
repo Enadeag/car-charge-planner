@@ -81,13 +81,14 @@ public class MinifiedAppTest {
     }
 
     /**
-     * slf4j finds the app's provider, whose logger keeps its name, and a stack trace through the logger names its class
-     * and method, and has a source file and a line: the logger writes the exception's trace, which asks the exception's
-     * {@code toString}. Only the logger's calls the app makes itself are left, such as a warning with an exception. R8
-     * names the file {@code r8-map-id-<id>} and numbers the lines anew, so both need the build's mapping file.
+     * slf4j finds the app's provider, whose logger keeps its name, and a stack trace through the logger names its class,
+     * method, source file and the line of the source that runs there: the logger writes the exception's trace, which
+     * asks the exception's {@code toString}. The test APK carries the logger's source, so the line is read, not
+     * written into the test. Only the logger's calls the app makes itself are left, such as a warning with an
+     * exception.
      */
     @Test
-    public void slf4jUsesTheAppsLoggerWhoseFramesKeepTheirNamesAndALine() {
+    public void slf4jUsesTheAppsLoggerWhoseFramesKeepTheirFileAndLine() throws IOException {
         Logger log = LoggerFactory.getLogger("minified");
         StackTraceElement[][] trace = new StackTraceElement[1][];
         Exception problem = new Exception() {
@@ -111,8 +112,18 @@ public class MinifiedAppTest {
         }
         assertTrue("a frame of the logger in " + Arrays.toString(trace[0]), frame != null);
         assertEquals("handleNormalizedLoggingCall", frame.getMethodName());
-        assertTrue("a source file in " + frame, frame.getFileName() != null);
-        assertTrue("a line number in " + frame, frame.getLineNumber() > 0);
+        assertEquals("LogcatLogger.java", frame.getFileName());
+        List<String> source = new ArrayList<>();
+        try (BufferedReader lines = new BufferedReader(new InputStreamReader(
+                instrumentation.getContext().getAssets().open("LogcatLogger.java"), StandardCharsets.UTF_8))) {
+            for (String line = lines.readLine(); line != null; line = lines.readLine()) {
+                source.add(line);
+            }
+        }
+        int line = frame.getLineNumber();
+        assertTrue("line " + line + " of " + source.size(), line >= 1 && line <= source.size());
+        assertTrue("the trace is written on line " + line + ": " + source.get(line - 1),
+                source.get(line - 1).contains("printStackTrace"));
     }
 
     /** The plan's note on the battery level, which only a made plan shows, is read from the screen. */
