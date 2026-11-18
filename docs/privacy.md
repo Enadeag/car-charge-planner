@@ -45,7 +45,7 @@ In the Android app, the engine's files (the settings file, `battery.json`, `away
 What can go to your next phone, and when:
 
 - **What moves:** your settings, the battery level you entered last, your away days, your trips, what you were told about each trip and the charge windows you were told about (the engine's files above but the forecast cache), and the **Wi-Fi only** switch. Nothing else.
-- **What never moves:** the API keys. The forecast does not move either: the next phone fetches its own (until the Android app 0.1.1 the forecast cache moved too, on Android 12 and later).
+- **What never moves:** the API keys. The forecast does not move either: the next phone fetches its own (in version 0.1.0 of the Android app the forecast cache moved too, on Android 12 and later).
 - **No cloud backup**: the app's rules allow none on any Android version, and a backup through `adb` gets nothing of the app from the releases either. The exception is a phone maker's own backup that treats itself as a transfer between two phones or ignores the app's rules (Android 10 and 11): it could still take the settings and trips, never the API keys (see [SECURITY.md](../SECURITY.md)).
 - **Android 12 and later:** the files move in Android's own transfer between two phones. A phone maker's own transfer tool may work differently.
 - **Android 10 and 11:** the files move only when the transfer tells the app it is one between two phones; where it does not, nothing of the app moves. This follows from Android's documentation and source; it was not tried on a phone with Android 10 or 11.
