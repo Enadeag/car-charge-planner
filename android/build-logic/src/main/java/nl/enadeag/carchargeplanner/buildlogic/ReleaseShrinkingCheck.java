@@ -24,8 +24,8 @@ import org.gradle.api.tasks.TaskAction;
  * A tripwire against a mistake in the build script or the app's own rule files, not against intent: it reads only
  * those files, not the libraries' consumer rules, which cannot switch renaming or optimising back on once
  * {@code -dontobfuscate} and {@code -dontoptimize} are given. It fails too when the release build shrinks resources:
- * that stays off until the reproducible build (#424), and the minified suite finds the app's texts by resource name,
- * which resource shrinking can remove.
+ * that stays off until #503 decides, as the minified suite finds the app's texts by resource name, which resource
+ * shrinking can remove.
  */
 public abstract class ReleaseShrinkingCheck extends DefaultTask {
 
@@ -97,7 +97,7 @@ public abstract class ReleaseShrinkingCheck extends DefaultTask {
             problems.add("isMinifyEnabled is false");
         }
         if (shrinksResources) {
-            problems.add("isShrinkResources is true, which waits for #424 and the minified suite's texts");
+            problems.add("isShrinkResources is true, which is off until #503 decides, with the minified suite's texts");
         }
         if (options.contains("-dontshrink")) {
             problems.add("a rule file says -dontshrink");
