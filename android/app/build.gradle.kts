@@ -2,6 +2,7 @@ import com.android.build.api.artifact.SingleArtifact
 import java.util.Locale
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import nl.enadeag.carchargeplanner.buildlogic.AppVersion
+import nl.enadeag.carchargeplanner.buildlogic.InstrumentedResultsCheck
 import nl.enadeag.carchargeplanner.buildlogic.LicenceAssets
 import nl.enadeag.carchargeplanner.buildlogic.ReleaseShrinkingCheck
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -68,7 +69,9 @@ if (instrumentedBuildType !in setOf("debug", "minified")) {
     throw GradleException("-PtestBuildType=$instrumentedBuildType: the instrumented tests run on debug or minified")
 }
 val minifiedKeystore: Provider<String> = providers.gradleProperty("minifiedKeystore")
-val keystorePassword: Provider<String> = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD")
+// read only when -PminifiedKeystore is given, so no other password of the shell reaches the configuration cache
+val minifiedKeystorePassword: Provider<String> =
+    minifiedKeystore.flatMap { providers.environmentVariable("MINIFIED_KEYSTORE_PASSWORD") }
 
 android {
     namespace = "nl.enadeag.carchargeplanner.android"
@@ -104,12 +107,12 @@ android {
             keyPassword = "android"
         }
         // a key made for one run (tools/android-sign.sh throwaway-key), named by -PminifiedKeystore, its password in
-        // ANDROID_KEYSTORE_PASSWORD; never committed, never the debug key
+        // MINIFIED_KEYSTORE_PASSWORD; never committed, never the debug key, never the release key's variable
         create("throwaway") {
             storeFile = minifiedKeystore.orNull?.let(::file)
-            storePassword = keystorePassword.orNull
+            storePassword = minifiedKeystorePassword.orNull
             keyAlias = "release"
-            keyPassword = keystorePassword.orNull
+            keyPassword = minifiedKeystorePassword.orNull
         }
     }
 
@@ -227,29 +230,29 @@ kotlin {
 }
 
 /** Puts one file, under its own name, in the instrumented tests' assets, such as the docs' example settings file. */
-abstract class ExampleConfigAsset : DefaultTask() {
+abstract class TestAssetFile : DefaultTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
-    abstract val example: RegularFileProperty
+    abstract val source: RegularFileProperty
 
     @get:OutputDirectory
     abstract val assets: DirectoryProperty
 
     @TaskAction
     fun copy() {
-        val file = example.get().asFile
+        val file = source.get().asFile
         file.copyTo(assets.get().file(file.name).asFile, overwrite = true)
     }
 }
 
-val exampleConfigAsset = tasks.register<ExampleConfigAsset>("exampleConfigAsset") {
-    example = exampleConfig
+val exampleConfigAsset = tasks.register<TestAssetFile>("exampleConfigAsset") {
+    source = exampleConfig
 }
 
 // the logger's source, so the minified suite finds the line a stack frame of the logger names
-val loggerSourceAsset = tasks.register<ExampleConfigAsset>("loggerSourceAsset") {
-    example = file("src/main/java/nl/enadeag/carchargeplanner/android/logging/LogcatLogger.java")
+val loggerSourceAsset = tasks.register<TestAssetFile>("loggerSourceAsset") {
+    source = file("src/main/java/nl/enadeag/carchargeplanner/android/logging/LogcatLogger.java")
 }
 
 // the licence texts of the app and of its libraries, which the screen of the licences shows (#331)
@@ -303,30 +306,15 @@ tasks.named("check") { dependsOn(checkReleaseNotDebugSigned) }
 val checkReleaseShrunk = tasks.register<ReleaseShrinkingCheck>("checkReleaseShrunk")
 tasks.named("check") { dependsOn(checkReleaseShrunk) }
 
-/**
- * Fails when the instrumented tests' results hold a failure, or no test: AGP 9.5 lets the connected test task pass
- * when the app's process crashes before the first test, which a missing keep rule can make it do (#485).
- */
-abstract class InstrumentedResultsCheck : DefaultTask() {
-
-    @get:InputDirectory
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val results: DirectoryProperty
-
-    @TaskAction
-    fun check() {
-        val files = results.get().asFileTree.matching { include("**/*.xml") }.files
-        val failed = files.filter { "<failure" in it.readText() }
-        if (failed.isNotEmpty() || files.none { "<testcase " in it.readText() }) {
-            throw GradleException("The instrumented tests failed or did not run, the app's process may have " +
-                "crashed (logcat says why): see ${results.get().asFile}, failures in $failed")
-        }
-    }
-}
-
+// the instrumented tests ran, all of them, and passed (#485); the minified suite's runner names its classes itself
 val instrumentedTask = "connected" + instrumentedBuildType.replaceFirstChar { it.uppercase() } + "AndroidTest"
 val checkInstrumentedResults = tasks.register<InstrumentedResultsCheck>("checkInstrumentedResults") {
     results = layout.buildDirectory.dir("outputs/androidTest-results/connected/$instrumentedBuildType")
+    if (instrumentedBuildType == "minified") {
+        val tests = "src/androidTestMinified/java/nl/enadeag/carchargeplanner/android/minified"
+        runner = file("$tests/MinifiedTestRunner.java")
+        testSources.from(fileTree("src/androidTestMinified"))
+    }
     mustRunAfter(instrumentedTask)
 }
 tasks.named { it == instrumentedTask }.configureEach { finalizedBy(checkInstrumentedResults) }
@@ -382,10 +370,10 @@ androidComponents {
             }
         }
         variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::getAssets)
-        variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(exampleConfigAsset, ExampleConfigAsset::assets)
+        variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(exampleConfigAsset, TestAssetFile::assets)
         if (variant.buildType == "minified") {
             val testAssets = variant.androidTest?.sources?.assets
-            testAssets?.addGeneratedSourceDirectory(loggerSourceAsset, ExampleConfigAsset::assets)
+            testAssets?.addGeneratedSourceDirectory(loggerSourceAsset, TestAssetFile::assets)
         }
         // MergedManifestTest reads the release build's manifest, with what the libraries add to it
         if (variant.name == "release") {

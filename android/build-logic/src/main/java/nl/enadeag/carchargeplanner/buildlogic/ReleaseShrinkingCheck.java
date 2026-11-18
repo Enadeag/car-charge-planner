@@ -18,7 +18,8 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
 /**
- * Fails when the release build is not shrunk by R8, or R8 may rename or optimise its classes: the log's stack traces
+ * Fails when the release build is not shrunk by R8, R8 may rename or optimise its classes, or no rule keeps the
+ * source files and lines ({@code -keepattributes SourceFile,LineNumberTable}): the log's stack traces
  * and tags name the app's classes, files and lines, so they must stay as they are (docs/design/android/build.md, R8).
  * A tripwire against a mistake in the build script or the app's own rule files, not against intent: it reads only
  * those files, not the libraries' consumer rules, which cannot switch renaming or optimising back on once
@@ -29,7 +30,7 @@ public abstract class ReleaseShrinkingCheck extends DefaultTask {
     /** Makes the task; Gradle fills in its properties. */
     public ReleaseShrinkingCheck() {
         setGroup("verification");
-        setDescription("Checks that R8 shrinks the release build and keeps its names and lines.");
+        setDescription("Checks that R8 shrinks the release build and keeps its names, files and lines.");
     }
 
     /**
@@ -93,6 +94,18 @@ public abstract class ReleaseShrinkingCheck extends DefaultTask {
         }
         if (!options.contains("-dontoptimize")) {
             problems.add("no rule file says -dontoptimize, so R8 would number the lines anew");
+        }
+        // the attributes that follow each -keepattributes, up to the next option
+        var attributes = new ArrayList<String>();
+        var kept = false;
+        for (var option : options) {
+            kept = option.equals("-keepattributes") || kept && !option.startsWith("-");
+            if (kept && !option.startsWith("-")) {
+                attributes.addAll(Arrays.asList(option.split(",")));
+            }
+        }
+        if (!attributes.containsAll(List.of("SourceFile", "LineNumberTable"))) {
+            problems.add("no rule file keeps SourceFile,LineNumberTable, so frames would lose their files and lines");
         }
         return problems;
     }
