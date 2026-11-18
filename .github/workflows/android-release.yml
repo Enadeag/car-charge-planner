@@ -278,7 +278,7 @@ jobs:
   # Builds the same commit again, on a runner of its own, in another folder, with a fresh Gradle home and another time
   # zone and locale, and compares its unsigned APK byte for byte with the build job's, so a release whose APK cannot
   # be built again stops before the key is asked for (#424). It writes nothing and never sees the key. The time zone
-  # and locale are set on the Gradle step and the step that checks them only: the build is what must not depend on
+  # and locale are set on the Gradle step and the step that checks the locale only: the build is what must not depend on
   # them, and the checkout, sdkmanager and locale-gen keep the runner's own.
   reproduce:
     needs: [prepare, build]
@@ -309,7 +309,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "21.0.13+9"
-      - name: Check that Java sees the other time zone and locale
+      # the time zone is only shown, by date; the locale is checked, as Java falls back to en_US without it
+      - name: Check that Java sees the Turkish locale
         env:
           TZ: Pacific/Auckland
           LANG: tr_TR.UTF-8
@@ -367,12 +368,20 @@ jobs:
             echo "::error::the build job's APK $first cannot be read, so nothing is signed"; exit 1
           fi
           if [ "${sum%% *}" != "$APK_SHA256" ]; then
-            echo "::error::$first is not the APK the build job checked (SHA-256 $APK_SHA256), so nothing is signed"
+            echo "::error::$first has the SHA-256 ${sum%% *}, not the build job's $APK_SHA256, so nothing is signed"
             exit 1
           fi
-          echo "The build job's versions:"; cat "$RUNNER_TEMP/first/build-versions.txt"
-          echo "This job's versions:"; cat "$RUNNER_TEMP/versions/build-versions.txt"
-          if ! cmp -s "$RUNNER_TEMP/first/build-versions.txt" "$RUNNER_TEMP/versions/build-versions.txt"; then
+          # The build job's file comes from another job, so neither file may give workflow commands while it is shown.
+          first_versions="$RUNNER_TEMP/first/build-versions.txt"
+          second_versions="$RUNNER_TEMP/versions/build-versions.txt"
+          token=$(cat /proc/sys/kernel/random/uuid)
+          echo "::stop-commands::$token"
+          echo "The build job's versions:"; printf '%s\n' "$(cat "$first_versions" 2>&1)"
+          echo "This job's versions:"; printf '%s\n' "$(cat "$second_versions" 2>&1)"
+          echo "::$token::"
+          if [ ! -f "$first_versions" ] || [ ! -f "$second_versions" ]; then
+            echo "::warning::a versions file is missing (above), so the versions are not compared; the APKs decide"
+          elif ! cmp -s "$first_versions" "$second_versions"; then
             echo "::warning::the two builds used other versions of the build-tools, the platform or Java (above)"
           fi
           status=0
@@ -385,18 +394,20 @@ jobs:
               "so nothing is signed"
             exit 1
           fi
-          mkdir "$RUNNER_TEMP/difference"
-          cp "$first" "$RUNNER_TEMP/difference/build-job.apk"
-          cp "$second" "$RUNNER_TEMP/difference/reproduce-job.apk"
-          unzip -v "$first" > "$RUNNER_TEMP/difference/build-job.txt"
-          unzip -v "$second" > "$RUNNER_TEMP/difference/reproduce-job.txt"
           echo "::error::the unsigned APK built again differs from the build job's, so nothing is signed; the" \
             "artifact android-reproduce-difference-$GITHUB_RUN_NUMBER-$GITHUB_RUN_ATTEMPT holds both APKs and" \
             "their unzip -v listings"
+          echo "difference=true" >> "$GITHUB_OUTPUT"
+          mkdir "$RUNNER_TEMP/difference"
+          cp "$first" "$RUNNER_TEMP/difference/build-job.apk"
+          cp "$second" "$RUNNER_TEMP/difference/reproduce-job.apk"
+          unzip -v "$first" > "$RUNNER_TEMP/difference/build-job.txt" || true
+          unzip -v "$second" > "$RUNNER_TEMP/difference/reproduce-job.txt" || true
           exit 1
-      # the attempt is in the name, so a re-run of failed jobs does not meet the artifact of the first attempt
+      # only after a difference, as the comparing step says; the attempt is in the name, so a re-run of failed jobs does
+      # not meet the artifact of the first attempt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: failure() && steps.compare.outcome == 'failure'
+        if: failure() && steps.compare.outputs.difference == 'true'
         with:
           name: android-reproduce-difference-${{ github.run_number }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/difference/

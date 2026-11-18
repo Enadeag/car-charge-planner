@@ -148,12 +148,19 @@ class AndroidReleaseWorkflowTest {
               echo "::error::the build job's APK $first cannot be read, so nothing is signed"; exit 1
             fi
             if [ "${sum%% *}" != "$APK_SHA256" ]; then
-              echo "::error::$first is not the APK the build job checked (SHA-256 $APK_SHA256), so nothing is signed"
+              echo "::error::$first has the SHA-256 ${sum%% *}, not the build job's $APK_SHA256, so nothing is signed"
               exit 1
             fi
-            echo "The build job's versions:"; cat "$RUNNER_TEMP/first/build-versions.txt"
-            echo "This job's versions:"; cat "$RUNNER_TEMP/versions/build-versions.txt"
-            if ! cmp -s "$RUNNER_TEMP/first/build-versions.txt" "$RUNNER_TEMP/versions/build-versions.txt"; then
+            first_versions="$RUNNER_TEMP/first/build-versions.txt"
+            second_versions="$RUNNER_TEMP/versions/build-versions.txt"
+            token=$(cat /proc/sys/kernel/random/uuid)
+            echo "::stop-commands::$token"
+            echo "The build job's versions:"; printf '%s\\n' "$(cat "$first_versions" 2>&1)"
+            echo "This job's versions:"; printf '%s\\n' "$(cat "$second_versions" 2>&1)"
+            echo "::$token::"
+            if [ ! -f "$first_versions" ] || [ ! -f "$second_versions" ]; then
+              echo "::warning::a versions file is missing (above), so the versions are not compared; the APKs decide"
+            elif ! cmp -s "$first_versions" "$second_versions"; then
               echo "::warning::the two builds used other versions of the build-tools, the platform or Java (above)"
             fi
             status=0
@@ -166,15 +173,22 @@ class AndroidReleaseWorkflowTest {
                 "so nothing is signed"
               exit 1
             fi
-            mkdir "$RUNNER_TEMP/difference"
-            cp "$first" "$RUNNER_TEMP/difference/build-job.apk"
-            cp "$second" "$RUNNER_TEMP/difference/reproduce-job.apk"
-            unzip -v "$first" > "$RUNNER_TEMP/difference/build-job.txt"
-            unzip -v "$second" > "$RUNNER_TEMP/difference/reproduce-job.txt"
             echo "::error::the unsigned APK built again differs from the build job's, so nothing is signed; the" \\
               "artifact android-reproduce-difference-$GITHUB_RUN_NUMBER-$GITHUB_RUN_ATTEMPT holds both APKs and" \\
               "their unzip -v listings"
+            echo "difference=true" >> "$GITHUB_OUTPUT"
+            mkdir "$RUNNER_TEMP/difference"
+            cp "$first" "$RUNNER_TEMP/difference/build-job.apk"
+            cp "$second" "$RUNNER_TEMP/difference/reproduce-job.apk"
+            unzip -v "$first" > "$RUNNER_TEMP/difference/build-job.txt" || true
+            unzip -v "$second" > "$RUNNER_TEMP/difference/reproduce-job.txt" || true
             exit 1
+            """;
+
+    private static final String JAVA_SEES_THE_LOCALE = """
+            if ! printf '%s\\n' "$settings" | grep -Fqx '    user.language = tr'; then
+              echo "::error::Java does not see the locale $LC_ALL, so this build would not differ in locale"; exit 1
+            fi
             """;
 
     private static String workflow;
@@ -455,6 +469,9 @@ class AndroidReleaseWorkflowTest {
         assertThat(steps(reproduce).get(1)).startsWith("      - name: Check that this is the commit that was built\n")
                 .contains("COMMIT: ${{ needs.prepare.outputs.commit }}\n", "if [ \"$head\" != \"$COMMIT\" ]; then",
                         "exit 1");
+        assertThat(runBody(step(build,
+                "Android Lint, the unit tests and the build's checks, and the unsigned release APK")))
+                .isEqualTo("./gradlew --stacktrace lint check assembleRelease");
         for (var name : List.of("Android SDK platform 37 and build-tools 36.0.0",
                 "Android Lint, the unit tests and the build's checks, and the unsigned release APK",
                 "Record the versions of the build-tools, the platform and Java")) {
@@ -470,10 +487,11 @@ class AndroidReleaseWorkflowTest {
         assertThat(reproduce).contains("\n          path: reproduce/car-charge-planner\n",
                 "\n        working-directory: reproduce/car-charge-planner/android\n",
                 "run: sudo locale-gen tr_TR.UTF-8\n",
-                "run: echo \"GRADLE_USER_HOME=$RUNNER_TEMP/gradle-home\" >> \"$GITHUB_ENV\"\n",
-                "grep -Fqx '    user.language = tr'");
-        // on the Gradle step and on the step that checks Java sees them, so the build runs under what was checked
-        for (var name : List.of("Check that Java sees the other time zone and locale",
+                "run: echo \"GRADLE_USER_HOME=$RUNNER_TEMP/gradle-home\" >> \"$GITHUB_ENV\"\n");
+        assertThat(runBody(step(reproduce, "Check that Java sees the Turkish locale")))
+                .as("the step fails when Java does not see the locale").endsWith(JAVA_SEES_THE_LOCALE.strip());
+        // on the Gradle step and on the step that checks Java sees the locale, so the build runs under what was checked
+        for (var name : List.of("Check that Java sees the Turkish locale",
                 "Android Lint, the unit tests and the build's checks, and the unsigned release APK")) {
             var step = step(reproduce, name);
             assertThat(step).as(name).contains("\n        env:\n");
@@ -495,7 +513,7 @@ class AndroidReleaseWorkflowTest {
         assertThat(runBody(compare)).isEqualTo(COMPARE.strip());
         var steps = steps(reproduce);
         assertThat(steps.getLast()).contains("actions/upload-artifact@",
-                "        if: failure() && steps.compare.outcome == 'failure'\n",
+                "        if: failure() && steps.compare.outputs.difference == 'true'\n",
                 "          name: android-reproduce-difference-${{ github.run_number }}-${{ github.run_attempt }}\n",
                 "          path: ${{ runner.temp }}/difference/\n", "          if-no-files-found: error\n",
                 "          retention-days: 14\n");
