@@ -14,7 +14,9 @@ import org.slf4j.spi.SLF4JServiceProvider;
 /**
  * Binds slf4j to Logcat, so the engine's log and the app's own reach the same place: from INFO in the release build,
  * from DEBUG in the debug build ({@code BuildConfig.DEBUG}). Nothing is written to a file. slf4j finds it through
- * {@code META-INF/services}: check that the file and this class are kept when minification is turned on (#424).
+ * {@code META-INF/services} and makes it with its no-argument constructor; in the shrunk release build R8 keeps the
+ * class and that constructor through the same file, without a keep rule. The minified suite's logger test,
+ * {@code MinifiedAppTest.slf4jUsesTheAppsLoggerWhoseFramesKeepTheirFileAndLine}, fails if it ever does not (#485).
  */
 public final class LogcatServiceProvider implements SLF4JServiceProvider {
 

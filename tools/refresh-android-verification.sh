@@ -10,8 +10,10 @@
 # (https://github.com/gradle/gradle/issues/19228). So the entries are what Google's Maven repository and Maven Central
 # serve at the time, and your ~/.gradle/gradle.properties and init scripts are not used.
 #
-# The emulator job's connectedDebugAndroidTest needs a device, so the script does not run it: an init script adds a
-# task to :app that resolves that task's input files (AGP's test platform among them), so their checksums are recorded.
+# The emulator job's connectedDebugAndroidTest and connectedMinifiedAndroidTest need a device, so the script does not
+# run them: an init script adds a task to :app that resolves the input files of the one of the tested build type (AGP's
+# test platform among them), so their checksums are recorded. The minified build type is a Gradle run of its own, with
+# -PtestBuildType=minified as in the emulator job, signed with a throw-away key made in the temporary folder (#485).
 #
 # With --clean the file starts again from its header and configuration, so entries that no build uses any more drop
 # out; the old file is kept as android/build/verification-metadata.old.xml to compare with, and is put back should
@@ -83,12 +85,14 @@ if [ "$clean" = true ]; then
   printf '   <components>\n   </components>\n</verification-metadata>\n' >> "$metadata"
 fi
 
-# :app:connectedTestInputs resolves the files connectedDebugAndroidTest takes, without a device and without running it.
+# :app:connectedTestInputs resolves the files connectedDebugAndroidTest, or with -PtestBuildType=minified
+# connectedMinifiedAndroidTest, takes, without a device and without running it.
 cat > "$home/connected-test-inputs.gradle" << 'EOF'
 allprojects {
     if (path == ':app') {
         tasks.register('connectedTestInputs') {
-            def connected = tasks.named('connectedDebugAndroidTest')
+            def type = findProperty('testBuildType') ?: 'debug'
+            def connected = tasks.named("connected${type.capitalize()}AndroidTest")
             doLast { logger.lifecycle("${connected.get().inputs.files.files.size()} input files of ${connected.name}") }
         }
     }
@@ -102,6 +106,15 @@ GRADLE_USER_HOME="$home" ./gradlew --no-daemon --write-verification-metadata sha
   --continue --init-script "$home/connected-test-inputs.gradle" \
   assembleDebug assembleDebugAndroidTest assembleRelease lint check :app:printReleaseVersion :app:pitestDebug \
   :app:connectedTestInputs -PpitClasses='nl.enadeag.carchargeplanner.android.OwnCode*'
+
+# The minified build and its test APK, as the emulator job builds them before the boot, with a key of its own.
+MINIFIED_KEYSTORE_PASSWORD=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
+export MINIFIED_KEYSTORE_PASSWORD
+ANDROID_KEYSTORE_PASSWORD=$MINIFIED_KEYSTORE_PASSWORD sh ../tools/android-sign.sh throwaway-key "$home/minified.p12" \
+  > /dev/null
+GRADLE_USER_HOME="$home" ./gradlew --no-daemon --write-verification-metadata sha256 --no-configuration-cache \
+  --continue --init-script "$home/connected-test-inputs.gradle" -PtestBuildType=minified \
+  -PminifiedKeystore="$home/minified.p12" :app:assembleMinified :app:assembleMinifiedAndroidTest :app:connectedTestInputs
 
 [ "$clean" = true ] || exit 0
 
