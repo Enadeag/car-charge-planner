@@ -3,6 +3,7 @@ import java.util.Locale
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import nl.enadeag.carchargeplanner.buildlogic.AppVersion
 import nl.enadeag.carchargeplanner.buildlogic.LicenceAssets
+import nl.enadeag.carchargeplanner.buildlogic.ReleaseShrinkingCheck
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -59,6 +60,16 @@ val robolectricOffline: Provider<List<String>> = robolectricJarsDir.map {
     listOf("-Drobolectric.offline=true", "-Drobolectric.dependency.dir=${it.asFile}")
 }
 
+// -PtestBuildType=minified runs the instrumented tests of src/androidTestMinified against the minified build, and
+// -PminifiedKeystore names the throw-away key it is signed with; without them the tests of src/androidTestDebug run
+// against debug
+val instrumentedBuildType: String = providers.gradleProperty("testBuildType").getOrElse("debug")
+if (instrumentedBuildType !in setOf("debug", "minified")) {
+    throw GradleException("-PtestBuildType=$instrumentedBuildType: the instrumented tests run on debug or minified")
+}
+val minifiedKeystore: Provider<String> = providers.gradleProperty("minifiedKeystore")
+val keystorePassword: Provider<String> = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD")
+
 android {
     namespace = "nl.enadeag.carchargeplanner.android"
     compileSdk = libs.versions.android.compile.sdk.get().toInt()
@@ -71,8 +82,15 @@ android {
         // (docs/dev/ci-and-releasing.md, Releasing the Android app); the version code follows from it (AppVersion).
         versionName = "0.1.1-SNAPSHOT"
         versionCode = AppVersion.versionCode(checkNotNull(versionName))
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = if (instrumentedBuildType == "minified") {
+            "nl.enadeag.carchargeplanner.android.minified.MinifiedTestRunner"
+        } else {
+            "androidx.test.runner.AndroidJUnitRunner"
+        }
     }
+
+    // the build type the instrumented tests run against: debug, or minified for the minified suite
+    testBuildType = instrumentedBuildType
 
     // The debug build is signed with the project's public debug key (not secret: anyone can sign with it, so it proves
     // nothing about the owner); the release build stays unsigned here, as android-release.yml signs it (#272).
@@ -84,6 +102,14 @@ android {
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
+        }
+        // a key made for one run (tools/android-sign.sh throwaway-key), named by -PminifiedKeystore, its password in
+        // ANDROID_KEYSTORE_PASSWORD; never committed, never the debug key
+        create("throwaway") {
+            storeFile = minifiedKeystore.orNull?.let(::file)
+            storePassword = keystorePassword.orNull
+            keyAlias = "release"
+            keyPassword = keystorePassword.orNull
         }
     }
 
@@ -99,6 +125,20 @@ android {
             isPseudoLocalesEnabled = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug+" + debugBuildLabel.get()
+        }
+        // R8 shrinks and optimises, but keeps the names, so the log's stack traces and tags stay readable
+        // (docs/design/android/build.md, R8); checkReleaseShrunk holds it to that
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        // The release build as R8 makes it, signed with a throw-away key so the minified suite can run on it
+        // (-PtestBuildType=minified); an id of its own, so it never replaces an installed release
+        create("minified") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".minified"
+            signingConfig = signingConfigs.getByName("throwaway")
         }
     }
 
@@ -137,10 +177,12 @@ android {
             "StringFormatCount", "MissingQuantity", "UnusedQuantity", "ImpliedQuantity")
     }
 
-    // SunnyDayPlan, the plan of a made-up sunny day, for the JVM tests and the instrumented tests alike
+    // SunnyDayPlan, the plan of a made-up sunny day, for the JVM tests and the debug build's instrumented tests alike.
+    // The instrumented tests sit in a folder per build type, not in androidTest, so the minified suite's test APK
+    // holds only its own few tests and none of the debug suite's references to the app's classes.
     sourceSets {
         getByName("test").kotlin.directories.add("src/sharedTest/kotlin")
-        getByName("androidTest").kotlin.directories.add("src/sharedTest/kotlin")
+        getByName("androidTestDebug").kotlin.directories.add("src/sharedTest/kotlin")
     }
 
     testOptions {
@@ -250,6 +292,38 @@ val checkReleaseNotDebugSigned = tasks.register<ReleaseSigningCheck>("checkRelea
 }
 tasks.named("check") { dependsOn(checkReleaseNotDebugSigned) }
 
+// the release build shrunk by R8, without renaming (#485)
+val checkReleaseShrunk = tasks.register<ReleaseShrinkingCheck>("checkReleaseShrunk")
+tasks.named("check") { dependsOn(checkReleaseShrunk) }
+
+/**
+ * Fails when the instrumented tests' results hold a failure, or no test: AGP 9.5 lets the connected test task pass
+ * when the app's process crashes before the first test, which a missing keep rule can make it do (#485).
+ */
+abstract class InstrumentedResultsCheck : DefaultTask() {
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val results: DirectoryProperty
+
+    @TaskAction
+    fun check() {
+        val files = results.get().asFileTree.matching { include("**/*.xml") }.files
+        val failed = files.filter { "<failure" in it.readText() }
+        if (failed.isNotEmpty() || files.none { "<testcase " in it.readText() }) {
+            throw GradleException("The instrumented tests failed or did not run, the app's process may have " +
+                "crashed (logcat says why): see ${results.get().asFile}, failures in $failed")
+        }
+    }
+}
+
+val instrumentedTask = "connected" + instrumentedBuildType.replaceFirstChar { it.uppercase() } + "AndroidTest"
+val checkInstrumentedResults = tasks.register<InstrumentedResultsCheck>("checkInstrumentedResults") {
+    results = layout.buildDirectory.dir("outputs/androidTest-results/connected/$instrumentedBuildType")
+    mustRunAfter(instrumentedTask)
+}
+tasks.named { it == instrumentedTask }.configureEach { finalizedBy(checkInstrumentedResults) }
+
 /** Prints the release build's version name and version code as its APK gets them, one `name=value` line each. */
 abstract class PrintReleaseVersion : DefaultTask() {
 
@@ -284,12 +358,21 @@ androidComponents {
             signingNames.putAll(signed.associate { (type, signing) -> type to signing.name })
             keystores.from(signed.mapNotNull { (_, signing) -> signing.storeFile })
         }
+        // the app's own rule files: AGP's default one lies in the build folder, made by a task of its own
+        val release = dsl.buildTypes.getByName("release")
+        val buildFolder = layout.buildDirectory.get().asFile.toPath()
+        checkReleaseShrunk.configure {
+            minified.set(release.isMinifyEnabled)
+            ruleFiles.from(release.proguardFiles.filterNot { it.toPath().startsWith(buildFolder) })
+        }
     }
     onVariants { variant ->
-        // every build of a build type other than debug (assembleRelease, bundleRelease) needs the guard, not only check
+        // every build of a type other than debug (assembleRelease, bundleRelease) needs the guards, not only check
         if (variant.buildType != "debug") {
             val preBuild = "pre" + variant.name.replaceFirstChar { it.uppercase() } + "Build"
-            tasks.matching { it.name == preBuild }.configureEach { dependsOn(checkReleaseNotDebugSigned) }
+            tasks.matching { it.name == preBuild }.configureEach {
+                dependsOn(checkReleaseNotDebugSigned, checkReleaseShrunk)
+            }
         }
         variant.sources.assets?.addGeneratedSourceDirectory(licenceAssets, LicenceAssets::getAssets)
         variant.androidTest?.sources?.assets?.addGeneratedSourceDirectory(exampleConfigAsset, ExampleConfigAsset::assets)
@@ -359,11 +442,13 @@ dependencies {
     // Compose's test manifest, for the screens' tests; it puts an exported empty activity in the debug APK only
     debugImplementation(libs.compose.ui.test.manifest)
 
-    // AndroidX Test's runner, core and JUnit 4 rules, for the instrumented tests on a device or emulator
+    // AndroidX Test's runner, core and JUnit 4 rules, for the debug build's instrumented tests on a device or emulator
     // (the emulator job)
-    androidTestImplementation(libs.androidx.test.runner)
-    androidTestImplementation(libs.androidx.test.core)
-    androidTestImplementation(libs.androidx.test.junit)
+    androidTestDebugImplementation(libs.androidx.test.runner)
+    androidTestDebugImplementation(libs.androidx.test.core)
+    androidTestDebugImplementation(libs.androidx.test.junit)
+    // the minified suite runs on JUnit 4 alone (MinifiedTestRunner)
+    "androidTestMinifiedImplementation"(libs.junit4)
 }
 
 // The app's logic, which PIT mutates (CONTRIBUTING.md, What is tested where): the classes with plain JUnit 5 tests.
