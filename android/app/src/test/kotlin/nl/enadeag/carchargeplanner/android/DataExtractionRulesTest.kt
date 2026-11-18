@@ -64,6 +64,8 @@ class DataExtractionRulesTest {
 
     private fun named(rule: Element) = "${rule.getAttribute("domain")}:${rule.getAttribute("path")}"
 
+    private fun shown(rule: Element) = "${rule.tagName} ${named(rule)}"
+
     private fun includes(parent: Element): Set<String> =
         children(parent).filter { it.tagName == "include" }.map(::named).toSet()
 
@@ -103,16 +105,18 @@ class DataExtractionRulesTest {
     fun beforeAndroid12EveryRuleIsAnIncludeThatRequiresTheDeviceToDeviceFlag() {
         val older = children(olderRules)
 
-        assertThat(older).isNotEmpty()
-        assertThat(older).allSatisfy { rule ->
-            assertThat(rule.tagName).`as`(named(rule)).isEqualTo("include")
-            assertThat(rule.getAttribute("requireFlags")).`as`(named(rule)).isEqualTo("deviceToDeviceTransfer")
+        val flagged = { rule: Element ->
+            rule.tagName == "include" && rule.getAttribute("requireFlags") == "deviceToDeviceTransfer"
         }
+
+        assertThat(older).isNotEmpty()
+        assertThat(older.filterNot(flagged).map(::shown)).`as`("rules without the device-to-device flag").isEmpty()
     }
 
     @Test
     fun bothVersionsTransferTheSameNamedFilesAndNothingElse() {
-        assertThat(children(section("device-transfer"))).allSatisfy { assertThat(it.tagName).isEqualTo("include") }
+        assertThat(children(section("device-transfer")).filterNot { it.tagName == "include" }.map(::shown))
+            .`as`("rules of the transfer that are not an include").isEmpty()
 
         assertThat(includes(olderRules)).isEqualTo(transferred)
     }
@@ -122,8 +126,7 @@ class DataExtractionRulesTest {
         val cloud = section("cloud-backup")
 
         assertThat(cloud.attributes.length).isZero()
-        assertThat(children(cloud)).allSatisfy { assertThat(it.tagName).isEqualTo("exclude") }
-        assertThat(children(cloud).map(::named)).containsExactlyInAnyOrderElementsOf(DOMAINS.map { "$it:." })
+        assertThat(children(cloud).map(::shown)).containsExactlyInAnyOrderElementsOf(DOMAINS.map { "exclude $it:." })
     }
 
     @Test
