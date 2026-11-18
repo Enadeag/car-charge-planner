@@ -36,8 +36,9 @@ import org.w3c.dom.Node;
  * <p>It checks that {@code verification-metadata.xml} records a SHA-256 for every file, poms included, without keys,
  * and trusts only an IDE's sources and Javadoc; that no build file of the Android build sets the verification mode or
  * switches the check off; that the wrapper's scripts and jar are the ones recorded in {@link #WRAPPER} and it
- * downloads Gradle from Gradle with a checksum; and that no line of a workflow or composite action under
- * {@code .github} gives Gradle an option that weakens the check or rewrites the metadata.
+ * downloads Gradle from Gradle with a checksum; that no line of a workflow or composite action under
+ * {@code .github} gives Gradle an option that weakens the check or rewrites the metadata; and that the repository's
+ * root and {@code release/} hold no build of their own, which would run without the metadata.
  *
  * <p>It catches a mistake, not intent. A workflow can switch the check off in ways this test does not see, such as a
  * script it runs or a variable it builds. The review of a pull request that touches {@code .github/}, the Android
@@ -72,6 +73,8 @@ class AndroidDependencyVerificationTest {
     /** The wrapper, or Gradle as a command, but not a path such as {@code gradle/actions} or {@code build.gradle}. */
     private static final Pattern GRADLE = Pattern.compile("gradlew|(?<![\\w./-])gradle(?![\\w./-])");
     private static final Pattern YAML = Pattern.compile("(?i).*[.]ya?ml");
+    private static final List<String> ROOT_BUILD =
+            List.of("gradlew", "gradlew.bat", "settings.gradle", "settings.gradle.kts");
 
     @Test
     void theWorkflowsUnderGithubAreFoundAndRead() throws IOException {
@@ -109,6 +112,20 @@ class AndroidDependencyVerificationTest {
                 "uses: gradle/actions/setup-gradle@v5", "run: grep -Fqx \"$ref\" tags", "curl -F file=@x.txt host")) {
             assertThat(problems("a.yml", line + "\n")).as(line).isEmpty();
         }
+    }
+
+    /** The workflows run steps in the root and in {@code release/}; a build there has no checksums of its own. */
+    @Test
+    void noOtherFolderThanAndroidHoldsARootBuildWithAWrapper(@TempDir Path root) throws IOException {
+        assertThat(otherRootBuilds(Path.of(""))).isEmpty();
+
+        assertThat(otherRootBuilds(root)).isEmpty();
+        for (var file : List.of(root.resolve("gradlew"), root.resolve(Path.of("release", "settings.gradle.kts")),
+                root.resolve("settings.gradle"), root.resolve(Path.of("release", "gradlew.bat")))) {
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, "");
+        }
+        assertThat(otherRootBuilds(root)).hasSize(4);
     }
 
     @Test
@@ -266,6 +283,12 @@ class AndroidDependencyVerificationTest {
                         .matches())) {
             return found.sorted().toList();
         }
+    }
+
+    /** The wrapper and settings files in {@code root} and its {@code release/}, each the start of another build. */
+    private static List<Path> otherRootBuilds(Path root) {
+        return Stream.of(root, root.resolve("release")).flatMap(folder -> ROOT_BUILD.stream().map(folder::resolve))
+                .filter(Files::exists).toList();
     }
 
     /** The SHA-256 of a wrapper file: a jar as it is, a script with CRLF and a lone CR read as LF. */
