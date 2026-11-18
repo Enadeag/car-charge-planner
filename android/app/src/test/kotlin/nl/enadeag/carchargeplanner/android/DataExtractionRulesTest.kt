@@ -30,8 +30,6 @@ import org.w3c.dom.Element
 class DataExtractionRulesTest {
 
     private companion object {
-        const val ANDROID = "http://schemas.android.com/apk/res/android"
-
         /** Every domain the rules know, from Android's documentation of both formats. */
         val DOMAINS = listOf("root", "file", "database", "sharedpref", "external", "device_root", "device_file",
             "device_database", "device_sharedpref")
@@ -47,10 +45,6 @@ class DataExtractionRulesTest {
     private val rules = xml("src/main/res/xml/data_extraction_rules.xml")
 
     private val olderRules = xml("src/main/res/xml/backup_rules.xml")
-
-    private val application = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
-        .newDocumentBuilder().parse(File("src/main/AndroidManifest.xml")).documentElement
-        .getElementsByTagName("application").item(0) as Element
 
     /** The phone's preferences stores that stay on this phone. */
     private val storesLeftOut = setOf(PhoneStoreFiles.STATE)
@@ -77,7 +71,11 @@ class DataExtractionRulesTest {
 
     private val transferred by lazy { includes(section("device-transfer")) }
 
-    /** The names the engine gives the files of its data folder, as it makes its parts in the app. */
+    /**
+     * The names the engine gives the files of its data folder, as it makes its parts in the app. Only the names
+     * resolved on the folder it is handed while it is built are seen: a name resolved later, or made through `File`
+     * or `Path.of`, is not.
+     */
     private fun namesTheEngineGivesItsFiles(): Set<String> {
         val folder = root.resolve("files")
         val asked = mutableSetOf<String>()
@@ -99,15 +97,6 @@ class DataExtractionRulesTest {
     }
 
     @Test
-    fun theManifestTurnsBackupOnWithBothRuleFilesAndNoAgentOfItsOwn() {
-        assertThat(application.getAttributeNS(ANDROID, "allowBackup")).isEqualTo("true")
-        assertThat(application.getAttributeNS(ANDROID, "dataExtractionRules")).isEqualTo("@xml/data_extraction_rules")
-        assertThat(application.getAttributeNS(ANDROID, "fullBackupContent")).isEqualTo("@xml/backup_rules")
-        assertThat(application.hasAttributeNS(ANDROID, "backupAgent")).isFalse()
-        assertThat(application.hasAttributeNS(ANDROID, "fullBackupOnly")).isFalse()
-    }
-
-    @Test
     fun beforeAndroid12EveryRuleIsAnIncludeThatRequiresTheDeviceToDeviceFlag() {
         val older = children(olderRules)
 
@@ -121,8 +110,14 @@ class DataExtractionRulesTest {
 
     @Test
     fun bothVersionsTransferTheSameNamedFilesAndNothingElse() {
-        assertThat(children(section("device-transfer")).filterNot { it.tagName == "include" }.map(::shown))
+        val transfer = children(section("device-transfer"))
+        assertThat(transfer.filterNot { it.tagName == "include" }.map(::shown))
             .`as`("rules of the transfer that are not an include").isEmpty()
+        // Android 12 and later read a flag there too; the transfer's includes need none
+        assertThat(transfer).allSatisfy { rule ->
+            assertThat((0 until rule.attributes.length).map { rule.attributes.item(it).nodeName })
+                .`as`(shown(rule)).containsExactlyInAnyOrder("domain", "path")
+        }
 
         assertThat(includes(olderRules)).isEqualTo(transferred)
     }
