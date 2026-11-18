@@ -81,13 +81,13 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 ### Release
 
-How a release is built, signed and published (`android-release.yml`, `tools/android-sign.sh`; the steps are in [Releasing the Android app](../../dev/ci-and-releasing.md#releasing-the-android-app)). The release key and the environment are the maintainer's (#271); R8 is under [R8](#r8) (#485) and a reproducible build waits for #424; Gradle's dependency verification is under [Dependency verification](#dependency-verification) (#484).
+How a release is built, signed and published (`android-release.yml`, `tools/android-sign.sh`; the steps are in [Releasing the Android app](../../dev/ci-and-releasing.md#releasing-the-android-app)). The release key and the environment are the maintainer's (#271); R8 is under [R8](#r8) (#485), the second build that must give the same APK under [Reproducible build](#reproducible-build) (#424); Gradle's dependency verification is under [Dependency verification](#dependency-verification) (#484).
 
 - The release commit sets `versionName` in `android/app/build.gradle.kts`, and a tag that is not `android-v` plus that version, or a version that still ends in `-SNAPSHOT`, stops the run, so the tag, the APK and the notes can never disagree (#272).
 - `versionCode` is major × 10000 + minor × 100 + patch (0.1.0 is 100), worked out only in `AppVersion` with its tests; a minor or patch above 99, any other form of the name and a code of 0 or above Play's 2,100,000,000 fail the build, as two versions could otherwise share a code (#272).
 - Tags are `android-vX.Y.Z` only, without pre-releases; any other tag stops before the key is asked for (#272).
 - Each job touches only what it needs, so the key never meets Gradle's plugins and the write token never meets the key (#272):
-  - prepare (the tag's form, the version, the notes) and build (lint, the tests, the unsigned APK) run Gradle with a read-only token and no secrets;
+  - prepare (the tag's form, the version, the notes), build (lint, the tests, the unsigned APK) and reproduce (the same build again, compared; see [Reproducible build](#reproducible-build)) run Gradle with a read-only token and no secrets;
   - tag-checks and no-release-yet check out nothing and only ask GitHub's API; no-release-yet has `contents: write`, as GitHub lists draft releases only to a token that can write, the one exception to "only the release job writes";
   - sign has the environment `android-release` and runs `apksigner` through `tools/android-sign.sh`, no Gradle and no third-party action, with a read-only token; sign-dry-run does the same with a throw-away key and without the environment;
   - release has the token that writes the draft and the attestation, and no key.
@@ -114,6 +114,22 @@ How a release is built, signed and published (`android-release.yml`, `tools/andr
 - No cache anywhere in the workflow (`setup-gradle` with `cache-disabled: true`, no `actions/cache`, no `cache:` of `setup-java`), so no other run can change what is built or signed (#272).
 - `AndroidReleaseWorkflowTest` holds the workflow's text to these rules, in the Maven build, so every pull request that changes the workflow runs it (#272).
 - No check that the tag is reachable from `main`, as on the desktop: a release branch may carry a fix (#272).
+
+### Reproducible build
+
+Two builds of the same commit give the same APK apart from the signature, and every release shows it before the key is asked for (#424).
+
+- The job `reproduce` of `android-release.yml` builds the commit again on a runner of its own, with the build job's Gradle call, and compares its unsigned APK with the build job's by `cmp`; `sign` and `sign-dry-run` wait for it, so a difference stops the release before signing (#424).
+- What differs between the two builds: the runner, the checkout's folder, the Gradle home (a fresh one under the runner's temp folder) and the time zone and locale (`Pacific/Auckland` and `tr_TR.UTF-8`, against UTC and the runner's English); a step fails when Java does not see the Turkish locale, so the difference cannot silently fall away (#424).
+- What is the same: the commit, the exact Temurin 21, the Gradle wrapper, `platforms;android-37.0` and build-tools 36.0.0, installed by the same steps without a cache (#424).
+- Both jobs record the revisions of the build-tools and the platform and Java's version, and `reproduce` shows both beside the comparison, with a warning when they differ; only the APKs decide (#424).
+- On a difference the job keeps both APKs and their `unzip -v` listings as the artifact `android-reproduce-difference-<run>-<attempt>`, for 14 days (#424).
+- It runs on a tag and in the dry run only, not weekly and not for pull requests: a change that breaks it shows at the next release, which waits until it is solved (decided 2026-11-18; #424).
+- `tools/android-sign.sh` signs with `--alignment-preserved true`: `apksigner` from build-tools 35 on otherwise pads the entries anew (its own extra field `0xd935`, native libraries to 16 KB), so the signed APK's entries no longer sit where the unsigned build put them and the signature cannot be copied onto a rebuilt APK, as F-Droid does. The build stays on build-tools 36.0.0 (#424).
+- The APK holds native libraries (`libandroidx.graphics.path.so` and `libdatastore_shared_counter.so`, for four ABIs), stored uncompressed and already aligned to 16 KB by AGP, with `classes*.dex`, `resources.arsc`, the baseline profile and the 9-patch images among the 29 stored entries; the option keeps that alignment, and `zipalign -c -P 16 4` still holds after signing (#424).
+- The trial, by hand, with a throw-away key (2026-11-18): the unsigned release APK built in two folders of one machine (Temurin 21.0.7+6, build-tools 36.0.0, platform 37.0 revision 2) was identical by `cmp`, also with `TZ=Pacific/Auckland`, with `tr_TR.UTF-8`, with `C` and with an empty Gradle home. One was signed by the script; `apksigcopier compare --unsigned` (apksigcopier 1.1.1, `apksigner` 36.0.0) copied its signature onto the other and the result verified, byte for byte the signed APK. Signed without the option, 59 of the 161 entries moved and the copied signature failed: "CHUNKED_SHA256 digest mismatch" (#424).
+- Not shown: that the APK does not depend on the JDK's vendor, as both builds use Temurin (#424).
+- Not shown: that F-Droid's build gives the same APK, as F-Droid builds with a JDK and build-tools of its own; only its recipe running shows that, and the recipe and the request stay with #280 (#424).
 
 ### Dependency verification
 
