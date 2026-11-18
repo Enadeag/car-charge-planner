@@ -5,6 +5,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Android
+- Your settings, battery level, away days, trips, trip notices and charge windows, and the Wi-Fi only switch now move to your next phone on Android 10 and 11 too, in a device-to-device transfer that says it is one, as they do on Android 12 and later; the API keys stay behind as before, and there is still no cloud backup on any version. The forecast cache no longer moves, on any version: the next phone fetches its own forecast (#397).
 - The APK is built only from libraries and plugins whose SHA-256 checksums are recorded in the repository: the build stops on any other file (#484).
 - The APK is about 9 MB instead of 30 MB: R8 now leaves out the code the app does not use, and keeps the class names, files and lines, so the log stays readable (#485).
 

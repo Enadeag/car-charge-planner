@@ -9,8 +9,8 @@ import org.w3c.dom.Element
 /**
  * What the release build asks of Android and opens to other apps, with what the libraries add: WorkManager's wake lock
  * and network state, which its scheduling and its network condition need, but not its work in the foreground; and
- * besides the app's own activity and boot receiver only the libraries' parts that the system alone reaches. The build
- * hands the merged manifest over as `release.manifest`.
+ * besides the app's own activity and boot receiver only the libraries' parts that the system alone reaches; and backup
+ * as the app's rule files decide it. The build hands the merged manifest over as `release.manifest`.
  */
 class MergedManifestTest {
 
@@ -53,6 +53,21 @@ class MergedManifestTest {
             "androidx.work.impl.background.systemjob.SystemJobService" to "android.permission.BIND_JOB_SERVICE",
             "androidx.work.impl.diagnostics.DiagnosticsReceiver" to "android.permission.DUMP",
             "androidx.profileinstaller.ProfileInstallReceiver" to "android.permission.DUMP")
+    }
+
+    /**
+     * Backup on with the app's two rule files and no agent of its own, in the manifest Android reads (#397): an agent,
+     * or `fullBackupOnly`, that a library merged in would decide itself what leaves the phone, past the rule files.
+     */
+    @Test
+    fun backupIsOnWithTheAppsTwoRuleFilesAndNoAgent() {
+        val application = elements("application").single()
+
+        assertThat(application.android("allowBackup")).isEqualTo("true")
+        assertThat(application.android("fullBackupContent")).isEqualTo("@xml/backup_rules")
+        assertThat(application.android("dataExtractionRules")).isEqualTo("@xml/data_extraction_rules")
+        assertThat(application.hasAttributeNS(ANDROID, "backupAgent")).isFalse()
+        assertThat(application.hasAttributeNS(ANDROID, "fullBackupOnly")).isFalse()
     }
 
     @Test

@@ -40,7 +40,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 ### Preferences on the phone
 
-- Two DataStore files in `files/datastore/`: `settings` ("Wi-Fi only", which goes along in a device transfer) and `state` (the card, the refused question, the Problems episode, `missed_rounds`; left out of backup and transfer, with its `.tmp`) (#361).
+- Two DataStore files in `files/datastore/`: `settings` ("Wi-Fi only", which goes along in a device transfer, named in both backup rule files) and `state` (the card, the refused question, the Problems episode, `missed_rounds`; no rule names it, nor its `.tmp`, so it stays on the phone) (#361, #397).
 - A failed read gives the default; a file that cannot be parsed is replaced by an empty one, so a damaged `settings` file turns "Wi-Fi only" off (#361).
 
 ### Rounds in the background
@@ -58,10 +58,10 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - While a round now only waits, asking again adds nothing; while one runs, exactly one more waits after it (`APPEND_OR_REPLACE`) (#362).
 - The schedule is refreshed at every `onStart`, when notifications are allowed through the card, and after the settings file is written or set aside, changed API keys, a saved battery level, and a changed away period or trip. With ready settings and notifications allowed it schedules both; without either it cancels both with the alarm; an unusable file leaves them (#362).
 - A "Wi-Fi only" change moves the hourly work and a waiting round now to the new network; a running one is left alone (#362).
-- WorkManager's database in `no_backup/` is excluded by both backup rule files all the same, as the keychain's file is (#362).
+- WorkManager's database lies in `no_backup/`, which Android never backs up or transfers, and no backup rule names it (#362, #397).
 
 ### Permissions and manifest
 
 - `POST_NOTIFICATIONS` is the one permission the notifications add (#361).
 - `RECEIVE_BOOT_COMPLETED` is the one permission of the app's own for the background work; WorkManager's `WAKE_LOCK` and `ACCESS_NETWORK_STATE` stay, and its `FOREGROUND_SERVICE` and `SystemForegroundService` are removed, as the app never runs work in the foreground (#362).
-- `MergedManifestTest` holds the release build's merged manifest to those permissions plus androidx.core's own signature permission, refuses `uses-permission-sdk-23`, and allows as exported parts only the activity, the boot receiver, and WorkManager's and profileinstaller's parts behind `BIND_JOB_SERVICE` and `DUMP` (#362).
+- `MergedManifestTest` holds the release build's merged manifest to those permissions plus androidx.core's own signature permission, refuses `uses-permission-sdk-23`, and allows as exported parts only the activity, the boot receiver, and WorkManager's and profileinstaller's parts behind `BIND_JOB_SERVICE` and `DUMP` (#362); and backup on with the two rule files and no `backupAgent` or `fullBackupOnly`, as a library could merge them in (#397).

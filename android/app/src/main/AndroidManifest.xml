@@ -11,10 +11,12 @@
   <!-- WorkManager's own, for work in the foreground, which the app never asks for -->
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
-  <!-- enableOnBackInvokedCallback: the predictive back gesture, which Android 13 and later have (tools:targetApi) -->
+  <!-- allowBackup: on for the transfer to the owner's next phone, which Android 10 and 11 make only with backup on; the
+       two rule files keep cloud backup empty and name what the transfer takes (#397).
+       enableOnBackInvokedCallback: the predictive back gesture, which Android 13 and later have (tools:targetApi) -->
   <application
       android:name=".CarChargePlannerApp"
-      android:allowBackup="false"
+      android:allowBackup="true"
       android:dataExtractionRules="@xml/data_extraction_rules"
       android:enableOnBackInvokedCallback="true"
       tools:targetApi="33"
