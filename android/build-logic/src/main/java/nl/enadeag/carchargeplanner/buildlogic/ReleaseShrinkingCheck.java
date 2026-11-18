@@ -23,7 +23,9 @@ import org.gradle.api.tasks.TaskAction;
  * and tags name the app's classes, files and lines, so they must stay as they are (docs/design/android/build.md, R8).
  * A tripwire against a mistake in the build script or the app's own rule files, not against intent: it reads only
  * those files, not the libraries' consumer rules, which cannot switch renaming or optimising back on once
- * {@code -dontobfuscate} and {@code -dontoptimize} are given.
+ * {@code -dontobfuscate} and {@code -dontoptimize} are given. It fails too when the release build shrinks resources:
+ * that stays off until the reproducible build (#424), and the minified suite finds the app's texts by resource name,
+ * which resource shrinking can remove.
  */
 public abstract class ReleaseShrinkingCheck extends DefaultTask {
 
@@ -40,6 +42,14 @@ public abstract class ReleaseShrinkingCheck extends DefaultTask {
      */
     @Input
     public abstract Property<Boolean> getMinified();
+
+    /**
+     * Whether the release build type has {@code isShrinkResources}.
+     *
+     * @return the switch
+     */
+    @Input
+    public abstract Property<Boolean> getShrinksResources();
 
     /**
      * The release build type's own rule files; AGP's default file, which never turns renaming off, is left out.
@@ -65,7 +75,7 @@ public abstract class ReleaseShrinkingCheck extends DefaultTask {
                 throw new UncheckedIOException("cannot read the rule file " + file, e);
             }
         }
-        var problems = problems(getMinified().get(), texts);
+        var problems = problems(getMinified().get(), getShrinksResources().get(), texts);
         if (!problems.isEmpty()) {
             throw new GradleException("The release build must be shrunk by R8 and keep its names and lines (#485): "
                     + String.join("; ", problems));
@@ -73,7 +83,7 @@ public abstract class ReleaseShrinkingCheck extends DefaultTask {
     }
 
     /** What is wrong with the release build, one text per problem; a {@code #} starts a comment, as in R8's files. */
-    static List<String> problems(boolean minified, List<String> ruleTexts) {
+    static List<String> problems(boolean minified, boolean shrinksResources, List<String> ruleTexts) {
         var options = new ArrayList<String>();
         for (var text : ruleTexts) {
             for (var line : text.split("\\R")) {
@@ -85,6 +95,9 @@ public abstract class ReleaseShrinkingCheck extends DefaultTask {
         var problems = new ArrayList<String>();
         if (!minified) {
             problems.add("isMinifyEnabled is false");
+        }
+        if (shrinksResources) {
+            problems.add("isShrinkResources is true, which waits for #424 and the minified suite's texts");
         }
         if (options.contains("-dontshrink")) {
             problems.add("a rule file says -dontshrink");

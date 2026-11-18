@@ -71,7 +71,11 @@ if (instrumentedBuildType !in setOf("debug", "minified")) {
 val minifiedKeystore: Provider<String> = providers.gradleProperty("minifiedKeystore")
 // read only when -PminifiedKeystore is given, so no other password of the shell reaches the configuration cache
 val minifiedKeystorePassword: Provider<String> =
-    minifiedKeystore.flatMap { providers.environmentVariable("MINIFIED_KEYSTORE_PASSWORD") }
+    minifiedKeystore.flatMap { providers.environmentVariable("MINIFIED_KEYSTORE_PASSWORD") }.filter { it.isNotEmpty() }
+if (minifiedKeystore.isPresent && !minifiedKeystorePassword.isPresent) {
+    throw GradleException("-PminifiedKeystore needs the throw-away key's password in MINIFIED_KEYSTORE_PASSWORD, " +
+        "which is unset or empty (docs/dev/android.md, R8 and the keep rules)")
+}
 
 android {
     namespace = "nl.enadeag.carchargeplanner.android"
@@ -358,6 +362,7 @@ androidComponents {
         val buildFolder = layout.buildDirectory.get().asFile.toPath()
         checkReleaseShrunk.configure {
             minified.set(release.isMinifyEnabled)
+            shrinksResources.set(release.isShrinkResources)
             ruleFiles.from(release.proguardFiles.filterNot { it.toPath().startsWith(buildFolder) })
         }
     }
