@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory
 
 private val LOG = LoggerFactory.getLogger("nl.enadeag.carchargeplanner.android.prefs.PhonePreferences")
 
-/** The file names of the phone's own preferences stores, which `data_extraction_rules.xml` names too. */
+/** The file names of the phone's own preferences stores; both backup rule files name the one that moves. */
 object PhoneStoreFiles {
 
     /** What goes along to the owner's next phone: the "Wi-Fi only" switch. */

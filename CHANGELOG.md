@@ -5,6 +5,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Android
+- Your settings, trips and the app's other files now move to your next phone on Android 10 and 11 too, in a device-to-device transfer that says it is one, as they do on Android 12 and later; the API keys stay behind as before, and there is still no cloud backup on any version (#397).
 - The APK is built only from libraries and plugins whose SHA-256 checksums are recorded in the repository: the build stops on any other file (#484).
 - The APK is about 9 MB instead of 30 MB: R8 now leaves out the code the app does not use, and keeps the class names, files and lines, so the log stays readable (#485).
 
