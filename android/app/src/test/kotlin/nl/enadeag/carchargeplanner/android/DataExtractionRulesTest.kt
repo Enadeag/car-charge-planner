@@ -23,8 +23,9 @@ import org.w3c.dom.Element
  * What may leave the phone (#397): no cloud backup on any version, and in the transfer to the owner's next phone only
  * the files the rules name, the same list on Android 10 and 11 as on 12 and later. Before Android 12 each of them
  * requires the device-to-device flag, so a backup without it takes nothing. The list holds every file the engine
- * writes in its folder and the phone's settings store, and nothing secret, temporary or set aside as damaged. No test
- * here sees a backup or a transfer, so this reads the rules.
+ * writes in its folder but the forecast cache, and the phone's settings store, and nothing secret, temporary or set
+ * aside as damaged. These tests read the rules; `tools/android-backup-check.sh` shows on the emulator that a backup
+ * without the flag saves nothing.
  */
 class DataExtractionRulesTest {
 
@@ -53,6 +54,11 @@ class DataExtractionRulesTest {
 
     /** The phone's preferences stores that stay on this phone. */
     private val storesLeftOut = setOf(PhoneStoreFiles.STATE)
+
+    /** What the engine keeps in its folder that stays on this phone, with why. */
+    private val engineFilesLeftOut = mapOf(
+        "forecasts" to "the next phone fetches its own forecast, and the folder holds the cache's damaged and " +
+            "temporary copies")
 
     private fun xml(path: String): Element =
         DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(path)).documentElement
@@ -139,11 +145,12 @@ class DataExtractionRulesTest {
     }
 
     @Test
-    fun theTransferNamesEveryFileTheEngineWritesInItsFolder() {
-        val engineFiles = transferred.filterNot { it.startsWith("file:datastore/") }
-            .map { it.removePrefix("file:").removeSuffix("/") }
+    fun theTransferNamesEveryFileTheEngineWritesInItsFolderButTheForecastCache() {
+        val engineFiles = transferred.filterNot { it.startsWith("file:datastore/") }.map { it.removePrefix("file:") }
+        val named = namesTheEngineGivesItsFiles()
 
-        assertThat(engineFiles).containsExactlyInAnyOrderElementsOf(namesTheEngineGivesItsFiles())
+        assertThat(named).containsAll(engineFilesLeftOut.keys)
+        assertThat(engineFiles).containsExactlyInAnyOrderElementsOf(named - engineFilesLeftOut.keys)
     }
 
     @Test

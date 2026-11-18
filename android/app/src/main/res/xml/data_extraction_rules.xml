@@ -2,10 +2,10 @@
 <!--
   Android 12 and later (#397). Cloud backup takes nothing: every domain is excluded whole, as a section without rules
   would take everything. The transfer to the owner's next phone takes only the files named, the same list as
-  backup_rules.xml for Android 10 and 11: the engine's files, the forecast cache and the phone's settings store
-  ("Wi-Fi only"). A file no include names stays on the phone: the keychain's file and WorkManager's database in
-  noBackupFilesDir, which Android never takes along anyway, the notifications' state store, which belongs to this
-  phone, temporary files and copies set aside as damaged. DataExtractionRulesTest holds the two lists to each other
+  backup_rules.xml for Android 10 and 11: the engine's six files and the phone's settings store ("Wi-Fi only"). A file
+  no include names stays on the phone: the forecast cache, as the next phone fetches its own, the keychain's file and
+  WorkManager's database in noBackupFilesDir, which Android never takes along anyway, the notifications' state store,
+  which belongs to this phone, temporary files and copies set aside as damaged. DataExtractionRulesTest holds the two lists to each other
   and to the files the engine and DataStore write.
 -->
 <data-extraction-rules>
@@ -27,7 +27,6 @@
     <include domain="file" path="trips.json" />
     <include domain="file" path="trip-notices.json" />
     <include domain="file" path="announced.json" />
-    <include domain="file" path="forecasts/" />
     <include domain="file" path="datastore/settings.preferences_pb" />
   </device-transfer>
 </data-extraction-rules>

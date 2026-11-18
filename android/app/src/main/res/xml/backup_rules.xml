@@ -3,9 +3,10 @@
   Android 10 and 11 (#397): only what moves to the owner's next phone, each file by name, and only in a transfer whose
   maker sets the device-to-device flag. Every include requires that flag, so a cloud backup or `adb backup` takes
   nothing; a file no include names never leaves the phone. The list is the same as the device-transfer section of
-  data_extraction_rules.xml, which Android 12 and later read instead: the engine's files, the forecast cache and the
-  phone's settings store ("Wi-Fi only"). The keychain's file and WorkManager's database lie in noBackupFilesDir, which
-  Android never takes along; the notifications' state store belongs to this phone. There are no excludes beside the
+  data_extraction_rules.xml, which Android 12 and later read instead: the engine's six files and the phone's settings
+  store ("Wi-Fi only"). The forecast cache stays, as the next phone fetches its own and the folder holds the cache's
+  damaged and temporary copies; the keychain's file and WorkManager's database lie in noBackupFilesDir, which Android
+  never takes along; the notifications' state store belongs to this phone. There are no excludes beside the
   includes: an exclude only narrows an include, so naming those files would say nothing, and Lint refuses an exclude
   outside every include. DataExtractionRulesTest holds the two lists to each other and to the files the engine and
   DataStore write.
@@ -17,6 +18,5 @@
   <include domain="file" path="trips.json" requireFlags="deviceToDeviceTransfer" />
   <include domain="file" path="trip-notices.json" requireFlags="deviceToDeviceTransfer" />
   <include domain="file" path="announced.json" requireFlags="deviceToDeviceTransfer" />
-  <include domain="file" path="forecasts/" requireFlags="deviceToDeviceTransfer" />
   <include domain="file" path="datastore/settings.preferences_pb" requireFlags="deviceToDeviceTransfer" />
 </full-backup-content>
