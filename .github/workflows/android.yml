@@ -220,6 +220,10 @@ jobs:
       # The step's timeout covers the boot and the tests, as the step before built the APKs; it ends a hang on
       # shutdown, should one come back, which was seen only on snapshot boots
       # (https://github.com/ReactiveCircus/android-emulator-runner/issues/385).
+      #
+      # After the suites, tools/android-backup-check.sh backs the debug build up with the local transport, which on
+      # Android 10 sets no device-to-device flag, and fails unless nothing of the app was saved (#397). The debug build,
+      # as run-as puts the made-up files in its folders; its manifest and backup rules are the release build's.
       - name: Instrumented tests on API 29
         timeout-minutes: 15
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -259,6 +263,7 @@ jobs:
             adb logcat -v threadtime < /dev/null > build/logcat.txt 2>&1 &
             ./gradlew --continue --stacktrace :app:connectedDebugAndroidTest
             ./gradlew --stacktrace -PtestBuildType=minified :app:connectedMinifiedAndroidTest
+            sh ../tools/android-backup-check.sh app/build/outputs/apk/debug/app-debug.apk
       # After a dependency-verification failure of the instrumented tests' build, says how to refresh the checksums; the
       # same step as in android-build.
       - name: How to refresh the checksums
