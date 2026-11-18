@@ -10,16 +10,19 @@ import android.app.UiAutomation;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -28,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -114,20 +118,51 @@ public class MinifiedAppTest {
     /** The plan's note on the battery level, which only a made plan shows, is read from the screen. */
     @Test
     public void theAppStartsOnTheSettingsFileAndShowsAPlan() {
-        String note = text("day_battery_assumed");
-        String shown = note.substring(0, note.indexOf('%'));
+        String shown = prefix("day_battery_assumed");
 
         start();
 
-        long deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(30);
-        boolean found = false;
-        while (!found && SystemClock.uptimeMillis() < deadline) {
-            found = onScreen(shown);
-            if (!found) {
-                SystemClock.sleep(250);
-            }
-        }
-        assertTrue("the screen shows \"" + shown + "…\"", found);
+        waitFor("the plan's note", node -> has(node.getText(), shown));
+    }
+
+    /**
+     * A made-up API key typed into Settings, Forecast and saved is encrypted with a key of the Android Keystore into
+     * the keychain's file, shows again after the activity is made anew, and never reaches the app's Logcat lines. In
+     * the .minified installation, so the app's own Keystore alias there is no one's real key. The key shown again
+     * comes from the engine's memory of the save: only a new process makes the app decrypt it anew.
+     */
+    @Test
+    public void anApiKeySavedInSettingsIsKeptThroughTheKeystore() throws Exception {
+        String key = "MADE-UP-MINIFIED-" + Long.toHexString(System.nanoTime());
+        start();
+        waitFor("the plan's note", node -> has(node.getText(), prefix("day_battery_assumed")));
+
+        openTheApiKeyOfOpenMeteo();
+        AccessibilityNodeInfo field = waitFor("the API key's field", this::isTheApiKeyOfOpenMeteo);
+        Bundle typed = new Bundle();
+        typed.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, key);
+        assertTrue("the key is typed", field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, typed));
+        click(waitFor("Save", node -> same(node.getText(), text("action_save")) && tappable(node) != null));
+        waitFor("the saved message", node -> same(node.getText(), text("settings_saved")));
+
+        File keychain = new File(app.getNoBackupFilesDir(), "keychain.json");
+        String stored = read(keychain);
+        assertTrue("the keychain's file names the entry: " + stored, stored.contains("forecast/open-meteo/api_key"));
+        assertTrue("the keychain's file does not hold the key itself", !stored.contains(key));
+        KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+        keyStore.load(null);
+        assertTrue("the Android Keystore holds the app's key", keyStore.aliases().hasMoreElements());
+
+        finishTheActivity();
+        started.clear();
+        start();
+        waitFor("the plan's note", node -> has(node.getText(), prefix("day_battery_assumed")));
+        openTheApiKeyOfOpenMeteo();
+        click(waitFor("Show", node -> has(node.getContentDescription(), prefix("key_show_of"))
+                && has(node.getContentDescription(), "Open-Meteo") && tappable(node) != null));
+        waitFor("the key, shown", node -> isTheApiKeyOfOpenMeteo(node) && same(node.getText(), key));
+
+        assertTrue("the app's Logcat lines do not hold the key", !logcat().contains(key));
     }
 
     /** The start of the activity with a usable settings file asks a round now, which WorkManager runs. */
@@ -164,36 +199,152 @@ public class MinifiedAppTest {
         return app.getString(id);
     }
 
-    /** Whether a node of the active window's accessibility tree has a text that contains [part]. */
-    private boolean onScreen(String part) {
-        AccessibilityNodeInfo root = instrumentation.getUiAutomation().getRootInActiveWindow();
-        return root != null && contains(root, part);
+    /** The text of the app's resource [name] up to its first placeholder. */
+    private String prefix(String name) {
+        String whole = text(name);
+        int placeholder = whole.indexOf('%');
+        return placeholder < 0 ? whole : whole.substring(0, placeholder);
     }
 
-    private static boolean contains(AccessibilityNodeInfo node, String part) {
-        CharSequence text = node.getText();
-        if (text != null && text.toString().contains(part)) {
-            return true;
+    /** From the dashboard: Settings, its Forecast page, and the fold of Open-Meteo's API key and server. */
+    private void openTheApiKeyOfOpenMeteo() {
+        click(waitFor("Settings", node -> same(node.getContentDescription(), text("home_settings"))
+                && tappable(node) != null));
+        click(waitFor("the Forecast row", node -> same(node.getText(), text("settings_forecast"))
+                && tappable(node) != null));
+        AccessibilityNodeInfo fold = waitFor("the fold of the API key and server",
+                node -> same(node.getText(), text("provider_fold_key_and_server")) && tappable(node) != null);
+        // open once a key is stored, and drawn with its fields, so a closed one has no field of the key
+        if (!onScreen(this::isTheApiKeyOfOpenMeteo)) {
+            click(fold);
         }
-        for (int i = 0; i < node.getChildCount(); i++) {
-            AccessibilityNodeInfo child = node.getChild(i);
-            if (child != null && contains(child, part)) {
+    }
+
+    /** Whether [node] is the field of Open-Meteo's API key: Compose puts the field's label inside it. */
+    private boolean isTheApiKeyOfOpenMeteo(AccessibilityNodeInfo node) {
+        if (!node.isEditable()) {
+            return false;
+        }
+        String label = String.format(text("provider_setting_of"), text("provider_api_key"), "Open-Meteo");
+        List<AccessibilityNodeInfo> inside = new ArrayList<>();
+        collect(node, inside);
+        for (AccessibilityNodeInfo part : inside) {
+            if (same(part.getText(), label)) {
                 return true;
             }
         }
         return false;
     }
 
-    /** How many of the round's works ended as a success, by WorkManager's own Logcat line for each. */
-    private static int roundsDone() throws IOException {
+    private static boolean has(CharSequence text, String part) {
+        return text != null && text.toString().contains(part);
+    }
+
+    private static boolean same(CharSequence text, String whole) {
+        return text != null && text.toString().equals(whole);
+    }
+
+    /**
+     * The first node of the active window's accessibility tree that [wanted] accepts, once there is one; scrolls the
+     * window's lists forward while it looks, and fails after 30 seconds, showing the tree.
+     */
+    private AccessibilityNodeInfo waitFor(String what, Predicate<AccessibilityNodeInfo> wanted) {
+        long deadline = SystemClock.uptimeMillis() + TimeUnit.SECONDS.toMillis(30);
+        StringBuilder tree = new StringBuilder();
+        while (SystemClock.uptimeMillis() < deadline) {
+            AccessibilityNodeInfo root = instrumentation.getUiAutomation().getRootInActiveWindow();
+            if (root != null) {
+                List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+                collect(root, nodes);
+                for (AccessibilityNodeInfo node : nodes) {
+                    if (wanted.test(node)) {
+                        return node;
+                    }
+                }
+                tree.setLength(0);
+                for (AccessibilityNodeInfo node : nodes) {
+                    tree.append("\n").append(node.getClassName()).append(" text=").append(node.getText())
+                            .append(" description=").append(node.getContentDescription())
+                            .append(" hint=").append(node.getHintText());
+                    if (node.isScrollable()) {
+                        node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+                    }
+                }
+            }
+            SystemClock.sleep(250); // the next look at the tree, not a wait for something to happen
+        }
+        throw new AssertionError("no " + what + " on the screen:" + tree);
+    }
+
+    private static void collect(AccessibilityNodeInfo node, List<AccessibilityNodeInfo> into) {
+        into.add(node);
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) {
+                collect(child, into);
+            }
+        }
+    }
+
+    /** Whether a node of the active window's accessibility tree is one [wanted] accepts, now. */
+    private boolean onScreen(Predicate<AccessibilityNodeInfo> wanted) {
+        AccessibilityNodeInfo root = instrumentation.getUiAutomation().getRootInActiveWindow();
+        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+        if (root != null) {
+            collect(root, nodes);
+        }
+        for (AccessibilityNodeInfo node : nodes) {
+            if (wanted.test(node)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** [node], or the nearest node above it that can be clicked; null when there is none. */
+    private static AccessibilityNodeInfo tappable(AccessibilityNodeInfo node) {
+        AccessibilityNodeInfo target = node;
+        while (target != null && !target.isClickable()) {
+            target = target.getParent();
+        }
+        return target;
+    }
+
+    /** Clicks [node], or the nearest node above it that can be clicked, as a tap there would. */
+    private static void click(AccessibilityNodeInfo node) {
+        assertTrue("clicked " + node.getText(), tappable(node).performAction(AccessibilityNodeInfo.ACTION_CLICK));
+    }
+
+    private static String read(File file) throws IOException {
+        StringBuilder text = new StringBuilder();
+        try (BufferedReader lines = new BufferedReader(
+                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+            for (String line = lines.readLine(); line != null; line = lines.readLine()) {
+                text.append(line).append('\n');
+            }
+        }
+        return text.toString();
+    }
+
+    /** The app's own Logcat lines so far, as Android shows an app only its own. */
+    private static String logcat() throws IOException {
         Process logcat = new ProcessBuilder("logcat", "-d", "-v", "tag").redirectErrorStream(true).start();
-        int done = 0;
+        StringBuilder text = new StringBuilder();
         try (BufferedReader lines = new BufferedReader(
                 new InputStreamReader(logcat.getInputStream(), StandardCharsets.UTF_8))) {
             for (String line = lines.readLine(); line != null; line = lines.readLine()) {
-                if (line.contains("Worker result SUCCESS for") && line.contains(ROUND_WORKER)) {
-                    done++;
-                }
+                text.append(line).append('\n');
+            }
+        }
+        return text.toString();
+    }
+
+    /** How many of the round's works ended as a success, by WorkManager's own Logcat line for each. */
+    private static int roundsDone() throws IOException {
+        int done = 0;
+        for (String line : logcat().split("\n")) {
+            if (line.contains("Worker result SUCCESS for") && line.contains(ROUND_WORKER)) {
+                done++;
             }
         }
         return done;
