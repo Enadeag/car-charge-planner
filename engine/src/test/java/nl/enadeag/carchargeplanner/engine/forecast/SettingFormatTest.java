@@ -1,12 +1,20 @@
 package nl.enadeag.carchargeplanner.engine.forecast;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class SettingFormatTest {
+
+    @ParameterizedTest
+    @EnumSource(SettingFormat.class)
+    void everyFormatRefusesToCheckWithoutBeingToldWherePlainHttpIsAllowed(SettingFormat format) {
+        assertThatThrownBy(() -> format.accepts("abc", null)).isInstanceOf(IllegalArgumentException.class);
+    }
 
     @ParameterizedTest
     @CsvSource({
@@ -23,19 +31,28 @@ class SettingFormatTest {
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, false",
     })
     void lettersAndDigitsAreOnlyTheseAtMostSixtyFour(String value, boolean accepted) {
-        assertThat(SettingFormat.LETTERS_AND_DIGITS.accepts(value)).isEqualTo(accepted);
+        assertThat(SettingFormat.acceptsLettersAndDigits(value)).isEqualTo(accepted);
+        for (var plainHttp : PlainHttp.values()) {
+            assertThat(SettingFormat.LETTERS_AND_DIGITS.accepts(value, plainHttp)).isEqualTo(accepted);
+        }
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"key\r\nX-Injected: 1", "a\nb", "tab\there", "bell\u0007", "nul\u0000", "del\u007F",
         "next line\u0085"})
     void anyTextIsOneLineWithoutControlCharacters(String value) {
-        assertThat(SettingFormat.TEXT.accepts(value)).isFalse();
+        assertThat(SettingFormat.acceptsText(value)).isFalse();
+        for (var plainHttp : PlainHttp.values()) {
+            assertThat(SettingFormat.TEXT.accepts(value, plainHttp)).isFalse();
+        }
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", "  spaces around  \n", "Ünïcode key/with=signs?", "😀"})
     void anyTextTakesEverythingElse(String value) {
-        assertThat(SettingFormat.TEXT.accepts(value)).isTrue();
+        assertThat(SettingFormat.acceptsText(value)).isTrue();
+        for (var plainHttp : PlainHttp.values()) {
+            assertThat(SettingFormat.TEXT.accepts(value, plainHttp)).isTrue();
+        }
     }
 }

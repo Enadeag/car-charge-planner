@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.form;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.forecast.PlainHttp;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat;
 import java.util.LinkedHashMap;
@@ -44,7 +45,8 @@ public record ProviderEntry(ProviderInfo info, Map<String, String> plain, Map<St
             }
         }
         for (var setting : info.settings()) {
-            if (!setting.format().accepts(entered.getOrDefault(setting.name(), ""))) {
+            // the desktop reaches a server on this computer over plain http, where the key does not leave it
+            if (!setting.format().accepts(entered.getOrDefault(setting.name(), ""), PlainHttp.TO_THIS_COMPUTER)) {
                 problems.put(setting.name(), messages.text(problem(setting.format())));
             }
         }

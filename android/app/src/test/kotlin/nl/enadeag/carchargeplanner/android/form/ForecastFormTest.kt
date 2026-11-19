@@ -13,6 +13,8 @@ import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class ForecastFormTest {
 
@@ -65,6 +67,99 @@ class ForecastFormTest {
             ForecastForm.Target.Setting(OPEN_METEO, "base_url") to FieldProblem.ServerAddress,
             ForecastForm.Target.Setting(FORECAST_SOLAR, "api_key") to FieldProblem.LettersAndDigits,
         ))
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["http://localhost:8080", "http://127.0.0.1:8080/om", "http://[::1]:8080"])
+    fun plainHttpIsRefusedAlsoForAServerOnThisPhone(address: String) {
+        form.load(DRAFT)
+        form.edit(OPEN_METEO, "base_url", address)
+
+        assertThat(form.check(DRAFT)).isNull()
+        assertThat(form.read(DRAFT)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(OPEN_METEO, "base_url") to FieldProblem.ServerAddress))
+    }
+
+    @Test
+    fun aStoredPlainHttpAddressIsShownUnchangedAndRefusedAtItsFieldUntilChanged() {
+        val stored = DRAFT.withForecast(ForecastSelection(OPEN_METEO, Optional.empty(),
+            mapOf(OPEN_METEO to mapOf("base_url" to "http://localhost:8080"))))
+        form.load(stored)
+
+        assertThat(form.text(OPEN_METEO, "base_url")).isEqualTo("http://localhost:8080")
+        assertThat(form.isEdited()).isFalse()
+        assertThat(form.check(stored)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(OPEN_METEO, "base_url") to FieldProblem.ServerAddress))
+        assertThat(form.text(OPEN_METEO, "base_url")).isEqualTo("http://localhost:8080")
+
+        form.edit(OPEN_METEO, "base_url", "https://localhost:8443")
+
+        assertThat(form.check(stored)!!.forecast().settingsOf(OPEN_METEO))
+            .isEqualTo(mapOf("base_url" to "https://localhost:8443"))
+    }
+
+    @Test
+    fun aValueTypedForAProviderNotChosenIsCheckedAsForAChosenOne() {
+        form.load(DRAFT)
+        form.loadKeys(StoredKeys.Read(Secrets.NONE))
+        form.choosePrimary(FORECAST_SOLAR)
+        form.edit(OPEN_METEO, "base_url", "http://localhost:8080")
+
+        assertThat(form.check(DRAFT)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(OPEN_METEO, "base_url") to FieldProblem.ServerAddress))
+    }
+
+    @Test
+    fun aKeyTypedInTheWrongFormForAProviderNotChosenIsRefused() {
+        form.load(DRAFT)
+        form.loadKeys(StoredKeys.Read(Secrets.NONE))
+        form.edit(FORECAST_SOLAR, "api_key", "not a key!")
+
+        assertThat(form.check(DRAFT)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(FORECAST_SOLAR, "api_key") to FieldProblem.LettersAndDigits))
+    }
+
+    @Test
+    fun aStoredPlainHttpAddressOfAProviderNotChosenIsKeptUntilChangedAndThenChecked() {
+        val stored = DRAFT.withForecast(ForecastSelection(FORECAST_SOLAR, Optional.empty(),
+            mapOf(OPEN_METEO to mapOf("base_url" to "http://localhost:8080"))))
+        form.load(stored)
+        form.loadKeys(StoredKeys.Read(Secrets.NONE))
+        assertThat(form.check(stored)!!.forecast().settingsOf(OPEN_METEO))
+            .isEqualTo(mapOf("base_url" to "http://localhost:8080"))
+
+        form.edit(OPEN_METEO, "base_url", "http://127.0.0.1:9000")
+        assertThat(form.check(stored)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(OPEN_METEO, "base_url") to FieldProblem.ServerAddress))
+
+        form.edit(OPEN_METEO, "base_url", "")
+        assertThat(form.check(stored)!!.forecast().settingsOf(OPEN_METEO)).isEmpty()
+
+        form.edit(OPEN_METEO, "base_url", "https://meteo.example.com")
+        assertThat(form.check(stored)!!.forecast().settingsOf(OPEN_METEO))
+            .isEqualTo(mapOf("base_url" to "https://meteo.example.com"))
+    }
+
+    @Test
+    fun checkingOneProvidersSettingsDropsOnlyItsOwnEarlierProblems() {
+        form.load(DRAFT)
+        form.loadKeys(StoredKeys.Read(Secrets(mapOf(FORECAST_SOLAR to mapOf("api_key" to "not a key!")))))
+        form.chooseFallback(FORECAST_SOLAR)
+        form.edit(OPEN_METEO, "base_url", "http://localhost:8080")
+        assertThat(form.check(DRAFT)).isNull()
+        assertThat(form.problems.value).hasSize(2)
+
+        form.loadKeys(StoredKeys.Read(Secrets(mapOf(FORECAST_SOLAR to mapOf("api_key" to "GOODKEY1")))))
+
+        assertThat(form.checkSettingsOf(FORECAST_SOLAR)).isTrue()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(OPEN_METEO, "base_url") to FieldProblem.ServerAddress))
+        assertThat(form.checkSettingsOf(OPEN_METEO)).isFalse()
     }
 
     @Test
