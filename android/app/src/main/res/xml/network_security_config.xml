@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only https: Android 10 and later refuse plain http by default at this targetSdk; said here so it holds whatever
-  the target. The debug build has its own copy of this file. -->
+<!-- Only https: Android 10 and later refuse plain http by default; said here so it holds whatever the target. From
+  target 37 Android adds an implicit configuration for loopback hosts that allows plain http when the app names none,
+  so they are named here. The debug build has its own copy of this file. -->
 <network-security-config>
   <base-config cleartextTrafficPermitted="false" />
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="false">localhost</domain>
+    <domain includeSubdomains="false">127.0.0.1</domain>
+    <domain includeSubdomains="false">::1</domain>
+  </domain-config>
 </network-security-config>
