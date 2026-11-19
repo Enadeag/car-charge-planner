@@ -24,7 +24,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - The battery check's tap and its action "Enter battery level" open the battery entry, only on the home or the home that comes next at a start; in set-up or Settings the tap only brings the app forward. `MainActivity` is `singleTop`, and the intent is followed in `onCreate` without saved state and in `onNewIntent` (#361).
 - The words are the desktop's facts with "Tap" and the spoken span ("11:15 to 14:30"), made when posted, in the app's language and the phone's 12- or 24-hour clock, the weekday in the home's zone, a distance in whole km rounded up until #311 (#361).
 - Nothing is posted while notifications are not allowed; a notification that cannot be posted is logged at warn with its kind only (#361).
-- The small icon `ic_stat_charge` is the launcher's bolt redrawn at 24 dp, with the launcher background as accent (#361).
+- The small icon `ic_stat_charge` is the launcher icon's car and sun scaled to 24 dp, in one colour, with the launcher background as accent (#361, #486).
 - Trip and window times are logged at DEBUG only (#382).
 
 ### Problems notification
