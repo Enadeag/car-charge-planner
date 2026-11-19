@@ -156,6 +156,17 @@ CI builds the app with `android.yml`, on Linux with JDK 21, in two jobs; [What i
 
 A release is built and signed by `android-release.yml`, for a tag `android-vX.Y.Z`; see [Releasing the Android app](ci-and-releasing.md#releasing-the-android-app).
 
+## The listing for F-Droid
+
+F-Droid shows the app with the texts and pictures in `fastlane/metadata/android/` at the repository's root, one folder per language, `en-US` (F-Droid's fallback) and `nl-NL`: `title.txt`, `short_description.txt`, `full_description.txt`, `changelogs/<versionCode>.txt` and `images/featureGraphic.png`, the same picture in both. The texts are plain text, say only what the README, the privacy page and the changelog say, and keep F-Droid's limits: the title 50 characters, the short description 80, the full description 4000 and a changelog 500, without the final newline. `AndroidListingTest`, in the Maven build, checks those limits, that both languages hold the same changelogs, that none is for a version after `versionName`'s and that a release commit has its version's changelog (see [Releasing the Android app](ci-and-releasing.md#releasing-the-android-app)). There is no `icon.png`: F-Droid takes the icon from the APK. Whether F-Droid finds the folder at the root while its recipe builds from `android/` shows when the recipe runs (#280).
+
+The icon's drawing is `tools/android-listing/icon.svg`. `ic_launcher_foreground.xml`, `ic_launcher_monochrome.xml` and `ic_stat_charge.xml` in `android/app/src/main/res/drawable/` carry its path data unchanged, and the colour `ic_launcher_background` its green, so a change to the icon changes all four. The feature graphic is rendered from `tools/android-listing/feature-graphic.svg`, which has the icon's car and sun and the name in Noto Sans Bold turned into paths (with fontTools), so the render needs no font:
+
+```bash
+rsvg-convert -w 1024 -h 500 tools/android-listing/feature-graphic.svg -o fastlane/metadata/android/en-US/images/featureGraphic.png
+cp fastlane/metadata/android/en-US/images/featureGraphic.png fastlane/metadata/android/nl-NL/images/featureGraphic.png
+```
+
 ## Trying the app
 
 Open `android/` in Android Studio and run the app on an emulator from its Device Manager (any system image from API 29) or on a phone; or start an emulator and run `adb install app/build/outputs/apk/debug/app-debug.apk` from `android/`. It opens on set-up, and after Finish on the dashboard, a tab per day of the plan, with Refresh and Settings in its top app bar.
