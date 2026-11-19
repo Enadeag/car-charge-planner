@@ -91,9 +91,9 @@ public final class GridAdvisor {
         return endLevelPct(day) < preferences.minimumPct().value() - MIN_DEFICIT_PCT;
     }
 
-    /** The true level at the end of the day: the plan's own end level stops at 0 %. */
+    /** The level at the end of the day, below 0 by the driving the battery cannot hold. */
     private static double endLevelPct(DayPlan day) {
-        return day.levelAfterChargingPct().value() - day.drivingPct();
+        return day.endLevelPct().value() - day.drivingShortPct();
     }
 
     private GridAdvice advice(List<DayPlan> days, List<TripAdvice> trips, DayPlan dip, List<ForecastStep> forecast,

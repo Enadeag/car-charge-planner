@@ -35,7 +35,7 @@ class ListedTripTest {
         var first = madeAt.atZone(zone).toLocalDate();
         var days = Stream.iterate(first, day -> day.plusDays(1)).limit(5)
                 .map(date -> new DayPlan(date, new Percent(40), List.of(), new Percent(40), new Percent(80),
-                        new Percent(40), 0, List.of()))
+                        new Percent(40), 0, 0, List.of()))
                 .toList();
         var parts = Parts.of(madeAt, zone, days, 0.3);
         return DashboardView.of(new PlanParts(madeAt, zone, days, 0.3, parts.batteryLevelPct(), false,

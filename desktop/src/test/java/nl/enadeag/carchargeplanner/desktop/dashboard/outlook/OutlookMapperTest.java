@@ -55,7 +55,7 @@ class OutlookMapperTest {
     }
 
     private static DayPlan day(LocalDate date, Window... windows) {
-        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(80), new Percent(62), 12,
+        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(80), new Percent(62), 12, 0,
                 List.of());
     }
 
@@ -68,7 +68,7 @@ class OutlookMapperTest {
     /** A day without a window that starts at a level while the plan charges up to another; the target is 80 %. */
     private static DayPlan withoutWindow(LocalDate date, double startPct, double chargeToPct) {
         return new DayPlan(date, new Percent(startPct), List.of(), new Percent(startPct), new Percent(chargeToPct),
-                new Percent(startPct), 12, List.of());
+                new Percent(startPct), 12, 0, List.of());
     }
 
     private static Outlook.Planned planned(boolean batteryAssumed, DayPlan... days) {
@@ -305,14 +305,14 @@ class OutlookMapperTest {
     /** Today with a window, Saturday the trip leaves after charging or not, Sunday to Tuesday without windows. */
     private static DashboardModel.Plan withTrip(Messages messages, double saturdayAfterPct) {
         var saturday = new DayPlan(TODAY.plusDays(1), new Percent(94), List.of(), new Percent(saturdayAfterPct),
-                new Percent(94), new Percent(32), 70, List.of());
+                new Percent(94), new Percent(32), 70, 0, List.of());
         var days = List.of(day(TODAY, window(TODAY, 11, 14, 0)), saturday,
                 new DayPlan(TODAY.plusDays(2), new Percent(32), List.of(), new Percent(32), new Percent(80),
-                        new Percent(32), 0, List.of()),
+                        new Percent(32), 0, 0, List.of()),
                 new DayPlan(TODAY.plusDays(3), new Percent(32), List.of(), new Percent(32), new Percent(80),
-                        new Percent(32), 0, List.of()),
+                        new Percent(32), 0, 0, List.of()),
                 new DayPlan(TODAY.plusDays(4), new Percent(32), List.of(), new Percent(32), new Percent(80),
-                        new Percent(20), 12, List.of()));
+                        new Percent(20), 12, 0, List.of()));
         var advice = new TripAdvice(LONG_TRIP, new Percent(94), List.of(), new Percent(94), Optional.empty(),
                 new Percent(94), 0, new Percent(42));
         var planned = new Outlook.Planned(at(TODAY, 8, 12), BRUSSELS, days, new Percent(50), false, Optional.empty(),
@@ -399,9 +399,9 @@ class OutlookMapperTest {
     /** Today without a window at the target, with the grid charge for Saturday's trip starting this evening. */
     private static DashboardModel.Plan gridChargeToday(Messages messages) {
         var today = new DayPlan(TODAY, new Percent(80), List.of(), new Percent(94), new Percent(80), new Percent(94), 0,
-                List.of());
+                0, List.of());
         var saturday = new DayPlan(TODAY.plusDays(1), new Percent(94), List.of(), new Percent(94), new Percent(94),
-                new Percent(32), 70, List.of());
+                new Percent(32), 70, 0, List.of());
         var grid = new TripGridCharge(window(TODAY, 20, 22, 14.6), TripGridCharge.Start.PLANNED);
         var advice = new TripAdvice(LONG_TRIP, new Percent(94), List.of(), new Percent(80), Optional.of(grid),
                 new Percent(94), 0, new Percent(42));

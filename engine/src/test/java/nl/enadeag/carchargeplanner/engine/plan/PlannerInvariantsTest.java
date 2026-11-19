@@ -77,10 +77,30 @@ class PlannerInvariantsTest {
                     .isAfterOrEqualTo(sorted.get(i - 1).end());
         }
 
+        for (int i = 0; i < days.size(); i++) {
+            var day = days.get(i);
+            double start = day.startLevelPct().value();
+            double after = day.levelAfterChargingPct().value();
+            double end = day.endLevelPct().value();
+            assertThat(after).as("%s is charged to at least its start", day.date()).isGreaterThanOrEqualTo(start);
+            assertThat(after).as("%s is charged to its end or more", day.date()).isGreaterThanOrEqualTo(end);
+            // without trips the day's course is its start, its solar charging up to what it aims at, and its end
+            double solarPct = percentOf(input, day.windows().stream().mapToDouble(Window::solarKwh).sum());
+            double solarLevel = Math.min(start + solarPct, Math.max(start, day.chargeToPct().value()));
+            assertThat(after).as("%s is charged to a level on its course", day.date())
+                    .isCloseTo(Math.max(solarLevel, end), within(EPS));
+            assertThat(end - day.drivingShortPct()).as("%s ends by its driving below the level after", day.date())
+                    .isCloseTo(after - day.drivingPct(), within(EPS));
+            if (i > 0) {
+                assertThat(day.startLevelPct()).as("%s starts where the day before ended", day.date())
+                        .isEqualTo(days.get(i - 1).endLevelPct());
+            }
+        }
+
         double minimum = input.preferences().minimumPct().value();
         if (advice.isEmpty()) {
             assertThat(days).as("no advice: every day ends at most a point under the minimum")
-                    .allSatisfy(day -> assertThat(day.levelAfterChargingPct().value() - day.drivingPct())
+                    .allSatisfy(day -> assertThat(day.endLevelPct().value() - day.drivingShortPct())
                             .isGreaterThanOrEqualTo(minimum - 1 - EPS));
             return;
         }
@@ -166,6 +186,11 @@ class PlannerInvariantsTest {
             }
         }
         return false;
+    }
+
+    /** The part of the battery that wall-side energy charges. */
+    private static double percentOf(Case input, double wallKwh) {
+        return wallKwh * input.system().charger().efficiency() / input.system().car().usableBatteryKwh() * 100;
     }
 
     /** The usable surplus over a time, from the forecast steps. */

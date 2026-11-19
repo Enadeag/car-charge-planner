@@ -8,7 +8,9 @@ import java.util.Optional;
  * leaves, at the end of the day, after the trip.
  *
  * @param startPct at the start of the day, never null; today's at the moment the plan was made
- * @param afterPct after the day's charging, never null; the start's when the day has none
+ * @param afterPct after the day's charging, never null: the highest level the day reaches, which is the start or a
+ *     higher level at a departure, after its solar charging or after a trip's grid charge that runs after the day's
+ *     driving; the start's when the day has no charging
  * @param afterTripPct at the end of the day a trip the plan advises on leaves, after the trip; empty on any other
  *     day, never null
  */
@@ -16,7 +18,8 @@ public record BatteryLevels(Percent startPct, Percent afterPct, Optional<Percent
 
     /**
      * Whether the day charges before the trip, which is when the start and the level after charging differ in whole
-     * percent. Without it a client shows only the start and the level after the trip.
+     * percent; on a departure day whose charging after the return brings the car above its start, that charging counts
+     * too. Without it a client shows only the start and the level after the trip.
      *
      * <p>A level is shown as a whole percentage, rounded half up; within 0 to 100 a tie is an exact half, which
      * {@link Math#round(double)} rounds up too.

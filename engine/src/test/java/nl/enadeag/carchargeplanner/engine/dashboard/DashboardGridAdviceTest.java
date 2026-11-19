@@ -43,7 +43,7 @@ class DashboardGridAdviceTest {
             List<OneOffAwayPeriod> away, List<Trip> trips) {
         var days = List.of(TODAY, TODAY.plusDays(1), TODAY.plusDays(2)).stream()
                 .map(date -> new DayPlan(date, new Percent(40), List.of(), new Percent(40), new Percent(80),
-                        new Percent(40), 0, List.of()))
+                        new Percent(40), 0, 0, List.of()))
                 .toList();
         var source = new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", madeAt, Freshness.FRESH,
                 ProviderRole.PRIMARY, "", Optional.empty(), List.of());

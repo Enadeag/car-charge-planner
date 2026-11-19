@@ -91,7 +91,7 @@ internal object Plans {
             val after = Percent(40.0 + 10.0 * windows.size)
             val date = madeAt.toLocalDate().plusDays(index.toLong())
             DayPlan(date, level, windows, after, Percent(chargeToPct(date)), endPct(date)?.let { Percent(it) } ?: after,
-                0.0, forecast(date))
+                0.0, 0.0, forecast(date))
         }
         return Outlook.Planned(madeAt.toInstant(), madeAt.zone, plans, level, assumed, Optional.ofNullable(gridAdvice),
             tripAdvice, source, baseloadKw, Percent(minimum), Percent(target))

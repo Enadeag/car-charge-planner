@@ -333,7 +333,8 @@ public final class Planner {
      * One day, in parts cut at its departures. Each part charges on solar power up to the target level, or up to what
      * the next trip needs from its first day of charging above the target. A trip's grid charge on its departure day is
      * counted before the departure; one on an earlier day after that day's driving, as it runs in the evening or the
-     * night. The day's solar charging aims at the highest of its parts' levels.
+     * night. The day's solar charging aims at the highest of its parts' levels. The level after charging is the highest
+     * the day reaches: at its start, at a departure, after the last solar charging or at its end.
      */
     private DayPlan planDay(LocalDate date, double startPct, Input input, List<TripCharge> charges,
             List<Departure> departures) {
@@ -341,8 +342,9 @@ public final class Planner {
         var runs = input.runsByDay().getOrDefault(date, List.of());
         var windows = new ArrayList<Window>();
         double level = startPct;
-        double removedPct = 0;
+        double highestPct = startPct;
         double tripsPct = 0;
+        double shortPct = 0;
         double laterGridPct = 0;
         double chargeToPct = 0;
         var partStart = date.atStartOfDay(zone).toInstant();
@@ -361,9 +363,10 @@ public final class Planner {
             if (gridDate(charge).filter(date::equals).isPresent()) {
                 level = Math.min(100, level + gridPct(charge));
             }
+            highestPct = Math.max(highestPct, level);
             double returned = Math.max(0, level - charge.tripPct());
             departures.add(new Departure(Math.max(0, level - gridPct(charge)), level, returned));
-            removedPct += level - returned;
+            shortPct += Math.max(0, charge.tripPct() - level);
             tripsPct += charge.tripPct();
             level = returned;
             partStart = departure;
@@ -373,10 +376,11 @@ public final class Planner {
         level = chargePart(partStart, dayEnd, level, capPct, runs, input.running(), windows);
 
         double otherPct = otherDrivingPct(date, input.now());
-        double after = Math.min(100, level + removedPct + laterGridPct);
+        shortPct += Math.max(0, otherPct - level);
         double end = Math.min(100, Math.max(0, level - otherPct) + laterGridPct);
+        double after = Math.max(Math.max(highestPct, level), end);
         return new DayPlan(date, new Percent(startPct), windows, new Percent(after), new Percent(chargeToPct),
-                new Percent(end), otherPct + tripsPct, input.stepsByDay().getOrDefault(date, List.of()));
+                new Percent(end), otherPct + tripsPct, shortPct, input.stepsByDay().getOrDefault(date, List.of()));
     }
 
     /**
