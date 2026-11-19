@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.engine.config.Percent;
-import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -34,8 +34,8 @@ class ListedTripTest {
     private static DashboardView dashboard(Instant madeAt, ZoneId zone, List<Trip> trips) {
         var first = madeAt.atZone(zone).toLocalDate();
         var days = Stream.iterate(first, day -> day.plusDays(1)).limit(5)
-                .map(date -> new DayPlan(date, new Percent(40), List.of(), new Percent(40), new Percent(80),
-                        new Percent(40), 0, 0, List.of()))
+                .map(date -> DayPlans.of(date, new Percent(40), List.of(), new Percent(40), new Percent(80),
+                        new Percent(40), 0, List.of()))
                 .toList();
         var parts = Parts.of(madeAt, zone, days, 0.3);
         return DashboardView.of(new PlanParts(madeAt, zone, days, 0.3, parts.batteryLevelPct(), false,

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
@@ -43,14 +44,14 @@ class DayCardTest {
     }
 
     private static DayPlan levels(LocalDate date, List<Window> windows, double start, double after, double end) {
-        return new DayPlan(date, new Percent(start), windows, new Percent(after), new Percent(40), new Percent(end), 0,
-                0, List.of());
+        return DayPlans.of(date, new Percent(start), windows, new Percent(after), new Percent(40), new Percent(end), 0,
+                List.of());
     }
 
     /** A day without a window that starts at one level while the plan charges up to another. */
     private static DayPlan chargingTo(LocalDate date, double start, double chargeTo) {
-        return new DayPlan(date, new Percent(start), List.of(), new Percent(start), new Percent(chargeTo),
-                new Percent(start), 0, 0, List.of());
+        return DayPlans.of(date, new Percent(start), List.of(), new Percent(start), new Percent(chargeTo),
+                new Percent(start), 0, List.of());
     }
 
     private static List<DayPlan> threeDaysWithoutWindows() {
@@ -193,8 +194,8 @@ class DayCardTest {
     @Test
     void eachDayIsJudgedByTheLevelItStartsFromNotTheLevelAfterTheGridCharge() {
         // the evening before a trip: its grid charge brings the level after charging up to what the trip needs
-        var evening = new DayPlan(TODAY, new Percent(85), List.of(), new Percent(92.1), new Percent(92.1),
-                new Percent(92.1), 0, 0, List.of());
+        var evening = DayPlans.of(TODAY, new Percent(85), List.of(), new Percent(92.1), new Percent(92.1),
+                new Percent(92.1), 0, List.of());
 
         var shown = days(List.of(evening), Optional.empty(), List.of(), List.of()).get(0);
 

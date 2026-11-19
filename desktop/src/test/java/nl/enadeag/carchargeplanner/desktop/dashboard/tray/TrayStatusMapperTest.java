@@ -14,6 +14,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.nio.file.Path;
@@ -40,7 +41,7 @@ class TrayStatusMapperTest {
     }
 
     private static DayPlan day(LocalDate date, Window... windows) {
-        return new DayPlan(date, new Percent(50), List.of(windows), new Percent(74), new Percent(80), new Percent(62), 12, 0, List.of());
+        return DayPlans.of(date, new Percent(50), List.of(windows), new Percent(74), new Percent(80), new Percent(62), 12, List.of());
     }
 
     private static Outlook.Planned plannedAt(int hour, Optional<GridAdvice> advice, DayPlan... days) {
