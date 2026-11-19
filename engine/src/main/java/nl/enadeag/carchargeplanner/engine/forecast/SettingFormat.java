@@ -8,7 +8,10 @@ public enum SettingFormat {
     /** Any text on one line: no control characters, such as a line break, which could end a header. */
     TEXT,
 
-    /** A server address a key may be sent to, as {@link ServerAddress#parse} accepts it. */
+    /**
+     * A server address a key may be sent to, as {@link ServerAddress#parse} accepts it under the {@link PlainHttp} of
+     * the client that checks it: https, or plain http to this computer only where that allows it.
+     */
     SERVER_ADDRESS,
 
     /** Only the letters A to Z, in either case, and the digits 0 to 9, at most 64 of them, such as an API key. */
@@ -17,20 +20,39 @@ public enum SettingFormat {
     private static final Pattern LETTERS_DIGITS = Pattern.compile("[A-Za-z0-9]{1,64}");
 
     /**
-     * Whether a value has this format. An empty value is left to the check on required settings.
+     * Whether a value as entered has this format. An empty value is left to the check on required settings.
      *
      * @param value the value as entered; white space around it is ignored, as the providers ignore it
+     * @param plainHttp where a server address may use plain http; the other formats do not use it
      * @return true when the value is empty or has this format
      */
-    public boolean accepts(String value) {
-        var stripped = value.strip();
-        if (stripped.isEmpty()) {
-            return true;
-        }
+    public boolean accepts(String value, PlainHttp plainHttp) {
         return switch (this) {
-            case TEXT -> stripped.chars().noneMatch(Character::isISOControl);
-            case SERVER_ADDRESS -> ServerAddress.parse(stripped).isPresent();
-            case LETTERS_AND_DIGITS -> LETTERS_DIGITS.matcher(stripped).matches();
+            case TEXT -> acceptsText(value);
+            case SERVER_ADDRESS -> value.isBlank() || ServerAddress.parse(value, plainHttp).isPresent();
+            case LETTERS_AND_DIGITS -> acceptsLettersAndDigits(value);
         };
+    }
+
+    /**
+     * Whether a value has the format {@link #TEXT}, for a provider that checks a value before it sends it.
+     *
+     * @param value the value; white space around it is ignored
+     * @return true when the value is empty or has no control characters
+     */
+    public static boolean acceptsText(String value) {
+        return value.strip().chars().noneMatch(Character::isISOControl);
+    }
+
+    /**
+     * Whether a value has the format {@link #LETTERS_AND_DIGITS}, for a provider that checks a value before it sends
+     * it.
+     *
+     * @param value the value; white space around it is ignored
+     * @return true when the value is empty or has only letters A to Z and digits, at most 64
+     */
+    public static boolean acceptsLettersAndDigits(String value) {
+        var stripped = value.strip();
+        return stripped.isEmpty() || LETTERS_DIGITS.matcher(stripped).matches();
     }
 }

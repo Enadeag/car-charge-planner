@@ -27,7 +27,7 @@ sealed interface FieldProblem {
     /** A forecast provider's setting that it needs has no value. */
     data object Required : FieldProblem
 
-    /** Not a server address an API key may be sent to: https, or plain http only to this phone. */
+    /** Not a server address the app may send an API key to: https only, also for a server on this phone. */
     data object ServerAddress : FieldProblem
 
     /** A value that may hold only the letters A to Z and the digits 0 to 9, such as an API key. */

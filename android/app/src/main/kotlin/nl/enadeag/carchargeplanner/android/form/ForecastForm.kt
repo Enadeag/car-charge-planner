@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.android.store.StoredKeys
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.forecast.PlainHttp
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
@@ -229,7 +230,9 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
         for (setting in info.settings()) {
             val target = Target.Setting(provider, setting.name())
             val value = entered[setting.name()].orEmpty()
-            if (!setting.format().accepts(value)) {
+            // https only, in every build: the release build's network security configuration refuses plain http,
+            // also to the phone itself
+            if (!setting.format().accepts(value, PlainHttp.NEVER)) {
                 problems[target] = when (setting.format()) {
                     SettingFormat.SERVER_ADDRESS -> FieldProblem.ServerAddress
                     SettingFormat.LETTERS_AND_DIGITS -> FieldProblem.LettersAndDigits

@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastProvider;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.forecast.PlaceSearch;
+import nl.enadeag.carchargeplanner.engine.forecast.PlainHttp;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderError;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderText;
@@ -90,6 +91,7 @@ public final class OpenMeteo implements ForecastProvider {
      * @param settings the provider's settings: "base_url" (blank for the public service) and "api_key" (blank for
      *     none)
      * @throws ProviderError.MissingSetting when the server address is not one {@link ServerAddress#parse} accepts
+     *     with plain http to this computer
      */
     static URI requestUri(SolarSite system, PanelArray array, Map<String, String> settings)
             throws ProviderError.MissingSetting {
@@ -104,7 +106,7 @@ public final class OpenMeteo implements ForecastProvider {
         query.put("forecast_days", String.valueOf(OpenMeteoSeries.FORECAST_DAYS));
         query.put("timeformat", "unixtime");
         var key = settings.getOrDefault("api_key", "").strip();
-        if (!SettingFormat.TEXT.accepts(key)) {
+        if (!SettingFormat.acceptsText(key)) {
             throw new ProviderError.MissingSetting(
                     "the API key must not hold a line break or another control character");
         }
@@ -125,8 +127,11 @@ public final class OpenMeteo implements ForecastProvider {
         if (server.isBlank()) {
             return PUBLIC_SERVER;
         }
-        return ServerAddress.parse(server).orElseThrow(() -> new ProviderError.MissingSetting("the server address must "
-                + "start with https://, or http:// for localhost, 127.0.0.1 or [::1], with no user name, \"?\" or \"#\""));
+        // the widest rule, the record's own: a stored address that a client's form refuses is left to that client's
+        // own network rules, so its failure keeps the message it had
+        var address = ServerAddress.parse(server, PlainHttp.TO_THIS_COMPUTER);
+        return address.orElseThrow(() -> new ProviderError.MissingSetting("the server address must start with "
+                + "https://, or http:// for localhost, 127.0.0.1 or [::1], with no user name, \"?\" or \"#\""));
     }
 
     @Override

@@ -245,7 +245,8 @@ public abstract class ProviderConformance {
         var c = providerCase();
         var wrong = "ftp://x y/?a=1&b=2#\r\nX-Injected: 1";
         for (var spec : c.provider(c.ok()).provider().info().settings()) {
-            assertThat(spec.format().accepts(wrong)).as("%s refuses the value", spec.name()).isFalse();
+            assertThat(spec.format().accepts(wrong, PlainHttp.TO_THIS_COMPUTER)).as("%s refuses the value", spec.name())
+                    .isFalse();
             var made = c.provider(c.ok());
             var settings = new HashMap<>(c.allSettings());
             settings.put(spec.name(), wrong);

@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Locale
+import java.util.Optional
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -14,6 +15,7 @@ import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.form.CarForm
 import nl.enadeag.carchargeplanner.android.form.ChargerForm
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
+import nl.enadeag.carchargeplanner.android.form.ForecastForm
 import nl.enadeag.carchargeplanner.android.form.HouseForm
 import nl.enadeag.carchargeplanner.android.form.LocationForm
 import nl.enadeag.carchargeplanner.android.form.NumberText
@@ -28,6 +30,7 @@ import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.store.StoredKeys
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
+import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
 import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult
@@ -325,6 +328,48 @@ class SettingsSessionTest {
         assertThat(session.forms.location.placeName()).isEqualTo(PlaceName("Utrecht, Netherlands"))
     }
 
+    private fun TestScope.sessionOverAStoredPlainHttpAddress(): SettingsSession {
+        val withHttp = stored.withForecast(ForecastSelection(openMeteo, Optional.empty(),
+            mapOf(openMeteo to mapOf("base_url" to "http://localhost:8080"))))
+        access.settings = StartState.Ready(withHttp)
+        return SettingsSession(handle, NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, access,
+            Saves(access, backgroundScope), backgroundScope, StandardTestDispatcher(testScheduler), withHttp, { }) { }
+            .also { runCurrent() }
+    }
+
+    @Test
+    fun aStoredPlainHttpAddressIsShownAndTheForecastPagesSaveIsRefusedAtItsFieldKeepingIt() = runTest {
+        val session = sessionOverAStoredPlainHttpAddress()
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+        assertThat(session.forms.forecast.text(openMeteo, "base_url")).isEqualTo("http://localhost:8080")
+
+        session.forms.forecast.chooseFallback(forecastSolar)
+        session.save()
+        runCurrent()
+
+        assertThat(access.written).isEmpty()
+        assertThat(session.refused.value).isTrue()
+        assertThat(session.forms.forecast.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(openMeteo, "base_url") to FieldProblem.ServerAddress))
+        assertThat(session.forms.forecast.text(openMeteo, "base_url")).isEqualTo("http://localhost:8080")
+        assertThat(storedNow().forecast().settingsOf(openMeteo)).containsEntry("base_url", "http://localhost:8080")
+    }
+
+    @Test
+    fun anotherPageSavesAsBeforeWhileAPlainHttpAddressIsStored() = runTest {
+        val session = sessionOverAStoredPlainHttpAddress()
+        session.open(SettingsPage.CAR_AND_HOUSE)
+        session.forms.car.edit(CarForm.Field.BATTERY, "75")
+
+        session.save()
+        runCurrent()
+
+        assertThat(access.written).containsExactly("settings")
+        assertThat(storedNow().system().car().usableBatteryKwh()).isEqualTo(75.0)
+        assertThat(storedNow().forecast().settingsOf(openMeteo)).containsEntry("base_url", "http://localhost:8080")
+    }
+
     @Test
     fun aRealDifferenceInTheCoordinatesSavesTheLocationWithoutThePlaceName() = runTest {
         val named = stored.withSystem(stored.system().withPlace(Coordinates(52.0907, 5.1214), amsterdam,
@@ -378,7 +423,7 @@ class SettingsSessionTest {
         session.open(SettingsPage.FORECAST)
         runCurrent()
         val forecast = session.forms.forecast
-        forecast.edit(openMeteo, "base_url", "http://localhost:8080")
+        forecast.edit(openMeteo, "base_url", "https://localhost:8443")
         forecast.edit(openMeteo, "api_key", "K1")
         forecast.chooseFallback(forecastSolar)
 
@@ -387,7 +432,7 @@ class SettingsSessionTest {
         runCurrent()
 
         assertThat(access.checked).containsExactly(
-            openMeteo to mapOf("base_url" to "http://localhost:8080", "api_key" to "K1"),
+            openMeteo to mapOf("base_url" to "https://localhost:8443", "api_key" to "K1"),
             forecastSolar to mapOf())
         assertThat(access.written).isEmpty()
     }

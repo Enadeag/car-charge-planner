@@ -73,7 +73,7 @@ public final class ExampleSolar implements ForecastProvider {
         if (key.isEmpty()) {
             throw new ProviderError.MissingSetting("Example Solar needs an API key");
         }
-        if (!SettingFormat.LETTERS_AND_DIGITS.accepts(key)) {
+        if (!SettingFormat.acceptsLettersAndDigits(key)) {
             throw new ProviderError.MissingSetting("the API key may hold only letters and digits");
         }
         return key;

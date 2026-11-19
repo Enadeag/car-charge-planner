@@ -13,6 +13,8 @@ import nl.enadeag.carchargeplanner.engine.secrets.Secrets
 import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class ForecastFormTest {
 
@@ -65,6 +67,37 @@ class ForecastFormTest {
             ForecastForm.Target.Setting(OPEN_METEO, "base_url") to FieldProblem.ServerAddress,
             ForecastForm.Target.Setting(FORECAST_SOLAR, "api_key") to FieldProblem.LettersAndDigits,
         ))
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["http://localhost:8080", "http://127.0.0.1:8080/om", "http://[::1]:8080"])
+    fun plainHttpIsRefusedAlsoForAServerOnThisPhone(address: String) {
+        form.load(DRAFT)
+        form.edit(OPEN_METEO, "base_url", address)
+
+        assertThat(form.check(DRAFT)).isNull()
+        assertThat(form.read(DRAFT)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(OPEN_METEO, "base_url") to FieldProblem.ServerAddress))
+    }
+
+    @Test
+    fun aStoredPlainHttpAddressIsShownUnchangedAndRefusedAtItsFieldUntilChanged() {
+        val stored = DRAFT.withForecast(ForecastSelection(OPEN_METEO, Optional.empty(),
+            mapOf(OPEN_METEO to mapOf("base_url" to "http://localhost:8080"))))
+        form.load(stored)
+
+        assertThat(form.text(OPEN_METEO, "base_url")).isEqualTo("http://localhost:8080")
+        assertThat(form.isEdited()).isFalse()
+        assertThat(form.check(stored)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(OPEN_METEO, "base_url") to FieldProblem.ServerAddress))
+        assertThat(form.text(OPEN_METEO, "base_url")).isEqualTo("http://localhost:8080")
+
+        form.edit(OPEN_METEO, "base_url", "https://localhost:8443")
+
+        assertThat(form.check(stored)!!.forecast().settingsOf(OPEN_METEO))
+            .isEqualTo(mapOf("base_url" to "https://localhost:8443"))
     }
 
     @Test

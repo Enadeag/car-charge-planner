@@ -983,19 +983,19 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun checkConnectionShowsTheEnginesEnglishDetailsForAServerOnThisPhone() {
+    fun checkConnectionShowsTheEnginesEnglishDetailsWhenItFails() {
         show()
         open(SettingsPage.FORECAST)
         pressProviderFold()
         field(text(R.string.provider_setting_of, text(R.string.provider_base_url), "Open-Meteo"))
-            .performTextInput("http://localhost:8080")
+            .performTextInput("https://localhost:8443")
 
         click(R.string.forecast_check, "Open-Meteo")
         compose.waitForIdle()
         access.checks.single().complete(ConnectionResult(false, 0, "Open-Meteo did not answer."))
         compose.waitForIdle()
 
-        assertThat(access.checked.single().second).containsEntry("base_url", "http://localhost:8080")
+        assertThat(access.checked.single().second).containsEntry("base_url", "https://localhost:8443")
         assertInLiveRegion(text(R.string.forecast_check_failed))
         compose.onNodeWithText(text(R.string.details_in_english, "Open-Meteo did not answer.")).assertExists()
     }
@@ -1295,6 +1295,48 @@ class SettingsScreenTest {
         pressProviderFold()
         providerFoldIs(keyAndServer, R.string.fold_expanded)
         assertThat(access.written).isEmpty()
+    }
+
+    /** Types a plain http address for a server on this phone and saves: refused, with a text that offers https only. */
+    private fun plainHttpIsRefusedAtTheField() {
+        show()
+        open(SettingsPage.FORECAST)
+        pressProviderFold()
+        baseUrl.performTextInput("http://127.0.0.1:8080/om")
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        val problem = text(R.string.problem_server_address)
+        baseUrl.assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, problem))
+        assertThat(problem).contains("https://").doesNotContain("http://")
+        assertThat(access.written).isEmpty()
+    }
+
+    @Test
+    fun plainHttpIsRefusedAlsoForAServerOnThisPhone() = plainHttpIsRefusedAtTheField()
+
+    @Test
+    @Config(qualifiers = "nl")
+    fun inDutchPlainHttpIsRefusedWithATextThatOffersOnlyHttps() = plainHttpIsRefusedAtTheField()
+
+    @Test
+    fun aStoredPlainHttpAddressIsShownUnchangedAndSaveRefusesItAtItsField() {
+        val withHttp = stored.withForecast(ForecastSelection(openMeteo, Optional.empty(),
+            mapOf(openMeteo to mapOf("base_url" to "http://localhost:8080"))))
+        access.settings = StartState.Ready(withHttp)
+        show(session(config = withHttp))
+        open(SettingsPage.FORECAST)
+
+        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        baseUrl.assert(hasText("http://localhost:8080"))
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        baseUrl.assertIsFocused().assert(hasText("http://localhost:8080"))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_server_address)))
+        assertThat(access.written).isEmpty()
+        assertThat((access.settings as StartState.Ready).config).isEqualTo(withHttp)
     }
 
     private fun provider(id: String, name: String, settings: List<SettingSpec>) = ProviderInfo(ProviderId(id), name,
