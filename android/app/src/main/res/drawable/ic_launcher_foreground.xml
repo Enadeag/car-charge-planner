@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- a white car under a half sun, inside the adaptive icon's 66 dp safe zone; drawn from
+<!-- a white car under a half sun, inside the adaptive icon's 66 dp safe zone but for the cap of the sun's top ray,
+  which reaches about 1.2 dp beyond it; drawn from
   tools/android-listing/icon.svg, which the listing's pictures are rendered from, so the two change together -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"

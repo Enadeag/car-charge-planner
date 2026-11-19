@@ -9,6 +9,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -27,10 +28,20 @@ class AndroidListingTest {
     private static final Path LISTING = Path.of("fastlane", "metadata", "android");
     private static final Path BUILD = Path.of("android", "app", "build.gradle.kts");
 
+    /** F-Droid's fallback language, which every other language follows. */
+    private static final String FALLBACK = "en-US";
+    /** The app's languages, as F-Droid names them. */
+    private static final List<String> LANGUAGES = List.of(FALLBACK, "nl-NL");
+
     /** Each text file of a language, with F-Droid's limit in characters, without the final newline. */
     private static final Map<String, Integer> TEXTS =
             Map.of("title.txt", 50, "short_description.txt", 80, "full_description.txt", 4000);
     private static final int CHANGELOG_LIMIT = 500;
+
+    /** The start of an HTML tag: F-Droid would read the text as HTML. */
+    private static final Pattern MARKUP = Pattern.compile("<[A-Za-z/]");
+    /** PNG chunks that carry text or a time, which a picture in the repository should not. */
+    private static final List<String> METADATA = List.of("tEXt", "zTXt", "iTXt", "eXIf", "tIME");
 
     private static final Pattern CHANGELOG = Pattern.compile("[1-9][0-9]*\\.txt");
     private static final Pattern VERSION_NAME =
@@ -38,7 +49,7 @@ class AndroidListingTest {
 
     @Test
     void theListingIsInEnglishAndDutch() throws IOException {
-        assertThat(languages()).containsExactly(LISTING.resolve("en-US"), LISTING.resolve("nl-NL"));
+        assertThat(languages()).containsExactlyElementsOf(LANGUAGES.stream().map(LISTING::resolve).toList());
     }
 
     @Test
@@ -62,7 +73,7 @@ class AndroidListingTest {
 
     @Test
     void everyLanguageHasTheSameChangelogs() throws IOException {
-        var english = names(LISTING.resolve("en-US").resolve("changelogs"));
+        var english = names(LISTING.resolve(FALLBACK).resolve("changelogs"));
 
         assertThat(english).isNotEmpty();
         for (var language : languages()) {
@@ -74,7 +85,8 @@ class AndroidListingTest {
     void noChangelogIsForAVersionAfterTheAppsAndAReleaseHasItsOwn() throws IOException {
         var version = VERSION_NAME.matcher(Files.readString(BUILD));
         assertThat(version.find()).as("versionName in " + BUILD).isTrue();
-        // as AppVersion in android/build-logic works it out; -SNAPSHOT has the code of its base version
+        // as AppVersion works it out (android/build-logic/src/main/java/nl/enadeag/carchargeplanner/buildlogic/);
+        // -SNAPSHOT has the code of its base version
         var code = Integer.parseInt(version.group(1)) * 10_000 + Integer.parseInt(version.group(2)) * 100
                 + Integer.parseInt(version.group(3));
         var release = version.group(4) == null;
@@ -101,8 +113,8 @@ class AndroidListingTest {
 
     /** tools/android-listing-pictures.sh writes them; F-Droid shows them in the order of their numbers. */
     @Test
-    void everyLanguageHasTheSamePhoneScreenshotsNumberedWithoutGapsEachAPngOf1080By2400() throws IOException {
-        var english = names(LISTING.resolve("en-US").resolve("images").resolve("phoneScreenshots"));
+    void phoneScreenshotsAreNumberedAndTheSameInEveryLanguage() throws IOException {
+        var english = names(LISTING.resolve(FALLBACK).resolve("images").resolve("phoneScreenshots"));
 
         assertThat(english).isNotEmpty();
         assertThat(english).containsExactlyInAnyOrderElementsOf(
@@ -123,6 +135,17 @@ class AndroidListingTest {
                 .isEqualTo("89504e470d0a1a0a0000000d49484452");
         var header = ByteBuffer.wrap(bytes, 16, 8);
         assertThat(List.of(header.getInt(), header.getInt())).as(picture.toString()).containsExactly(width, height);
+        assertThat(chunks(bytes)).as(picture + " holds no text or time").doesNotContainAnyElementsOf(METADATA);
+    }
+
+    /** The types of a PNG's chunks, in order. */
+    private static List<String> chunks(byte[] png) {
+        var types = new ArrayList<String>();
+        var buffer = ByteBuffer.wrap(png);
+        for (int at = 8; at + 8 <= png.length; at += 12 + buffer.getInt(at)) {
+            types.add(new String(png, at + 4, 4, StandardCharsets.US_ASCII));
+        }
+        return types;
     }
 
     private static void assertWithin(Path file, int limit) throws IOException {
@@ -137,6 +160,7 @@ class AndroidListingTest {
         assertThat(text).as(file + " ends in one newline").endsWith("\n").doesNotEndWith("\n\n");
         var body = text.substring(0, text.length() - 1);
         assertThat(body).as(file.toString()).isNotBlank().doesNotContain("\r");
+        assertThat(body).as(file + " is plain text, without HTML").doesNotContainPattern(MARKUP);
         assertThat(body.codePointCount(0, body.length())).as(file + " in characters").isLessThanOrEqualTo(limit);
     }
 
