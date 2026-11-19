@@ -10,17 +10,19 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - The screen tests use Espresso 3.7.0, because the 3.5.0 that Compose's test rule brings calls `InputManager.getInstance()`, which Android 17 removed; the instrumented tests keep 3.5.0 while the emulator runs API 29 (#321).
 - One test of the notifications card's refusal in `HomeScreenTest` runs on SDK 36, because Robolectric 4.17 counts the manifest's permissions as granted on 37; it is tried again with each Robolectric update (#321).
 - Target 37, walked against Android's behaviour changes for apps targeting Android 17 and for all apps (#383):
-  - The app has no widget or `RemoteViews`, reads no SMS or contacts, uses no Bluetooth and plays and records no audio, so those changes do not apply (#383).
-  - The app does not reflect on `MessageQueue` or change a `static final` field. Espresso 3.7.0 and Robolectric 4.17 meet the new queue's minimum, and the instrumented tests keep Espresso 3.5.0 on the API 29 emulator, where the old queue runs (#383).
-  - Native libraries are loaded by name with `System.loadLibrary` (by datastore-core and graphics-path), never with `System.load` from a file the app can write, so the read-only rule does not apply (#383).
-  - The manifest sets no orientation, resizability or aspect ratio, so ignoring them on large screens changes nothing (#383).
-  - The API key field already hides its text (`PasswordVisualTransformation`, shown only with Show), so the setting that hides passwords typed on a physical keyboard changes nothing (#383).
-  - `setContentCaptureEnabled` is never called, and Settings sets `FLAG_SECURE`, which is what Android 17 asks for to keep the screen out of content capture (#383).
-  - A notification opens the app through a `PendingIntent` to the app's own alias, started by the user's tap, and no code starts an activity from the background, so the stricter background activity start rules do not apply (#383).
-  - Certificate Transparency is on for every https host, because the configuration has no trust anchors of its own; Encrypted Client Hello keeps Android's default. Neither is opted out; both show only on a device, so a failure is found by the check on a phone (#383).
-  - The release configuration names `localhost`, `127.0.0.1` and `::1` with plain http refused, because Android 17 adds an implicit configuration that allows plain http to loopback hosts when the app names none; `NetworkSecurityConfigTest` pins it (#383).
-  - The permission for the local network (`ACCESS_LOCAL_NETWORK`) is not declared or asked: a server on the owner's own network does not work on Android 17 and later, and the privacy page says so; whether to support it is #505 (#383).
-  - Still to be recorded: the maintainer's check on an Android 17 phone (the orchestrator fills this in) (#383).
+  - The app has no widget or `RemoteViews`, reads no SMS or contacts, uses no Bluetooth and plays and records no audio, so those changes do not apply.
+  - The app does not reflect on `MessageQueue` or change a `static final` field. Espresso 3.7.0 and Robolectric 4.17 meet the new queue's minimum, and the instrumented tests keep Espresso 3.5.0 on the API 29 emulator, where the old queue runs.
+  - Native libraries are loaded by name with `System.loadLibrary` (by datastore-core and graphics-path), never with `System.load` from a file the app can write, so the read-only rule does not apply.
+  - The manifest sets no orientation, resizability or aspect ratio, so ignoring them on large screens changes nothing.
+  - The API key field already hides its text (`PasswordVisualTransformation`, shown only with Show), so the setting that hides passwords typed on a physical keyboard changes nothing.
+  - `setContentCaptureEnabled` is never called, and Settings sets `FLAG_SECURE`, which is what Android 17 asks for to keep the screen out of content capture.
+  - A notification opens the app through a `PendingIntent` to the app's own alias, started by the user's tap, and no code starts an activity from the background, so the stricter background activity start rules do not apply.
+  - Certificate Transparency is on for every https host, because the configuration has no trust anchors of its own, and Encrypted Client Hello keeps Android's default; neither is opted out, and both show only on a device.
+  - The release configuration names `localhost`, `127.0.0.1` and `::1` with plain http refused, because Android otherwise adds a configuration of its own that allows plain http to the device itself. Naming one such host already keeps Android's configuration out, so every other spelling (`ip6-localhost`, the rest of 127.0.0.0/8) falls to the base rule and is refused too; `NetworkSecurityConfigTest` pins the three names.
+  - The permission for the local network (`ACCESS_LOCAL_NETWORK`) is not declared or asked, so a server on the owner's own network cannot be reached on Android 17 and later, as the privacy page says; whether to support it is #505.
+  - The text-change types for typing Chinese, Japanese, Korean or Vietnamese on a physical keyboard are for `TextView`, and the app's fields are Compose.
+  - Of the changes for all apps: the keyboard is not shown again after a rotation, as the activity is made anew and the app does not ask for it, which is accepted; the app holds one Keystore key, far under the new limit per app; it sends no `ACTION_SEND`, sets no `usesCleartextTraffic`, captures no pointer and sends nothing to its own device across profiles; the memory limit shows only on a device.
+  - Not recorded yet: the check on a phone with Android 17.
 - Dependabot has no ignore entries for the AndroidX libraries: every update is a pull request behind CI and review (#321).
 - `material-icons-core` is the only icon library; `NOTICE` names it as an exception, with its licence in `android/legal/apache-2.0.txt` (#315).
 - DataStore brings a repackaged Protocol Buffers under BSD-3-Clause, whose text is `android/legal/protobuf.txt` (#361).
