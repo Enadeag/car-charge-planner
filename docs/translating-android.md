@@ -4,6 +4,8 @@ The words and the way the texts are written in [translating.md](translating.md) 
 
 The Android app's texts are Android string resources, in `android/app/src/main/res/`: `values/strings.xml` is English, which any language without its own file falls back to, and `values-nl/strings.xml` is Dutch. The names are the same in every file. `app_name` is the one text that is not translated (`translatable="false"`): it is the product's name. The debug build alone overrides it in `android/app/src/debug/res/values/strings.xml` as "Car charge planner (debug)", also untranslated, so the two builds differ in the launcher; a new language leaves it out as before.
 
+The app's listing for F-Droid has its texts in Dutch too: `fastlane/metadata/android/nl-NL/` holds the title, the short and the full description, a changelog for each release and the phone screenshots in Dutch, beside English in `en-US/`, in plain text, with F-Droid's limits that `AndroidListingTest` checks (see [The listing for F-Droid](dev/android.md#the-listing-for-f-droid)). The words and rules of [translating.md](translating.md) hold there too, and both languages say the same.
+
 ```xml
 <!-- %1$s the start time; %2$d the number of days -->
 <string name="window_from">From %1$s, for %2$d days</string>
@@ -219,4 +221,4 @@ The debug build has two made-up languages, `en-XA` (English with accents and ext
 
 4. **Try it.** On a debug build, choose the language in Android's settings for the app (Android 13 and later: Settings, Apps, the app, Language) or as the phone's language, and look at every screen: long words are the usual trouble. The app has no language menu of its own.
 
-5. **Send it.** Commit the `values-<code>` folder, and open a pull request. A language needs the desktop's texts too, see [Adding a language to the desktop app](translating.md#adding-a-language-to-the-desktop-app), or the other app shows English.
+5. **Send it.** Commit the `values-<code>` folder, and open a pull request. The F-Droid listing in that language is a folder of its own under `fastlane/metadata/android/`, with every changelog the others have and the same phone screenshots. For the screenshots, add the language's F-Droid code (such as `de-DE`) to `languages` at the top of `tools/android-listing-pictures.sh`; the script finds the texts it taps in `values-<code>`, by the language's first two letters. If the place search names the example's country differently in the language, add it to the script's `case` that names the place, beside Dutch's "Zonnedorp, België". Add the language to `LANGUAGES` in `AndroidListingTest` too. A language needs the desktop's texts too, see [Adding a language to the desktop app](translating.md#adding-a-language-to-the-desktop-app), or the other app shows English.

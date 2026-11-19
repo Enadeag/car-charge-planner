@@ -1,6 +1,6 @@
 # Android: build, tests and CI
 
-Decisions about building, testing and checking the Android app: SDK levels, dependencies, the debug build, StrictMode, the tests, mutation testing, the licence files, the emulator job, R8, the release and dependency verification.
+Decisions about building, testing and checking the Android app: SDK levels, dependencies, the debug build, StrictMode, the tests, mutation testing, the licence files, the emulator job, R8, the release, dependency verification, and the icon and the listing for F-Droid.
 
 What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken names, saved state) is in [screens.md](screens.md); read it too.
 
@@ -170,3 +170,27 @@ Every file Gradle downloads is checked against its SHA-256 in `android/gradle/ve
 - The cache of `android.yml` stays, as cached files are checked too; the release keeps building without a cache (#484).
 - Outside the check, and not closed here: the Gradle distribution (the wrapper's `distributionSha256Sum`), the Android SDK and build-tools (`sdkmanager`, over HTTPS) and the JDK (`setup-java`, over HTTPS) (#484).
 - The file is marked as generated in `.gitattributes` (#484).
+
+### Icon and listing
+
+The app's icon and its listing for F-Droid ([The listing for F-Droid](../../dev/android.md#the-listing-for-f-droid); #486).
+
+- The icon is a white car under a yellow half sun on green (#1E8E5A). It is drawn inside the adaptive icon's 66 dp safe zone, so no launcher's mask cuts it, except the cap of the sun's top ray, which reaches about 1.2 dp beyond it (#486).
+- The car carries the meaning: white on the green has a contrast of 4.1:1, the sun's yellow (#FFC940) only 2.7:1, under 3:1, so the sun is decoration (#486).
+- The car's windows and wheel arches are holes in one path (`evenOdd`), not shapes in the background's green, so the themed icon of Android 13 and later, `ic_launcher_monochrome` with the same shapes in one colour, sun included, shows them (#486).
+- The app needs Android 10, which takes the adaptive icon from `mipmap-anydpi`, so there are no round icon and no bitmap icons per density (#486).
+- `tools/android-listing/icon.svg` is the one drawing: the vector drawables carry its path data, and the feature graphic takes its car and sun, so the launcher, the notifications and the listing show the same picture (#486).
+- The notifications' small icon is the same car and sun scaled to 24 dp in one colour, as it follows the launcher icon (#361, #486).
+- The listing is at the repository's root, `fastlane/metadata/android/`, one of the places F-Droid's page names, in `en-US` and `nl-NL`, the app's two languages; whether F-Droid finds it there with the recipe's subfolder shows when the recipe runs (#280, #486).
+- It has no `icon.png`: F-Droid takes the icon from the APK, so there is no second copy to keep the same (#486).
+- The texts are plain text, without the few HTML tags F-Droid allows, so they read the same wherever F-Droid shows them; they do not say the app works offline, as it needs the forecast (#486).
+- The feature graphic has the car and sun and the app's name only, no words to translate; the same file is in both languages, as F-Droid's page calls `en-US` the fallback language but does not say that pictures fall back (#486).
+- Each Android release adds its changelog in both languages in the release pull request (#486).
+- `AndroidListingTest` checks F-Droid's limits, that the texts are plain text, the changelogs' names against the version code, that both languages hold the same changelogs and the same phone screenshots, numbered from 1 without a gap, and that every picture is a PNG of its size without text or time chunks (#486).
+- Five phone screenshots per language, in the light theme at 1080x2400 with gesture navigation and a status bar cleaned by SystemUI's demo mode: today's dashboard with a charge window and the chart, a day with a trip and its advice, a grey day without a charge window, set-up's Welcome page, which says what leaves the phone, and Settings' Location page. Not the Forecast page, which refuses screenshots (#486).
+- The pictures are made from an emulator by `tools/android-listing-pictures.sh`, so they can be made again when a screen changes; it does not run in CI, as a person looks at each picture before it is committed (#486).
+- They show the made-up example home and a made-up forecast, never a live one: a stand-in for Open-Meteo on `127.0.0.1`, which the debug build may reach over plain http, answers relative to a fixed day, so the pictures come out the same on every run; nothing of a real owner, place or car brand is in them (#486).
+- They show the app as a release does: the debug build, which `run-as` and the stand-in need, is built for them with `-PdebugAppName`, a Gradle property that only replaces its shown name, so no picture says "(debug)" and every other build stays as it was (#486).
+- The Welcome page is taken on the app without any of its files, as at its first start; it needs no network (#486).
+- The Location page is Settings', not set-up's: set-up's needs a place chosen from the search, which asks Open-Meteo's real geocoding service at an address the app does not let a setting change (`OpenMeteoPlaces`); Settings' Location page is the same page, with the example's place (#486).
+- Dutch has its own set, with the emulator's language set to Dutch and the same data and clock, and the place named as the search names it in Dutch; the app's name stays "Car charge planner", as in the app (#486).

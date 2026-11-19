@@ -10,6 +10,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - The APK is about 9 MB instead of 30 MB: R8 now leaves out the code the app does not use, and keeps the class names, files and lines, so the log stays readable (#485).
 - Every release is built twice, on two separate GitHub runners, and is signed only when both builds give the same APK; an APK you build from the tag with the exact Java, platform and build-tools of the release should match it apart from its signature (see Reproducible build in `docs/design/android/build.md`) (#424).
 - The app now targets Android 17. On Android 17 and later it cannot reach a forecast server on your own home network, because it does not ask for the permission for nearby devices; a server on the internet works as before (#383).
+- The app has its own icon: a white car under a yellow half sun, on green, also as the themed icon and in the notifications (#486).
 
 ## [0.7.0] - 2026-11-13
 

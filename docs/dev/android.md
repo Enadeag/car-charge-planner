@@ -156,6 +156,36 @@ CI builds the app with `android.yml`, on Linux with JDK 21, in two jobs; [What i
 
 A release is built and signed by `android-release.yml`, for a tag `android-vX.Y.Z`; see [Releasing the Android app](ci-and-releasing.md#releasing-the-android-app).
 
+## The listing for F-Droid
+
+F-Droid shows the app with the texts and pictures in `fastlane/metadata/android/` at the repository's root, one folder per language, `en-US` (F-Droid's fallback) and `nl-NL`: `title.txt`, `short_description.txt`, `full_description.txt`, `changelogs/<versionCode>.txt`, `images/featureGraphic.png`, the same picture in both, and `images/phoneScreenshots/1.png` to `5.png`.
+
+The texts are plain text, say only what the README, the privacy page and the changelog say, and keep F-Droid's limits: the title 50 characters, the short description 80, the full description 4000 and a changelog 500, without the final newline. `AndroidListingTest`, in the Maven build, checks those limits, that the texts hold no HTML, that both languages hold the same changelogs and the same phone screenshots, numbered from 1 without a gap and each a PNG of 1080x2400 without text or time chunks, that none is for a version after `versionName`'s and that a release commit has its version's changelog (see [Releasing the Android app](ci-and-releasing.md#releasing-the-android-app)).
+
+There is no `icon.png`: F-Droid takes the icon from the APK. Whether F-Droid finds the folder at the root while its recipe builds from `android/` shows when the recipe runs (#280).
+
+The icon's drawing is `tools/android-listing/icon.svg`. `ic_launcher_foreground.xml`, `ic_launcher_monochrome.xml` and `ic_stat_charge.xml` in `android/app/src/main/res/drawable/` carry its path data unchanged, and the colour `ic_launcher_background` its green, so a change to the icon changes all four. The feature graphic is rendered from `tools/android-listing/feature-graphic.svg`, which has the icon's car and sun and the name in Noto Sans Bold turned into paths (with fontTools), so the render needs no font:
+
+```bash
+rsvg-convert -w 1024 -h 500 tools/android-listing/feature-graphic.svg -o fastlane/metadata/android/en-US/images/featureGraphic.png
+cp fastlane/metadata/android/en-US/images/featureGraphic.png fastlane/metadata/android/nl-NL/images/featureGraphic.png
+```
+
+The phone screenshots are made on an emulator by `tools/android-listing-pictures.sh`, in English and in Dutch: today's dashboard with a charge window and the chart, Sunday with a trip and its advice, a grey Monday without a charge window, set-up's Welcome page, which says what leaves the phone, and Settings' Location page. Make them again only when one of those screens visibly changes, and look at every picture before committing them; CI does not run the script.
+
+```bash
+sh tools/android-listing-pictures.sh                      # builds the debug app, boots an emulator of its own, writes the ten pictures
+SERIAL=emulator-5554 sh tools/android-listing-pictures.sh # on an emulator that is booted already
+```
+
+It builds the debug app with `-PdebugAppName="Car charge planner"`, so the pictures show the name a release shows instead of "(debug)"; without the property the debug build is made as always.
+
+The data is the made-up example home of `docs/example-engine.json` on Friday 3 July 2026 at 08:20, with a battery level, and for the second picture a trip, put in the app's files folder through `run-as`; the Welcome page is taken on the app without any of its files. The forecast is made up too: `tools/android-listing/MadeUpOpenMeteo.java` answers as Open-Meteo on `127.0.0.1`, which the emulator reaches through `adb reverse`, and the settings file names it as Open-Meteo's server address, without a fallback, so the app asks no real service. Set-up's Location page is not pictured, as its place search asks Open-Meteo's real service; Settings' Location page is the same page.
+
+The status bar is cleaned with SystemUI's demo mode; an app whose ongoing notification would still show there, such as Android System Intelligence downloading the new language, is stopped, and the script says so.
+
+Without `SERIAL` the script makes an AVD of its own in a temporary folder (on the Android 17 Google Play image, or the one `IMAGE` names), boots it without a window on port 5584 (`EMULATOR_PORT`) and removes both afterwards. A booted emulator (the script refuses a phone, as it sets the clock and stops apps) must be 1080x2400 at 420 dpi with gesture navigation and without the debug app (whose data the script would replace); its language, time zone, automatic time, night mode and demo mode are put back afterwards and the app is uninstalled, but its clock stays on the pictures' time until automatic time sets it again. The script optimises the PNGs with `oxipng` or `optipng` when one is on `PATH`, and says which; without one they stay as `screencap` writes them, which holds no text or time chunks.
+
 ## Trying the app
 
 Open `android/` in Android Studio and run the app on an emulator from its Device Manager (any system image from API 29) or on a phone; or start an emulator and run `adb install app/build/outputs/apk/debug/app-debug.apk` from `android/`. It opens on set-up, and after Finish on the dashboard, a tab per day of the plan, with Refresh and Settings in its top app bar.

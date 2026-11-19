@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the launcher icon's car and sun (ic_launcher_foreground) in one colour, for the themed icon of Android 13 and
+  later, which tints it -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M43,41 A11,11 0 0 1 65,41 Z" />
+  <path
+      android:strokeColor="#FFFFFFFF"
+      android:strokeWidth="3.5"
+      android:strokeLineCap="round"
+      android:pathData="M39.9,35.87 L35.68,34.33 M45.4,28.71 L42.82,25.03 M54,26 L54,21.5 M62.6,28.71 L65.18,25.03 M68.1,35.87 L72.32,34.33" />
+  <!-- the windows and the wheel arches are holes in the body -->
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:fillType="evenOdd"
+      android:pathData="M30,70 v-5 q0,-5 5,-6 l5,-8 q2,-3 5,-3 h18 q3,0 5,3 l5,8 q5,1 5,6 v5 q0,2 -2,2 H73.5 A6.5,6.5 0 0 0 60.5,72 H47.5 A6.5,6.5 0 0 0 34.5,72 H32 q-2,0 -2,-2 z M44.5,51.5 h8 v7 h-12.4 z M55.5,51.5 h8 l4.4,7 h-12.4 z" />
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M37,72 a4,4 0 1 0 8,0 a4,4 0 1 0 -8,0 z M63,72 a4,4 0 1 0 8,0 a4,4 0 1 0 -8,0 z" />
+</vector>
