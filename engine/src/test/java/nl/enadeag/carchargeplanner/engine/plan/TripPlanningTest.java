@@ -636,6 +636,79 @@ class TripPlanningTest {
     }
 
     @Test
+    void fromMiddayOnlyTheRestOfTheDaysDrivingComesBeforeTheGridCharge() {
+        // from 12:00 Friday drives 4.5 %, to 45.5 %, and the evening's grid charge adds 45.25 % for Saturday's 90.75 %
+        var planned = plan(system(50), dark(3), 50, at(FRI, 12), trip(SAT, 8, 18, 250));
+        var friday = planned.day(FRI);
+        assertThat(friday.drivingPct()).isCloseTo(4.5, CLOSE);
+        assertThat(friday.levelAfterChargingPct().value()).isCloseTo(90.75, CLOSE);
+        assertThat(friday.endLevelPct().value()).isCloseTo(90.75, CLOSE);
+    }
+
+    @Test
+    void anEarlierDaysGridChargeStopsAtAFullBattery() {
+        // 260 km take 53.82 %, so Sunday needs 30 + 53.82 + 9 = 92.82 %; away from Saturday 06:00, the grid charge
+        // runs on Friday evening, and from Friday's 41 % after its driving its 92.82 - 32 = 60.82 % (as Saturday drives
+        // 9 % more) would reach 101.82 %: it stops at 100 %, and Sunday leaves with 91 %
+        var away = new AwayTimes(List.of(), List.of(new OneOffAwayPeriod(at(SAT, 6), at(SUN, 7))),
+                List.of(trip(SUN, 8, 18, 260)));
+        var planned = plan(system(50), dark(4), 50, at(FRI, 0), away);
+        var friday = planned.day(FRI);
+        assertThat(planned.grid().start().atZone(TZ).toLocalDate()).isEqualTo(FRI);
+        assertThat(friday.endLevelPct().value()).isEqualTo(100);
+        assertThat(friday.levelAfterChargingPct().value()).isEqualTo(100);
+        assertThat(planned.day(SAT).endLevelPct().value()).isCloseTo(91, CLOSE);
+        assertThat(planned.trip().departureLevelPct().value()).isCloseTo(91, CLOSE);
+    }
+
+    @Test
+    void aDepartureDayWithAGridChargeBeforeAndSunAfterTheTripShowsTheHighestOfBoth() {
+        // 145 km take 30.015 %, so the trip needs 60.015 %: the 10.015 % from the grid runs on Saturday morning before
+        // the 10:00 departure; the car is back at 11:00 with 30 % and the sun until 19:00 charges it to the 80 % target
+        var afternoon = Map.of(11, 12.0, 12, 12.0, 13, 12.0, 14, 12.0, 15, 12.0, 16, 12.0, 17, 12.0, 18, 12.0);
+        var planned = plan(days(List.of(Map.of(), Map.of(), afternoon)), 50, at(FRI, 0), trip(SAT, 10, 11, 145));
+        var saturday = planned.day(SAT);
+        assertThat(planned.grid().start().atZone(TZ).toLocalDate()).isEqualTo(SAT);
+        assertThat(planned.trip().departureLevelPct().value()).isCloseTo(60.015, CLOSE);
+        assertThat(planned.trip().returnLevelPct().value()).isCloseTo(30, CLOSE);
+        assertThat(saturday.levelAfterChargingPct().value()).isCloseTo(80, CLOSE);
+        assertThat(saturday.endLevelPct().value()).isCloseTo(80, CLOSE);
+    }
+
+    @Test
+    void aDayThatEndsFullAfterATripsGridChargeGetsNoGridAdviceThoughItsDrivingFits() {
+        // 400 km a day take 72 %, so Saturday's 100 km trip (20.7 %) would need 30 + 20.7 + 72 = 122.7 %: the plan
+        // charges for 100 %. Friday drives from 90 % to 18 % and the evening's grid charge brings it to 100 %, which is
+        // above the minimum; Saturday leaves with 100 %, is back with 79.3 % and drives to 7.3 %, and Sunday's 72 %
+        // leave it 64.7 points short: the advice is for Sunday, 30 + 64.7 = 94.7 % under the minimum
+        var planned = plan(system(400), dark(4), 90, at(FRI, 0), trip(SAT, 8, 18, 100));
+        var friday = planned.day(FRI);
+        assertThat(planned.grid().start().atZone(TZ).toLocalDate()).isEqualTo(FRI);
+        assertThat(friday.endLevelPct().value()).isEqualTo(100);
+        assertThat(friday.drivingShortPct()).isZero();
+        var advice = planned.gridAdvice().orElseThrow();
+        assertThat(advice.day()).isEqualTo(SUN);
+        assertThat(advice.endLevelPct()).isCloseTo(-64.7, CLOSE);
+        assertThat(advice.deficitPct()).isCloseTo(94.7, CLOSE);
+    }
+
+    @Test
+    void aDayThatRunsOutBeforeATripsGridChargeLosesItsGridAdvice() {
+        // as above from 50 %: Friday's 72 % leave it 22 points short before the evening's grid charge brings it to
+        // 100 %, so the advice reads Friday's end as 100 - 22 = 78 % and says nothing of the day the car runs out on;
+        // #511 keeps the question. The advice is for Sunday, as above
+        var planned = plan(system(400), dark(4), 50, at(FRI, 0), trip(SAT, 8, 18, 100));
+        var friday = planned.day(FRI);
+        assertThat(planned.grid().start().atZone(TZ).toLocalDate()).isEqualTo(FRI);
+        assertThat(friday.endLevelPct().value()).isEqualTo(100);
+        assertThat(friday.drivingShortPct()).isCloseTo(22, CLOSE);
+        var advice = planned.gridAdvice().orElseThrow();
+        assertThat(advice.day()).isEqualTo(SUN);
+        assertThat(advice.endLevelPct()).isCloseTo(-64.7, CLOSE);
+        assertThat(advice.deficitPct()).isCloseTo(94.7, CLOSE);
+    }
+
+    @Test
     void eachDayStartsAtTheLevelTheDayBeforeEnds() {
         var planned = plan(system(50), days(List.of(Map.of(), SUNNY, Map.of(), Map.of(), Map.of())), 50, at(FRI, 0),
                 trip(SAT, 8, 18, 100), trip(SUN.plusDays(1), 8, 18, 250));

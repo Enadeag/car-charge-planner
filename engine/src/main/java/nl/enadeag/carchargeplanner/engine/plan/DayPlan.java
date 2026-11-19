@@ -21,8 +21,8 @@ import java.util.List;
  *     after it; at most 100, and 0 when driving takes more than is left and no grid charge follows
  * @param drivingPct the part of the battery driving takes off the day in percent, 0 or more: the daily distance, and
  *     the trips that depart on the day; more than 100 when the driving needs more than the battery holds
- * @param drivingShortPct the part of the day's driving the battery cannot hold, in percent, 0 or more: 0 when the
- *     battery holds it all
+ * @param drivingShortPct the part of the day's driving the battery cannot hold, in percent, from 0 to
+ *     {@code drivingPct}: 0 when the battery holds it all
  * @param forecast the forecast steps that start on the day in the home's time zone, in time order; empty when the
  *     forecast does not reach the day
  */
@@ -40,13 +40,18 @@ public record DayPlan(
     /**
      * Checks the driving the battery cannot hold, and copies the lists of windows and forecast steps.
      *
-     * @throws IllegalArgumentException when the driving the battery cannot hold is below 0 or not a number
+     * @throws IllegalArgumentException when the driving the battery cannot hold is below 0, more than the day's
+     *     driving or not a number
      * @throws NullPointerException when the windows or the steps are null or hold null
      */
     public DayPlan {
         if (drivingShortPct < 0 || Double.isNaN(drivingShortPct)) {
             throw new IllegalArgumentException(
                     "the driving the battery cannot hold must be 0 % or more, not " + drivingShortPct + " %");
+        }
+        if (drivingShortPct > drivingPct) {
+            throw new IllegalArgumentException("the driving the battery cannot hold, " + drivingShortPct
+                    + " %, must be at most the day's driving, " + drivingPct + " %");
         }
         windows = List.copyOf(windows);
         forecast = List.copyOf(forecast);

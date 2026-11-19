@@ -91,7 +91,10 @@ public final class GridAdvisor {
         return endLevelPct(day) < preferences.minimumPct().value() - MIN_DEFICIT_PCT;
     }
 
-    /** The level at the end of the day, below 0 by the driving the battery cannot hold. */
+    /**
+     * The level at the end of the day less the driving the battery cannot hold: below 0 when the driving exceeds the
+     * battery, unless a trip's grid charge after that driving makes up for it.
+     */
     private static double endLevelPct(DayPlan day) {
         return day.endLevelPct().value() - day.drivingShortPct();
     }

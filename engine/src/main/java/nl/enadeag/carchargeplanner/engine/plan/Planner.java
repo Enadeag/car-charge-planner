@@ -333,8 +333,8 @@ public final class Planner {
      * One day, in parts cut at its departures. Each part charges on solar power up to the target level, or up to what
      * the next trip needs from its first day of charging above the target. A trip's grid charge on its departure day is
      * counted before the departure; one on an earlier day after that day's driving, as it runs in the evening or the
-     * night. The day's solar charging aims at the highest of its parts' levels. The level after charging is the highest
-     * the day reaches: at its start, at a departure, after the last solar charging or at its end.
+     * night. The day's solar charging aims at the highest of its parts' levels. The level after charging is the one
+     * {@link DayPlan#levelAfterChargingPct()} describes.
      */
     private DayPlan planDay(LocalDate date, double startPct, Input input, List<TripCharge> charges,
             List<Departure> departures) {
@@ -342,7 +342,8 @@ public final class Planner {
         var runs = input.runsByDay().getOrDefault(date, List.of());
         var windows = new ArrayList<Window>();
         double level = startPct;
-        double highestPct = startPct;
+        // no need to count the start: the first departure, or without one the solar charging, never ends below it
+        double highestPct = 0;
         double tripsPct = 0;
         double shortPct = 0;
         double laterGridPct = 0;

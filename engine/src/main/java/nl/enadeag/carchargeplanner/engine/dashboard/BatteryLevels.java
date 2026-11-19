@@ -18,8 +18,8 @@ public record BatteryLevels(Percent startPct, Percent afterPct, Optional<Percent
 
     /**
      * Whether the day charges before the trip, which is when the start and the level after charging differ in whole
-     * percent; on a departure day whose charging after the return brings the car above its start, that charging counts
-     * too. Without it a client shows only the start and the level after the trip.
+     * percent; charging after the return that brings the car above its start counts too. Without it a client shows
+     * only the start and the level after the trip.
      *
      * <p>A level is shown as a whole percentage, rounded half up; within 0 to 100 a tie is an exact half, which
      * {@link Math#round(double)} rounds up too.
