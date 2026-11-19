@@ -1,12 +1,20 @@
 package nl.enadeag.carchargeplanner.engine.forecast;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class SettingFormatTest {
+
+    @ParameterizedTest
+    @EnumSource(SettingFormat.class)
+    void everyFormatRefusesToCheckWithoutBeingToldWherePlainHttpIsAllowed(SettingFormat format) {
+        assertThatThrownBy(() -> format.accepts("abc", null)).isInstanceOf(IllegalArgumentException.class);
+    }
 
     @ParameterizedTest
     @CsvSource({

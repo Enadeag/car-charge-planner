@@ -90,8 +90,8 @@ public final class OpenMeteo implements ForecastProvider {
     /**
      * @param settings the provider's settings: "base_url" (blank for the public service) and "api_key" (blank for
      *     none)
-     * @throws ProviderError.MissingSetting when the server address is not one {@link ServerAddress#parse} accepts
-     *     with plain http to this computer
+     * @throws ProviderError.MissingSetting when the server address is not https or plain http to this computer, with
+     *     no user name, "?" or "#"
      */
     static URI requestUri(SolarSite system, PanelArray array, Map<String, String> settings)
             throws ProviderError.MissingSetting {
@@ -127,8 +127,8 @@ public final class OpenMeteo implements ForecastProvider {
         if (server.isBlank()) {
             return PUBLIC_SERVER;
         }
-        // the widest rule, the record's own: a stored address that a client's form refuses is left to that client's
-        // own network rules, so its failure keeps the message it had
+        // the record's own, widest rule: a stored address that a client's form would refuse now is left to that
+        // client's own network rules
         var address = ServerAddress.parse(server, PlainHttp.TO_THIS_COMPUTER);
         return address.orElseThrow(() -> new ProviderError.MissingSetting("the server address must start with "
                 + "https://, or http:// for localhost, 127.0.0.1 or [::1], with no user name, \"?\" or \"#\""));

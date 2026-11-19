@@ -1317,6 +1317,25 @@ class SettingsScreenTest {
     fun plainHttpIsRefusedAlsoForAServerOnThisPhone() = plainHttpIsRefusedAtTheField()
 
     @Test
+    fun checkConnectionShowsTheServerAddressProblemAtTheFieldAndAsksNothing() {
+        show()
+        open(SettingsPage.FORECAST)
+        pressProviderFold()
+        baseUrl.performTextInput("http://localhost:8080")
+        pressProviderFold()
+        baseUrl.assertDoesNotExist()
+
+        click(R.string.forecast_check, "Open-Meteo")
+        compose.waitForIdle()
+
+        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        baseUrl.assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_server_address)))
+        assertThat(access.checked).isEmpty()
+        assertThat(access.written).isEmpty()
+    }
+
+    @Test
     @Config(qualifiers = "nl")
     fun inDutchPlainHttpIsRefusedWithATextThatOffersOnlyHttps() = plainHttpIsRefusedAtTheField()
 

@@ -36,11 +36,15 @@ public record ServerAddress(URI uri) {
      * Reads an address as the owner typed it.
      *
      * @param text the address; white space around it and "/" at its end are ignored
-     * @param plainHttp where the address may use plain http
+     * @param plainHttp where the reading client lets the address use plain http, as it can connect; not null
      * @return the address, or empty when it is not a web address, not one a key may be sent to, or plain http where
      *     {@code plainHttp} does not allow it
+     * @throws IllegalArgumentException when {@code plainHttp} is null
      */
     public static Optional<ServerAddress> parse(String text, PlainHttp plainHttp) {
+        if (plainHttp == null) {
+            throw new IllegalArgumentException("where plain http is allowed must be given");
+        }
         var trimmed = text.strip().replaceAll("/+$", "");
         try {
             var uri = new URI(trimmed);

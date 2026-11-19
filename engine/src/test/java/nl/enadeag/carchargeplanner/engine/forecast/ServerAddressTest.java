@@ -19,6 +19,7 @@ class ServerAddressTest {
         "HTTPS://Example.org:8443, HTTPS://Example.org:8443",
         "http://localhost:8080, http://localhost:8080",
         "http://LocalHost, http://LocalHost",
+        "HTTP://localhost, HTTP://localhost",
         "http://127.0.0.1:8080/om, http://127.0.0.1:8080/om",
         "http://[::1]:8080, http://[::1]:8080",
     })
@@ -57,6 +58,12 @@ class ServerAddressTest {
     }
 
     @Test
+    void readingAnAddressWithoutSayingWherePlainHttpIsAllowedIsAMistake() {
+        assertThatThrownBy(() -> ServerAddress.parse("https://example.org", null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void theRecordItselfAllowsPlainHttpToThisComputer() {
         assertThat(new ServerAddress(URI.create("http://localhost:8080")).withPath("/v1"))
                 .isEqualTo("http://localhost:8080/v1");
@@ -67,6 +74,7 @@ class ServerAddressTest {
     @ValueSource(strings = {
         "http://localhost.evil.example", "http://localhost@evil.example", "http://127.0.0.1.nip.io",
         "http://127.0.0.1@evil.example:80", "http://[::1].evil.example", "http://[::2]", "http://0.0.0.0",
+        "http://localhost.", "http://[0:0:0:0:0:0:0:1]",
         "http://example.org", "https://user@example.org", "https://user:pw@example.org", "https://example.org/?key=1",
         "https://example.org?", "https://example.org#top", "https://", "https:example.org", "ftp://example.org",
         "example.org", "javascript:alert(1)", "https://exa mple.org", "file:///etc/passwd", ""})

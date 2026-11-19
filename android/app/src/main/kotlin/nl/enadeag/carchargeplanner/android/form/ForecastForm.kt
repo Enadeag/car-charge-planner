@@ -174,6 +174,19 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
     fun plainOf(provider: ProviderId): Map<String, String> = infoOf(provider)?.settings().orEmpty()
         .filter { !it.secret() }.associate { it.name() to text(provider, it.name()) }.filterValues { it.isNotEmpty() }
 
+    /**
+     * Checks one provider's settings as typed, by the same rules as Save, before a connection check asks it: each
+     * refused value shows its problem at its field, and that provider's earlier problems go.
+     *
+     * @param provider the provider to be asked
+     * @return true when no value is refused, so it may be asked
+     */
+    fun checkSettingsOf(provider: ProviderId): Boolean {
+        val problems = settingProblems(provider)
+        problemsNow.value = problemsNow.value.filterKeys { (it as? Target.Setting)?.provider != provider } + problems
+        return problems.isEmpty()
+    }
+
     override fun load(config: EngineConfig) {
         val forecast = config.forecast()
         handle[PRIMARY] = forecast.primary().value()

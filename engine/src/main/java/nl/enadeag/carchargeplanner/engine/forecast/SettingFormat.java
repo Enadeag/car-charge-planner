@@ -20,13 +20,19 @@ public enum SettingFormat {
     private static final Pattern LETTERS_DIGITS = Pattern.compile("[A-Za-z0-9]{1,64}");
 
     /**
-     * Whether a value as entered has this format. An empty value is left to the check on required settings.
+     * Whether a value as entered has this format. An empty value is left to the check on required settings. Only
+     * {@link #SERVER_ADDRESS} reads the policy on plain http; it is asked of every format, so a client that checks
+     * settings of any format always says where it allows plain http.
      *
      * @param value the value as entered; white space around it is ignored, as the providers ignore it
-     * @param plainHttp where a server address may use plain http; the other formats do not use it
+     * @param plainHttp where the checking client lets a server address use plain http, as it can connect; not null
      * @return true when the value is empty or has this format
+     * @throws IllegalArgumentException when {@code plainHttp} is null
      */
     public boolean accepts(String value, PlainHttp plainHttp) {
+        if (plainHttp == null) {
+            throw new IllegalArgumentException("where plain http is allowed must be given");
+        }
         return switch (this) {
             case TEXT -> acceptsText(value);
             case SERVER_ADDRESS -> value.isBlank() || ServerAddress.parse(value, plainHttp).isPresent();

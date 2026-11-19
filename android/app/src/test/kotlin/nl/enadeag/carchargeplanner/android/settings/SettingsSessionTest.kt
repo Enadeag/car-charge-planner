@@ -357,6 +357,47 @@ class SettingsSessionTest {
     }
 
     @Test
+    fun aStoredPlainHttpAddressIsKeptWhenTheForecastPageSavesAnotherPrimaryWithoutAFallback() = runTest {
+        val session = sessionOverAStoredPlainHttpAddress()
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+
+        session.forms.forecast.choosePrimary(forecastSolar)
+        session.save()
+        runCurrent()
+
+        assertThat(access.written).containsExactly("settings")
+        assertThat(storedNow().forecast().primary()).isEqualTo(forecastSolar)
+        assertThat(storedNow().forecast().fallback()).isEmpty()
+        assertThat(storedNow().forecast().settingsOf(openMeteo)).containsEntry("base_url", "http://localhost:8080")
+    }
+
+    @Test
+    fun checkConnectionShowsAProblemSaveWouldShowAtItsFieldAndAsksNothing() = runTest {
+        val session = session()
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+        session.forms.forecast.edit(openMeteo, "base_url", "http://localhost:8080")
+        val shownBefore = session.problemsShown.value
+
+        session.checkConnection(SettingsSession.Role.PRIMARY)
+        runCurrent()
+
+        assertThat(access.checked).isEmpty()
+        assertThat(access.written).isEmpty()
+        assertThat(session.forms.forecast.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(openMeteo, "base_url") to FieldProblem.ServerAddress))
+        assertThat(session.problemsShown.value).isEqualTo(shownBefore + 1)
+
+        session.forms.forecast.edit(openMeteo, "base_url", "https://localhost:8443")
+        session.checkConnection(SettingsSession.Role.PRIMARY)
+        runCurrent()
+
+        assertThat(access.checked).containsExactly(openMeteo to mapOf("base_url" to "https://localhost:8443"))
+        assertThat(session.forms.forecast.problems.value).isEmpty()
+    }
+
+    @Test
     fun anotherPageSavesAsBeforeWhileAPlainHttpAddressIsStored() = runTest {
         val session = sessionOverAStoredPlainHttpAddress()
         session.open(SettingsPage.CAR_AND_HOUSE)

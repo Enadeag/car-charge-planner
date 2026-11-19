@@ -123,7 +123,7 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
     /** True after a Save that found a refused value, until the page saves or closes. */
     val refused: StateFlow<Boolean> = refusedNow.asStateFlow()
 
-    /** How many times Save showed problems, so the page can move the focus to the first. */
+    /** How many times Save or Check connection showed problems, so the page can move the focus to the first. */
     val problemsShown: StateFlow<Int> = problemsShownNow.asStateFlow()
 
     /** The API keys as read for the Forecast page; null while they are read, or on another page. */
@@ -247,13 +247,18 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
     }
 
     /**
-     * Asks a provider for one forecast with the Forecast page's values as typed, keys included; nothing is saved.
+     * Asks a provider for one forecast with the Forecast page's values as typed, keys included; nothing is saved. A
+     * value Save would refuse shows its problem at its field instead, and the provider is not asked.
      *
      * @param role the primary or the fallback as chosen; nothing is asked for a fallback of none
      */
     fun checkConnection(role: Role) {
         val forecast = forms.forecast
         val provider = (if (role == Role.PRIMARY) forecast.primary() else forecast.fallback()) ?: return
+        if (!forecast.checkSettingsOf(provider)) {
+            problemsShownNow.value++
+            return
+        }
         val check = if (role == Role.PRIMARY) primaryCheck else fallbackCheck
         check.check(provider, configNow.value.system(), forecast.plainOf(provider) + forecast.secretsOf(provider))
     }
