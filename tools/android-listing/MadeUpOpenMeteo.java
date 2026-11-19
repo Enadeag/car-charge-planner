@@ -26,8 +26,12 @@ import java.util.StringJoiner;
  */
 public final class MadeUpOpenMeteo {
 
-    /** The sunlight on the panels at its highest, in W/m², from the first day on. */
-    private static final double[] PEAKS = {820, 640, 560, 190};
+    /**
+     * The sunlight on the panels at its highest, in W/m², from the first day on. The first day's is one at which the
+     * example home's charge window takes nothing from the grid, so the first picture shows no "0.1 kWh from the grid"
+     * beside a rounded "100% solar".
+     */
+    private static final double[] PEAKS = {840, 640, 560, 190};
 
     private MadeUpOpenMeteo() {
     }
@@ -39,7 +43,8 @@ public final class MadeUpOpenMeteo {
         }
         var port = Integer.parseInt(args[0]);
         var first = LocalDate.parse(args[1]);
-        var server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
+        var loopback = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
+        var server = HttpServer.create(new InetSocketAddress(loopback, port), 0);
         server.createContext("/v1/forecast", exchange -> answer(exchange, first));
         server.start();
         System.out.println("made-up Open-Meteo on http://127.0.0.1:" + port + " from " + first);
@@ -67,7 +72,7 @@ public final class MadeUpOpenMeteo {
      * The hours from midnight of the first day as Open-Meteo stamps them, in seconds: the value stamped T is the mean
      * of the hour before it.
      */
-    static String forecast(LocalDate first, ZoneId zone, int days) {
+    private static String forecast(LocalDate first, ZoneId zone, int days) {
         var times = new StringJoiner(",", "[", "]");
         var values = new StringJoiner(",", "[", "]");
         for (int day = 0; day < days; day++) {
