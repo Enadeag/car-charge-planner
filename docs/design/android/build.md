@@ -22,7 +22,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
   - The permission for the local network (`ACCESS_LOCAL_NETWORK`) is not declared or asked, so a server on the owner's own network cannot be reached on Android 17 and later, as the privacy page says; whether to support it is #505.
   - The text-change types for typing Chinese, Japanese, Korean or Vietnamese on a physical keyboard are for `TextView`, and the app's fields are Compose.
   - Of the changes for all apps: the keyboard is not shown again after a rotation, as the activity is made anew and the app does not ask for it, which is accepted; the app holds one Keystore key, far under the new limit per app; it sends no `ACTION_SEND`, sets no `usesCleartextTraffic`, captures no pointer and sends nothing to its own device across profiles; the memory limit shows only on a device.
-  - Not recorded yet: the check on a phone with Android 17.
+  - Checked on a phone with Android 17 (2026-11-19), with the release build of a dry run: set-up with the place search, the forecasts of both providers, refreshing, a rotation with the keyboard open, a notification and its tap, the hourly round after an hour and after a restart all worked, so Certificate Transparency and Encrypted Client Hello stand in the way of neither provider.
 - Dependabot has no ignore entries for the AndroidX libraries: every update is a pull request behind CI and review (#321).
 - `material-icons-core` is the only icon library; `NOTICE` names it as an exception, with its licence in `android/legal/apache-2.0.txt` (#315).
 - DataStore brings a repackaged Protocol Buffers under BSD-3-Clause, whose text is `android/legal/protobuf.txt` (#361).
