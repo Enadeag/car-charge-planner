@@ -248,18 +248,21 @@ class SettingsSession(private val handle: SavedStateHandle, private val numbers:
 
     /**
      * Asks a provider for one forecast with the Forecast page's values as typed, keys included; nothing is saved. A
-     * value Save would refuse shows its problem at its field instead, and the provider is not asked.
+     * value Save would refuse or a required one that is missing shows its problem at its field instead, the provider is
+     * not asked, and an earlier result of this check goes.
      *
      * @param role the primary or the fallback as chosen; nothing is asked for a fallback of none
      */
     fun checkConnection(role: Role) {
         val forecast = forms.forecast
         val provider = (if (role == Role.PRIMARY) forecast.primary() else forecast.fallback()) ?: return
+        val check = if (role == Role.PRIMARY) primaryCheck else fallbackCheck
         if (!forecast.checkSettingsOf(provider)) {
+            // an earlier result was for other values, and an answer still under way would be too
+            check.cancel()
             problemsShownNow.value++
             return
         }
-        val check = if (role == Role.PRIMARY) primaryCheck else fallbackCheck
         check.check(provider, configNow.value.system(), forecast.plainOf(provider) + forecast.secretsOf(provider))
     }
 

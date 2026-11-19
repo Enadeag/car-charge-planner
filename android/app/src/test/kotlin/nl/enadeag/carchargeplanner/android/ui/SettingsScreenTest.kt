@@ -1317,6 +1317,25 @@ class SettingsScreenTest {
     fun plainHttpIsRefusedAlsoForAServerOnThisPhone() = plainHttpIsRefusedAtTheField()
 
     @Test
+    fun anAddressTypedForAProviderNotChosenOpensItsFoldAndTakesTheFocusOnSave() {
+        val other = stored.withForecast(ForecastSelection(forecastSolar, Optional.empty(), mapOf()))
+        access.settings = StartState.Ready(other)
+        show(session(config = other))
+        open(SettingsPage.FORECAST)
+        pressProviderFold()
+        baseUrl.performTextInput("http://localhost:8080")
+        pressProviderFold()
+
+        click(R.string.action_save)
+        compose.waitForIdle()
+
+        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        baseUrl.assertIsFocused()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_server_address)))
+        assertThat(access.written).isEmpty()
+    }
+
+    @Test
     fun checkConnectionShowsTheServerAddressProblemAtTheFieldAndAsksNothing() {
         show()
         open(SettingsPage.FORECAST)

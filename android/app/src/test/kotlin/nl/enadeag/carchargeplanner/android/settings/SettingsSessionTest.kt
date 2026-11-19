@@ -328,13 +328,83 @@ class SettingsSessionTest {
         assertThat(session.forms.location.placeName()).isEqualTo(PlaceName("Utrecht, Netherlands"))
     }
 
-    private fun TestScope.sessionOverAStoredPlainHttpAddress(): SettingsSession {
-        val withHttp = stored.withForecast(ForecastSelection(openMeteo, Optional.empty(),
+    private fun TestScope.sessionOverAStoredPlainHttpAddress(): SettingsSession =
+        sessionOver(ForecastSelection(openMeteo, Optional.empty(),
             mapOf(openMeteo to mapOf("base_url" to "http://localhost:8080"))))
-        access.settings = StartState.Ready(withHttp)
+
+    private fun TestScope.sessionOver(forecast: ForecastSelection): SettingsSession {
+        val config = stored.withForecast(forecast)
+        access.settings = StartState.Ready(config)
         return SettingsSession(handle, NumberText(Locale.ENGLISH), { amsterdam }, { "en" }, access,
-            Saves(access, backgroundScope), backgroundScope, StandardTestDispatcher(testScheduler), withHttp, { }) { }
+            Saves(access, backgroundScope), backgroundScope, StandardTestDispatcher(testScheduler), config, { }) { }
             .also { runCurrent() }
+    }
+
+    @Test
+    fun anAddressTypedForAProviderNotChosenIsRefusedAtItsFieldAndNothingIsWritten() = runTest {
+        val session = sessionOver(ForecastSelection(forecastSolar, Optional.empty(), mapOf()))
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+        session.forms.forecast.edit(openMeteo, "base_url", "http://localhost:8080")
+
+        session.save()
+        runCurrent()
+
+        assertThat(access.written).isEmpty()
+        assertThat(session.refused.value).isTrue()
+        assertThat(session.forms.forecast.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(openMeteo, "base_url") to FieldProblem.ServerAddress))
+    }
+
+    /** Check until it works, then an address Check refuses: the field shows why, and the earlier result is gone. */
+    private fun TestScope.aRefusedCheckDropsTheEarlierResult(role: SettingsSession.Role, forecast: ForecastSelection) {
+        val session = sessionOver(forecast)
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+        val check = if (role == SettingsSession.Role.PRIMARY) session.primaryCheck else session.fallbackCheck
+        session.forms.forecast.edit(openMeteo, "base_url", "https://localhost:8443")
+        session.checkConnection(role)
+        runCurrent()
+        access.checks.single().complete(ConnectionResult(true, 2, "Works"))
+        runCurrent()
+        assertThat(check.state.value).isInstanceOf(SetUpCheck.State.Works::class.java)
+
+        session.forms.forecast.edit(openMeteo, "base_url", "http://localhost:8080")
+        session.checkConnection(role)
+        runCurrent()
+
+        assertThat(check.state.value).isEqualTo(SetUpCheck.State.NotAsked)
+        assertThat(access.checked).hasSize(1)
+        assertThat(session.forms.forecast.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(openMeteo, "base_url") to FieldProblem.ServerAddress))
+    }
+
+    @Test
+    fun aRefusedCheckOfThePrimaryDropsItsEarlierResult() = runTest {
+        aRefusedCheckDropsTheEarlierResult(SettingsSession.Role.PRIMARY,
+            ForecastSelection(openMeteo, Optional.empty(), mapOf()))
+    }
+
+    @Test
+    fun aRefusedCheckOfTheFallbackDropsItsEarlierResult() = runTest {
+        aRefusedCheckDropsTheEarlierResult(SettingsSession.Role.FALLBACK,
+            ForecastSelection(forecastSolar, Optional.of(openMeteo), mapOf()))
+    }
+
+    @Test
+    fun checkingTheFallbackWithAKeyInTheWrongFormShowsItAtTheKeyAndAsksNothing() = runTest {
+        val session = sessionOver(ForecastSelection(openMeteo, Optional.of(forecastSolar), mapOf()))
+        session.open(SettingsPage.FORECAST)
+        runCurrent()
+        session.forms.forecast.edit(forecastSolar, "api_key", "not a key!")
+
+        session.checkConnection(SettingsSession.Role.FALLBACK)
+        runCurrent()
+
+        assertThat(access.checked).isEmpty()
+        assertThat(access.written).isEmpty()
+        assertThat(session.forms.forecast.problems.value).containsExactlyEntriesOf(mapOf(
+            ForecastForm.Target.Setting(forecastSolar, "api_key") to FieldProblem.LettersAndDigits))
     }
 
     @Test

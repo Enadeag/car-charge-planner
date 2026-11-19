@@ -127,8 +127,8 @@ public final class OpenMeteo implements ForecastProvider {
         if (server.isBlank()) {
             return PUBLIC_SERVER;
         }
-        // the record's own, widest rule: a stored address that a client's form would refuse now is left to that
-        // client's own network rules
+        // the record's own, widest rule: a stored address that a client's form would refuse is left to that client's
+        // own network rules
         var address = ServerAddress.parse(server, PlainHttp.TO_THIS_COMPUTER);
         return address.orElseThrow(() -> new ProviderError.MissingSetting("the server address must start with "
                 + "https://, or http:// for localhost, 127.0.0.1 or [::1], with no user name, \"?\" or \"#\""));

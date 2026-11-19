@@ -175,11 +175,12 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
         .filter { !it.secret() }.associate { it.name() to text(provider, it.name()) }.filterValues { it.isNotEmpty() }
 
     /**
-     * Checks one provider's settings as typed, by the same rules as Save, before a connection check asks it: each
-     * refused value shows its problem at its field, and that provider's earlier problems go.
+     * Checks one provider's settings as typed, by the same rules as Save, before a connection check asks it: a value
+     * Save would refuse or a required one that is missing shows its problem at its field, and that provider's earlier
+     * problems go; other providers' problems stay.
      *
      * @param provider the provider to be asked
-     * @return true when no value is refused, so it may be asked
+     * @return true when nothing is refused or missing, so it may be asked
      */
     fun checkSettingsOf(provider: ProviderId): Boolean {
         val problems = settingProblems(provider)
@@ -216,8 +217,14 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
         val problems = linkedMapOf<Target, FieldProblem>()
         val primary = primary() ?: config.forecast().primary()
         val fallback = if (handle.contains(FALLBACK)) fallback() else config.forecast().fallback().getOrNull()
-        for (id in listOfNotNull(primary, fallback).distinct()) {
+        val chosen = listOfNotNull(primary, fallback).distinct()
+        for (id in chosen) {
             problems.putAll(settingProblems(id))
+        }
+        // a stored value of a provider not chosen is kept untouched, as it is not used; one typed here is checked, so
+        // nothing Save would refuse for a chosen provider gets stored by the way
+        for (info in providers.filter { it.id() !in chosen }) {
+            problems.putAll(settingProblems(info.id()).filterKeys { it is Target.Setting && wasEdited(it) })
         }
         val settings = LinkedHashMap(config.forecast().settings())
         providers.forEach { info -> settings[info.id()] = plainOf(info.id()) }
@@ -258,6 +265,9 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
         }
         return problems
     }
+
+    private fun wasEdited(target: Target.Setting): Boolean = if (isSecret(target)) target in typedKeys
+        else plainKey(target) in handle.get<ArrayList<String>>(EDITED).orEmpty()
 
     private fun storedSecrets(): Secrets = (stored as? StoredKeys.Read)?.keys ?: Secrets.NONE
 
