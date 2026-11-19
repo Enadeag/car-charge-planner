@@ -13,6 +13,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
@@ -94,14 +95,34 @@ class AndroidListingTest {
     @Test
     void theFeatureGraphicIsAPngOf1024By500() throws IOException {
         for (var language : languages()) {
-            var graphic = language.resolve("images").resolve("featureGraphic.png");
-            var bytes = Files.readAllBytes(graphic);
-
-            assertThat(HexFormat.of().formatHex(bytes, 0, 16)).as(graphic.toString())
-                    .isEqualTo("89504e470d0a1a0a0000000d49484452");
-            var header = ByteBuffer.wrap(bytes, 16, 8);
-            assertThat(List.of(header.getInt(), header.getInt())).as(graphic.toString()).containsExactly(1024, 500);
+            assertPng(language.resolve("images").resolve("featureGraphic.png"), 1024, 500);
         }
+    }
+
+    /** tools/android-listing-pictures.sh writes them; F-Droid shows them in the order of their numbers. */
+    @Test
+    void everyLanguageHasTheSamePhoneScreenshotsNumberedWithoutGapsEachAPngOf1080By2400() throws IOException {
+        var english = names(LISTING.resolve("en-US").resolve("images").resolve("phoneScreenshots"));
+
+        assertThat(english).isNotEmpty();
+        assertThat(english).containsExactlyInAnyOrderElementsOf(
+                IntStream.rangeClosed(1, english.size()).mapToObj(number -> number + ".png").toList());
+        for (var language : languages()) {
+            var folder = language.resolve("images").resolve("phoneScreenshots");
+            assertThat(names(folder)).as(language.toString()).isEqualTo(english);
+            for (var name : english) {
+                assertPng(folder.resolve(name), 1080, 2400);
+            }
+        }
+    }
+
+    private static void assertPng(Path picture, int width, int height) throws IOException {
+        var bytes = Files.readAllBytes(picture);
+
+        assertThat(HexFormat.of().formatHex(bytes, 0, 16)).as(picture.toString())
+                .isEqualTo("89504e470d0a1a0a0000000d49484452");
+        var header = ByteBuffer.wrap(bytes, 16, 8);
+        assertThat(List.of(header.getInt(), header.getInt())).as(picture.toString()).containsExactly(width, height);
     }
 
     private static void assertWithin(Path file, int limit) throws IOException {
