@@ -92,6 +92,7 @@ Decisions about the engine that both apps share, the desktop app and the Android
 - Every request of either app carries `HttpGet.USER_AGENT` as its User-Agent: the app's name and its home page, one text in the engine, so the services see one app, without a device or a version (#309).
 - A body that ends before its `Content-Length` is an `IOException` in both apps, as soon as the server hangs up, never a shorter body as if it were whole; `HttpGetContractTest` checks it with a plain socket, as `com.sun.net.httpserver` cannot send such an answer (#309).
 - A 1xx, 204 or 304 answer with a `Content-Length` is not part of the contract (decided 2026-11-13): Java's client refuses such a 204 before `JdkHttpGet` sees it, a final 1xx reaches neither client, and no provider sends a conditional request. `AndroidHttpGet` keeps its own rule, an empty body for them, with its own test (#309).
+- Where a typed server address may use plain http is the client's choice, a `PlainHttp` that `ServerAddress.parse` and `SettingFormat.accepts` take without a default, so a form that forgets it does not compile: the desktop passes `TO_THIS_COMPUTER`, Android `NEVER`, as its network security configuration refuses plain http even to the phone itself. A request reads an address under the record's own rule, https or plain http to this computer, and leaves the rest to the client's network rules (#509).
 
 ### The dashboard model
 

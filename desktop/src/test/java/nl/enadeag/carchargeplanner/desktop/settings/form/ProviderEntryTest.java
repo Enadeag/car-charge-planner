@@ -56,6 +56,14 @@ class ProviderEntryTest {
     }
 
     @Test
+    void aServerOnThisComputerMayBeReachedOverPlainHttp() {
+        for (var address : List.of("http://localhost:8080", "http://127.0.0.1:8080/om", "http://[::1]:8080")) {
+            assertThat(new ProviderEntry(INFO, Map.of("site", "home", "base_url", address),
+                    Map.of("api_key", "abc123"), Set.of()).problems(ENGLISH)).as(address).isEmpty();
+        }
+    }
+
+    @Test
     void aSecretTypedAmongThePlainSettingsIsNotUsed() {
         assertThat(new ProviderEntry(INFO, Map.of("site", "home", "api_key", "abc123"), Map.of(), Set.of())
                 .problems(ENGLISH)).containsExactly(Map.entry("api_key", REQUIRED));

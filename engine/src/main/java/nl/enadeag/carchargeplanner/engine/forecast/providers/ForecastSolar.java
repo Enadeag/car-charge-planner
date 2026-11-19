@@ -76,7 +76,7 @@ public final class ForecastSolar implements ForecastProvider {
         var parts = new ArrayList<String>();
         parts.add(SERVER);
         var key = settings.getOrDefault("api_key", "").strip();
-        if (!SettingFormat.LETTERS_AND_DIGITS.accepts(key)) {
+        if (!SettingFormat.acceptsLettersAndDigits(key)) {
             throw new ProviderError.MissingSetting("the API key may hold only letters and digits");
         }
         if (!key.isEmpty()) {

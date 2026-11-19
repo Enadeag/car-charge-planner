@@ -76,7 +76,10 @@ class SetUpCheck(private val access: EngineAccess, scope: CoroutineScope) {
         }
     }
 
-    /** Stops a check that runs, as the owner went back; its answer is dropped and nothing is asked. */
+    /**
+     * Stops a check that runs and forgets the last answer, as the owner went back or the values it was for are refused;
+     * its answer is dropped and nothing is asked.
+     */
     fun cancel() {
         latest.cancel()
         stateNow.value = State.NotAsked

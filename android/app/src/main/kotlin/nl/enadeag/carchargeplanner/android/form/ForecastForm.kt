@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.android.store.StoredKeys
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.ForecastSelection
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
+import nl.enadeag.carchargeplanner.engine.forecast.PlainHttp
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo
 import nl.enadeag.carchargeplanner.engine.forecast.SettingFormat
 import nl.enadeag.carchargeplanner.engine.secrets.KeyChanges
@@ -173,6 +174,20 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
     fun plainOf(provider: ProviderId): Map<String, String> = infoOf(provider)?.settings().orEmpty()
         .filter { !it.secret() }.associate { it.name() to text(provider, it.name()) }.filterValues { it.isNotEmpty() }
 
+    /**
+     * Checks one provider's settings as typed, by the same rules as Save, before a connection check asks it: a value
+     * Save would refuse or a required one that is missing shows its problem at its field, and that provider's earlier
+     * problems go; other providers' problems stay.
+     *
+     * @param provider the provider to be asked
+     * @return true when nothing is refused or missing, so it may be asked
+     */
+    fun checkSettingsOf(provider: ProviderId): Boolean {
+        val problems = settingProblems(provider)
+        problemsNow.value = problemsNow.value.filterKeys { (it as? Target.Setting)?.provider != provider } + problems
+        return problems.isEmpty()
+    }
+
     override fun load(config: EngineConfig) {
         val forecast = config.forecast()
         handle[PRIMARY] = forecast.primary().value()
@@ -202,8 +217,14 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
         val problems = linkedMapOf<Target, FieldProblem>()
         val primary = primary() ?: config.forecast().primary()
         val fallback = if (handle.contains(FALLBACK)) fallback() else config.forecast().fallback().getOrNull()
-        for (id in listOfNotNull(primary, fallback).distinct()) {
+        val chosen = listOfNotNull(primary, fallback).distinct()
+        for (id in chosen) {
             problems.putAll(settingProblems(id))
+        }
+        // a stored value of a provider not chosen is kept untouched, as it is not used; one typed here is checked, so
+        // nothing Save would refuse for a chosen provider gets stored by the way
+        for (info in providers.filter { it.id() !in chosen }) {
+            problems.putAll(settingProblems(info.id()).filterKeys { it is Target.Setting && wasEdited(it) })
         }
         val settings = LinkedHashMap(config.forecast().settings())
         providers.forEach { info -> settings[info.id()] = plainOf(info.id()) }
@@ -229,7 +250,9 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
         for (setting in info.settings()) {
             val target = Target.Setting(provider, setting.name())
             val value = entered[setting.name()].orEmpty()
-            if (!setting.format().accepts(value)) {
+            // https only, in every build: the release build's network security configuration refuses plain http,
+            // also to the phone itself
+            if (!setting.format().accepts(value, PlainHttp.NEVER)) {
                 problems[target] = when (setting.format()) {
                     SettingFormat.SERVER_ADDRESS -> FieldProblem.ServerAddress
                     SettingFormat.LETTERS_AND_DIGITS -> FieldProblem.LettersAndDigits
@@ -242,6 +265,9 @@ class ForecastForm(private val handle: SavedStateHandle, private val providers: 
         }
         return problems
     }
+
+    private fun wasEdited(target: Target.Setting): Boolean = if (isSecret(target)) target in typedKeys
+        else plainKey(target) in handle.get<ArrayList<String>>(EDITED).orEmpty()
 
     private fun storedSecrets(): Secrets = (stored as? StoredKeys.Read)?.keys ?: Secrets.NONE
 
