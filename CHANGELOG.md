@@ -14,6 +14,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Every release is built twice, on two separate GitHub runners, and is signed only when both builds give the same APK; an APK you build from the tag with the exact Java, platform and build-tools of the release should match it apart from its signature (see Reproducible build in `docs/design/android/build.md`) (#424).
 - The app now targets Android 17. On Android 17 and later it cannot reach a forecast server on your own home network, because it does not ask for the permission for nearby devices; a server on the internet works as before (#383).
 - The app has its own icon: a white car under a yellow half sun, on green, also as the themed icon and in the notifications (#486).
+- The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
 
 ## [0.7.0] - 2026-11-13
 
