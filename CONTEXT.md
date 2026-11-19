@@ -267,7 +267,7 @@ Not built yet (no car is read). A way for an owner to read their own car that th
 _Avoid_: Official API (a maker can have an API that owners may not use), unofficial route
 
 **Local network (not encrypted)**:
-Not built yet. An integration that reaches a device on the owner's own network over plain http, which only a private address allows; Settings is to label it so. Today only a loopback address (`localhost`, `127.0.0.1`, `[::1]`) is allowed plain http, and nothing is labelled.
+Not built yet. An integration that reaches a device on the owner's own network over plain http, which only a private address allows; Settings is to label it so, and the Android app would need the local network permission for it (#505). Today only a loopback address (`localhost`, `127.0.0.1`, `[::1]`) is allowed plain http, and only on the desktop; the Android app takes https only, in Settings and in its network security configuration. Nothing is labelled.
 _Avoid_: LAN, insecure, http mode
 
 **Home Assistant**:
