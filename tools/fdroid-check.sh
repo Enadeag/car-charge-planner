@@ -26,11 +26,13 @@
 # The container keeps Docker's default capabilities and may gain privileges: fdroid build --on-server runs sudo as the
 # image's user, which no-new-privileges would stop. Root in the container fetches fdroidserver and keeps it, the
 # recipe's copy and the logs its own; the image's user vagrant, who runs fdroid and so the build, gets only fdroiddata/
-# and gradle-home/, and root's shell writes the logs. That split holds because vagrant may use sudo until fdroid build
-# --on-server locks root and removes sudo, which it does before it prepares the source (build.py), and fdroid lint,
-# rewritemeta and scanner run no code of the source; check that again whenever FDROIDSERVER_COMMIT moves. The image must
-# have the user vagrant; the build never runs as root. At the end root gives SCRATCH back to the user who ran the
-# script; a run stopped before that leaves files owned by other users in SCRATCH, which this gives back:
+# and gradle-home/, and root's shell writes the logs. Root also makes the tree readable for others, whatever the host's
+# umask, so that vagrant can read it; it stays readable after the run. The split between root and vagrant holds because
+# vagrant may use sudo until fdroid build --on-server locks root and removes sudo, which it does before it prepares the
+# source (build.py), and fdroid lint, rewritemeta and scanner run no code of the source; check that again whenever
+# FDROIDSERVER_COMMIT moves. The image must have the user vagrant; the build never runs as root. At the end root gives
+# SCRATCH back to the user who ran the script; a run stopped before that leaves files owned by other users in SCRATCH,
+# which this gives back:
 #
 #   docker run --rm --mount type=bind,src=SCRATCH,dst=/work IMAGE chown -R "$(id -u):$(id -g)" /work
 #
