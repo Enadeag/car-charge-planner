@@ -1,0 +1,1 @@
+De app zelf is gelijk aan 0.2.0. Deze versie bevat wat F-Droid nodig heeft om de app aan te bieden: een versiecode die F-Droid kan lezen, zodat het elke nieuwe versie zelf vindt, en een icoon voor de pagina van de app in F-Droid.
