@@ -1,9 +1,11 @@
 package nl.enadeag.carchargeplanner.buildlogic;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.gradle.api.GradleException;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -49,5 +51,25 @@ class AppVersionTest {
     void aCodeOfZeroOrAboveTheHighestPlayAcceptsIsRefused(String name) {
         assertThatThrownBy(() -> AppVersion.versionCode(name)).isInstanceOf(GradleException.class)
                 .hasMessageContaining("must be from 1 up to 2100000000");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"200, 0.2.0", "201, 0.2.1-SNAPSHOT", "10203, 1.2.3"})
+    void theCodeThatTheNameGivesPassesTheCheck(int code, String name) {
+        assertThatCode(() -> AppVersion.check(code, name)).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"200, 0.2.1-SNAPSHOT, 201", "202, 0.2.1, 201", "201, 0.2.0, 200", "0, 0.1.0, 100", "-100, 0.1.0, 100"})
+    void anotherCodeFailsTheCheckWithTheCodeTheNameAndTheCodeItGives(int code, String name, int expected) {
+        assertThatThrownBy(() -> AppVersion.check(code, name)).isInstanceOf(GradleException.class)
+                .hasMessage("version code " + code + " does not match version name '" + name + "', which gives "
+                        + expected + " (major × 10000 + minor × 100 + patch)");
+    }
+
+    @Test
+    void theCheckRefusesANameOfAnotherForm() {
+        assertThatThrownBy(() -> AppVersion.check(100, "0.1")).isInstanceOf(GradleException.class)
+                .hasMessageContaining("is not X.Y.Z or X.Y.Z-SNAPSHOT");
     }
 }

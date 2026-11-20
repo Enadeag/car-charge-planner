@@ -4,8 +4,9 @@ import java.util.regex.Pattern;
 import org.gradle.api.GradleException;
 
 /**
- * The Android app's version code, which follows from its version name alone (#272), so a release commit sets only
- * the name: {@code major × 10000 + minor × 100 + patch}, such as 100 for 0.1.0.
+ * The rule between the Android app's version name and its version code: {@code major × 10000 + minor × 100 + patch},
+ * such as 100 for 0.1.0. The build file writes the code as a number beside the name, so F-Droid's update check can
+ * read it, and {@link #check} holds the number to the rule.
  */
 public final class AppVersion {
 
@@ -33,7 +34,7 @@ public final class AppVersion {
         var match = NAME.matcher(versionName);
         if (!match.matches()) {
             throw new GradleException("version name '" + versionName + "' is not X.Y.Z or X.Y.Z-SNAPSHOT (digits "
-                    + "without leading zeros, such as 0.1.0), from which the version code follows");
+                    + "without leading zeros, such as 0.1.0), which gives the version code the build checks");
         }
         var major = Long.parseLong(match.group(1));
         var minor = Long.parseLong(match.group(2));
@@ -48,5 +49,21 @@ public final class AppVersion {
                     + ", which must be from 1 up to " + HIGHEST_CODE);
         }
         return (int) code;
+    }
+
+    /**
+     * Checks a version code written beside its version name.
+     *
+     * @param versionCode the number the build file holds, any int; refused unless it is the code the name gives
+     * @param versionName the name the build file sets, as for {@link #versionCode(String)}; never null
+     * @throws GradleException when {@link #versionCode(String)} refuses the name, or when the code is not the one the
+     *     name gives, with the code, the name and the code it gives in the message
+     */
+    public static void check(int versionCode, String versionName) {
+        var expected = versionCode(versionName);
+        if (versionCode != expected) {
+            throw new GradleException("version code " + versionCode + " does not match version name '" + versionName
+                    + "', which gives " + expected + " (major × 10000 + minor × 100 + patch)");
+        }
     }
 }

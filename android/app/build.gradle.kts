@@ -89,10 +89,12 @@ android {
         applicationId = "io.github.enadeag.car_charge_planner"
         minSdk = libs.versions.android.min.sdk.get().toInt()
         targetSdk = 37
-        // A release commit sets the version name without -SNAPSHOT, and the next one with it
-        // (docs/dev/ci-and-releasing.md, Releasing the Android app); the version code follows from it (AppVersion).
+        // A release commit sets the version name without -SNAPSHOT, the next one with it (docs/dev/ci-and-releasing.md,
+        // Releasing the Android app). The version code is written out because F-Droid reads it from this file; the
+        // check stops the build when it is not the code the name gives.
         versionName = "0.2.1-SNAPSHOT"
-        versionCode = AppVersion.versionCode(checkNotNull(versionName))
+        versionCode = 201
+        AppVersion.check(checkNotNull(versionCode), checkNotNull(versionName))
         testInstrumentationRunner = if (instrumentedBuildType == "minified") {
             "nl.enadeag.carchargeplanner.android.minified.MinifiedTestRunner"
         } else {
