@@ -18,7 +18,9 @@
 # downloads the APK the recipe's Binaries names, copies its signature onto the APK it built and verifies it. The check
 # passes only when the build log says that the built APK matched the reference and that the reference's signer is the
 # certificate in android/release-certificate.sha256. The logs are in SCRATCH/check/, the APKs in
-# SCRATCH/fdroiddata/tmp/.
+# SCRATCH/fdroiddata/tmp/. The verdict is read from fdroid's own log, into which the build's output also goes, so the
+# check shows that an honest build gives the released APK and is no defence against a build that fakes that line;
+# F-Droid's own build is the gate.
 #
 # The container keeps Docker's default capabilities and may gain privileges: fdroid build --on-server runs sudo as the
 # image's user, which no-new-privileges would stop. Root in the container fetches fdroidserver and keeps it, the
