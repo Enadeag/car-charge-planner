@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 class AndroidListingTest {
 
     private static final Path LISTING = Path.of("fastlane", "metadata", "android");
-    private static final Path BUILD = Path.of("android", "app", "build.gradle.kts");
+    static final Path BUILD = Path.of("android", "app", "build.gradle.kts");
 
     /** F-Droid's fallback language, which every other language follows. */
     private static final String FALLBACK = "en-US";
@@ -46,7 +46,7 @@ class AndroidListingTest {
     private static final Pattern CHANGELOG = Pattern.compile("[1-9][0-9]*\\.txt");
     private static final Pattern VERSION_NAME =
             Pattern.compile("^\\s*versionName = \"(\\d+)\\.(\\d+)\\.(\\d+)(-SNAPSHOT)?\"$", Pattern.MULTILINE);
-    private static final Pattern VERSION_CODE = Pattern.compile("^\\s*versionCode = (\\d+)$", Pattern.MULTILINE);
+    static final Pattern VERSION_CODE = Pattern.compile("^\\s*versionCode = (\\d+)$", Pattern.MULTILINE);
 
     @Test
     void theListingIsInEnglishAndDutch() throws IOException {
