@@ -113,6 +113,18 @@ class AndroidListingTest {
         }
     }
 
+    /** F-Droid takes no icon from the APK, whose launcher icon is an adaptive icon in XML only. */
+    @Test
+    void theIconIsAPngOf512By512AndTheSameInEveryLanguage() throws IOException {
+        var english = Files.readAllBytes(LISTING.resolve(FALLBACK).resolve("images").resolve("icon.png"));
+
+        for (var language : languages()) {
+            var icon = language.resolve("images").resolve("icon.png");
+            assertPng(icon, 512, 512);
+            assertThat(Files.readAllBytes(icon)).as(icon.toString()).isEqualTo(english);
+        }
+    }
+
     /** tools/android-listing-pictures.sh writes them; F-Droid shows them in the order of their numbers. */
     @Test
     void phoneScreenshotsAreNumberedAndTheSameInEveryLanguage() throws IOException {
