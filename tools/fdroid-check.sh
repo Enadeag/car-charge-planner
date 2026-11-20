@@ -12,21 +12,25 @@
 # fdroiddata at FDROIDDATA_COMMIT, by default the commits below, and records what ran in SCRATCH/check/versions.txt.
 # A newer image or commit is taken on purpose: run the check with the variables set, then change the defaults.
 #
-# The container runs with 6 GB of memory and 3 CPUs and only SCRATCH mounted, and Gradle with at most two workers.
-# It puts the recipe in metadata/ and runs fdroid lint, fdroid rewritemeta (which must change nothing), fdroid scanner
-# and fdroid build on the server's own JDK, as fdroiddata's CI runs it (--on-server --test --no-tarball). fdroid build
-# downloads the APK the recipe's Binaries names, copies its signature onto the APK it built and verifies it. The check
-# passes only when the build log says that the built APK matched the reference and that the reference's signer is the
-# certificate in android/release-certificate.sha256. The logs are in SCRATCH/check/, the APKs in
+# The container runs with 6 GB of memory and 3 CPUs and only SCRATCH mounted, and Gradle with at most two workers. It
+# puts the recipe in metadata/ and runs fdroid lint, fdroid rewritemeta (which must change nothing), fdroid scanner
+# (--exit-code, so a finding fails) and fdroid build on the server's own JDK, with the flags of fdroiddata's CI
+# (--verbose --test --refresh-scanner --on-server --no-tarball) and -l, which builds only the latest version. fdroid
+# build downloads the APK the recipe's Binaries names, copies its signature onto the APK it built and verifies it. The
+# check passes only when the build log says that the built APK matched the reference and that the reference's signer is
+# the certificate in android/release-certificate.sha256. The logs are in SCRATCH/check/, the APKs in
 # SCRATCH/fdroiddata/tmp/. The verdict is read from fdroid's own log, into which the build's output also goes, so the
 # check shows that an honest build gives the released APK and is no defence against a build that fakes that line;
 # F-Droid's own build is the gate.
 #
 # The container keeps Docker's default capabilities and may gain privileges: fdroid build --on-server runs sudo as the
 # image's user, which no-new-privileges would stop. Root in the container fetches fdroidserver and keeps it, the
-# recipe's copy and the logs its own; the image's user vagrant, who runs fdroid and so the build, gets only
-# fdroiddata/ and gradle-home/, and root's shell writes the logs. At the end root gives SCRATCH back to the user who
-# ran the script; a run stopped before that leaves files owned by other users in SCRATCH, which this gives back:
+# recipe's copy and the logs its own; the image's user vagrant, who runs fdroid and so the build, gets only fdroiddata/
+# and gradle-home/, and root's shell writes the logs. That split holds because vagrant may use sudo until fdroid build
+# --on-server locks root and removes sudo, which it does before it prepares the source (build.py), and fdroid lint,
+# rewritemeta and scanner run no code of the source; check that again whenever FDROIDSERVER_COMMIT moves. The image must
+# have the user vagrant; the build never runs as root. At the end root gives SCRATCH back to the user who ran the
+# script; a run stopped before that leaves files owned by other users in SCRATCH, which this gives back:
 #
 #   docker run --rm --mount type=bind,src=SCRATCH,dst=/work IMAGE chown -R "$(id -u):$(id -g)" /work
 #
@@ -46,15 +50,22 @@ fail() {
   exit 1
 }
 
+# one line, all of it matching the extended regular expression
+whole() {
+  case "$1" in *'
+'*) return 1 ;; esac
+  printf '%s\n' "$1" | grep -Eqx "$2"
+}
 for commit in "$fdroidserver_commit" "$fdroiddata_commit"; do
-  printf '%s\n' "$commit" | grep -Eqx '[0-9a-f]{40}' \
-    || fail "FDROIDSERVER_COMMIT and FDROIDDATA_COMMIT must be a commit's 40 hex digits, not '$commit'"
+  whole "$commit" '[0-9a-f]{40}' \
+    || fail "FDROIDSERVER_COMMIT and FDROIDDATA_COMMIT must be a commit's 40 lowercase hex digits, not '$commit'"
 done
-printf '%s\n' "$image" | grep -Eqx '[^@[:space:]]+@sha256:[0-9a-f]{64}' \
-  || fail "FDROID_IMAGE must name the image by its digest, as NAME@sha256:<64 hex digits>, not '$image'"
+whole "$image" '[a-z0-9][^@[:space:]]*@sha256:[0-9a-f]{64}' \
+  || fail "FDROID_IMAGE must name the image by its digest, as NAME@sha256:<64 lowercase hex digits>, NAME starting" \
+    "with a lowercase letter or digit, not '$image'"
 
 # Inside the container, as root: everything F-Droid's side does. The image's user vagrant runs fdroid, as on F-Droid's
-# buildserver; where root cannot become vagrant, fdroid runs as the user the script runs as.
+# buildserver.
 inside() {
   work=/work
   . /etc/profile.d/bsenv.sh
@@ -80,24 +91,21 @@ inside() {
     java -version 2>&1
   } | tee check/versions.txt
 
-  user=
-  if [ "$(id -u)" = 0 ] && runuser -u vagrant -- true 2> /dev/null; then
-    # the mount belongs to the user who ran the script, who may have vagrant's uid
-    chown -R root:root "$work"
-    chmod -R go-w "$work"
-    chown -R vagrant:vagrant fdroiddata gradle-home
-    user=vagrant
+  if [ "$(id -u)" != 0 ] || ! runuser -u vagrant -- true 2> /dev/null; then
+    echo "error: the image has no user vagrant that root can become; the build never runs as root" >&2
+    exit 1
   fi
-  as_user() {
-    if [ -n "$user" ]; then runuser -u "$user" -- "$@"; else "$@"; fi
-  }
+  # the mount belongs to the user who ran the script, who may have vagrant's uid, and keeps that user's umask
+  chown -R root:root "$work"
+  chmod -R go+rX,go-w "$work"
+  chown -R vagrant:vagrant fdroiddata gradle-home
   cd fdroiddata
   step() {
     name=$1
     shift
     echo "== fdroid $*"
     set +e
-    as_user env HOME=/home/vagrant PATH="$work/fdroidserver:$PATH" \
+    runuser -u vagrant -- env HOME=/home/vagrant PATH="$work/fdroidserver:$PATH" \
       PYTHONPATH="$work/fdroidserver:$work/fdroidserver/examples" PYTHONUNBUFFERED=true \
       GRADLE_USER_HOME="$work/gradle-home" serverwebroot=/tmp fdroid "$@" > "$work/check/$name.log" 2>&1
     rc=$?
@@ -112,8 +120,8 @@ inside() {
     diff -u "$work/input/recipe.yml" "metadata/$app.yml" > "$work/check/rewritemeta.diff" || true
     echo 1 > "$work/check/rewritemeta.rc"
   fi
-  step scanner scanner -v "$app"
-  step build build -v -l --on-server --test --no-tarball "$app"
+  step scanner scanner --verbose --exit-code "$app"
+  step build build --verbose --test --refresh-scanner --on-server --no-tarball -l "$app"
 }
 
 if [ "${1:-}" = --inside ]; then
@@ -128,17 +136,22 @@ certificate=android/release-certificate.sha256
 command -v docker > /dev/null || fail "docker is not on PATH"
 case "$1" in /*) target=$1 ;; *) target=$PWD/$1 ;; esac
 case "$target" in *,*) fail "$target has a comma, which docker run --mount cannot take" ;; esac
+if [ -e "$target" ]; then
+  [ -d "$target" ] && [ -z "$(ls -A "$target")" ] || fail "$target is not an empty folder; give a new or empty one"
+fi
+fingerprint=$(sh tools/android-sign.sh fingerprint "$certificate") || fail "no fingerprint in $certificate"
+docker pull --quiet -- "$image" > /dev/null || fail "docker could not pull $image"
+pulled=$(docker image inspect --format '{{index .RepoDigests 0}}' "$image") && [ -n "$pulled" ] \
+  || fail "docker image inspect gave no digest for $image"
+echo "$pulled"
+
 mkdir -p "$target"
 scratch=$(cd "$target" && pwd)
-[ -z "$(ls -A "$scratch")" ] || fail "$scratch is not empty; give a new or empty folder"
-fingerprint=$(sh tools/android-sign.sh fingerprint "$certificate")
-
 mkdir "$scratch/input" "$scratch/check"
+printf '%s\n' "$pulled" > "$scratch/check/image.txt"
 cp "$recipe" "$scratch/input/recipe.yml"
 cp "$0" "$scratch/input/fdroid-check.sh"
 
-docker pull --quiet "$image"
-docker image inspect --format '{{index .RepoDigests 0}}' "$image" | tee "$scratch/check/image.txt"
 set +e
 docker run --rm --memory 6g --memory-swap 6g --cpus 3 --mount "type=bind,src=$scratch,dst=/work" \
   --env "FDROIDSERVER_COMMIT=$fdroidserver_commit" --env "FDROIDDATA_COMMIT=$fdroiddata_commit" "$image" \
