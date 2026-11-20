@@ -26,7 +26,7 @@ AllowedAPKSigningKeys: 510ff0e96c0ae7286e97769a4bc0e1fd5ccba8ac79d0897597da047a0
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^android-v\d+\.\d+\.\d+$
-UpdateCheckData: android/app/build.gradle.kts|versionCode = (\d+)|.|versionName =
-  "([^"-]+)"
+UpdateCheckData: android/app/build.gradle.kts|(?m)^\s*versionCode = (\d+)$|.|(?m)^\s*versionName
+  = "(\d+\.\d+\.\d+)"$
 CurrentVersion: 0.2.0
 CurrentVersionCode: 200
