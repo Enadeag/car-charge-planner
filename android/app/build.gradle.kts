@@ -91,7 +91,7 @@ android {
         targetSdk = 37
         // A release commit sets the version name without -SNAPSHOT, and the next one with it
         // (docs/dev/ci-and-releasing.md, Releasing the Android app); the version code follows from it (AppVersion).
-        versionName = "0.2.0"
+        versionName = "0.2.1-SNAPSHOT"
         versionCode = AppVersion.versionCode(checkNotNull(versionName))
         testInstrumentationRunner = if (instrumentedBuildType == "minified") {
             "nl.enadeag.carchargeplanner.android.minified.MinifiedTestRunner"
