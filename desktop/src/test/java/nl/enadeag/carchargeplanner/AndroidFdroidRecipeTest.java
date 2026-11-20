@@ -109,31 +109,37 @@ class AndroidFdroidRecipeTest {
         assertThat(data[2]).as("the version name from the same file").isEqualTo(".");
         var build = Files.readString(BUILD);
         var release = build.replace("-SNAPSHOT\"", "\"");
+        var snapshot = release.replaceFirst("(versionName = \"[^\"]+)\"", "$1-SNAPSHOT\"");
+        var versionName = Pattern.compile("versionName = \"([^\"-]+)").matcher(build);
+        assertThat(versionName.find()).isTrue();
 
         var code = Pattern.compile(data[1]).matcher(build);
         assertThat(code.find()).isTrue();
         assertThat(Integer.parseInt(code.group(1))).isEqualTo(buildCode());
         var name = Pattern.compile(data[3]).matcher(release);
         assertThat(name.find()).as("the version name of a release commit").isTrue();
-        var versionName = Pattern.compile("versionName = \"([^\"-]+)").matcher(build);
-        assertThat(versionName.find()).isTrue();
         assertThat(name.group(1)).isEqualTo(versionName.group(1));
-        // a snapshot's tag would give no version, so F-Droid would pass over it
-        assertThat(Pattern.compile(data[3]).matcher(build).find()).as("the name of " + BUILD)
-                .isEqualTo(release.equals(build));
+        // the name's expression takes X.Y.Z alone, so a snapshot's tag gives no version and F-Droid passes over it
+        assertThat(Pattern.compile(data[3]).matcher(snapshot).find()).as("the name of a snapshot").isFalse();
 
         var tags = Pattern.compile(field(recipe, "UpdateCheckMode").replaceFirst("^Tags ", ""));
         assertThat(tags.matcher("android-v0.2.0").find()).isTrue();
         assertThat(tags.matcher("v0.7.0").find()).isFalse();
+        assertThat(tags.matcher("android-v0.2.0-rc1").find()).isFalse();
+        assertThat(tags.matcher("android-v1").find()).isFalse();
     }
 
     @Test
     void theBuildChecksTheVersionCodeAgainstTheName() throws IOException {
         var lines = Files.readAllLines(BUILD);
-        var at = lines.indexOf(lines.stream().filter(line -> VERSION_CODE.matcher(line).matches()).findFirst()
-                .orElseThrow());
+        var at = 0;
+        while (at < lines.size() && !VERSION_CODE.matcher(lines.get(at)).matches()) {
+            at++;
+        }
+        var after = at + 1 < lines.size() ? lines.get(at + 1) : "";
 
-        assertThat(lines.get(at + 1)).contains("AppVersion.check(");
+        assertThat(after).as("the line after versionCode in build.gradle.kts must call AppVersion.check")
+                .contains("AppVersion.check(");
     }
 
     private static String applicationId() throws IOException {
