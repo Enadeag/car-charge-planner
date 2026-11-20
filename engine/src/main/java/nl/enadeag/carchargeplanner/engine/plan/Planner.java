@@ -342,7 +342,8 @@ public final class Planner {
         var runs = input.runsByDay().getOrDefault(date, List.of());
         var windows = new ArrayList<Window>();
         double level = startPct;
-        // no need to count the start: the first departure, or without one the solar charging, never ends below it
+        // charging only raises the level, so the first departure's level, or without one the level after the day's
+        // charging, is at least the start
         double highestPct = 0;
         double tripsPct = 0;
         double shortPct = 0;

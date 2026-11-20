@@ -11,9 +11,8 @@ import java.util.List;
  * @param date the local date
  * @param startLevelPct the battery level at the start of the day
  * @param windows the charge windows of the day in time order, possibly none
- * @param levelAfterChargingPct the highest battery level the day reaches, which is the start level or a higher level at
- *     a departure, after the day's last solar charging, or at its end after a trip's grid charge that runs after the
- *     day's driving
+ * @param levelAfterChargingPct the highest of the day's battery levels: its start level, the level at each departure,
+ *     the level after its last solar charging, and its end level
  * @param chargeToPct the battery level the day's solar charging aims at, the target charge level or more: more on a
  *     day the plan charges above the target for a trip; on a day with a departure the highest of the parts before and
  *     after it. A trip's grid charge does not raise it.
