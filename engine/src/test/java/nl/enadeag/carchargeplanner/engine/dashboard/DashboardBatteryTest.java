@@ -95,10 +95,10 @@ class DashboardBatteryTest {
     }
 
     @Test
-    void aDayWithTwoTripsShowsTheHighestLevelBeforeEitherLeavesAndTheLevelAfterTheLast() {
+    void aDayWithTwoTripsShowsTheLevelTheSunReachesBetweenThemAndTheLevelAfterTheLast() {
         // a 100 kWh car without a daily distance: each 100 km trip takes 20.7 % and needs 50.7 %; the first leaves
         // with the 50 % the day starts with, is back with 29.3 %, and the sun charges it to the 80 % target before the
-        // second, which leaves 59.3 %
+        // second leaves; the day ends at 59.3 %, after the second
         var sunny = Map.of(9, 12.0, 10, 12.0, 11, 12.0, 12, 12.0, 13, 12.0, 14, 12.0, 15, 12.0, 16, 12.0);
         var view = dashboard(home(100, 0), forecast(FRI, List.of(Map.of(), sunny)), 50, at(FRI, 0, 0),
                 new Trip(at(SAT, 6, 0), at(SAT, 8, 0), 100, false),

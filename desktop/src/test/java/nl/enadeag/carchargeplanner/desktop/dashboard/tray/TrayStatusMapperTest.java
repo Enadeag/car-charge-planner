@@ -41,7 +41,8 @@ class TrayStatusMapperTest {
     }
 
     private static DayPlan day(LocalDate date, Window... windows) {
-        return DayPlans.of(date, new Percent(50), List.of(windows), new Percent(74), new Percent(80), new Percent(62), 12, List.of());
+        return DayPlans.of(date, new Percent(50), List.of(windows), new Percent(74), new Percent(80), new Percent(62),
+                12, List.of());
     }
 
     private static Outlook.Planned plannedAt(int hour, Optional<GridAdvice> advice, DayPlan... days) {
