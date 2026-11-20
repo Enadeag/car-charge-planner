@@ -7,16 +7,6 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Fixed
 - The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
 
-### Android
-- Your settings, battery level, away days, trips, trip notices and charge windows, and the Wi-Fi only switch now move to your next phone on Android 10 and 11 too, in a device-to-device transfer that says it is one, as they do on Android 12 and later; the API keys stay behind as before, and there is still no cloud backup on any version. The forecast cache no longer moves, on any version: the next phone fetches its own forecast (#397).
-- The APK is built only from libraries and plugins whose SHA-256 checksums are recorded in the repository: the build stops on any other file (#484).
-- The APK is about 9 MB instead of 30 MB: R8 now leaves out the code the app does not use, and keeps the class names, files and lines, so the log stays readable (#485).
-- Every release is built twice, on two separate GitHub runners, and is signed only when both builds give the same APK; an APK you build from the tag with the exact Java, platform and build-tools of the release should match it apart from its signature (see Reproducible build in `docs/design/android/build.md`) (#424).
-- The app now targets Android 17. On Android 17 and later it cannot reach a forecast server on your own home network, because it does not ask for the permission for nearby devices; a server on the internet works as before (#383).
-- The app has its own icon: a white car under a yellow half sun, on green, also as the themed icon and in the notifications (#486).
-- Settings no longer accepts a server address that starts with http://, not even for a server on the phone itself: the app only connects over https, so such an address never worked. An address you saved earlier is kept; change it on the Forecast page before you save that page (#509).
-- The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
-
 ## [0.7.0] - 2026-11-13
 
 Your home is entered more simply: solar panels as a number of panels with their direction, tilt and year, the charger as its charge power at home, and set-up no longer asks for the house's own use. A day without a charge window says whether charging is not needed or there is too little solar power, and the dashboard warns when a forecast provider refuses its API key. The settings file is now version 2: once this version has saved it, 0.6.0 and older cannot read it.
@@ -35,6 +25,19 @@ Your home is entered more simply: solar panels as a number of panels with their 
 - No field shows **Typical value** any more, in set-up or in Settings: a value "I don't know" filled in looks like any other. The app still keeps which values are typical in the settings file, and set-up's welcome now says that a typical value can be changed there or later in Settings (#458).
 - A day without a charge window now says which of two things it is, as on Android: **Charging not needed** when the battery shows the level the plan charges to (the target, or more before a trip), with nothing else in the day card, or **No charge window** with "There is too little solar power while the car is home." when the car could use a charge. Neither shows a battery chip in the day card; the Car battery card still shows the levels on every day. A day a grid charge starts on, a trip's or the grid advice's on an earlier day than the one it is about, says only **No charge window**, with its battery chip, as the day a trip leaves does. A day the car is away on a trip, the day a trip leaves and the grid advice's day say what they said before (#460).
 - On the desktop, a settings file that exists but cannot be used is headed **Settings file cannot be used** in English, as on Android, in the dashboard and in the tray ("Settings file cannot be used: Fix engine.json: …"), instead of "Not set up", which now says only that there is no settings file. The Dutch stays "Niet ingesteld" (#325).
+
+## [Android 0.2.0] - 2026-11-20
+
+A smaller and more guarded release build, ready for F-Droid: the APK is about 9 MB instead of 30 MB, is built twice and signed only when both builds are the same, and comes from libraries with recorded checksums. The app targets Android 17, has its own icon, moves your settings to a next phone on Android 10 and 11 too, and its battery card no longer shows a level the car never reaches.
+
+- Your settings, battery level, away days, trips, trip notices and charge windows, and the Wi-Fi only switch now move to your next phone on Android 10 and 11 too, in a device-to-device transfer that says it is one, as they do on Android 12 and later; the API keys stay behind as before, and there is still no cloud backup on any version. The forecast cache no longer moves, on any version: the next phone fetches its own forecast (#397).
+- The APK is built only from libraries and plugins whose SHA-256 checksums are recorded in the repository: the build stops on any other file (#484).
+- The APK is about 9 MB instead of 30 MB: R8 now leaves out the code the app does not use, and keeps the class names, files and lines, so the log stays readable (#485).
+- Every release is built twice, on two separate GitHub runners, and is signed only when both builds give the same APK; an APK you build from the tag with the exact Java, platform and build-tools of the release should match it apart from its signature (see Reproducible build in `docs/design/android/build.md`) (#424).
+- The app now targets Android 17. On Android 17 and later it cannot reach a forecast server on your own home network, because it does not ask for the permission for nearby devices; a server on the internet works as before (#383).
+- The app has its own icon: a white car under a yellow half sun, on green, also as the themed icon and in the notifications (#486).
+- Settings no longer accepts a server address that starts with http://, not even for a server on the phone itself: the app only connects over https, so such an address never worked. An address you saved earlier is kept; change it on the Forecast page before you save that page (#509).
+- The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
 
 ## [Android 0.1.0] - 2026-11-13
 
@@ -214,4 +217,5 @@ First version, for Linux.
 [0.3.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Enadeag/car-charge-planner/releases/tag/v0.1.0
+[Android 0.2.0]: https://github.com/Enadeag/car-charge-planner/compare/android-v0.1.0...android-v0.2.0
 [Android 0.1.0]: https://github.com/Enadeag/car-charge-planner/releases/tag/android-v0.1.0
