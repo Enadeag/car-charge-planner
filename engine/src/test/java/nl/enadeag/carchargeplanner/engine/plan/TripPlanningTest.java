@@ -649,7 +649,8 @@ class TripPlanningTest {
     void anEarlierDaysGridChargeStopsAtAFullBattery() {
         // 260 km take 53.82 %, so Sunday needs 30 + 53.82 + 9 = 92.82 %; away from Saturday 06:00, the grid charge
         // runs on Friday evening, and from Friday's 41 % after its driving its 92.82 - 32 = 60.82 % (as Saturday drives
-        // 9 % more) would reach 101.82 %: it stops at 100 %, and Sunday leaves with 91 %
+        // 9 % more) would reach 101.82 %: it stops at 100 %, and Sunday leaves with 91 %, under the 92.82 % it needs.
+        // That shortfall is the problem of a need above 100 % over several days that #511 holds, not this test's point
         var away = new AwayTimes(List.of(), List.of(new OneOffAwayPeriod(at(SAT, 6), at(SUN, 7))),
                 List.of(trip(SUN, 8, 18, 260)));
         var planned = plan(system(50), dark(4), 50, at(FRI, 0), away);
@@ -676,11 +677,11 @@ class TripPlanningTest {
     }
 
     @Test
-    void aDayThatEndsFullAfterATripsGridChargeGetsNoGridAdviceThoughItsDrivingFits() {
+    void theGridAdvicePassesOverADayAnEveningGridChargeBringsBackAndWarnsForTheDayTheLevelDrops() {
         // 400 km a day take 72 %, so Saturday's 100 km trip (20.7 %) would need 30 + 20.7 + 72 = 122.7 %: the plan
-        // charges for 100 %. Friday drives from 90 % to 18 % and the evening's grid charge brings it to 100 %, which is
-        // above the minimum; Saturday leaves with 100 %, is back with 79.3 % and drives to 7.3 %, and Sunday's 72 %
-        // leave it 64.7 points short: the advice is for Sunday, 30 + 64.7 = 94.7 % under the minimum
+        // charges for 100 %. Friday drives from 90 % to 18 % and the evening's grid charge brings it to 100 %, above
+        // the minimum, so Friday gets no advice. Saturday leaves with 100 %, is back with 79.3 % and drives to 7.3 %,
+        // and Sunday's 72 % leave it 64.7 points short: the advice is for Sunday, 30 + 64.7 = 94.7 % under the minimum
         var planned = plan(system(400), dark(4), 90, at(FRI, 0), trip(SAT, 8, 18, 100));
         var friday = planned.day(FRI);
         assertThat(planned.grid().start().atZone(TZ).toLocalDate()).isEqualTo(FRI);
@@ -693,10 +694,13 @@ class TripPlanningTest {
     }
 
     @Test
-    void aDayThatRunsOutBeforeATripsGridChargeLosesItsGridAdvice() {
-        // as above from 50 %: Friday's 72 % leave it 22 points short before the evening's grid charge brings it to
-        // 100 %, so the advice reads Friday's end as 100 - 22 = 78 % and says nothing of the day the car runs out on;
-        // #511 keeps the question. The advice is for Sunday, as above
+    void aDayTheCarRunsOutOnBeforeAnEveningGridChargeForATripGetsNoGridAdvice() {
+        // This pins accepted behaviour that #511 may change. 400 km a day take 72 %, so Saturday's 100 km trip (20.7 %)
+        // would need 30 + 20.7 + 72 = 122.7 %: the plan charges for 100 %. Friday's 72 % leave the 50 % it starts with
+        // 22 points short, and the evening's grid charge then brings it to 100 %: the advice reads Friday's end as
+        // 100 - 22 = 78 %, above the minimum, and gives Friday no advice. Saturday leaves with 100 %, is back with
+        // 79.3 % and drives to 7.3 %, and Sunday's 72 % leave it 64.7 points short: the advice is for Sunday, with a
+        // deficit of 30 + 64.7 = 94.7 %
         var planned = plan(system(400), dark(4), 50, at(FRI, 0), trip(SAT, 8, 18, 100));
         var friday = planned.day(FRI);
         assertThat(planned.grid().start().atZone(TZ).toLocalDate()).isEqualTo(FRI);
@@ -706,6 +710,25 @@ class TripPlanningTest {
         assertThat(advice.day()).isEqualTo(SUN);
         assertThat(advice.endLevelPct()).isCloseTo(-64.7, CLOSE);
         assertThat(advice.deficitPct()).isCloseTo(94.7, CLOSE);
+    }
+
+    @Test
+    void aDayTheCarRunsOutOnBeforeAnEveningGridChargeForATripKeepsASmallerGridAdvice() {
+        // This pins accepted behaviour that #511 may change. 600 km a day take 108 %, so Saturday's 100 km trip would
+        // need far more than 100 %: the plan charges for 100 %. Friday's 108 % leave the 20 % it starts with 88 points
+        // short, and the evening's grid charge then brings it to 100 %: the advice reads Friday's end as 100 - 88 =
+        // 12 %, so Friday keeps its advice, with a deficit of 30 - 12 = 18 % (20 kWh at the wall), though the car runs
+        // out 88 points short of the day's driving
+        var planned = plan(system(600), dark(4), 20, at(FRI, 0), trip(SAT, 8, 18, 100));
+        var friday = planned.day(FRI);
+        assertThat(planned.grid().start().atZone(TZ).toLocalDate()).isEqualTo(FRI);
+        assertThat(friday.endLevelPct().value()).isEqualTo(100);
+        assertThat(friday.drivingShortPct()).isCloseTo(88, CLOSE);
+        var advice = planned.gridAdvice().orElseThrow();
+        assertThat(advice.day()).isEqualTo(FRI);
+        assertThat(advice.endLevelPct()).isCloseTo(12, CLOSE);
+        assertThat(advice.deficitPct()).isCloseTo(18, CLOSE);
+        assertThat(advice.energyKwh()).isCloseTo(20, CLOSE);
     }
 
     @Test

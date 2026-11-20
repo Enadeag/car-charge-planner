@@ -11,7 +11,7 @@ public final class DayPlans {
     private DayPlans() {
     }
 
-    /** A day whose battery holds all its driving: none of it is short. */
+    /** A day whose battery holds all its driving: none of it is short. A test that needs a shortfall builds the day. */
     public static DayPlan of(LocalDate date, Percent startLevelPct, List<Window> windows,
             Percent levelAfterChargingPct, Percent chargeToPct, Percent endLevelPct, double drivingPct,
             List<ForecastStep> forecast) {

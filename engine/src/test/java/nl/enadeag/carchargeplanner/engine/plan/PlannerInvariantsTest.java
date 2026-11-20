@@ -31,8 +31,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * The rules every plan keeps, checked on random homes, forecasts, away times and trips. Each case comes from its own seed, so
- * a failing seed can be run again on its own.
+ * The rules every plan keeps, checked on random homes, forecasts, away times and trips. Each case comes from its own
+ * seed, so a failing seed can be run again on its own.
  */
 class PlannerInvariantsTest {
 
@@ -97,14 +97,15 @@ class PlannerInvariantsTest {
             var departing = plan.trips().stream()
                     .filter(trip -> trip.trip().departure().atZone(zone).toLocalDate().equals(day.date()))
                     .toList();
-            double highest = departing.stream().mapToDouble(trip -> trip.departureLevelPct().value())
-                    .reduce(Math.max(start, end), Math::max);
             if (departing.isEmpty()) {
                 double solarPct = percentOf(input, solarKwh(day.windows()));
                 double solarLevel = Math.min(start + solarPct, Math.max(start, day.chargeToPct().value()));
                 assertThat(after).as("%s is charged to a level on its course", day.date())
                         .isCloseTo(Math.max(solarLevel, end), within(EPS));
             } else {
+                // the last part's own cap does not show outside the planner, so its solar level is bounded, not known
+                double highest = departing.stream().mapToDouble(trip -> trip.departureLevelPct().value())
+                        .reduce(Math.max(start, end), Math::max);
                 var last = departing.get(departing.size() - 1);
                 double solarAfterPct = percentOf(input, solarKwh(day.windows().stream()
                         .filter(window -> !window.start().isBefore(last.trip().departure())).toList()));
@@ -119,6 +120,7 @@ class PlannerInvariantsTest {
             }
             boolean gridStarts = plan.trips().stream().flatMap(trip -> trip.grid().stream())
                     .anyMatch(grid -> grid.window().start().atZone(zone).toLocalDate().equals(day.date()));
+            // a departure takes the trip off before the day's end, and a trip's grid charge adds after the driving
             if (departing.isEmpty() && !gridStarts) {
                 assertThat(end - day.drivingShortPct()).as("%s ends by its driving below the level after", day.date())
                         .isCloseTo(after - day.drivingPct(), within(EPS));
@@ -126,13 +128,13 @@ class PlannerInvariantsTest {
         }
 
         double minimum = input.preferences().minimumPct().value();
-        var tripDays = days.stream()
-                .filter(day -> plan.trips().stream().anyMatch(trip -> trip.trip().covers(day.date(), zone)))
-                .toList();
         if (advice.isEmpty()) {
-            assertThat(days).as("no advice: every day without a trip ends at most a point under the minimum")
-                    .allSatisfy(day -> assertThat(tripDays.contains(day)
-                            || day.endLevelPct().value() - day.drivingShortPct() >= minimum - 1 - EPS).isTrue());
+            // the days of a trip are left to its advice, as the advisor leaves them
+            days.stream()
+                    .filter(day -> plan.trips().stream().noneMatch(trip -> trip.trip().covers(day.date(), zone)))
+                    .forEach(day -> assertThat(day.endLevelPct().value() - day.drivingShortPct())
+                            .as("no advice: %s ends at most a point under the minimum", day.date())
+                            .isGreaterThanOrEqualTo(minimum - 1 - EPS));
             return;
         }
         var given = advice.get();
