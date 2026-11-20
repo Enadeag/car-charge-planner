@@ -7,6 +7,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Fixed
 - The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
 
+### Android
+
 ## [0.7.0] - 2026-11-13
 
 Your home is entered more simply: solar panels as a number of panels with their direction, tilt and year, the charger as its charge power at home, and set-up no longer asks for the house's own use. A day without a charge window says whether charging is not needed or there is too little solar power, and the dashboard warns when a forecast provider refuses its API key. The settings file is now version 2: once this version has saved it, 0.6.0 and older cannot read it.
