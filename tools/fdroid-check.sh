@@ -21,22 +21,35 @@
 # SCRATCH/fdroiddata/tmp/.
 #
 # The container keeps Docker's default capabilities and may gain privileges: fdroid build --on-server runs sudo as the
-# image's user, which no-new-privileges would stop. It hands SCRATCH to the image's user vagrant and gives it back at
-# the end; a run stopped before that leaves files owned by other users in SCRATCH, which this gives back:
+# image's user, which no-new-privileges would stop. Root in the container fetches fdroidserver and keeps it, the
+# recipe's copy and the logs its own; the image's user vagrant, who runs fdroid and so the build, gets only
+# fdroiddata/ and gradle-home/, and root's shell writes the logs. At the end root gives SCRATCH back to the user who
+# ran the script; a run stopped before that leaves files owned by other users in SCRATCH, which this gives back:
 #
 #   docker run --rm --mount type=bind,src=SCRATCH,dst=/work IMAGE chown -R "$(id -u):$(id -g)" /work
 #
-# Needs docker and permission to use it.
+# It is written for rootful Docker: under rootless Docker or Podman that chown maps to a subordinate uid, and the
+# files stay another user's. --inside is the part that runs in the container, not for use by hand. Needs docker and
+# permission to use it.
 set -eu
 
 app=io.github.enadeag.car_charge_planner
 fdroidserver_commit=${FDROIDSERVER_COMMIT:-fc2c86473e66a44fc641f403c338a8b2cccfad88}
 fdroiddata_commit=${FDROIDDATA_COMMIT:-a7530ea2a9ef3628d33143ddb3485430bf83ee9b}
+digest=sha256:1ea8bef1820bff06c2974e31b4fc4c79c364cd24231b86e71fa4b926797e0dac
+image=${FDROID_IMAGE:-registry.gitlab.com/fdroid/fdroidserver@$digest}
 
 fail() {
   echo "error: $*" >&2
   exit 1
 }
+
+for commit in "$fdroidserver_commit" "$fdroiddata_commit"; do
+  printf '%s\n' "$commit" | grep -Eqx '[0-9a-f]{40}' \
+    || fail "FDROIDSERVER_COMMIT and FDROIDDATA_COMMIT must be a commit's 40 hex digits, not '$commit'"
+done
+printf '%s\n' "$image" | grep -Eqx '[^@[:space:]]+@sha256:[0-9a-f]{64}' \
+  || fail "FDROID_IMAGE must name the image by its digest, as NAME@sha256:<64 hex digits>, not '$image'"
 
 # Inside the container, as root: everything F-Droid's side does. The image's user vagrant runs fdroid, as on F-Droid's
 # buildserver; where root cannot become vagrant, fdroid runs as the user the script runs as.
@@ -45,11 +58,11 @@ inside() {
   . /etc/profile.d/bsenv.sh
   cd "$work"
   git init --quiet fdroidserver
-  git -C fdroidserver fetch --quiet --depth 1 https://gitlab.com/fdroid/fdroidserver.git "$fdroidserver_commit"
+  git -C fdroidserver fetch --quiet --depth 1 -- https://gitlab.com/fdroid/fdroidserver.git "$fdroidserver_commit"
   git -C fdroidserver checkout --quiet FETCH_HEAD
   git init --quiet fdroiddata
   git -C fdroiddata sparse-checkout set config
-  git -C fdroiddata fetch --quiet --depth 1 --filter=blob:none https://gitlab.com/fdroid/fdroiddata.git \
+  git -C fdroiddata fetch --quiet --depth 1 --filter=blob:none -- https://gitlab.com/fdroid/fdroiddata.git \
     "$fdroiddata_commit"
   git -C fdroiddata checkout --quiet FETCH_HEAD
   chmod 0600 fdroiddata/config.yml
@@ -67,7 +80,10 @@ inside() {
 
   user=
   if [ "$(id -u)" = 0 ] && runuser -u vagrant -- true 2> /dev/null; then
-    chown -R vagrant:vagrant "$work"
+    # the mount belongs to the user who ran the script, who may have vagrant's uid
+    chown -R root:root "$work"
+    chmod -R go-w "$work"
+    chown -R vagrant:vagrant fdroiddata gradle-home
     user=vagrant
   fi
   as_user() {
@@ -108,12 +124,10 @@ recipe="tools/fdroid/$app.yml"
 certificate=android/release-certificate.sha256
 [ -f "$recipe" ] && [ -f "$certificate" ] || fail "run this from the repository's root"
 command -v docker > /dev/null || fail "docker is not on PATH"
-digest=sha256:1ea8bef1820bff06c2974e31b4fc4c79c364cd24231b86e71fa4b926797e0dac
-image=${FDROID_IMAGE:-registry.gitlab.com/fdroid/fdroidserver@$digest}
-
-mkdir -p "$1"
-scratch=$(cd "$1" && pwd)
-case "$scratch" in *,*) fail "$scratch has a comma, which docker run --mount cannot take" ;; esac
+case "$1" in /*) target=$1 ;; *) target=$PWD/$1 ;; esac
+case "$target" in *,*) fail "$target has a comma, which docker run --mount cannot take" ;; esac
+mkdir -p "$target"
+scratch=$(cd "$target" && pwd)
 [ -z "$(ls -A "$scratch")" ] || fail "$scratch is not empty; give a new or empty folder"
 fingerprint=$(sh tools/android-sign.sh fingerprint "$certificate")
 
