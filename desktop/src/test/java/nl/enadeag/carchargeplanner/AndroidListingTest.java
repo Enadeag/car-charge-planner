@@ -46,6 +46,7 @@ class AndroidListingTest {
     private static final Pattern CHANGELOG = Pattern.compile("[1-9][0-9]*\\.txt");
     private static final Pattern VERSION_NAME =
             Pattern.compile("^\\s*versionName = \"(\\d+)\\.(\\d+)\\.(\\d+)(-SNAPSHOT)?\"$", Pattern.MULTILINE);
+    private static final Pattern VERSION_CODE = Pattern.compile("^\\s*versionCode = (\\d+)$", Pattern.MULTILINE);
 
     @Test
     void theListingIsInEnglishAndDutch() throws IOException {
@@ -83,14 +84,15 @@ class AndroidListingTest {
 
     @Test
     void noChangelogIsForAVersionAfterTheAppsAndAReleaseHasItsOwn() throws IOException {
-        var version = VERSION_NAME.matcher(Files.readString(BUILD));
+        var build = Files.readString(BUILD);
+        var version = VERSION_NAME.matcher(build);
         assertThat(version.find()).as("versionName in " + BUILD).isTrue();
-        // as AppVersion works it out (android/build-logic/src/main/java/nl/enadeag/carchargeplanner/buildlogic/);
-        // -SNAPSHOT has the code of its base version
-        var code = Integer.parseInt(version.group(1)) * 10_000 + Integer.parseInt(version.group(2)) * 100
-                + Integer.parseInt(version.group(3));
         var release = version.group(4) == null;
         assertThat(version.find()).as("a second versionName in " + BUILD).isFalse();
+        // the number F-Droid's update check reads; the build holds it to the name (AppVersion)
+        var versionCode = VERSION_CODE.matcher(build);
+        assertThat(versionCode.find()).as("versionCode as a number in " + BUILD).isTrue();
+        var code = Integer.parseInt(versionCode.group(1));
 
         for (var language : languages()) {
             var changelogs = files(language.resolve("changelogs"));
