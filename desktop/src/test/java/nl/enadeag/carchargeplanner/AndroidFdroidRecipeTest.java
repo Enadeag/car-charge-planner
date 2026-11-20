@@ -138,8 +138,8 @@ class AndroidFdroidRecipeTest {
         }
         var after = at + 1 < lines.size() ? lines.get(at + 1) : "";
 
-        assertThat(after).as("the line after versionCode in build.gradle.kts must call AppVersion.check")
-                .contains("AppVersion.check(");
+        assertThat(after.strip()).as("the line after versionCode in build.gradle.kts must call AppVersion.check")
+                .startsWith("AppVersion.check(");
     }
 
     private static String applicationId() throws IOException {

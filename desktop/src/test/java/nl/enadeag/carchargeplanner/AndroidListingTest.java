@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -121,7 +122,8 @@ class AndroidListingTest {
         for (var language : languages()) {
             var icon = language.resolve("images").resolve("icon.png");
             assertPng(icon, 512, 512);
-            assertThat(Files.readAllBytes(icon)).as(icon.toString()).isEqualTo(english);
+            assertThat(Arrays.equals(Files.readAllBytes(icon), english)).as("icon.png is the same file in " + language)
+                    .isTrue();
         }
     }
 
