@@ -9,7 +9,7 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
-import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
@@ -42,7 +42,7 @@ class DashboardGridAdviceTest {
     private static DashboardView dashboard(Instant madeAt, Optional<GridAdvice> grid, double minimumPct,
             List<OneOffAwayPeriod> away, List<Trip> trips) {
         var days = List.of(TODAY, TODAY.plusDays(1), TODAY.plusDays(2)).stream()
-                .map(date -> new DayPlan(date, new Percent(40), List.of(), new Percent(40), new Percent(80),
+                .map(date -> DayPlans.of(date, new Percent(40), List.of(), new Percent(40), new Percent(80),
                         new Percent(40), 0, List.of()))
                 .toList();
         var source = new ForecastSource(new ProviderId("main"), "Main", "Forecast by Main", madeAt, Freshness.FRESH,

@@ -14,6 +14,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
@@ -68,7 +69,7 @@ class AnnouncerTest {
     }
 
     private static DayPlan day(LocalDate date, Window... windows) {
-        return new DayPlan(date, new Percent(40), List.of(windows), new Percent(55), new Percent(80), new Percent(40),
+        return DayPlans.of(date, new Percent(40), List.of(windows), new Percent(55), new Percent(80), new Percent(40),
                 12, List.of());
     }
 

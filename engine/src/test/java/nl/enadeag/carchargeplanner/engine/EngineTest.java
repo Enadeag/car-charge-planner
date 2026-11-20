@@ -46,7 +46,7 @@ import nl.enadeag.carchargeplanner.engine.notify.Announcer;
 import nl.enadeag.carchargeplanner.engine.notify.BatteryCheck;
 import nl.enadeag.carchargeplanner.engine.notify.Notice;
 import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
-import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
@@ -478,7 +478,7 @@ class EngineTest {
                 10, 2.3, 4.6, 0);
         var next = new Window(madeAt.plus(Duration.ofHours(1)),
                 madeAt.plus(Duration.ofHours(3)), 10, 2.3, 4.6, 0);
-        var day = new DayPlan(DAY, new Percent(50), List.of(ended, next),
+        var day = DayPlans.of(DAY, new Percent(50), List.of(ended, next),
                 new Percent(60), new Percent(80), new Percent(50), 10, List.of());
         var planned = new Outlook.Planned(madeAt, BRUSSELS, List.of(day), new Percent(50), true, Optional.empty(), List.of(), source,
                 0, new Percent(30), new Percent(80));

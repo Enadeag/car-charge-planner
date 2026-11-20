@@ -14,6 +14,7 @@ import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,8 +31,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * The rules every plan keeps, checked on random homes, forecasts and away times. Each case comes from its own seed, so
- * a failing seed can be run again on its own.
+ * The rules every plan keeps, checked on random homes, forecasts, away times and trips. Each case comes from its own
+ * seed, so a failing seed can be run again on its own.
  */
 class PlannerInvariantsTest {
 
@@ -51,10 +52,12 @@ class PlannerInvariantsTest {
     @MethodSource("seeds")
     void everyPlanKeepsItsRules(long seed) {
         var input = randomCase(new Random(seed));
-        var days = new Planner(input.system(), input.preferences(), input.away())
-                .plan(input.forecast(), input.soc(), input.now(), List.of());
+        var plan = new Planner(input.system(), input.preferences(), input.away())
+                .planWithTrips(input.forecast(), input.soc(), input.now(), List.of());
+        var days = plan.days();
         var advice = new GridAdvisor(input.system(), input.preferences(), input.away())
-                .advise(days, input.forecast(), input.now());
+                .advise(plan, input.forecast(), input.now());
+        var zone = input.system().timezone();
 
         var windows = days.stream().flatMap(day -> day.windows().stream()).toList();
         var awayTime = input.away().during(input.forecast(), input.system().timezone());
@@ -77,10 +80,60 @@ class PlannerInvariantsTest {
                     .isAfterOrEqualTo(sorted.get(i - 1).end());
         }
 
+        for (int i = 0; i < days.size(); i++) {
+            var day = days.get(i);
+            double start = day.startLevelPct().value();
+            double after = day.levelAfterChargingPct().value();
+            double end = day.endLevelPct().value();
+            assertThat(after).as("%s is charged to at least its start", day.date()).isGreaterThanOrEqualTo(start);
+            assertThat(after).as("%s is charged to its end or more", day.date()).isGreaterThanOrEqualTo(end);
+            assertThat(after).as("%s is charged to at most a full battery", day.date()).isLessThanOrEqualTo(100);
+            if (i > 0) {
+                assertThat(day.startLevelPct()).as("%s starts where the day before ended", day.date())
+                        .isEqualTo(days.get(i - 1).endLevelPct());
+            }
+            // the day's course: its start, the level at each departure, its solar charging after the last return (or
+            // from the start), and its end
+            var departing = plan.trips().stream()
+                    .filter(trip -> trip.trip().departure().atZone(zone).toLocalDate().equals(day.date()))
+                    .toList();
+            if (departing.isEmpty()) {
+                double solarPct = percentOf(input, solarKwh(day.windows()));
+                double solarLevel = Math.min(start + solarPct, Math.max(start, day.chargeToPct().value()));
+                assertThat(after).as("%s is charged to a level on its course", day.date())
+                        .isCloseTo(Math.max(solarLevel, end), within(EPS));
+            } else {
+                // the last part's own cap does not show outside the planner, so its solar level is bounded, not known
+                double highest = departing.stream().mapToDouble(trip -> trip.departureLevelPct().value())
+                        .reduce(Math.max(start, end), Math::max);
+                var last = departing.get(departing.size() - 1);
+                double solarAfterPct = percentOf(input, solarKwh(day.windows().stream()
+                        .filter(window -> !window.start().isBefore(last.trip().departure())).toList()));
+                double reachable = last.returnLevelPct().value() + solarAfterPct;
+                assertThat(after).as("%s is charged to a level on its course", day.date())
+                        .isGreaterThanOrEqualTo(highest - EPS)
+                        .isLessThanOrEqualTo(Math.max(highest, reachable) + EPS);
+                if (solarAfterPct == 0) {
+                    assertThat(after).as("%s without charging after its last return", day.date())
+                            .isCloseTo(highest, within(EPS));
+                }
+            }
+            boolean gridStarts = plan.trips().stream().flatMap(trip -> trip.grid().stream())
+                    .anyMatch(grid -> grid.window().start().atZone(zone).toLocalDate().equals(day.date()));
+            // a departure takes the trip off before the day's end, and a trip's grid charge adds after the driving
+            if (departing.isEmpty() && !gridStarts) {
+                assertThat(end - day.drivingShortPct()).as("%s ends by its driving below the level after", day.date())
+                        .isCloseTo(after - day.drivingPct(), within(EPS));
+            }
+        }
+
         double minimum = input.preferences().minimumPct().value();
         if (advice.isEmpty()) {
-            assertThat(days).as("no advice: every day ends at most a point under the minimum")
-                    .allSatisfy(day -> assertThat(day.levelAfterChargingPct().value() - day.drivingPct())
+            // the days of a trip are left to its advice, as the advisor leaves them
+            days.stream()
+                    .filter(day -> plan.trips().stream().noneMatch(trip -> trip.trip().covers(day.date(), zone)))
+                    .forEach(day -> assertThat(day.endLevelPct().value() - day.drivingShortPct())
+                            .as("no advice: %s ends at most a point under the minimum", day.date())
                             .isGreaterThanOrEqualTo(minimum - 1 - EPS));
             return;
         }
@@ -100,6 +153,9 @@ class PlannerInvariantsTest {
                     .noneMatch(time -> time.overlaps(window.start(), window.end()));
             assertThat(windows).as("%s is clear of the solar windows", window)
                     .noneMatch(solar -> solar.start().isBefore(window.end()) && window.start().isBefore(solar.end()));
+            assertThat(plan.trips().stream().flatMap(trip -> trip.grid().stream()).map(TripGridCharge::window))
+                    .as("%s is clear of the trips' grid charges", window)
+                    .noneMatch(grid -> grid.start().isBefore(window.end()) && window.start().isBefore(grid.end()));
         });
     }
 
@@ -150,8 +206,16 @@ class PlannerInvariantsTest {
         }
 
         var now = from.plus(Duration.ofMinutes(random.nextInt(24 * 60)));
-        return new Case(system, preferences, new AwayTimes(recurring, oneOff, List.of()), List.copyOf(forecast),
-                new Percent(random.nextInt(101)), now);
+        var soc = new Percent(random.nextInt(101));
+        // drawn last, so the cases without trips stay those of the seeds before trips were drawn
+        var trips = new ArrayList<Trip>();
+        int tripCount = random.nextInt(3);
+        for (int i = 0; i < tripCount; i++) {
+            var departure = from.plus(Duration.ofMinutes(15L * random.nextInt(4 * 24 * days)));
+            var back = departure.plus(Duration.ofMinutes(15L + 15L * random.nextInt(4 * 30)));
+            trips.add(new Trip(departure, back, 5 + random.nextInt(400), random.nextBoolean()));
+        }
+        return new Case(system, preferences, new AwayTimes(recurring, oneOff, trips), List.copyOf(forecast), soc, now);
     }
 
     /** Whether forecast steps cover the whole time, without a gap. */
@@ -166,6 +230,15 @@ class PlannerInvariantsTest {
             }
         }
         return false;
+    }
+
+    private static double solarKwh(List<Window> windows) {
+        return windows.stream().mapToDouble(Window::solarKwh).sum();
+    }
+
+    /** The part of the battery that wall-side energy charges. */
+    private static double percentOf(Case input, double wallKwh) {
+        return wallKwh * input.system().charger().efficiency() / input.system().car().usableBatteryKwh() * 100;
     }
 
     /** The usable surplus over a time, from the forecast steps. */

@@ -272,7 +272,7 @@ class GridAdvisorTest {
     void theAdviceIsForTheFirstDipOnly() {
         var advised = advise(dull(4), 40, fridayAt(7));
         var firstDip = advised.days().stream()
-                .filter(day -> day.levelAfterChargingPct().value() - day.drivingPct() < PREFERENCES.minimumPct().value() - 1)
+                .filter(day -> day.endLevelPct().value() - day.drivingShortPct() < PREFERENCES.minimumPct().value() - 1)
                 .findFirst().orElseThrow();
         assertThat(advised.advice().day()).isEqualTo(firstDip.date());
     }

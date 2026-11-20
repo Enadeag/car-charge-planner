@@ -3,7 +3,7 @@ package nl.enadeag.carchargeplanner.engine.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.engine.config.Percent;
-import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
@@ -65,7 +65,7 @@ class DashboardTripAdviceTest {
             List<TripAdvice> advice) {
         var first = madeAt.atZone(BRUSSELS).toLocalDate();
         var days = Stream.of(first, first.plusDays(1), first.plusDays(2))
-                .map(date -> new DayPlan(date, new Percent(45), List.of(), new Percent(45), new Percent(80),
+                .map(date -> DayPlans.of(date, new Percent(45), List.of(), new Percent(45), new Percent(80),
                         new Percent(45), 0, List.of()))
                 .toList();
         return DashboardView.of(new PlanParts(madeAt, BRUSSELS, days, 0.3, new Percent(45), assumed, gridAdvice,

@@ -4,6 +4,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Fixed
+- The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
+
 ### Android
 - Your settings, battery level, away days, trips, trip notices and charge windows, and the Wi-Fi only switch now move to your next phone on Android 10 and 11 too, in a device-to-device transfer that says it is one, as they do on Android 12 and later; the API keys stay behind as before, and there is still no cloud backup on any version. The forecast cache no longer moves, on any version: the next phone fetches its own forecast (#397).
 - The APK is built only from libraries and plugins whose SHA-256 checksums are recorded in the repository: the build stops on any other file (#484).
@@ -12,6 +15,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - The app now targets Android 17. On Android 17 and later it cannot reach a forecast server on your own home network, because it does not ask for the permission for nearby devices; a server on the internet works as before (#383).
 - The app has its own icon: a white car under a yellow half sun, on green, also as the themed icon and in the notifications (#486).
 - Settings no longer accepts a server address that starts with http://, not even for a server on the phone itself: the app only connects over https, so such an address never worked. An address you saved earlier is kept; change it on the Forecast page before you save that page (#509).
+- The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
 
 ## [0.7.0] - 2026-11-13
 

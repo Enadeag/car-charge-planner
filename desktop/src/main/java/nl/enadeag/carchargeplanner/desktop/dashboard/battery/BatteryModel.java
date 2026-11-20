@@ -4,7 +4,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
  * One day's battery as the battery bar draws it.
  *
  * @param levelPct the battery level at the start: now for today, from 0 to 100
- * @param afterPct the battery level once the day's windows are done, from 0 to 100
+ * @param afterPct the highest battery level the day reaches, from the level at the start to 100
  * @param minimumPct the minimum charge level, from 0 to 100
  * @param targetPct the target charge level, from 0 to 100
  * @param levels the levels in words, such as "50 → 74 %"

@@ -14,7 +14,7 @@ import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
-import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
@@ -476,7 +476,7 @@ class TripNoticesTest {
     void theEarliestOfAWindowAndATripsChargeStartIsDue() {
         var advice = withGrid(SATURDAY_EVENING, TripGridCharge.Start.PLANNED);
         var window = new Window(at(SATURDAY, 13, 0), at(SATURDAY, 15, 0), 8, 1.8, 3.6, 0);
-        var day = new DayPlan(SATURDAY, new Percent(40), List.of(window),
+        var day = DayPlans.of(SATURDAY, new Percent(40), List.of(window),
                 new Percent(55), new Percent(80), new Percent(40), 12, List.of());
         var now = at(SATURDAY, 8, 0);
         var source = forecast(now, Freshness.FRESH);

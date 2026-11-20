@@ -11,14 +11,17 @@ import java.util.List;
  * @param date the local date
  * @param startLevelPct the battery level at the start of the day
  * @param windows the charge windows of the day in time order, possibly none
- * @param levelAfterChargingPct the battery level once the windows and the trips' grid charges of the day are done, as if
- *     no trip had left; at most 100
+ * @param levelAfterChargingPct the highest of the day's battery levels: its start level, the level at each departure,
+ *     the level after its last solar charging, and its end level
  * @param chargeToPct the battery level the day's solar charging aims at, the target charge level or more: more on a
  *     day the plan charges above the target for a trip; on a day with a departure the highest of the parts before and
  *     after it. A trip's grid charge does not raise it.
- * @param endLevelPct the battery level at the end of the day; 0 when driving takes more than is left
+ * @param endLevelPct the battery level at the end of the day, after its driving and a trip's grid charge that runs
+ *     after it; at most 100, and 0 when driving takes more than is left and no grid charge follows
  * @param drivingPct the part of the battery driving takes off the day in percent, 0 or more: the daily distance, and
  *     the trips that depart on the day; more than 100 when the driving needs more than the battery holds
+ * @param drivingShortPct the part of the day's driving the battery cannot hold, in percent, from 0 to
+ *     {@code drivingPct}: 0 when the battery holds it all
  * @param forecast the forecast steps that start on the day in the home's time zone, in time order; empty when the
  *     forecast does not reach the day
  */
@@ -30,14 +33,25 @@ public record DayPlan(
         Percent chargeToPct,
         Percent endLevelPct,
         double drivingPct,
+        double drivingShortPct,
         List<ForecastStep> forecast) {
 
     /**
-     * Copies the lists of windows and forecast steps.
+     * Checks the driving the battery cannot hold, and copies the lists of windows and forecast steps.
      *
+     * @throws IllegalArgumentException when the driving the battery cannot hold is below 0, more than the day's
+     *     driving or not a number
      * @throws NullPointerException when the windows or the steps are null or hold null
      */
     public DayPlan {
+        if (drivingShortPct < 0 || Double.isNaN(drivingShortPct)) {
+            throw new IllegalArgumentException(
+                    "the driving the battery cannot hold must be 0 % or more, not " + drivingShortPct + " %");
+        }
+        if (drivingShortPct > drivingPct) {
+            throw new IllegalArgumentException("the driving the battery cannot hold, " + drivingShortPct
+                    + " %, must be at most the day's driving, " + drivingPct + " %");
+        }
         windows = List.copyOf(windows);
         forecast = List.copyOf(forecast);
     }

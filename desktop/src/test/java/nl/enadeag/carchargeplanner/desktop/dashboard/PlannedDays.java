@@ -8,6 +8,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
 import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import java.time.Duration;
 import java.time.Instant;
@@ -57,7 +58,8 @@ public final class PlannedDays {
     }
 
     public static DayPlan day(LocalDate date, double start, double after, List<ForecastStep> forecast, Window... windows) {
-        return new DayPlan(date, new Percent(start), List.of(windows), new Percent(after), new Percent(80), new Percent(start), 12, forecast);
+        return DayPlans.of(date, new Percent(start), List.of(windows), new Percent(after), new Percent(80),
+                new Percent(start), 12, forecast);
     }
 
     /** A plan with a minimum of 30 % and a target of 80 %. */

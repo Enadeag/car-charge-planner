@@ -19,7 +19,7 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
-import nl.enadeag.carchargeplanner.engine.plan.DayPlan;
+import nl.enadeag.carchargeplanner.engine.plan.DayPlans;
 import nl.enadeag.carchargeplanner.engine.plan.GridAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripAdvice;
 import nl.enadeag.carchargeplanner.engine.plan.TripGridCharge;
@@ -87,12 +87,15 @@ class DashboardLanguagesTest {
      * and a charging stop; both providers refused their key.
      */
     private static Outlook.Planned planned() {
-        var today = new DayPlan(TODAY, new Percent(50), List.of(new Window(at(TODAY, 10), at(TODAY, 13), 10, 2.3, 7.3, 0.6),
-                new Window(at(TODAY, 14), at(TODAY, 15), 8, 1.8, 1.8, 0)), new Percent(74), new Percent(80), new Percent(62), 12, sunny(TODAY));
+        var today = DayPlans.of(TODAY, new Percent(50),
+                List.of(new Window(at(TODAY, 10), at(TODAY, 13), 10, 2.3, 7.3, 0.6),
+                        new Window(at(TODAY, 14), at(TODAY, 15), 8, 1.8, 1.8, 0)),
+                new Percent(74), new Percent(80), new Percent(62), 12, sunny(TODAY));
         // tomorrow a trip leaves after a charge: the longest battery chip and levels
-        var tomorrow = new DayPlan(TODAY.plusDays(1), new Percent(62), List.of(), new Percent(100), new Percent(100), new Percent(22), 12,
-                sunny(TODAY.plusDays(1)));
-        var friday = new DayPlan(TODAY.plusDays(2), new Percent(22), List.of(), new Percent(22), new Percent(80), new Percent(10), 12, List.of());
+        var tomorrow = DayPlans.of(TODAY.plusDays(1), new Percent(62), List.of(), new Percent(100), new Percent(100),
+                new Percent(22), 12, sunny(TODAY.plusDays(1)));
+        var friday = DayPlans.of(TODAY.plusDays(2), new Percent(22), List.of(), new Percent(22), new Percent(80),
+                new Percent(10), 12, List.of());
         var night = new Window(at(TODAY, 22), at(TODAY.plusDays(1), 4), 16, 3.7, 0, 11.0);
         var source = new ForecastSource(new ProviderId("open-meteo"), "Open-Meteo", "Weather data: Open-Meteo.com (CC BY 4.0)",
                 at(TODAY, 7), Freshness.STALE, ProviderRole.FALLBACK, "Forecast.Solar", Optional.of(at(TODAY, 9)),
