@@ -82,7 +82,7 @@ jobs:
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           (yes || true) | "$sdkmanager" --licenses > /dev/null
           "$sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
-      # The version code is the build's, a number the build holds to the version name (AppVersion), so it is read here.
+      # The build holds the version code to the version name (AppVersion), so the code is read here, not worked out.
       - name: Read the version and compare it with the tag
         id: version
         run: |

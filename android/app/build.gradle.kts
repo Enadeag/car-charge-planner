@@ -89,9 +89,9 @@ android {
         applicationId = "io.github.enadeag.car_charge_planner"
         minSdk = libs.versions.android.min.sdk.get().toInt()
         targetSdk = 37
-        // A release commit sets the version name without -SNAPSHOT, and the next one with it, and the version code
-        // beside it as a number, which F-Droid's update check reads from this file (docs/dev/ci-and-releasing.md,
-        // Releasing the Android app). AppVersion stops the build when the code is not the one the name gives.
+        // A release commit sets the version name without -SNAPSHOT, the next one with it (docs/dev/ci-and-releasing.md,
+        // Releasing the Android app). The version code is written out because F-Droid reads it from this file; the
+        // check stops the build when it is not the code the name gives.
         versionName = "0.2.1-SNAPSHOT"
         versionCode = 201
         AppVersion.check(checkNotNull(versionCode), checkNotNull(versionName))

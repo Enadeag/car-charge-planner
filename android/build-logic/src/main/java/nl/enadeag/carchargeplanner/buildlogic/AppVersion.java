@@ -34,7 +34,7 @@ public final class AppVersion {
         var match = NAME.matcher(versionName);
         if (!match.matches()) {
             throw new GradleException("version name '" + versionName + "' is not X.Y.Z or X.Y.Z-SNAPSHOT (digits "
-                    + "without leading zeros, such as 0.1.0), from which the version code follows");
+                    + "without leading zeros, such as 0.1.0), which gives the version code the build checks");
         }
         var major = Long.parseLong(match.group(1));
         var minor = Long.parseLong(match.group(2));
@@ -54,7 +54,7 @@ public final class AppVersion {
     /**
      * Checks a version code written beside its version name.
      *
-     * @param versionCode the code the build file sets
+     * @param versionCode the number the build file holds, any int; refused unless it is the code the name gives
      * @param versionName the name the build file sets, as for {@link #versionCode(String)}; never null
      * @throws GradleException when {@link #versionCode(String)} refuses the name, or when the code is not the one the
      *     name gives, with the code, the name and the code it gives in the message
