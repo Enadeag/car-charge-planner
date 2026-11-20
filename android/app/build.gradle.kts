@@ -92,8 +92,8 @@ android {
         // A release commit sets the version name without -SNAPSHOT, the next one with it (docs/dev/ci-and-releasing.md,
         // Releasing the Android app). The version code is written out because F-Droid reads it from this file; the
         // check stops the build when it is not the code the name gives.
-        versionName = "0.2.1"
-        versionCode = 201
+        versionName = "0.2.2-SNAPSHOT"
+        versionCode = 202
         AppVersion.check(checkNotNull(versionCode), checkNotNull(versionName))
         testInstrumentationRunner = if (instrumentedBuildType == "minified") {
             "nl.enadeag.carchargeplanner.android.minified.MinifiedTestRunner"
