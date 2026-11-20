@@ -7,8 +7,6 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Fixed
 - The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
 
-### Android
-
 ## [0.7.0] - 2026-11-13
 
 Your home is entered more simply: solar panels as a number of panels with their direction, tilt and year, the charger as its charge power at home, and set-up no longer asks for the house's own use. A day without a charge window says whether charging is not needed or there is too little solar power, and the dashboard warns when a forecast provider refuses its API key. The settings file is now version 2: once this version has saved it, 0.6.0 and older cannot read it.
@@ -27,6 +25,14 @@ Your home is entered more simply: solar panels as a number of panels with their 
 - No field shows **Typical value** any more, in set-up or in Settings: a value "I don't know" filled in looks like any other. The app still keeps which values are typical in the settings file, and set-up's welcome now says that a typical value can be changed there or later in Settings (#458).
 - A day without a charge window now says which of two things it is, as on Android: **Charging not needed** when the battery shows the level the plan charges to (the target, or more before a trip), with nothing else in the day card, or **No charge window** with "There is too little solar power while the car is home." when the car could use a charge. Neither shows a battery chip in the day card; the Car battery card still shows the levels on every day. A day a grid charge starts on, a trip's or the grid advice's on an earlier day than the one it is about, says only **No charge window**, with its battery chip, as the day a trip leaves does. A day the car is away on a trip, the day a trip leaves and the grid advice's day say what they said before (#460).
 - On the desktop, a settings file that exists but cannot be used is headed **Settings file cannot be used** in English, as on Android, in the dashboard and in the tray ("Settings file cannot be used: Fix engine.json: …"), instead of "Not set up", which now says only that there is no settings file. The Dutch stays "Niet ingesteld" (#325).
+
+## [Android 0.2.1] - 2026-11-20
+
+The app itself is as in 0.2.0. This release carries what F-Droid needs to offer the app: a version code it can read, and an icon for the app's page there.
+
+- The version code is written as a number beside the version name, so F-Droid finds a new release from its tag; every build checks the number against the name (#280).
+- The app's page in F-Droid gets the app's icon, from a picture in the listing, as F-Droid takes none from the app's own adaptive icon (#280).
+- F-Droid's own build of 0.2.0 gave the released APK byte for byte, so F-Droid can offer the APK as it is signed here (see Reproducible build in `docs/design/android/build.md`) (#280).
 
 ## [Android 0.2.0] - 2026-11-20
 
@@ -219,5 +225,6 @@ First version, for Linux.
 [0.3.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Enadeag/car-charge-planner/releases/tag/v0.1.0
+[Android 0.2.1]: https://github.com/Enadeag/car-charge-planner/compare/android-v0.2.0...android-v0.2.1
 [Android 0.2.0]: https://github.com/Enadeag/car-charge-planner/compare/android-v0.1.0...android-v0.2.0
 [Android 0.1.0]: https://github.com/Enadeag/car-charge-planner/releases/tag/android-v0.1.0

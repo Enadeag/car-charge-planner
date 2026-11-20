@@ -1,0 +1,1 @@
+The app itself is as in 0.2.0. This release carries what F-Droid needs to offer the app: a version code F-Droid can read, so it finds each new release by itself, and an icon for the app's page in F-Droid.
