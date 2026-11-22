@@ -136,7 +136,7 @@ The decisions of the assumption checks behind this model are comments on #341 an
 - The package-private `GridAdviceBuilder` makes it. The record checks that the energy is finite and more than 0, that the end level is finite, and that the window is not on a later day than the one it is for, as `GridAdvisor` gives them; `DashboardView`, which has both, checks that the end level is below the plan's minimum (#402).
 - The desktop's `GridAdviceMapper` takes the home's zone and the plan's levels and maps the view, also for the tray's tooltip, which makes the dashboard without the stored away periods and trips, as the grid advice does not depend on them; a test pins that, with away periods and a trip on the advice's day (#402).
 - On Android `Dashboard.gridAdvice` reads the view and `DashboardWords` writes the words (#402).
-- `GridPlacements.placements` takes at least one quarter of an hour for a grid charge, so an energy above 0 that rounds to no quarter still has a free quarter to start in; it is placed once there, for the grid advice and a trip's grid charge alike, and the one-point floors of `GridAdvisor` and `Planner` stay the only minimum (#515).
+- `GridPlacements.placements` takes at least one quarter of an hour for a grid charge, also for an energy too small to fill one, for the grid advice and a trip's grid charge alike; the one-point floors of `GridAdvisor` and `Planner` stay the only minimum. Such a window ends five minutes after its start rather than on it, as a window needs a length (#515).
 
 ### The trip advice
 

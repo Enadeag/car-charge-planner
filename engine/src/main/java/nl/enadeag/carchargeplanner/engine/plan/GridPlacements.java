@@ -19,6 +19,7 @@ import java.util.Optional;
 final class GridPlacements {
 
     private static final Duration QUARTER_HOUR = Duration.ofMinutes(15);
+    private static final Duration FIVE_MINUTES = Duration.ofMinutes(5);
     private static final double QUARTER_HOUR_IN_HOURS = 0.25;
     private static final double EPS = 1e-9;
 
@@ -179,8 +180,12 @@ final class GridPlacements {
             imported += Math.max(0, powerKw - usableKw) * quarterHours;
         }
         var start = stretch.get(0).start();
-        var end = Hours.earliest(Hours.ceilToFiveMinutes(Hours.plus(start, hours), zone),
-                stretch.get(stretch.size() - 1).end());
+        var end = Hours.ceilToFiveMinutes(Hours.plus(start, hours), zone);
+        if (!end.isAfter(start)) {
+            // A window without a length has no moment it runs and cannot be shown.
+            end = start.plus(FIVE_MINUTES);
+        }
+        end = Hours.earliest(end, stretch.get(stretch.size() - 1).end());
         return new Window(start, end, amps, powerKw, solar, imported);
     }
 }
