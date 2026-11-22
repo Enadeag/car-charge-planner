@@ -53,8 +53,8 @@ modules:
           - android
       # the Maven of .mvn/wrapper/maven-wrapper.properties (PackagingTest checks the address and checksum)
       - type: archive
-        url: https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.10.0/apache-maven-3.10.0-bin.zip
-        sha256: 1f6d9909266510f039f59aa0e13dcd2c66da85f043e56276e41f2918f8bddaff
+        url: https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.10.1/apache-maven-3.10.1-bin.zip
+        sha256: 9c1ef9174ef250a5009ed0dec97cbe8699acf7479add4e62bf7b0ea791c0adb5
         dest: maven
       # JavaFX's jmods, as tools/package-linux.sh downloads them (PackagingTest checks the address and checksum)
       - type: archive

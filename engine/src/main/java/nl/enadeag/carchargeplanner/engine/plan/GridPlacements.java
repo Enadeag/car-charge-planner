@@ -19,6 +19,7 @@ import java.util.Optional;
 final class GridPlacements {
 
     private static final Duration QUARTER_HOUR = Duration.ofMinutes(15);
+    private static final Duration FIVE_MINUTES = Duration.ofMinutes(5);
     private static final double QUARTER_HOUR_IN_HOURS = 0.25;
     private static final double EPS = 1e-9;
 
@@ -70,7 +71,8 @@ final class GridPlacements {
 
     /**
      * Every stretch of free quarters of an hour that delivers the energy at this current and starts within the charging
-     * hours, as a window. It may run on after them.
+     * hours, as a window. It may run on after them. A stretch is at least one quarter, so an energy too small for
+     * one still has a place.
      *
      * @param quarters the quarters to look in, in time order, without gaps
      * @param energyKwh the wall-side energy to deliver in kWh, more than 0
@@ -80,7 +82,7 @@ final class GridPlacements {
     List<Window> placements(List<QuarterHour> quarters, double energyKwh, int amps, Instant notBefore) {
         double powerKw = Charging.powerKw(amps, system.charger());
         double hours = energyKwh / powerKw;
-        int count = (int) Math.ceil(hours / QUARTER_HOUR_IN_HOURS - EPS);
+        int count = Math.max(1, (int) Math.ceil(hours / QUARTER_HOUR_IN_HOURS - EPS));
         var placements = new ArrayList<Window>();
         for (int first = 0; first + count <= quarters.size(); first++) {
             var stretch = quarters.subList(first, first + count);
@@ -178,8 +180,12 @@ final class GridPlacements {
             imported += Math.max(0, powerKw - usableKw) * quarterHours;
         }
         var start = stretch.get(0).start();
-        var end = Hours.earliest(Hours.ceilToFiveMinutes(Hours.plus(start, hours), zone),
-                stretch.get(stretch.size() - 1).end());
+        var end = Hours.ceilToFiveMinutes(Hours.plus(start, hours), zone);
+        if (!end.isAfter(start)) {
+            // A window without a length has no moment it runs and cannot be shown.
+            end = start.plus(FIVE_MINUTES);
+        }
+        end = Hours.earliest(end, stretch.get(stretch.size() - 1).end());
         return new Window(start, end, amps, powerKw, solar, imported);
     }
 }
