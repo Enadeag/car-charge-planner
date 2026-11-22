@@ -2,6 +2,12 @@
 
 Decisions about trips entered by hand ([ADR 0009](../../adr/0009-trips-and-calendar.md), layer 1) that the ADR and the code alone do not explain. Each says what holds now and ends with the issue that settled it. What the terms mean (trip, departure, charging hours, battery check) is in `CONTEXT.md`.
 
+### Bounds and damaged rows
+
+- A trip's distance is more than 0 and at most 20,000 km there and back, well above a drive across a continent and back; it lasts at most 366 days, as the planner goes through a trip day by day; it departs from 1970-01-01T00:00Z and returns before 10000-01-01T00:00Z (#410).
+- Both apps' entries refuse a distance beyond 20,000 km before they make the trip, at the distance, with a text that names the engine's limit: "The distance must be at most 20,000 km." on the desktop, in miles rounded down to a whole mile (12,427 mi), so a trip of the distance named is never refused; Android has km only. The length and the moments have no text of their own (#410).
+- A row of `trips.json` or `away.json` outside these bounds is a damaged row, as any row the engine cannot read: left out when planning, and while it is in the file no trip or away period can be added, changed or removed. Neither app shows such rows (#410).
+
 ### Grid charges and the charging hours
 
 - Every grid charge starts within the charging hours, a trip's and the everyday grid advice's alike, and may run on after them (#227).

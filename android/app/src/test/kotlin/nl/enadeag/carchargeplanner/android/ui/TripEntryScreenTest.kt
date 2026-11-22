@@ -572,6 +572,19 @@ class TripEntryScreenTest {
     }
 
     @Test
+    fun aDistanceTooFarIsRefusedUnderTheFieldWithTheLimit() {
+        show()
+        openAdd()
+        typeDistance("20001")
+
+        click(save)
+
+        compose.onNodeWithText("The distance must be at most 20000 km.").assertIsDisplayed()
+        distance.assertIsFocused()
+        assertThat(access.tripChanges).isEmpty()
+    }
+
+    @Test
     fun aSaveThatFailedSaysSoAtTheTopAtOnceWithTheEnglishDetailsAndPutsTheFocusOnTheTitle() {
         access.tripFails = "No space left on device"
         show()

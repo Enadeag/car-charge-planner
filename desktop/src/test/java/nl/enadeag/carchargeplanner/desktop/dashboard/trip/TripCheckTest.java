@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -110,6 +111,28 @@ class TripCheckTest {
     void aDistanceOfNothingOrLessIsRefusedAtTheDistance(String typed) {
         assertThat(morning().check(entered("7:30", "18:00", typed)))
                 .isEqualTo(new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_POSITIVE, Field.DISTANCE));
+    }
+
+    @Test
+    void aTripOfTwentyThousandKmIsSavedAndALongerOneRefusedWithThatLimit() {
+        assertThat(morning().check(entered("7:30", "18:00", "20000")))
+                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), 20_000, false)));
+        assertThat(morning().check(entered("7:30", "18:00", "20000.01"))).isEqualTo(
+                new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("20,000", "km")));
+        assertThat(check(at(DAY, 6, 0), Units.METRIC, new Messages(Language.DUTCH))
+                .check(entered("7:30", "18:00", "20000,01"))).isEqualTo(
+                        new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("20.000", "km")));
+    }
+
+    /** 20,000 km is 12,427.4 miles: the limit is named in whole miles, rounded down, and a trip of it is saved. */
+    @Test
+    void inMilesTheLimitIsNamedRoundedDownAndATripOfItIsSaved() {
+        var miles = check(at(DAY, 6, 0), Units.IMPERIAL, ENGLISH);
+
+        assertThat(((Checked.Valid) miles.check(entered("7:30", "18:00", "12427"))).trip().distanceKm())
+                .isCloseTo(19_999.317_888, within(1e-9));
+        assertThat(miles.check(entered("7:30", "18:00", "12428"))).isEqualTo(
+                new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("12,427", "mi")));
     }
 
     @Test

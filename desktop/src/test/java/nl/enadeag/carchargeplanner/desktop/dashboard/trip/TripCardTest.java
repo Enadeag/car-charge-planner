@@ -227,6 +227,18 @@ class TripCardTest {
     }
 
     @Test
+    void aTripTooFarIsRefusedWithTheLimitInTheText() throws Exception {
+        show(Models.CLOUDY_TOMORROW, Models.TRIPS);
+        openEntry();
+        Fx.run(() -> card.editor().enter(SATURDAY, "8:00", SATURDAY, "18:00", "20001", false));
+
+        Keyboard.press(KeyCode.ENTER);
+
+        assertThat(added).isEmpty();
+        assertThat(Fx.call(() -> card.editor().problem())).isEqualTo("The distance must be at most 20,000 km.");
+    }
+
+    @Test
     void aTripThatHasReturnedByTheTimeOfSavingIsRefused() throws Exception {
         show(Models.SUNNY_TODAY, Models.TRIPS); // made at 08:12
 

@@ -398,6 +398,19 @@ class TripEntryAddAndChangeTest {
     }
 
     @Test
+    fun aDistanceOfTwentyThousandKmIsSavedAndAnyMoreRefusedAtTheDistance() = runTest {
+        val entry = added()
+        entry.fill("20000.001")
+
+        entry.save()
+
+        assertThat(entry.problem.value).isEqualTo(Problem.DISTANCE_TOO_FAR)
+        assertThat(entry.problem.value!!.field).isEqualTo(Field.DISTANCE)
+        entry.fill("20000")
+        assertThat(saved(entry)?.distanceKm()).isEqualTo(20_000.0)
+    }
+
+    @Test
     fun aTinyDistanceIsSaved() = runTest {
         val entry = added()
         entry.fill("0.001")

@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -24,10 +25,11 @@ import tools.jackson.databind.node.ObjectNode;
  * The away periods the owner entered by hand for specific days, in a JSON file the engine keeps:
  * {@code {"version": 1, "periods": [{"start": "2026-07-04T06:00:00Z", "end": "2026-07-04T16:00:00Z"}]}}, where a file
  * without a version is version 1. A file that is missing or cannot be used holds none, and a damaged entry is left
- * out, so a bad file never stops planning. But nothing is added to or removed from such a file: that would lose what
- * it holds, so the owner is told instead. The periods are kept in memory until the file changes on disk. Every
- * method may be called from any thread: a change reads, changes and writes the file as one step, so two changes at
- * the same time both count.
+ * out, so a bad file never stops planning; an entry that starts or ends outside a trip's range of moments, from
+ * {@link Trip#EARLIEST_INSTANT} and before {@link Trip#INSTANTS_END}, counts as damaged. But nothing is added to or
+ * removed from such a file: that would lose what it holds, so the owner is told instead. The periods are kept in
+ * memory until the file changes on disk. Every method may be called from any thread: a change reads, changes and
+ * writes the file as one step, so two changes at the same time both count.
  */
 public final class AwayFile {
 
@@ -154,8 +156,12 @@ public final class AwayFile {
                 return Optional.empty();
             }
             try {
-                return Optional.of(new OneOffAwayPeriod(Instant.parse(start.stringValue()),
-                        Instant.parse(end.stringValue())));
+                var from = Instant.parse(start.stringValue());
+                var to = Instant.parse(end.stringValue());
+                if (from.isBefore(Trip.EARLIEST_INSTANT) || !to.isBefore(Trip.INSTANTS_END)) {
+                    return Optional.empty();
+                }
+                return Optional.of(new OneOffAwayPeriod(from, to));
             } catch (DateTimeException | IllegalArgumentException ignored) {
                 return Optional.empty();
             }

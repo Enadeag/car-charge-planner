@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.trip;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,8 +26,10 @@ class TripTest {
     }
 
     @ParameterizedTest
-    @ValueSource(doubles = {0, -0.0, -1, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
-    void aTripMustHaveAFiniteDistanceOfMoreThanNothing(double distanceKm) {
+    // 20_000.000_000_000_004 is the next double after 20,000
+    @ValueSource(doubles = {0, -0.0, -1, 20_000.000_000_000_004, Double.NaN, Double.POSITIVE_INFINITY,
+        Double.NEGATIVE_INFINITY})
+    void aTripMustHaveADistanceOfMoreThanNothingAndAtMostTwentyThousandKm(double distanceKm) {
         assertThatThrownBy(() -> new Trip(DEPARTURE, RETURN, distanceKm, false))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("distance");
     }
@@ -35,6 +38,35 @@ class TripTest {
     void theShortestTripTakesAMomentAndTheSmallestDistance() {
         var trip = new Trip(DEPARTURE, DEPARTURE.plusNanos(1), Double.MIN_VALUE, true);
         assertThat(trip.distanceKm()).isEqualTo(Double.MIN_VALUE);
+    }
+
+    @Test
+    void theLongestTripTakes366DaysAndTwentyThousandKm() {
+        var back = DEPARTURE.plus(Duration.ofDays(366));
+
+        var trip = new Trip(DEPARTURE, back, 20_000, false);
+
+        assertThat(trip.returnTime()).isEqualTo(back);
+        assertThat(trip.distanceKm()).isEqualTo(20_000);
+        assertThatThrownBy(() -> new Trip(DEPARTURE, back.plusNanos(1), 300, false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("a trip must return at most 366 days after its departure, not PT8784H0.000000001S");
+    }
+
+    @Test
+    void aTripLeavesFrom1970AndReturnsBeforeTheYear10000() {
+        var earliest = Instant.parse("1970-01-01T00:00:00Z");
+        var latest = Instant.parse("+10000-01-01T00:00:00Z").minusNanos(1);
+
+        assertThat(new Trip(earliest, earliest.plusSeconds(3600), 300, false).departure()).isEqualTo(earliest);
+        assertThat(new Trip(latest.minusSeconds(3600), latest, 300, false).returnTime()).isEqualTo(latest);
+        assertThatThrownBy(() -> new Trip(earliest.minusNanos(1), earliest.plusSeconds(3600), 300, false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("a trip's departure must be 1970-01-01T00:00:00Z or later,"
+                        + " not 1969-12-31T23:59:59.999999999Z");
+        assertThatThrownBy(() -> new Trip(latest.minusSeconds(3600), latest.plusNanos(1), 300, false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("a trip's return must be before +10000-01-01T00:00:00Z, not +10000-01-01T00:00:00Z");
     }
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");

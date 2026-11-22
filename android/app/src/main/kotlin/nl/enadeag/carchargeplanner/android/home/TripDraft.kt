@@ -48,6 +48,9 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
 
         /** The distance is 0 or less. */
         DISTANCE_NOT_POSITIVE(TripEntry.Field.DISTANCE),
+
+        /** The distance is more than a trip may have, [Trip.MAX_DISTANCE_KM]. */
+        DISTANCE_TOO_FAR(TripEntry.Field.DISTANCE),
     }
 
     /**
@@ -159,6 +162,9 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
             ?: numbers.read(typed) ?: return Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER)
         if (km <= 0) {
             return Checked.Refused(Problem.DISTANCE_NOT_POSITIVE)
+        }
+        if (km > Trip.MAX_DISTANCE_KM) {
+            return Checked.Refused(Problem.DISTANCE_TOO_FAR)
         }
         return Checked.Valid(Trip(departure, back, km, fields.canCharge, opened?.notWithThisCar() == true))
     }

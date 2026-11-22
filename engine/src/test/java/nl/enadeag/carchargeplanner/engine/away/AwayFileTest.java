@@ -173,6 +173,33 @@ class AwayFileTest {
                 new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "\"start\": \"1969-12-31T23:59:59.999999999Z\", \"end\": \"1970-01-01T08:00:00Z\"",
+        "\"start\": \"9999-12-31T06:00:00Z\", \"end\": \"+10000-01-01T00:00:00Z\""})
+    void aPeriodOutsideATripsRangeOfMomentsIsDamaged(String entry) throws IOException {
+        var path = Files.writeString(folder.resolve("away.json"), "{\"periods\": [{" + entry + "},"
+                + " {\"start\": \"2026-07-04T06:00:00Z\", \"end\": \"2026-07-04T08:00:00Z\"}]}");
+
+        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(
+                new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")));
+        assertThatThrownBy(() -> new AwayFile(path, FILES, CLOCK).add(OneOffAwayPeriod.allDay(DAY, TZ), NOW))
+                .isInstanceOf(IOException.class).hasMessageContaining("holds 1 damaged entries");
+    }
+
+    @Test
+    void periodsOnTheEdgesOfATripsRangeOfMomentsAreKept() throws IOException {
+        var path = Files.writeString(folder.resolve("away.json"), """
+                {"periods": [{"start": "1970-01-01T00:00:00Z", "end": "1970-01-01T08:00:00Z"},
+                  {"start": "9999-12-31T06:00:00Z", "end": "9999-12-31T23:59:59.999999999Z"}]}
+                """);
+
+        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(
+                new OneOffAwayPeriod(Instant.parse("1970-01-01T00:00:00Z"), Instant.parse("1970-01-01T08:00:00Z")),
+                new OneOffAwayPeriod(Instant.parse("9999-12-31T06:00:00Z"),
+                        Instant.parse("9999-12-31T23:59:59.999999999Z")));
+    }
+
     @Test
     void aPeriodThatCannotBeSavedIsReported() throws IOException {
         Files.writeString(folder.resolve("data"), "a file where the folder should be");

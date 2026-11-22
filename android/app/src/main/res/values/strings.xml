@@ -486,6 +486,8 @@
   <string name="trip_passed">That trip is over already.</string>
   <string name="trip_distance_not_a_number">Type the distance as a number, such as 120.</string>
   <string name="trip_distance_not_positive">The distance must be more than 0.</string>
+  <!-- %1$s the longest distance there and back a trip may have, in km, written already, such as 20000 -->
+  <string name="trip_distance_too_far">The distance must be at most %1$s km.</string>
   <!-- asked by Back or Close in the trip entry with something changed, under discard_question -->
   <string name="trip_discard_text">The trip you entered is not saved yet.</string>
   <!-- the date picker's button under the calendar or the typed date, named for what it switches to, as

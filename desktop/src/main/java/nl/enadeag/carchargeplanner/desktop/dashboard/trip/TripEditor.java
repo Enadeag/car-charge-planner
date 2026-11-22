@@ -220,8 +220,8 @@ final class TripEditor extends VBox {
                                 trip.notWithThisCar()));
                 closed.run();
             }
-            case TripCheck.Checked.Refused(var why, var where) -> {
-                showProblem(messages.text(why));
+            case TripCheck.Checked.Refused(var why, var where, var values) -> {
+                showProblem(messages.text(why, values.toArray()));
                 ScreenReader.focus(field(where));
             }
         }
