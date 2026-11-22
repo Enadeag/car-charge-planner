@@ -572,6 +572,20 @@ class TripEntryScreenTest {
     }
 
     @Test
+    fun aTripTooLongIsRefusedUnderTheReturnWithTheLimit() {
+        show()
+        openAdd()
+        typeDistance("120")
+        compose.runOnIdle { trips.returnDay(today.plusDays(367)) }
+
+        click(save)
+
+        compose.onNodeWithText("A trip can last at most 366 days.").assertIsDisplayed()
+        button(R.string.trip_return_day).assertIsFocused()
+        assertThat(access.tripChanges).isEmpty()
+    }
+
+    @Test
     fun aDistanceTooFarIsRefusedUnderTheFieldWithTheLimit() {
         show()
         openAdd()

@@ -484,6 +484,8 @@
   <!-- why the trip entry's Save refused the trip, the desktop's: under the return's buttons, or under the distance -->
   <string name="trip_return_before_departure">The return must be after the departure.</string>
   <string name="trip_passed">That trip is over already.</string>
+  <!-- %1$s the most days a trip may last, written already, such as 366 -->
+  <string name="trip_too_long">A trip can last at most %1$s days.</string>
   <string name="trip_distance_not_a_number">Type the distance as a number, such as 120.</string>
   <string name="trip_distance_not_positive">The distance must be more than 0.</string>
   <!-- %1$s the longest distance there and back a trip may have, in km, written already, such as 20000 -->

@@ -135,6 +135,44 @@ class TripCheckTest {
                 new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("12,427", "mi")));
     }
 
+    /** From 3 July 2026 to 4 July 2027 the clocks go back once and forward once, so 366 days are 8784 hours. */
+    @Test
+    void aTripOf366DaysIsSavedAndAMinuteLongerRefusedAtTheDayOfReturnWithThatLimit() {
+        var back = DAY.plusDays(366);
+
+        assertThat(morning().check(new Entered(DAY, "7:30", back, "7:30", "300", false, false)))
+                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(back, 7, 30), 300, false)));
+        assertThat(morning().check(new Entered(DAY, "7:30", back, "7:31", "300", false, false))).isEqualTo(
+                new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of("366")));
+    }
+
+    /**
+     * The length is counted in real hours: from 28 March 2026 to 29 March 2027 the clocks go forward twice and back
+     * once, so a return an hour later on the clock than 366 days still comes 366 days after the departure.
+     */
+    @Test
+    void theLengthIsCountedInRealHoursNotOnTheClock() {
+        var leaves = LocalDate.of(2026, 3, 28);
+        var back = leaves.plusDays(366);
+
+        assertThat(morning().check(new Entered(leaves, "8:00", back, "9:00", "300", false, false)))
+                .isEqualTo(new Checked.Valid(new Trip(at(leaves, 8, 0), at(back, 9, 0), 300, false)));
+        assertThat(morning().check(new Entered(leaves, "8:00", back, "9:01", "300", false, false)))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of("366")));
+    }
+
+    /** A trip edited by hand to return at 9999-12-31T23:30Z shows its return on 1 January 10000 in Brussels. */
+    @Test
+    void aReturnInTheYear10000IsRefusedAtTheDayOfReturnAsTooLong() {
+        var leaves = LocalDate.of(9999, 12, 31);
+        var back = LocalDate.of(10_000, 1, 1);
+
+        assertThat(morning().check(new Entered(leaves, "20:00", back, "0:59", "300", false, false)))
+                .isEqualTo(new Checked.Valid(new Trip(at(leaves, 20, 0), at(back, 0, 59), 300, false)));
+        assertThat(morning().check(new Entered(leaves, "20:00", back, "1:30", "300", false, false)))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of("366")));
+    }
+
     @Test
     void theTimesAreCheckedBeforeTheDistance() {
         assertThat(morning().check(entered("18:00", "7:30", "far")))

@@ -4,6 +4,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
@@ -18,7 +19,7 @@ import java.util.Optional;
 
 /**
  * Whether what the owner entered for a trip can be saved, and as which trip: the times must be times, the return must
- * be after the departure and not have passed, and the distance must be a number more than 0 and at most a trip's
+ * be after the departure, not have passed and not be later than a trip may last, and the distance must be a number more than 0 and at most a trip's
  * longest, in the owner's units.
  */
 final class TripCheck {
@@ -70,6 +71,10 @@ final class TripCheck {
         if (!returnTime.isAfter(clock.instant())) {
             return new Checked.Refused(TextKey.TRIP_PASSED, Field.RETURN_DAY);
         }
+        if (Duration.between(departure, returnTime).compareTo(Trip.MAX_LENGTH) > 0) {
+            return new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY,
+                    List.of(messages.number(Trip.MAX_LENGTH.toDays(), 0)));
+        }
         var typed = messages.parseNumber(entered.distance());
         if (typed.isEmpty()) {
             return new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_A_NUMBER, Field.DISTANCE);
@@ -86,6 +91,11 @@ final class TripCheck {
             var longest = Math.floor(units.distance(Trip.MAX_DISTANCE_KM));
             return new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE,
                     List.of(messages.number(longest, 0), units.distanceUnit()));
+        }
+        if (!returnTime.isBefore(Trip.INSTANTS_END)) {
+            // only a trip edited by hand to return at the end of the year 9999 offers such a day
+            return new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY,
+                    List.of(messages.number(Trip.MAX_LENGTH.toDays(), 0)));
         }
         return new Checked.Valid(new Trip(departure, returnTime, km, entered.canChargeAtDestination(),
                 entered.notWithThisCar()));

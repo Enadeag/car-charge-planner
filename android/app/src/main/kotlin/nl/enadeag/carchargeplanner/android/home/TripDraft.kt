@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.android.home
 
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -42,6 +43,12 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
 
         /** The return has passed by the time of Save. */
         PASSED(TripEntry.Field.RETURN),
+
+        /**
+         * The return is more than a trip may last, [Trip.MAX_LENGTH], after the departure, or in the year 10000 or
+         * later.
+         */
+        TOO_LONG(TripEntry.Field.RETURN),
 
         /** The distance is no number, or too large to be one. */
         DISTANCE_NOT_A_NUMBER(TripEntry.Field.DISTANCE),
@@ -156,6 +163,9 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         if (!back.isAfter(now)) {
             return Checked.Refused(Problem.PASSED)
         }
+        if (Duration.between(departure, back) > Trip.MAX_LENGTH) {
+            return Checked.Refused(Problem.TOO_LONG)
+        }
         val typed = fields.distance.trim()
         // a distance left as it first showed, in whole km, stays the trip's own
         val km = opened?.takeIf { typed == first.distance }?.distanceKm()
@@ -165,6 +175,10 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         }
         if (km > Trip.MAX_DISTANCE_KM) {
             return Checked.Refused(Problem.DISTANCE_TOO_FAR)
+        }
+        if (!back.isBefore(Trip.INSTANTS_END)) {
+            // only a trip edited by hand to return at the end of the year 9999 offers such a day
+            return Checked.Refused(Problem.TOO_LONG)
         }
         return Checked.Valid(Trip(departure, back, km, fields.canCharge, opened?.notWithThisCar() == true))
     }

@@ -32,9 +32,9 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * minute, its distance in whole km and "Not with this car" carried along unseen. The days offered run from the home's
  * today, by the clock when the entry opens, to 20 days after it, widened to the days the entry opened on. A time the
  * clocks skip counts as the time after the gap, one they repeat as its first. Save checks, in the desktop's order,
- * that the return is after the departure, that it has not passed by the clock at Save, and that the distance is a
- * number more than 0 and at most a trip's longest, read as a number field reads it; it shows the first problem only,
- * which goes at the next change.
+ * that the return is after the departure, that it has not passed by the clock at Save and is at most a trip's longest
+ * after the departure, and that the distance is a number more than 0 and at most a trip's longest, read as a number
+ * field reads it; it shows the first problem only, which goes at the next change.
  * A distance left as it first showed keeps the trip's own, so a change does not round it. A save that worked closes
  * the entry, says so once and hands the stored trips on; one that failed keeps the entry open with what was entered
  * and why. Back, or Close, asks before it throws a change away and closes at once when nothing differs from how the

@@ -227,6 +227,18 @@ class TripCardTest {
     }
 
     @Test
+    void aTripTooLongIsRefusedWithTheLimitInTheText() throws Exception {
+        show(Models.CLOUDY_TOMORROW, Models.TRIPS);
+        openEntry();
+        Fx.run(() -> card.editor().enter(SATURDAY, "8:00", SATURDAY.plusDays(367), "8:00", "100", false));
+
+        Keyboard.press(KeyCode.ENTER);
+
+        assertThat(added).isEmpty();
+        assertThat(Fx.call(() -> card.editor().problem())).isEqualTo("A trip can last at most 366 days.");
+    }
+
+    @Test
     void aTripTooFarIsRefusedWithTheLimitInTheText() throws Exception {
         show(Models.CLOUDY_TOMORROW, Models.TRIPS);
         openEntry();

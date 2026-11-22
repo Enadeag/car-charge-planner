@@ -386,6 +386,20 @@ class TripEntryAddAndChangeTest {
             .isEqualTo(TripDraft.Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER))
     }
 
+    /** A trip edited by hand to return at 9999-12-31T23:30Z shows its return at 00:30 on 1 January 10000. */
+    @Test
+    fun changingAReturnIntoTheYear10000IsRefusedAtTheReturnAsTooLong() {
+        val opened = Trip(Instant.parse("9999-12-31T19:00:00Z"), Instant.parse("9999-12-31T23:30:00Z"), 300.0, false)
+        val first = Fields.of(opened, amsterdam, "300")
+        val unchanged = TripDraft(Mode.CHANGE, amsterdam, today, first, opened, first)
+        val later = unchanged.copy(fields = first.copy(returnTime = LocalTime.of(1, 30)))
+
+        assertThat(unchanged.check(clock.now, NumberText(Locale.ENGLISH))).isEqualTo(TripDraft.Checked.Valid(opened))
+        assertThat(later.check(clock.now, NumberText(Locale.ENGLISH)))
+            .isEqualTo(TripDraft.Checked.Refused(Problem.TOO_LONG))
+        assertThat(Problem.TOO_LONG.field).isEqualTo(Field.RETURN)
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["0", "-5", "0.0", "-0.1"])
     fun aDistanceOfZeroOrLessIsRefused(typed: String) = runTest {
@@ -395,6 +409,20 @@ class TripEntryAddAndChangeTest {
         entry.save()
 
         assertThat(entry.problem.value).isEqualTo(Problem.DISTANCE_NOT_POSITIVE)
+    }
+
+    /** From 1 June 2026 to 2 June 2027 the clocks go back once and forward once, so 366 days are 8784 hours. */
+    @Test
+    fun aTripOf366DaysIsSavedAndAMinuteLongerRefusedAtTheReturn() = runTest {
+        val entry = added()
+        entry.fill("300", to = today.plusDays(366), back = "08:01")
+
+        entry.save()
+
+        assertThat(entry.problem.value).isEqualTo(Problem.TOO_LONG)
+        assertThat(entry.problem.value!!.field).isEqualTo(Field.RETURN)
+        entry.fill("300", to = today.plusDays(366), back = "08:00")
+        assertThat(saved(entry)).isEqualTo(trip(today, "08:00", today.plusDays(366), "08:00", 300.0))
     }
 
     @Test

@@ -130,10 +130,12 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
     var spot by rememberSaveable { mutableStateOf(Spot.DEPARTURE_DAY) }
     val focus = remember { Spot.entries.associateWith { FocusRequester() } }
     val problemText = problem?.let {
-        if (it == TripDraft.Problem.DISTANCE_TOO_FAR) {
-            stringResource(problemId(it), words.whole(Trip.MAX_DISTANCE_KM.toDouble()))
-        } else {
-            stringResource(problemId(it))
+        when (it) {
+            TripDraft.Problem.DISTANCE_TOO_FAR ->
+                stringResource(problemId(it), words.whole(Trip.MAX_DISTANCE_KM.toDouble()))
+            TripDraft.Problem.TOO_LONG ->
+                stringResource(problemId(it), words.whole(Trip.MAX_LENGTH.toDays().toDouble()))
+            else -> stringResource(problemId(it))
         }
     }
     val returnProblem = problemText.takeIf { problem?.field == TripEntry.Field.RETURN }
@@ -297,6 +299,7 @@ private fun dayName(words: DashboardWords, today: LocalDate, day: LocalDate): St
 private fun problemId(problem: TripDraft.Problem): Int = when (problem) {
     TripDraft.Problem.RETURN_NOT_AFTER_DEPARTURE -> R.string.trip_return_before_departure
     TripDraft.Problem.PASSED -> R.string.trip_passed
+    TripDraft.Problem.TOO_LONG -> R.string.trip_too_long
     TripDraft.Problem.DISTANCE_NOT_A_NUMBER -> R.string.trip_distance_not_a_number
     TripDraft.Problem.DISTANCE_NOT_POSITIVE -> R.string.trip_distance_not_positive
     TripDraft.Problem.DISTANCE_TOO_FAR -> R.string.trip_distance_too_far

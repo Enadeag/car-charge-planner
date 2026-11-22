@@ -171,6 +171,11 @@ public enum TextKey {
     TRIP_RETURN_BEFORE_DEPARTURE,
     /** Said when the entered trip has returned already. */
     TRIP_PASSED,
+    /**
+     * Said when the entered return is later after the departure than a trip may last, or in the year 10000: {0} the
+     * most days.
+     */
+    TRIP_TOO_LONG,
     /** Said when the entered distance is not a number. */
     TRIP_DISTANCE_NOT_A_NUMBER,
     /** Said when the entered distance is 0 or less. */
