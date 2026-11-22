@@ -21,7 +21,7 @@ junit4 = "4.13.2"
 androidx-test-espresso = "3.7.0"
 lifecycle = "2.11.0"
 coroutines = "1.11.0"
-robolectric = "4.17"
+robolectric = "4.18"
 # Robolectric's Android for each SDK the tests run on (robolectric.properties and @Config(sdk = ...)), named as
 # the Robolectric version above asks for it: Gradle downloads and checks these jars, and the tests run with
 # Robolectric offline (#484). RobolectricSdkJarsTest holds them to the Robolectric version; a Robolectric update may
