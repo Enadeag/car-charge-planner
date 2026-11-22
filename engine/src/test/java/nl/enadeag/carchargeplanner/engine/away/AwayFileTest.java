@@ -200,6 +200,22 @@ class AwayFileTest {
                         Instant.parse("9999-12-31T23:59:59.999999999Z")));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"1969-12-31T23:59:59.999999999Z | 1970-01-01T08:00:00Z",
+        "9999-12-31T06:00:00Z | +10000-01-01T00:00:00Z"})
+    void aPeriodOutsideATripsRangeOfMomentsIsNotAdded(String entered) throws IOException {
+        var path = folder.resolve("away.json");
+        new AwayFile(path, FILES, CLOCK).add(OneOffAwayPeriod.allDay(DAY, TZ), NOW);
+        var before = Files.readString(path);
+        var ends = entered.split(" \\| ");
+        var period = new OneOffAwayPeriod(Instant.parse(ends[0]), Instant.parse(ends[1]));
+
+        assertThatThrownBy(() -> new AwayFile(path, FILES, CLOCK).add(period, NOW))
+                .isInstanceOf(IOException.class).hasMessageContaining("is not added");
+        assertThat(Files.readString(path)).isEqualTo(before);
+        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(OneOffAwayPeriod.allDay(DAY, TZ));
+    }
+
     @Test
     void aPeriodThatCannotBeSavedIsReported() throws IOException {
         Files.writeString(folder.resolve("data"), "a file where the folder should be");

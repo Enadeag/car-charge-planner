@@ -17,9 +17,6 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
  */
 public record Charger(Phases phases, int minAmps, int maxAmps, double volts, double efficiency) {
 
-    /** A common home charger, for an owner who does not know the values: one phase, 6 to 16 A, 230 V, 90 %. */
-    public static final Charger TYPICAL = new Charger(Phases.ONE, 6, 16, 230, 0.9);
-
     /** The lowest current per phase either current may be, in A. */
     public static final int MIN_CURRENT_AMPS = 1;
 
@@ -41,6 +38,9 @@ public record Charger(Phases phases, int minAmps, int maxAmps, double volts, dou
     /** The highest efficiency, 100%: a charger without losses. */
     public static final double MAX_EFFICIENCY = 1;
 
+    /** A common home charger, for an owner who does not know the values: one phase, 6 to 16 A, 230 V, 90 %. */
+    public static final Charger TYPICAL = new Charger(Phases.ONE, 6, 16, 230, 0.9);
+
     /**
      * Checks the values.
      *
@@ -59,6 +59,7 @@ public record Charger(Phases phases, int minAmps, int maxAmps, double volts, dou
             throw new InvalidSetting(ConfigSetting.CHARGER_MAX_CURRENT, InvalidSetting.Rule.OUT_OF_RANGE,
                     "maxAmps must be from " + MIN_CURRENT_AMPS + " to " + MAX_CURRENT_AMPS + ", not " + maxAmps);
         }
+        // written as a negation, so that a NaN is refused
         if (!(volts >= MIN_VOLTS && volts <= MAX_VOLTS)) {
             throw new InvalidSetting(ConfigSetting.CHARGER_VOLTAGE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "volts must be from " + MIN_VOLTS + " to " + MAX_VOLTS + ", not " + volts);

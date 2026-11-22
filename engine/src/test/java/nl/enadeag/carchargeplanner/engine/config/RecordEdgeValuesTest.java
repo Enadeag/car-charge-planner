@@ -76,8 +76,13 @@ class RecordEdgeValuesTest {
         assertThatCode(make::get).doesNotThrowAnyException();
     }
 
+    /** A value past the edge of a range, refused as {@link InvalidSetting.Rule#OUT_OF_RANGE}. */
     private static Arguments refused(ConfigSetting setting, Supplier<Object> make) {
-        return Arguments.of(setting, make);
+        return refused(setting, InvalidSetting.Rule.OUT_OF_RANGE, make);
+    }
+
+    private static Arguments refused(ConfigSetting setting, InvalidSetting.Rule rule, Supplier<Object> make) {
+        return Arguments.of(setting, rule, make);
     }
 
     static Stream<Arguments> pastTheEdge() {
@@ -90,8 +95,10 @@ class RecordEdgeValuesTest {
                 refused(ConfigSetting.CAR_DAILY_DISTANCE, () -> new Car(60, 18, Math.nextUp(1000.0))),
                 refused(ConfigSetting.CHARGER_MIN_CURRENT, () -> new Charger(Phases.ONE, 0, 16, 230, 0.9)),
                 refused(ConfigSetting.CHARGER_MIN_CURRENT, () -> new Charger(Phases.ONE, 81, 81, 230, 0.9)),
-                refused(ConfigSetting.CHARGER_MAX_CURRENT, () -> new Charger(Phases.ONE, 16, 15, 230, 0.9)),
+                refused(ConfigSetting.CHARGER_MAX_CURRENT, InvalidSetting.Rule.BELOW_MINIMUM_CURRENT,
+                        () -> new Charger(Phases.ONE, 16, 15, 230, 0.9)),
                 refused(ConfigSetting.CHARGER_MAX_CURRENT, () -> new Charger(Phases.ONE, 6, 81, 230, 0.9)),
+                refused(ConfigSetting.CHARGER_MAX_CURRENT, () -> new Charger(Phases.ONE, 80, 81, 230, 0.9)),
                 refused(ConfigSetting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, Math.nextDown(100.0), 0.9)),
                 refused(ConfigSetting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, Math.nextUp(400.0), 0.9)),
                 refused(ConfigSetting.CHARGER_EFFICIENCY, () -> new Charger(Phases.ONE, 6, 16, 230,
@@ -114,7 +121,8 @@ class RecordEdgeValuesTest {
                         Duration.ZERO, LEAD)),
                 refused(ConfigSetting.NOTIFY_LEAD, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2,
                         WINDOW, Duration.ofMinutes(-1))),
-                refused(ConfigSetting.MINIMUM_CHARGE, () -> new PlanningPreferences(HIGH, HIGH, 0.85, 0.2, WINDOW, LEAD)),
+                refused(ConfigSetting.MINIMUM_CHARGE, InvalidSetting.Rule.NOT_BELOW_TARGET,
+                        () -> new PlanningPreferences(HIGH, HIGH, 0.85, 0.2, WINDOW, LEAD)),
                 refused(ConfigSetting.CAR_BATTERY, () -> new Car(Double.NaN, 18, 40)),
                 refused(ConfigSetting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, Double.NaN, 0.9)),
                 refused(ConfigSetting.HOUSE_BASELOAD, () -> new House(Double.NaN)),
@@ -123,11 +131,13 @@ class RecordEdgeValuesTest {
                         WINDOW, LEAD)));
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "{0} {1}")
     @MethodSource("pastTheEdge")
-    void aValuePastTheEdgeIsRefusedAndNamed(ConfigSetting setting, Supplier<Object> make) {
-        assertThatThrownBy(make::get).isInstanceOfSatisfying(InvalidSetting.class,
-                problem -> assertThat(problem.setting()).isEqualTo(setting));
+    void aValuePastTheEdgeIsRefusedAndNamed(ConfigSetting setting, InvalidSetting.Rule rule, Supplier<Object> make) {
+        assertThatThrownBy(make::get).isInstanceOfSatisfying(InvalidSetting.class, problem -> {
+            assertThat(problem.setting()).isEqualTo(setting);
+            assertThat(problem.rule()).isEqualTo(rule);
+        });
     }
 
     private static final PlaceName BRUSSELS = new PlaceName("Brussels, Belgium");

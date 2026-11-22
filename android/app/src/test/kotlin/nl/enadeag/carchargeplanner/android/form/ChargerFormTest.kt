@@ -67,6 +67,16 @@ class ChargerFormTest {
     }
 
     @Test
+    fun aHighestCurrentAboveTheEnginesBoundIsOutOfRangeAtItsField() {
+        form.load(stored)
+        form.edit(ChargerForm.Field.MAX_CURRENT, "81")
+
+        assertThat(form.check(stored)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ChargerForm.Field.MAX_CURRENT to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+    }
+
+    @Test
     fun anEfficiencyAboveAHundredPercentIsOutOfRange() {
         form.load(stored)
         form.edit(ChargerForm.Field.EFFICIENCY, "101")

@@ -38,6 +38,12 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
      * @property field where the owner fixes it
      */
     enum class Problem(val field: TripEntry.Field) {
+        /**
+         * The departure is before a trip's earliest moment, [Trip.EARLIEST_INSTANT]: only a phone whose clock was put
+         * back near 1970 offers such a day.
+         */
+        DEPARTED_BEFORE_EARLIEST(TripEntry.Field.DEPARTURE),
+
         /** The return is not after the departure, also when a time the clocks skip moves the departure on. */
         RETURN_NOT_AFTER_DEPARTURE(TripEntry.Field.RETURN),
 
@@ -157,6 +163,9 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         // a time the clocks skip counts as the time after the gap, one they repeat as its first
         val departure = fields.departureDay.atTime(fields.departureTime).atZone(zone).toInstant()
         val back = fields.returnDay.atTime(fields.returnTime).atZone(zone).toInstant()
+        if (departure.isBefore(Trip.EARLIEST_INSTANT)) {
+            return Checked.Refused(Problem.DEPARTED_BEFORE_EARLIEST)
+        }
         if (!back.isAfter(departure)) {
             return Checked.Refused(Problem.RETURN_NOT_AFTER_DEPARTURE)
         }

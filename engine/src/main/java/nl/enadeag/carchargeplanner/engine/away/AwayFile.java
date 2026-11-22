@@ -71,10 +71,16 @@ public final class AwayFile {
      * @param period the period to add
      * @param now the current moment, which decides which periods are old
      * @return the stored periods after the change, in order of their start
-     * @throws IOException when the file could not be written, or it exists but could not be read whole; it is then
-     *     left as it was
+     * @throws IOException when the period starts or ends outside a trip's range of moments, so reading it back would
+     *     count it as damaged, when the file could not be written, or when it exists but could not be read whole; it is
+     *     then left as it was
      */
     public synchronized List<OneOffAwayPeriod> add(OneOffAwayPeriod period, Instant now) throws IOException {
+        if (!withinRange(period.start(), period.end())) {
+            throw new IOException("an away period must start at " + Trip.EARLIEST_INSTANT + " or later and end before "
+                    + Trip.INSTANTS_END + ", so " + period.start() + " to " + period.end() + " is not added to "
+                    + file.path());
+        }
         var keepFrom = now.minus(KEEP_AFTER_END);
         var periods = new ArrayList<>(storedForChange().stream()
                 .filter(stored -> stored.end().isAfter(keepFrom) && !stored.equals(period))
@@ -97,6 +103,11 @@ public final class AwayFile {
         var periods = storedForChange().stream().filter(stored -> !stored.equals(period)).toList();
         file.write(new Entries(periods, 0));
         return periods;
+    }
+
+    /** Whether a period from start to end lies within a trip's range of moments, as a stored period must. */
+    private static boolean withinRange(Instant start, Instant end) {
+        return !start.isBefore(Trip.EARLIEST_INSTANT) && end.isBefore(Trip.INSTANTS_END);
     }
 
     /** The stored periods, when writing them back loses nothing. */
@@ -158,7 +169,7 @@ public final class AwayFile {
             try {
                 var from = Instant.parse(start.stringValue());
                 var to = Instant.parse(end.stringValue());
-                if (from.isBefore(Trip.EARLIEST_INSTANT) || !to.isBefore(Trip.INSTANTS_END)) {
+                if (!withinRange(from, to)) {
                     return Optional.empty();
                 }
                 return Optional.of(new OneOffAwayPeriod(from, to));

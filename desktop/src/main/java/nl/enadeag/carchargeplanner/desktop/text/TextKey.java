@@ -172,8 +172,8 @@ public enum TextKey {
     /** Said when the entered trip has returned already. */
     TRIP_PASSED,
     /**
-     * Said when the entered return is later after the departure than a trip may last, or in the year 10000: {0} the
-     * most days.
+     * Said when the entered trip would last longer than a trip may, or return in the year 10000: {0} the most days a
+     * trip may last, a whole number.
      */
     TRIP_TOO_LONG,
     /** Said when the entered distance is not a number. */

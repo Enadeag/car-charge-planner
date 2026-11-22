@@ -143,7 +143,7 @@ class TripCheckTest {
         assertThat(morning().check(new Entered(DAY, "7:30", back, "7:30", "300", false, false)))
                 .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(back, 7, 30), 300, false)));
         assertThat(morning().check(new Entered(DAY, "7:30", back, "7:31", "300", false, false))).isEqualTo(
-                new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of("366")));
+                new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of(366L)));
     }
 
     /**
@@ -158,7 +158,7 @@ class TripCheckTest {
         assertThat(morning().check(new Entered(leaves, "8:00", back, "9:00", "300", false, false)))
                 .isEqualTo(new Checked.Valid(new Trip(at(leaves, 8, 0), at(back, 9, 0), 300, false)));
         assertThat(morning().check(new Entered(leaves, "8:00", back, "9:01", "300", false, false)))
-                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of("366")));
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of(366L)));
     }
 
     /** A trip edited by hand to return at 9999-12-31T23:30Z shows its return on 1 January 10000 in Brussels. */
@@ -170,7 +170,21 @@ class TripCheckTest {
         assertThat(morning().check(new Entered(leaves, "20:00", back, "0:59", "300", false, false)))
                 .isEqualTo(new Checked.Valid(new Trip(at(leaves, 20, 0), at(back, 0, 59), 300, false)));
         assertThat(morning().check(new Entered(leaves, "20:00", back, "1:30", "300", false, false)))
-                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of("366")));
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of(366L)));
+        // 01:00 in Brussels on 1 January 10000 is the year's first moment in UTC
+        assertThat(morning().check(new Entered(leaves, "20:00", back, "1:00", "300", false, false)))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of(366L)));
+    }
+
+    /** A computer whose clock was put back to just after 1970 began in UTC, in a home where it is still 1969. */
+    @Test
+    void aDepartureBefore1970IsRefusedAtTheDepartureAsPassed() {
+        var check = new TripCheck(ZoneId.of("America/New_York"), InstantSource.fixed(Instant.parse(
+                "1970-01-01T02:00:00Z")), Units.METRIC, ENGLISH);
+        var day = LocalDate.of(1969, 12, 31);
+
+        assertThat(check.check(new Entered(day, "8:00", day.plusDays(1), "18:00", "300", false, false)))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_PASSED, Field.DEPARTURE_TIME));
     }
 
     @Test

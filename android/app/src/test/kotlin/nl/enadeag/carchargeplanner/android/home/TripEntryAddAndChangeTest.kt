@@ -393,11 +393,29 @@ class TripEntryAddAndChangeTest {
         val first = Fields.of(opened, amsterdam, "300")
         val unchanged = TripDraft(Mode.CHANGE, amsterdam, today, first, opened, first)
         val later = unchanged.copy(fields = first.copy(returnTime = LocalTime.of(1, 30)))
+        // 01:00 in Amsterdam on 1 January 10000 is the year's first moment in UTC
+        val atTheEnd = unchanged.copy(fields = first.copy(returnTime = LocalTime.of(1, 0)))
 
         assertThat(unchanged.check(clock.now, NumberText(Locale.ENGLISH))).isEqualTo(TripDraft.Checked.Valid(opened))
         assertThat(later.check(clock.now, NumberText(Locale.ENGLISH)))
             .isEqualTo(TripDraft.Checked.Refused(Problem.TOO_LONG))
+        assertThat(atTheEnd.check(clock.now, NumberText(Locale.ENGLISH)))
+            .isEqualTo(TripDraft.Checked.Refused(Problem.TOO_LONG))
         assertThat(Problem.TOO_LONG.field).isEqualTo(Field.RETURN)
+    }
+
+    /** A phone whose clock was put back to just after 1970 began in UTC, in a home where it is still 1969. */
+    @Test
+    fun aDepartureBefore1970IsRefusedAtTheDepartureAsPassed() {
+        val newYork = ZoneId.of("America/New_York")
+        val now = Instant.parse("1970-01-01T02:00:00Z")
+        val day = LocalDate.of(1969, 12, 31)
+        val fields = Fields(day, LocalTime.of(8, 0), day.plusDays(1), LocalTime.of(18, 0), "300", false)
+        val draft = TripDraft(Mode.ADD, newYork, day, fields, null, fields)
+
+        assertThat(draft.check(now, NumberText(Locale.ENGLISH)))
+            .isEqualTo(TripDraft.Checked.Refused(Problem.DEPARTED_BEFORE_EARLIEST))
+        assertThat(Problem.DEPARTED_BEFORE_EARLIEST.field).isEqualTo(Field.DEPARTURE)
     }
 
     @ParameterizedTest

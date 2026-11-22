@@ -30,8 +30,9 @@ public record Trip(Instant departure, Instant returnTime, double distanceKm, boo
     public static final Instant EARLIEST_INSTANT = Instant.EPOCH;
 
     /**
-     * The first moment a return may no longer be: the start of the year 10000, far from the end of what a date can
-     * hold, where turning a moment into a date fails.
+     * The first moment that is not allowed, so the end is exclusive: a return must be before it. It is the start of
+     * the year 10000 in UTC, the first year with five digits, well before the end of what a date can hold, where
+     * turning a moment into a date in a time zone fails.
      */
     public static final Instant INSTANTS_END = LocalDate.of(10_000, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant();
 
@@ -59,6 +60,7 @@ public record Trip(Instant departure, Instant returnTime, double distanceKm, boo
             throw new IllegalArgumentException("a trip must return at most " + MAX_LENGTH.toDays()
                     + " days after its departure, not " + Duration.between(departure, returnTime));
         }
+        // written as a negation, so that a NaN is refused
         if (!(distanceKm > 0 && distanceKm <= MAX_DISTANCE_KM)) {
             throw new IllegalArgumentException("a trip's distance must be more than 0 km and at most "
                     + MAX_DISTANCE_KM + " km, not " + distanceKm);

@@ -28,6 +28,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -64,7 +65,7 @@ private enum class Spot {
     /** The title, after a save that failed. */
     TOP,
 
-    /** The departure day's button, where the entry starts. */
+    /** The departure day's button, where the entry starts, and after a problem with the departure. */
     DEPARTURE_DAY,
 
     /** The departure time's button. */
@@ -129,15 +130,8 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
     var picking by rememberSaveable { mutableStateOf<Picking?>(null) }
     var spot by rememberSaveable { mutableStateOf(Spot.DEPARTURE_DAY) }
     val focus = remember { Spot.entries.associateWith { FocusRequester() } }
-    val problemText = problem?.let {
-        when (it) {
-            TripDraft.Problem.DISTANCE_TOO_FAR ->
-                stringResource(problemId(it), words.whole(Trip.MAX_DISTANCE_KM.toDouble()))
-            TripDraft.Problem.TOO_LONG ->
-                stringResource(problemId(it), words.whole(Trip.MAX_LENGTH.toDays().toDouble()))
-            else -> stringResource(problemId(it))
-        }
-    }
+    val problemText = problem?.let { problemText(it, words) }
+    val departureProblem = problemText.takeIf { problem?.field == TripEntry.Field.DEPARTURE }
     val returnProblem = problemText.takeIf { problem?.field == TripEntry.Field.RETURN }
     val distanceProblem = problemText.takeIf { problem?.field == TripEntry.Field.DISTANCE }
     val fields = draft.fields
@@ -147,7 +141,11 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
         FocusOnWindow { focus.getValue(spot) }
         LaunchedEffect(refusals) {
             val field = problem?.field ?: return@LaunchedEffect
-            spot = if (field == TripEntry.Field.RETURN) Spot.RETURN_DAY else Spot.DISTANCE
+            spot = when (field) {
+                TripEntry.Field.DEPARTURE -> Spot.DEPARTURE_DAY
+                TripEntry.Field.RETURN -> Spot.RETURN_DAY
+                TripEntry.Field.DISTANCE -> Spot.DISTANCE
+            }
             focus.getValue(spot).requestFocus()
         }
         LaunchedEffect(failed) {
@@ -169,12 +167,16 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
             if (draft.zone != phoneZone) {
                 Text(stringResource(R.string.home_zone, draft.zone.id))
             }
-            Moment(Named(stringResource(R.string.trip_departure_day), dayName(words, draft.today, fields.departureDay),
-                focus.getValue(Spot.DEPARTURE_DAY), noted(Spot.DEPARTURE_DAY)) { picking = Picking.DEPARTURE_DAY },
-                Named(stringResource(R.string.trip_departure_time), words.time(fields.departureTime),
-                    focus.getValue(Spot.DEPARTURE_TIME), noted(Spot.DEPARTURE_TIME)) {
-                    picking = Picking.DEPARTURE_TIME
-                }, null, !savingNow)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Moment(Named(stringResource(R.string.trip_departure_day),
+                    dayName(words, draft.today, fields.departureDay), focus.getValue(Spot.DEPARTURE_DAY),
+                    noted(Spot.DEPARTURE_DAY)) { picking = Picking.DEPARTURE_DAY },
+                    Named(stringResource(R.string.trip_departure_time), words.time(fields.departureTime),
+                        focus.getValue(Spot.DEPARTURE_TIME), noted(Spot.DEPARTURE_TIME)) {
+                        picking = Picking.DEPARTURE_TIME
+                    }, departureProblem, !savingNow)
+                Refusal(departureProblem)
+            }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Moment(Named(stringResource(R.string.trip_return_day), dayName(words, draft.today, fields.returnDay),
                     focus.getValue(Spot.RETURN_DAY), noted(Spot.RETURN_DAY)) { picking = Picking.RETURN_DAY },
@@ -182,13 +184,7 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
                         focus.getValue(Spot.RETURN_TIME), noted(Spot.RETURN_TIME)) {
                         picking = Picking.RETURN_TIME
                     }, returnProblem, !savingNow)
-                // under the return's buttons; the live region stays while empty, so a refusal that comes in is read
-                // while the focus moves to the return day
-                Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
-                    returnProblem?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+                Refusal(returnProblem)
             }
             DistanceField(fields.distance, distanceProblem, savingNow, focus.getValue(Spot.DISTANCE),
                 noted(Spot.DISTANCE), entry::distance) { entry.save() }
@@ -229,6 +225,19 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
  */
 private class Named(val name: String, val value: String, val focus: FocusRequester, val noted: Modifier,
     val onClick: () -> Unit)
+
+/**
+ * Why Save refused a moment of the trip, under its buttons. The live region stays while empty, so a refusal that comes
+ * in is read while the focus moves to the moment's day.
+ */
+@Composable
+private fun Refusal(problem: String?) {
+    Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+        problem?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
 
 /**
  * A moment of the trip, the departure or the return: its day's button and its time's, side by side while both fit
@@ -296,11 +305,16 @@ private fun CanCharge(checked: Boolean, enabled: Boolean, modifier: Modifier, on
 private fun dayName(words: DashboardWords, today: LocalDate, day: LocalDate): String =
     words.date(DayName.of(day, today))
 
-private fun problemId(problem: TripDraft.Problem): Int = when (problem) {
-    TripDraft.Problem.RETURN_NOT_AFTER_DEPARTURE -> R.string.trip_return_before_departure
-    TripDraft.Problem.PASSED -> R.string.trip_passed
-    TripDraft.Problem.TOO_LONG -> R.string.trip_too_long
-    TripDraft.Problem.DISTANCE_NOT_A_NUMBER -> R.string.trip_distance_not_a_number
-    TripDraft.Problem.DISTANCE_NOT_POSITIVE -> R.string.trip_distance_not_positive
-    TripDraft.Problem.DISTANCE_TOO_FAR -> R.string.trip_distance_too_far
+@Composable
+private fun problemText(problem: TripDraft.Problem, words: DashboardWords): String = when (problem) {
+    // a departure before 1970 is over, whatever a phone's clock that was put back says
+    TripDraft.Problem.DEPARTED_BEFORE_EARLIEST -> stringResource(R.string.trip_passed)
+    TripDraft.Problem.RETURN_NOT_AFTER_DEPARTURE -> stringResource(R.string.trip_return_before_departure)
+    TripDraft.Problem.PASSED -> stringResource(R.string.trip_passed)
+    TripDraft.Problem.TOO_LONG ->
+        Trip.MAX_LENGTH.toDays().toInt().let { days -> pluralStringResource(R.plurals.trip_too_long, days, days) }
+    TripDraft.Problem.DISTANCE_NOT_A_NUMBER -> stringResource(R.string.trip_distance_not_a_number)
+    TripDraft.Problem.DISTANCE_NOT_POSITIVE -> stringResource(R.string.trip_distance_not_positive)
+    TripDraft.Problem.DISTANCE_TOO_FAR ->
+        stringResource(R.string.trip_distance_too_far, words.whole(Trip.MAX_DISTANCE_KM.toDouble()))
 }

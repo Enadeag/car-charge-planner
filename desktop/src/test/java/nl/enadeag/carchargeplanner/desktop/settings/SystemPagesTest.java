@@ -694,9 +694,10 @@ class SystemPagesTest {
         assertThat(Fx.call(() -> {
             settings.type(view, TextKey.FIELD_CAR_BATTERY, "200");
             settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "60");
+            settings.type(view, TextKey.FIELD_CAR_DAILY_DISTANCE, "0");
             return SettingsFixture.save(view);
         })).isTrue();
-        assertThat(stored().system().car()).isEqualTo(new Car(200, 60, 1000));
+        assertThat(stored().system().car()).isEqualTo(new Car(200, 60, 0));
     }
 
     /** In miles the fields' ends are 620 mi, 1 and 12.5 mi/kWh, which in km also lie within the engine's bounds. */

@@ -46,6 +46,7 @@ public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double
      * @throws InvalidSetting when a value is outside the range given for it
      */
     public Car {
+        // written as a negation, so that a NaN is refused
         if (!(usableBatteryKwh >= MIN_USABLE_BATTERY_KWH && usableBatteryKwh <= MAX_USABLE_BATTERY_KWH)) {
             throw new InvalidSetting(ConfigSetting.CAR_BATTERY, InvalidSetting.Rule.OUT_OF_RANGE,
                     "usableBatteryKwh must be from " + MIN_USABLE_BATTERY_KWH + " to " + MAX_USABLE_BATTERY_KWH

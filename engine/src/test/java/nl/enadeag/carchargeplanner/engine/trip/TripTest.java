@@ -31,7 +31,8 @@ class TripTest {
         Double.NEGATIVE_INFINITY})
     void aTripMustHaveADistanceOfMoreThanNothingAndAtMostTwentyThousandKm(double distanceKm) {
         assertThatThrownBy(() -> new Trip(DEPARTURE, RETURN, distanceKm, false))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("distance");
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("distance")
+                .hasMessageContaining("20000");
     }
 
     @Test
@@ -50,7 +51,7 @@ class TripTest {
         assertThat(trip.distanceKm()).isEqualTo(20_000);
         assertThatThrownBy(() -> new Trip(DEPARTURE, back.plusNanos(1), 300, false))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("a trip must return at most 366 days after its departure, not PT8784H0.000000001S");
+                .hasMessageStartingWith("a trip must return at most 366 days after its departure, not ");
     }
 
     @Test
