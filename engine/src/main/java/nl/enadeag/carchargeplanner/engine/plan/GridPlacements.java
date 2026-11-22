@@ -70,7 +70,8 @@ final class GridPlacements {
 
     /**
      * Every stretch of free quarters of an hour that delivers the energy at this current and starts within the charging
-     * hours, as a window. It may run on after them.
+     * hours, as a window. It may run on after them. A stretch is at least one quarter, so an energy too small for
+     * one still has a place.
      *
      * @param quarters the quarters to look in, in time order, without gaps
      * @param energyKwh the wall-side energy to deliver in kWh, more than 0
@@ -80,7 +81,7 @@ final class GridPlacements {
     List<Window> placements(List<QuarterHour> quarters, double energyKwh, int amps, Instant notBefore) {
         double powerKw = Charging.powerKw(amps, system.charger());
         double hours = energyKwh / powerKw;
-        int count = (int) Math.ceil(hours / QUARTER_HOUR_IN_HOURS - EPS);
+        int count = Math.max(1, (int) Math.ceil(hours / QUARTER_HOUR_IN_HOURS - EPS));
         var placements = new ArrayList<Window>();
         for (int first = 0; first + count <= quarters.size(); first++) {
             var stretch = quarters.subList(first, first + count);
