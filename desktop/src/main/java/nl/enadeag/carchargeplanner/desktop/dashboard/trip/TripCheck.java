@@ -20,8 +20,8 @@ import java.util.Optional;
 /**
  * Whether what the owner entered for a trip can be saved, and as which trip: the times must be times, the departure
  * must not be before a trip's earliest moment, the return must be after the departure, not have passed and not be
- * later than a trip may last, and the distance must be a number more than 0 and at most a trip's longest, in the
- * owner's units.
+ * later than a trip may last, the distance must be a number more than 0 and at most a trip's longest, in the
+ * owner's units, and the return must be before a trip's latest moment.
  */
 final class TripCheck {
 
@@ -97,7 +97,7 @@ final class TripCheck {
                     List.of(messages.number(longest, 0), units.distanceUnit()));
         }
         if (!returnTime.isBefore(Trip.INSTANTS_END)) {
-            // only a trip edited by hand to return at the end of the year 9999 offers such a day
+            // only a trip edited by hand, or a clock put forward to the end of the year 9999, offers such a day
             return tooLong();
         }
         return new Checked.Valid(new Trip(departure, returnTime, km, entered.canChargeAtDestination(),

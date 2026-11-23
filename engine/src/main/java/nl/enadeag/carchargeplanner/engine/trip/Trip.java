@@ -46,12 +46,11 @@ public record Trip(Instant departure, Instant returnTime, double distanceKm, boo
      */
     public Trip {
         if (departure.isBefore(EARLIEST_INSTANT)) {
-            throw new IllegalArgumentException("a trip's departure must be " + EARLIEST_INSTANT + " or later, not "
-                    + departure);
+            throw new IllegalArgumentException("a trip's departure must be " + EARLIEST_INSTANT
+                    + " or later");
         }
         if (!returnTime.isBefore(INSTANTS_END)) {
-            throw new IllegalArgumentException("a trip's return must be before " + INSTANTS_END + ", not "
-                    + returnTime);
+            throw new IllegalArgumentException("a trip's return must be before " + INSTANTS_END);
         }
         if (!departure.isBefore(returnTime)) {
             throw new IllegalArgumentException("a trip must return after its departure");

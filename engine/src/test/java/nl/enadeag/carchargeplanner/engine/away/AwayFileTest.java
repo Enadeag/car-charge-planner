@@ -215,6 +215,19 @@ class AwayFileTest {
         assertThat(Files.readString(path)).isEqualTo(before);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"1969-12-31T23:59:59.999999999Z | 1970-01-01T08:00:00Z",
+        "9999-12-31T06:00:00Z | +10000-01-01T08:00:00Z"})
+    void theMessageOfAPeriodThatIsNotAddedLeavesTheOwnersTimesOut(String entered) throws IOException {
+        var path = folder.resolve("away.json");
+        var ends = entered.split(" \\| ");
+        var period = new OneOffAwayPeriod(Instant.parse(ends[0]), Instant.parse(ends[1]));
+
+        assertThatThrownBy(() -> new AwayFile(path, FILES, CLOCK).add(period, NOW))
+                .isInstanceOf(IOException.class).message()
+                .doesNotContain(period.start().toString()).doesNotContain(period.end().toString());
+    }
+
     @Test
     void periodsOnTheEdgesOfATripsRangeOfMomentsAreAdded() throws IOException {
         var now = Instant.parse("1970-01-01T01:00:00Z");

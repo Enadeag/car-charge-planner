@@ -22,7 +22,7 @@ public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double
     /** The largest usable battery, in kWh: more than any road vehicle has. */
     public static final int MAX_USABLE_BATTERY_KWH = 1000;
 
-    /** The lowest consumption, in kWh per 100 km. */
+    /** The lowest consumption, in kWh per 100 km: below any car, and below the lowest the desktop's field allows. */
     public static final int MIN_CONSUMPTION_KWH_PER_100KM = 1;
 
     /** The highest consumption, in kWh per 100 km: more than any road vehicle uses. */
@@ -31,7 +31,7 @@ public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double
     /** The shortest daily distance, in km: a car that stays home. */
     public static final int MIN_KM_PER_DAY = 0;
 
-    /** The longest daily distance, in km. */
+    /** The longest daily distance, in km: the desktop's own upper end. */
     public static final int MAX_KM_PER_DAY = 1000;
 
     /** The trip surcharge unless the owner changes it: long drives on motorways and in winter use more. */

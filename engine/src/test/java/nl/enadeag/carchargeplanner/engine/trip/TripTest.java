@@ -63,11 +63,12 @@ class TripTest {
         assertThat(new Trip(latest.minusSeconds(3600), latest, 300, false).returnTime()).isEqualTo(latest);
         assertThatThrownBy(() -> new Trip(earliest.minusNanos(1), earliest.plusSeconds(3600), 300, false))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("a trip's departure must be 1970-01-01T00:00:00Z or later,"
-                        + " not 1969-12-31T23:59:59.999999999Z");
-        assertThatThrownBy(() -> new Trip(latest.minusSeconds(3600), latest.plusNanos(1), 300, false))
+                .hasMessage("a trip's departure must be 1970-01-01T00:00:00Z or later");
+        var afterTheEnd = latest.plus(Duration.ofDays(1));
+        assertThatThrownBy(() -> new Trip(latest.minusSeconds(3600), afterTheEnd, 300, false))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("a trip's return must be before +10000-01-01T00:00:00Z, not +10000-01-01T00:00:00Z");
+                .hasMessage("a trip's return must be before +10000-01-01T00:00:00Z")
+                .hasMessageNotContaining("+10000-01-02");
     }
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");

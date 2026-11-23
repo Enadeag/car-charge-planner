@@ -572,6 +572,33 @@ class TripEntryScreenTest {
     }
 
     @Test
+    fun aTripThatIsOverIsRefusedUnderTheReturn() {
+        show()
+        openAdd()
+        typeDistance("120")
+        compose.runOnIdle { trips.returnTime(LocalTime.of(8, 30)) }
+
+        click(save)
+
+        compose.onNodeWithText(text(R.string.trip_passed)).assertIsDisplayed()
+        button(R.string.trip_return_day).assertIsFocused()
+        assertThat(access.tripChanges).isEmpty()
+    }
+
+    @Test
+    fun aDistanceOfNothingIsRefusedUnderTheField() {
+        show()
+        openAdd()
+        typeDistance("0")
+
+        click(save)
+
+        compose.onNodeWithText(text(R.string.trip_distance_not_positive)).assertIsDisplayed()
+        distance.assertIsFocused()
+        assertThat(access.tripChanges).isEmpty()
+    }
+
+    @Test
     fun aTripTooLongIsRefusedUnderTheReturnWithTheLimit() {
         show()
         openAdd()

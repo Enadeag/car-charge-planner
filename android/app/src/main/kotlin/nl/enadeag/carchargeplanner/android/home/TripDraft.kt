@@ -184,7 +184,7 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
             return Checked.Refused(Problem.DISTANCE_TOO_FAR)
         }
         if (!back.isBefore(Trip.INSTANTS_END)) {
-            // only a trip edited by hand to return at the end of the year 9999 offers such a day
+            // only a trip edited by hand, or a clock put forward to the end of the year 9999, offers such a day
             return Checked.Refused(Problem.TOO_LONG)
         }
         return Checked.Valid(Trip(departure, back, km, fields.canCharge, opened?.notWithThisCar() == true))

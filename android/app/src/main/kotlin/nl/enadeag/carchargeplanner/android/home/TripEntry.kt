@@ -34,8 +34,9 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * clocks skip counts as the time after the gap, one they repeat as its first. Save checks, in the desktop's order,
  * that the departure is not before a trip's earliest moment, shown at the return as a trip that is over, that the
  * return is after the departure, that it has not passed by the clock at Save and is at most a trip's longest after the
- * departure, and that the distance is a number more than 0 and at most a trip's longest, read as a number field reads
- * it; it shows the first problem only, which goes at the next change.
+ * departure, that the distance is a number more than 0 and at most a trip's longest, read as a number field reads
+ * it, and that the return is before a trip's latest moment; it shows the first problem only, which goes at the
+ * next change.
  * A distance left as it first showed keeps the trip's own, so a change does not round it. A save that worked closes
  * the entry, says so once and hands the stored trips on; one that failed keeps the entry open with what was entered
  * and why. Back, or Close, asks before it throws a change away and closes at once when nothing differs from how the

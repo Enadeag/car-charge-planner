@@ -31,7 +31,7 @@ Decisions about the engine that both apps share, the desktop app and the Android
 - A setting outside its bound is an `InvalidSetting` with its own `ConfigSetting` and the rule `OUT_OF_RANGE`, whose English message names the field, its limits and the value (`usableBatteryKwh must be from 1 to 1000, not 5000.0`); both apps show their general text for it. A settings file with such a value is unusable like any other the engine refuses, with no migration and no clamping on read (#410).
 - A trip outside its bounds is refused by `Trip` with an `IllegalArgumentException`, as a distance of 0 is (#410).
 - The one-off away periods in `away.json` are held to a trip's range of moments by `AwayFile`: reading counts a row that starts before 1970 or ends on 1 January 10000 (UTC) or later as damaged, and adding such a period fails as a write that failed does, so the file never gets a row it would read back as damaged. The weekly away periods hold times of a weekday, no moments (#410).
-- `OneOffAwayPeriod` itself has no check of that range, as the dashboard makes whole days around a stored period (#410).
+- `OneOffAwayPeriod` itself has no check of that range: `ComingAway` makes the all-day period around a stored period's start day to tell whether it is a whole day, and that period, in the home's zone, may start in 1969 or end in the year 10000 (#410).
 
 ### Setting the settings file aside
 
@@ -40,7 +40,7 @@ Decisions about the engine that both apps share, the desktop app and the Android
 
 ### The Android app's forms
 
-- A typed value is refused only when the engine's own rules refuse it (`InvalidSetting`, `Percent`, the whole-minute rules), as an error under its field; nothing is clamped or rounded. The desktop's own, narrower ranges are not used on Android, but the engine's bounds of the car's and the charger's numbers hold in both apps (see Bounds of the car's, the charger's and a trip's numbers); one source of every range for both apps, with a text per setting that names its limits, is the open #317 (#313, #410).
+- A typed value is refused only when the engine's own rules refuse it (`InvalidSetting`, `Percent`, the whole-minute rules), as an error under its field; nothing is clamped or rounded. The desktop's own, narrower ranges are not used on Android; one source of these ranges for both apps is the open #317 (#313).
 - The amps and the fields in minutes refuse a number with decimals, even `,0`, with "Type a whole number, without decimals."; nothing is rounded, and those fields get a keypad without a decimal mark (`NumberText.readWhole`) (#313).
 - Each save's outcome is kept in the app's scope until a screen has shown it, oldest first (`Saves.lastOutcome`, `Saves.shown`), so a later success never takes a failure's place. Only an unshown outcome that equals a later one is replaced by it (#313).
 

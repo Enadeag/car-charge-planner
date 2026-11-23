@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
@@ -674,7 +675,7 @@ class SystemPagesTest {
         });
 
         var car = stored().system().car();
-        assertThat(car.kmPerDay()).isCloseTo(80.4672, org.assertj.core.data.Offset.offset(1e-9));
+        assertThat(car.kmPerDay()).isCloseTo(80.4672, within(1e-9));
         assertThat(car.consumptionKwhPer100km()).as("not touched, so exactly as it was").isEqualTo(18);
     }
 
@@ -712,16 +713,16 @@ class SystemPagesTest {
             return SettingsFixture.save(view);
         })).isTrue();
         var car = stored().system().car();
-        assertThat(car.kmPerDay()).isCloseTo(997.793_28, org.assertj.core.data.Offset.offset(1e-9));
+        assertThat(car.kmPerDay()).isCloseTo(997.793_28, within(1e-9));
         assertThat(car.consumptionKwhPer100km())
-                .isCloseTo(62.137_119_223_733, org.assertj.core.data.Offset.offset(1e-9));
+                .isCloseTo(62.137_119_223_733, within(1e-9));
 
         assertThat(Fx.call(() -> {
             settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "12.5");
             return SettingsFixture.save(view);
         })).isTrue();
         assertThat(stored().system().car().consumptionKwhPer100km())
-                .isCloseTo(4.970_969_537_898_7, org.assertj.core.data.Offset.offset(1e-9));
+                .isCloseTo(4.970_969_537_898_7, within(1e-9));
     }
 
     /** The ends of the charger's fields lie within the engine's bounds, so each is saved as typed. */

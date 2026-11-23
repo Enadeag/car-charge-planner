@@ -115,6 +115,12 @@ class TripCheckTest {
     }
 
     @Test
+    void aDistanceOfLessThanOneKmIsSaved() {
+        assertThat(morning().check(entered("7:30", "18:00", "0.5")))
+                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), 0.5, false)));
+    }
+
+    @Test
     void aTripOfTwentyThousandKmIsSavedAndALongerOneRefusedWithThatLimit() {
         assertThat(morning().check(entered("7:30", "18:00", "20000")))
                 .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), 20_000, false)));
