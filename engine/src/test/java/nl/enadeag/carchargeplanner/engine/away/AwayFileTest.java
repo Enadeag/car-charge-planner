@@ -173,6 +173,73 @@ class AwayFileTest {
                 new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "\"start\": \"1969-12-31T23:59:59.999999999Z\", \"end\": \"1970-01-01T08:00:00Z\"",
+        "\"start\": \"9999-12-31T06:00:00Z\", \"end\": \"+10000-01-01T00:00:00Z\""})
+    void aPeriodOutsideATripsRangeOfMomentsIsDamaged(String entry) throws IOException {
+        var path = Files.writeString(folder.resolve("away.json"), "{\"periods\": [{" + entry + "},"
+                + " {\"start\": \"2026-07-04T06:00:00Z\", \"end\": \"2026-07-04T08:00:00Z\"}]}");
+
+        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(
+                new OneOffAwayPeriod(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z")));
+        assertThatThrownBy(() -> new AwayFile(path, FILES, CLOCK).add(OneOffAwayPeriod.allDay(DAY, TZ), NOW))
+                .isInstanceOf(IOException.class).hasMessageContaining("holds 1 damaged entries");
+    }
+
+    @Test
+    void periodsOnTheEdgesOfATripsRangeOfMomentsAreKept() throws IOException {
+        var path = Files.writeString(folder.resolve("away.json"), """
+                {"periods": [{"start": "1970-01-01T00:00:00Z", "end": "1970-01-01T08:00:00Z"},
+                  {"start": "9999-12-31T06:00:00Z", "end": "9999-12-31T23:59:59.999999999Z"}]}
+                """);
+
+        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(
+                new OneOffAwayPeriod(Instant.parse("1970-01-01T00:00:00Z"), Instant.parse("1970-01-01T08:00:00Z")),
+                new OneOffAwayPeriod(Instant.parse("9999-12-31T06:00:00Z"),
+                        Instant.parse("9999-12-31T23:59:59.999999999Z")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1969-12-31T23:59:59.999999999Z | 1970-01-01T08:00:00Z",
+        "9999-12-31T06:00:00Z | +10000-01-01T00:00:00Z"})
+    void aPeriodOutsideATripsRangeOfMomentsIsNotAdded(String entered) throws IOException {
+        var path = folder.resolve("away.json");
+        new AwayFile(path, FILES, CLOCK).add(OneOffAwayPeriod.allDay(DAY, TZ), NOW);
+        var before = Files.readString(path);
+        var ends = entered.split(" \\| ");
+        var period = new OneOffAwayPeriod(Instant.parse(ends[0]), Instant.parse(ends[1]));
+
+        assertThatThrownBy(() -> new AwayFile(path, FILES, CLOCK).add(period, NOW))
+                .isInstanceOf(IOException.class).message().doesNotContain(period.start().toString());
+        assertThat(Files.readString(path)).isEqualTo(before);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1969-12-31T23:59:59.999999999Z | 1970-01-01T08:00:00Z",
+        "9999-12-31T06:00:00Z | +10000-01-01T08:00:00Z"})
+    void theMessageOfAPeriodThatIsNotAddedLeavesTheOwnersTimesOut(String entered) throws IOException {
+        var path = folder.resolve("away.json");
+        var ends = entered.split(" \\| ");
+        var period = new OneOffAwayPeriod(Instant.parse(ends[0]), Instant.parse(ends[1]));
+
+        assertThatThrownBy(() -> new AwayFile(path, FILES, CLOCK).add(period, NOW))
+                .isInstanceOf(IOException.class).message()
+                .doesNotContain(period.start().toString()).doesNotContain(period.end().toString());
+    }
+
+    @Test
+    void periodsOnTheEdgesOfATripsRangeOfMomentsAreAdded() throws IOException {
+        var now = Instant.parse("1970-01-01T01:00:00Z");
+        var first = new OneOffAwayPeriod(Instant.parse("1970-01-01T00:00:00Z"), Instant.parse("1970-01-01T08:00:00Z"));
+        var last = new OneOffAwayPeriod(Instant.parse("9999-12-31T06:00:00Z"),
+                Instant.parse("9999-12-31T23:59:59.999999999Z"));
+
+        assertThat(file().add(first, now)).containsExactly(first);
+        assertThat(file().add(last, now)).containsExactly(first, last);
+        assertThat(file().periods()).containsExactly(first, last);
+    }
+
     @Test
     void aPeriodThatCannotBeSavedIsReported() throws IOException {
         Files.writeString(folder.resolve("data"), "a file where the folder should be");

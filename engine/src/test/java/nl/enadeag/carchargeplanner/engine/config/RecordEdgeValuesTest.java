@@ -36,14 +36,21 @@ class RecordEdgeValuesTest {
 
     static Stream<Arguments> edges() {
         return Stream.of(
-                ok("the smallest battery", () -> new Car(Double.MIN_VALUE, 18, 40)),
-                ok("the smallest consumption", () -> new Car(60, Double.MIN_VALUE, 40)),
+                ok("the smallest battery", () -> new Car(1, 18, 40)),
+                ok("the largest battery", () -> new Car(1000, 18, 40)),
+                ok("the smallest consumption", () -> new Car(60, 1, 40)),
+                ok("the largest consumption", () -> new Car(60, 200, 40)),
                 ok("no driving", () -> new Car(60, 18, 0)),
+                ok("the longest daily distance", () -> new Car(60, 18, 1000)),
                 ok("a minimum current of 1 A", () -> new Charger(Phases.ONE, 1, 16, 230, 0.9)),
+                ok("one current only, 1 A", () -> new Charger(Phases.ONE, 1, 1, 230, 0.9)),
                 ok("one current only", () -> new Charger(Phases.ONE, 16, 16, 230, 0.9)),
-                ok("the lowest voltage", () -> new Charger(Phases.ONE, 6, 16, Double.MIN_VALUE, 0.9)),
+                ok("one current only, 80 A", () -> new Charger(Phases.ONE, 80, 80, 230, 0.9)),
+                ok("a maximum current of 80 A", () -> new Charger(Phases.ONE, 6, 80, 230, 0.9)),
+                ok("the lowest voltage", () -> new Charger(Phases.ONE, 6, 16, 100, 0.9)),
+                ok("the highest voltage", () -> new Charger(Phases.ONE, 6, 16, 400, 0.9)),
                 ok("a charger without losses", () -> new Charger(Phases.ONE, 6, 16, 230, 1)),
-                ok("the lowest efficiency", () -> new Charger(Phases.ONE, 6, 16, 230, Double.MIN_VALUE)),
+                ok("the lowest efficiency", () -> new Charger(Phases.ONE, 6, 16, 230, 0.01)),
                 ok("a house that uses nothing", () -> new House(0)),
                 ok("flat panels", () -> new PanelArray("", 5, 0, 0, 0.14)),
                 ok("upright panels", () -> new PanelArray("", 5, 90, 0, 0.14)),
@@ -69,19 +76,33 @@ class RecordEdgeValuesTest {
         assertThatCode(make::get).doesNotThrowAnyException();
     }
 
+    /** A value past the edge of a range, refused as {@link InvalidSetting.Rule#OUT_OF_RANGE}. */
     private static Arguments refused(ConfigSetting setting, Supplier<Object> make) {
-        return Arguments.of(setting, make);
+        return refused(setting, InvalidSetting.Rule.OUT_OF_RANGE, make);
+    }
+
+    private static Arguments refused(ConfigSetting setting, InvalidSetting.Rule rule, Supplier<Object> make) {
+        return Arguments.of(setting, rule, make);
     }
 
     static Stream<Arguments> pastTheEdge() {
         return Stream.of(
-                refused(ConfigSetting.CAR_BATTERY, () -> new Car(0, 18, 40)),
-                refused(ConfigSetting.CAR_CONSUMPTION, () -> new Car(60, 0, 40)),
+                refused(ConfigSetting.CAR_BATTERY, () -> new Car(Math.nextDown(1.0), 18, 40)),
+                refused(ConfigSetting.CAR_BATTERY, () -> new Car(Math.nextUp(1000.0), 18, 40)),
+                refused(ConfigSetting.CAR_CONSUMPTION, () -> new Car(60, Math.nextDown(1.0), 40)),
+                refused(ConfigSetting.CAR_CONSUMPTION, () -> new Car(60, Math.nextUp(200.0), 40)),
                 refused(ConfigSetting.CAR_DAILY_DISTANCE, () -> new Car(60, 18, -Double.MIN_VALUE)),
+                refused(ConfigSetting.CAR_DAILY_DISTANCE, () -> new Car(60, 18, Math.nextUp(1000.0))),
                 refused(ConfigSetting.CHARGER_MIN_CURRENT, () -> new Charger(Phases.ONE, 0, 16, 230, 0.9)),
-                refused(ConfigSetting.CHARGER_MAX_CURRENT, () -> new Charger(Phases.ONE, 16, 15, 230, 0.9)),
-                refused(ConfigSetting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, 0, 0.9)),
-                refused(ConfigSetting.CHARGER_EFFICIENCY, () -> new Charger(Phases.ONE, 6, 16, 230, 0)),
+                refused(ConfigSetting.CHARGER_MIN_CURRENT, () -> new Charger(Phases.ONE, 81, 81, 230, 0.9)),
+                refused(ConfigSetting.CHARGER_MAX_CURRENT, InvalidSetting.Rule.BELOW_MINIMUM_CURRENT,
+                        () -> new Charger(Phases.ONE, 16, 15, 230, 0.9)),
+                refused(ConfigSetting.CHARGER_MAX_CURRENT, () -> new Charger(Phases.ONE, 6, 81, 230, 0.9)),
+                refused(ConfigSetting.CHARGER_MAX_CURRENT, () -> new Charger(Phases.ONE, 80, 81, 230, 0.9)),
+                refused(ConfigSetting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, Math.nextDown(100.0), 0.9)),
+                refused(ConfigSetting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, Math.nextUp(400.0), 0.9)),
+                refused(ConfigSetting.CHARGER_EFFICIENCY, () -> new Charger(Phases.ONE, 6, 16, 230,
+                        Math.nextDown(0.01))),
                 refused(ConfigSetting.CHARGER_EFFICIENCY, () -> new Charger(Phases.ONE, 6, 16, 230, Math.nextUp(1.0))),
                 refused(ConfigSetting.HOUSE_BASELOAD, () -> new House(-Double.MIN_VALUE)),
                 refused(ConfigSetting.PANEL_SIZE, () -> new PanelArray("", 0, 35, 0, 0.14)),
@@ -100,7 +121,8 @@ class RecordEdgeValuesTest {
                         Duration.ZERO, LEAD)),
                 refused(ConfigSetting.NOTIFY_LEAD, () -> new PlanningPreferences(LOW, HIGH, 0.85, 0.2,
                         WINDOW, Duration.ofMinutes(-1))),
-                refused(ConfigSetting.MINIMUM_CHARGE, () -> new PlanningPreferences(HIGH, HIGH, 0.85, 0.2, WINDOW, LEAD)),
+                refused(ConfigSetting.MINIMUM_CHARGE, InvalidSetting.Rule.NOT_BELOW_TARGET,
+                        () -> new PlanningPreferences(HIGH, HIGH, 0.85, 0.2, WINDOW, LEAD)),
                 refused(ConfigSetting.CAR_BATTERY, () -> new Car(Double.NaN, 18, 40)),
                 refused(ConfigSetting.CHARGER_VOLTAGE, () -> new Charger(Phases.ONE, 6, 16, Double.NaN, 0.9)),
                 refused(ConfigSetting.HOUSE_BASELOAD, () -> new House(Double.NaN)),
@@ -109,11 +131,13 @@ class RecordEdgeValuesTest {
                         WINDOW, LEAD)));
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "{0} {1}")
     @MethodSource("pastTheEdge")
-    void aValuePastTheEdgeIsRefusedAndNamed(ConfigSetting setting, Supplier<Object> make) {
-        assertThatThrownBy(make::get).isInstanceOfSatisfying(InvalidSetting.class,
-                problem -> assertThat(problem.setting()).isEqualTo(setting));
+    void aValuePastTheEdgeIsRefusedAndNamed(ConfigSetting setting, InvalidSetting.Rule rule, Supplier<Object> make) {
+        assertThatThrownBy(make::get).isInstanceOfSatisfying(InvalidSetting.class, problem -> {
+            assertThat(problem.setting()).isEqualTo(setting);
+            assertThat(problem.rule()).isEqualTo(rule);
+        });
     }
 
     private static final PlaceName BRUSSELS = new PlaceName("Brussels, Belgium");

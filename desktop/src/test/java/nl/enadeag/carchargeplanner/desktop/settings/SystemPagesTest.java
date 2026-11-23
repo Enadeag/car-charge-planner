@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
@@ -674,8 +675,76 @@ class SystemPagesTest {
         });
 
         var car = stored().system().car();
-        assertThat(car.kmPerDay()).isCloseTo(80.4672, org.assertj.core.data.Offset.offset(1e-9));
+        assertThat(car.kmPerDay()).isCloseTo(80.4672, within(1e-9));
         assertThat(car.consumptionKwhPer100km()).as("not touched, so exactly as it was").isEqualTo(18);
+    }
+
+    /** The ends of the car's fields lie within the engine's bounds, so each is saved as typed. */
+    @Test
+    void theEndsOfTheCarsFieldsAreSaved() throws Exception {
+        var view = open();
+
+        assertThat(Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "1");
+            settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "5");
+            settings.type(view, TextKey.FIELD_CAR_DAILY_DISTANCE, "1000");
+            return SettingsFixture.save(view);
+        })).isTrue();
+        assertThat(stored().system().car()).isEqualTo(new Car(1, 5, 1000));
+
+        assertThat(Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_BATTERY, "200");
+            settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "60");
+            settings.type(view, TextKey.FIELD_CAR_DAILY_DISTANCE, "0");
+            return SettingsFixture.save(view);
+        })).isTrue();
+        assertThat(stored().system().car()).isEqualTo(new Car(200, 60, 0));
+    }
+
+    /** In miles the fields' ends are 620 mi, 1 and 12.5 mi/kWh, which in km also lie within the engine's bounds. */
+    @Test
+    void theEndsOfTheCarsFieldsInMilesAreSaved() throws Exception {
+        var view = open();
+
+        assertThat(Fx.call(() -> {
+            settings.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL);
+            settings.type(view, TextKey.FIELD_CAR_DAILY_DISTANCE, "620");
+            settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "1");
+            return SettingsFixture.save(view);
+        })).isTrue();
+        var car = stored().system().car();
+        assertThat(car.kmPerDay()).isCloseTo(997.793_28, within(1e-9));
+        assertThat(car.consumptionKwhPer100km())
+                .isCloseTo(62.137_119_223_733, within(1e-9));
+
+        assertThat(Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "12.5");
+            return SettingsFixture.save(view);
+        })).isTrue();
+        assertThat(stored().system().car().consumptionKwhPer100km())
+                .isCloseTo(4.970_969_537_898_7, within(1e-9));
+    }
+
+    /** The ends of the charger's fields lie within the engine's bounds, so each is saved as typed. */
+    @Test
+    void theEndsOfTheChargersFieldsAreSaved() throws Exception {
+        var view = openWithCharger(new Charger(Phases.ONE, 6, 16, 230, 0.9));
+
+        assertThat(Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_MIN_CURRENT, "1");
+            settings.type(view, TextKey.FIELD_MAX_CURRENT, "80");
+            settings.type(view, TextKey.FIELD_VOLTAGE, "400");
+            settings.type(view, TextKey.FIELD_EFFICIENCY, "1");
+            return SettingsFixture.save(view);
+        })).isTrue();
+        assertThat(stored().system().charger()).isEqualTo(new Charger(Phases.ONE, 1, 80, 400, 0.01));
+
+        assertThat(Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_VOLTAGE, "100");
+            settings.type(view, TextKey.FIELD_EFFICIENCY, "100");
+            return SettingsFixture.save(view);
+        })).isTrue();
+        assertThat(stored().system().charger()).isEqualTo(new Charger(Phases.ONE, 1, 80, 100, 1));
     }
 
     @Test

@@ -171,10 +171,17 @@ public enum TextKey {
     TRIP_RETURN_BEFORE_DEPARTURE,
     /** Said when the entered trip has returned already. */
     TRIP_PASSED,
+    /**
+     * Said when the entered trip would last longer than a trip may, or return in the year 10000: {0} the most days a
+     * trip may last, a whole number.
+     */
+    TRIP_TOO_LONG,
     /** Said when the entered distance is not a number. */
     TRIP_DISTANCE_NOT_A_NUMBER,
     /** Said when the entered distance is 0 or less. */
     TRIP_DISTANCE_NOT_POSITIVE,
+    /** Said when the entered distance is beyond the longest a trip may have: {0} that distance, {1} its unit. */
+    TRIP_DISTANCE_TOO_FAR,
     /** The chip above a trip's advice. */
     TRIP_ADVICE_LABEL,
     /** A trip advice's title: {0} the day of departure in a sentence, {1} its time, {2} the distance, {3} its unit. */

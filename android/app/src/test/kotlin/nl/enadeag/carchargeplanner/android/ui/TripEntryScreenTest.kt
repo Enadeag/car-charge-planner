@@ -572,6 +572,60 @@ class TripEntryScreenTest {
     }
 
     @Test
+    fun aTripThatIsOverIsRefusedUnderTheReturn() {
+        show()
+        openAdd()
+        typeDistance("120")
+        compose.runOnIdle { trips.returnTime(LocalTime.of(8, 30)) }
+
+        click(save)
+
+        compose.onNodeWithText(text(R.string.trip_passed)).assertIsDisplayed()
+        button(R.string.trip_return_day).assertIsFocused()
+        assertThat(access.tripChanges).isEmpty()
+    }
+
+    @Test
+    fun aDistanceOfNothingIsRefusedUnderTheField() {
+        show()
+        openAdd()
+        typeDistance("0")
+
+        click(save)
+
+        compose.onNodeWithText(text(R.string.trip_distance_not_positive)).assertIsDisplayed()
+        distance.assertIsFocused()
+        assertThat(access.tripChanges).isEmpty()
+    }
+
+    @Test
+    fun aTripTooLongIsRefusedUnderTheReturnWithTheLimit() {
+        show()
+        openAdd()
+        typeDistance("120")
+        compose.runOnIdle { trips.returnDay(today.plusDays(367)) }
+
+        click(save)
+
+        compose.onNodeWithText("A trip can last at most 366 days.").assertIsDisplayed()
+        button(R.string.trip_return_day).assertIsFocused()
+        assertThat(access.tripChanges).isEmpty()
+    }
+
+    @Test
+    fun aDistanceTooFarIsRefusedUnderTheFieldWithTheLimit() {
+        show()
+        openAdd()
+        typeDistance("20001")
+
+        click(save)
+
+        compose.onNodeWithText("The distance must be at most 20000 km.").assertIsDisplayed()
+        distance.assertIsFocused()
+        assertThat(access.tripChanges).isEmpty()
+    }
+
+    @Test
     fun aSaveThatFailedSaysSoAtTheTopAtOnceWithTheEnglishDetailsAndPutsTheFocusOnTheTitle() {
         access.tripFails = "No space left on device"
         show()

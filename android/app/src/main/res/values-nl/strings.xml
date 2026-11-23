@@ -316,8 +316,13 @@
   <string name="trip_distance_field">Afstand heen en terug</string>
   <string name="trip_return_before_departure">De terugkomst moet na het vertrek liggen.</string>
   <string name="trip_passed">Die rit is al voorbij.</string>
+  <plurals name="trip_too_long">
+    <item quantity="one">Een rit kan hoogstens %1$d dag duren.</item>
+    <item quantity="other">Een rit kan hoogstens %1$d dagen duren.</item>
+  </plurals>
   <string name="trip_distance_not_a_number">Typ de afstand als een getal, zoals 120.</string>
   <string name="trip_distance_not_positive">De afstand moet meer dan 0 zijn.</string>
+  <string name="trip_distance_too_far">De afstand mag hoogstens %1$s km zijn.</string>
   <string name="trip_discard_text">De rit die je invulde is nog niet opgeslagen.</string>
   <string name="picker_calendar">Kalender</string>
 

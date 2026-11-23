@@ -386,6 +386,49 @@ class TripEntryAddAndChangeTest {
             .isEqualTo(TripDraft.Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER))
     }
 
+    /** A trip edited by hand to return at 9999-12-31T23:30Z shows its return at 00:30 on 1 January 10000. */
+    @Test
+    fun changingAReturnIntoTheYear10000IsRefusedAtTheReturnAsTooLong() {
+        val opened = Trip(Instant.parse("9999-12-31T19:00:00Z"), Instant.parse("9999-12-31T23:30:00Z"), 300.0, false)
+        val first = Fields.of(opened, amsterdam, "300")
+        val unchanged = TripDraft(Mode.CHANGE, amsterdam, today, first, opened, first)
+        val later = unchanged.copy(fields = first.copy(returnTime = LocalTime.of(1, 30)))
+        // 01:00 in Amsterdam on 1 January 10000 is the year's first moment in UTC
+        val atTheEnd = unchanged.copy(fields = first.copy(returnTime = LocalTime.of(1, 0)))
+
+        assertThat(unchanged.check(clock.now, NumberText(Locale.ENGLISH))).isEqualTo(TripDraft.Checked.Valid(opened))
+        assertThat(later.check(clock.now, NumberText(Locale.ENGLISH)))
+            .isEqualTo(TripDraft.Checked.Refused(Problem.TOO_LONG))
+        assertThat(atTheEnd.check(clock.now, NumberText(Locale.ENGLISH)))
+            .isEqualTo(TripDraft.Checked.Refused(Problem.TOO_LONG))
+        assertThat(Problem.TOO_LONG.field).isEqualTo(Field.RETURN)
+    }
+
+    /** A phone whose clock was put back to just after 1970 began in UTC, in a home where it is still 1969. */
+    @Test
+    fun aDepartureBefore1970IsRefusedAtTheReturnAsPassed() {
+        val newYork = ZoneId.of("America/New_York")
+        val now = Instant.parse("1970-01-01T02:00:00Z")
+        val day = LocalDate.of(1969, 12, 31)
+        val fields = Fields(day, LocalTime.of(8, 0), day.plusDays(1), LocalTime.of(18, 0), "300", false)
+        val draft = TripDraft(Mode.ADD, newYork, day, fields, null, fields)
+
+        assertThat(draft.check(now, NumberText(Locale.ENGLISH)))
+            .isEqualTo(TripDraft.Checked.Refused(Problem.PASSED))
+        assertThat(Problem.PASSED.field).isEqualTo(Field.RETURN)
+    }
+
+    @Test
+    fun aDepartureAtTheFirstMomentOf1970IsSaved() {
+        val now = Instant.parse("1970-01-01T00:00:30Z")
+        val day = LocalDate.of(1970, 1, 1)
+        val fields = Fields(day, LocalTime.MIDNIGHT, day, LocalTime.of(18, 0), "300", false)
+        val draft = TripDraft(Mode.ADD, ZoneOffset.UTC, day, fields, null, fields)
+
+        assertThat(draft.check(now, NumberText(Locale.ENGLISH))).isEqualTo(TripDraft.Checked.Valid(
+            Trip(Instant.parse("1970-01-01T00:00:00Z"), Instant.parse("1970-01-01T18:00:00Z"), 300.0, false, false)))
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["0", "-5", "0.0", "-0.1"])
     fun aDistanceOfZeroOrLessIsRefused(typed: String) = runTest {
@@ -395,6 +438,33 @@ class TripEntryAddAndChangeTest {
         entry.save()
 
         assertThat(entry.problem.value).isEqualTo(Problem.DISTANCE_NOT_POSITIVE)
+    }
+
+    /** From 1 June 2026 to 2 June 2027 the clocks go back once and forward once, so 366 days are 8784 hours. */
+    @Test
+    fun aTripOf366DaysIsSavedAndAMinuteLongerRefusedAtTheReturn() = runTest {
+        val entry = added()
+        entry.fill("300", to = today.plusDays(366), back = "08:01")
+
+        entry.save()
+
+        assertThat(entry.problem.value).isEqualTo(Problem.TOO_LONG)
+        assertThat(entry.problem.value!!.field).isEqualTo(Field.RETURN)
+        entry.fill("300", to = today.plusDays(366), back = "08:00")
+        assertThat(saved(entry)).isEqualTo(trip(today, "08:00", today.plusDays(366), "08:00", 300.0))
+    }
+
+    @Test
+    fun aDistanceOfTwentyThousandKmIsSavedAndAnyMoreRefusedAtTheDistance() = runTest {
+        val entry = added()
+        entry.fill("20000.001")
+
+        entry.save()
+
+        assertThat(entry.problem.value).isEqualTo(Problem.DISTANCE_TOO_FAR)
+        assertThat(entry.problem.value!!.field).isEqualTo(Field.DISTANCE)
+        entry.fill("20000")
+        assertThat(saved(entry)?.distanceKm()).isEqualTo(20_000.0)
     }
 
     @Test

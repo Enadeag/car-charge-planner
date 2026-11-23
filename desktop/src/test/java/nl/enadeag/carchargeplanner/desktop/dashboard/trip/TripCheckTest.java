@@ -15,6 +15,8 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -110,6 +112,97 @@ class TripCheckTest {
     void aDistanceOfNothingOrLessIsRefusedAtTheDistance(String typed) {
         assertThat(morning().check(entered("7:30", "18:00", typed)))
                 .isEqualTo(new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_POSITIVE, Field.DISTANCE));
+    }
+
+    @Test
+    void aDistanceOfLessThanOneKmIsSaved() {
+        assertThat(morning().check(entered("7:30", "18:00", "0.5")))
+                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), 0.5, false)));
+    }
+
+    @Test
+    void aTripOfTwentyThousandKmIsSavedAndALongerOneRefusedWithThatLimit() {
+        assertThat(morning().check(entered("7:30", "18:00", "20000")))
+                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), 20_000, false)));
+        assertThat(morning().check(entered("7:30", "18:00", "20000.01"))).isEqualTo(
+                new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("20,000", "km")));
+        assertThat(check(at(DAY, 6, 0), Units.METRIC, new Messages(Language.DUTCH))
+                .check(entered("7:30", "18:00", "20000,01"))).isEqualTo(
+                        new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("20.000", "km")));
+    }
+
+    /** 20,000 km is 12,427.4 miles: the limit is named in whole miles, rounded down, and a trip of it is saved. */
+    @Test
+    void inMilesTheLimitIsNamedRoundedDownAndATripOfItIsSaved() {
+        var miles = check(at(DAY, 6, 0), Units.IMPERIAL, ENGLISH);
+
+        assertThat(((Checked.Valid) miles.check(entered("7:30", "18:00", "12427"))).trip().distanceKm())
+                .isCloseTo(19_999.317_888, within(1e-9));
+        assertThat(miles.check(entered("7:30", "18:00", "12428"))).isEqualTo(
+                new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("12,427", "mi")));
+    }
+
+    /** From 3 July 2026 to 4 July 2027 the clocks go back once and forward once, so 366 days are 8784 hours. */
+    @Test
+    void aTripOf366DaysIsSavedAndAMinuteLongerRefusedAtTheDayOfReturnWithThatLimit() {
+        var back = DAY.plusDays(366);
+
+        assertThat(morning().check(new Entered(DAY, "7:30", back, "7:30", "300", false, false)))
+                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(back, 7, 30), 300, false)));
+        assertThat(morning().check(new Entered(DAY, "7:30", back, "7:31", "300", false, false))).isEqualTo(
+                new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of(366L)));
+    }
+
+    /**
+     * The length is counted in real hours: from 28 March 2026 to 29 March 2027 the clocks go forward twice and back
+     * once, so a return an hour later on the clock than 366 days still comes 366 days after the departure.
+     */
+    @Test
+    void theLengthIsCountedInRealHoursNotOnTheClock() {
+        var leaves = LocalDate.of(2026, 3, 28);
+        var back = leaves.plusDays(366);
+
+        assertThat(morning().check(new Entered(leaves, "8:00", back, "9:00", "300", false, false)))
+                .isEqualTo(new Checked.Valid(new Trip(at(leaves, 8, 0), at(back, 9, 0), 300, false)));
+        assertThat(morning().check(new Entered(leaves, "8:00", back, "9:01", "300", false, false)))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of(366L)));
+    }
+
+    /** A trip edited by hand to return at 9999-12-31T23:30Z shows its return on 1 January 10000 in Brussels. */
+    @Test
+    void aReturnInTheYear10000IsRefusedAtTheDayOfReturnAsTooLong() {
+        var leaves = LocalDate.of(9999, 12, 31);
+        var back = LocalDate.of(10_000, 1, 1);
+
+        assertThat(morning().check(new Entered(leaves, "20:00", back, "0:59", "300", false, false)))
+                .isEqualTo(new Checked.Valid(new Trip(at(leaves, 20, 0), at(back, 0, 59), 300, false)));
+        assertThat(morning().check(new Entered(leaves, "20:00", back, "1:30", "300", false, false)))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of(366L)));
+        // 01:00 in Brussels on 1 January 10000 is the year's first moment in UTC
+        assertThat(morning().check(new Entered(leaves, "20:00", back, "1:00", "300", false, false)))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of(366L)));
+    }
+
+    /** A computer whose clock was put back to just after 1970 began in UTC, in a home where it is still 1969. */
+    @Test
+    void aDepartureBefore1970IsRefusedAtTheDepartureAsPassed() {
+        var check = new TripCheck(ZoneId.of("America/New_York"), InstantSource.fixed(Instant.parse(
+                "1970-01-01T02:00:00Z")), Units.METRIC, ENGLISH);
+        var day = LocalDate.of(1969, 12, 31);
+
+        assertThat(check.check(new Entered(day, "8:00", day.plusDays(1), "18:00", "300", false, false)))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_PASSED, Field.DEPARTURE_TIME));
+    }
+
+    @Test
+    void aDepartureAtTheFirstMomentOf1970IsAccepted() {
+        var check = new TripCheck(ZoneOffset.UTC, InstantSource.fixed(Instant.parse("1970-01-01T00:00:30Z")),
+                Units.METRIC, ENGLISH);
+        var day = LocalDate.of(1970, 1, 1);
+
+        assertThat(check.check(new Entered(day, "0:00", day, "18:00", "300", false, false)))
+                .isEqualTo(new Checked.Valid(new Trip(Instant.parse("1970-01-01T00:00:00Z"),
+                        Instant.parse("1970-01-01T18:00:00Z"), 300, false, false)));
     }
 
     @Test

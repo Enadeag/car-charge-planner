@@ -12,20 +12,20 @@ class NotANumberTest {
     @Test
     void aCarRefusesAValueThatIsNotANumber() {
         assertThatThrownBy(() -> new Car(NAN, 17, 30)).isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("usableBatteryKwh must be more than 0");
+                .hasMessage("usableBatteryKwh must be from 1 to 1000, not NaN");
         assertThatThrownBy(() -> new Car(60, NAN, 30)).isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("consumptionKwhPer100km must be more than 0");
+                .hasMessage("consumptionKwhPer100km must be from 1 to 200, not NaN");
         assertThatThrownBy(() -> new Car(60, 17, NAN)).isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("kmPerDay must not be negative");
+                .hasMessage("kmPerDay must be from 0 to 1000, not NaN");
     }
 
     @Test
     void aChargerRefusesAValueThatIsNotANumber() {
         assertThatThrownBy(() -> new Charger(Phases.THREE, 6, 16, NAN, 0.9))
-                .isInstanceOf(IllegalArgumentException.class).hasMessage("volts must be more than 0");
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("volts must be from 100 to 400, not NaN");
         assertThatThrownBy(() -> new Charger(Phases.THREE, 6, 16, 230, NAN))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("efficiency must be more than 0 and at most 1");
+                .hasMessage("efficiency must be from 0.01 to 1.0, not NaN");
     }
 
     @Test

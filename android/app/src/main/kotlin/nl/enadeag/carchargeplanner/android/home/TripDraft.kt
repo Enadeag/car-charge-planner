@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.android.home
 
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -40,14 +41,26 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         /** The return is not after the departure, also when a time the clocks skip moves the departure on. */
         RETURN_NOT_AFTER_DEPARTURE(TripEntry.Field.RETURN),
 
-        /** The return has passed by the time of Save. */
+        /**
+         * The return has passed by the time of Save, or the departure is before a trip's earliest moment,
+         * [Trip.EARLIEST_INSTANT].
+         */
         PASSED(TripEntry.Field.RETURN),
+
+        /**
+         * The return is more than a trip may last, [Trip.MAX_LENGTH], after the departure, or in the year 10000 or
+         * later.
+         */
+        TOO_LONG(TripEntry.Field.RETURN),
 
         /** The distance is no number, or too large to be one. */
         DISTANCE_NOT_A_NUMBER(TripEntry.Field.DISTANCE),
 
         /** The distance is 0 or less. */
         DISTANCE_NOT_POSITIVE(TripEntry.Field.DISTANCE),
+
+        /** The distance is more than a trip may have, [Trip.MAX_DISTANCE_KM]. */
+        DISTANCE_TOO_FAR(TripEntry.Field.DISTANCE),
     }
 
     /**
@@ -147,11 +160,18 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         // a time the clocks skip counts as the time after the gap, one they repeat as its first
         val departure = fields.departureDay.atTime(fields.departureTime).atZone(zone).toInstant()
         val back = fields.returnDay.atTime(fields.returnTime).atZone(zone).toInstant()
+        if (departure.isBefore(Trip.EARLIEST_INSTANT)) {
+            // only a phone whose clock was put back near 1970 offers such a day, and such a trip is over
+            return Checked.Refused(Problem.PASSED)
+        }
         if (!back.isAfter(departure)) {
             return Checked.Refused(Problem.RETURN_NOT_AFTER_DEPARTURE)
         }
         if (!back.isAfter(now)) {
             return Checked.Refused(Problem.PASSED)
+        }
+        if (Duration.between(departure, back) > Trip.MAX_LENGTH) {
+            return Checked.Refused(Problem.TOO_LONG)
         }
         val typed = fields.distance.trim()
         // a distance left as it first showed, in whole km, stays the trip's own
@@ -159,6 +179,13 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
             ?: numbers.read(typed) ?: return Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER)
         if (km <= 0) {
             return Checked.Refused(Problem.DISTANCE_NOT_POSITIVE)
+        }
+        if (km > Trip.MAX_DISTANCE_KM) {
+            return Checked.Refused(Problem.DISTANCE_TOO_FAR)
+        }
+        if (!back.isBefore(Trip.INSTANTS_END)) {
+            // only a trip edited by hand, or a clock put forward to the end of the year 9999, offers such a day
+            return Checked.Refused(Problem.TOO_LONG)
         }
         return Checked.Valid(Trip(departure, back, km, fields.canCharge, opened?.notWithThisCar() == true))
     }

@@ -28,6 +28,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -57,6 +58,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 import nl.enadeag.carchargeplanner.android.ui.components.TimeButton
 import nl.enadeag.carchargeplanner.android.ui.components.TimeDialog
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
+import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /** Where the focus is in the entry, so it comes back there when a picker or the question over the entry closes. */
 private enum class Spot {
@@ -128,7 +130,7 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
     var picking by rememberSaveable { mutableStateOf<Picking?>(null) }
     var spot by rememberSaveable { mutableStateOf(Spot.DEPARTURE_DAY) }
     val focus = remember { Spot.entries.associateWith { FocusRequester() } }
-    val problemText = problem?.let { stringResource(problemId(it)) }
+    val problemText = problem?.let { problemText(it, words) }
     val returnProblem = problemText.takeIf { problem?.field == TripEntry.Field.RETURN }
     val distanceProblem = problemText.takeIf { problem?.field == TripEntry.Field.DISTANCE }
     val fields = draft.fields
@@ -287,9 +289,14 @@ private fun CanCharge(checked: Boolean, enabled: Boolean, modifier: Modifier, on
 private fun dayName(words: DashboardWords, today: LocalDate, day: LocalDate): String =
     words.date(DayName.of(day, today))
 
-private fun problemId(problem: TripDraft.Problem): Int = when (problem) {
-    TripDraft.Problem.RETURN_NOT_AFTER_DEPARTURE -> R.string.trip_return_before_departure
-    TripDraft.Problem.PASSED -> R.string.trip_passed
-    TripDraft.Problem.DISTANCE_NOT_A_NUMBER -> R.string.trip_distance_not_a_number
-    TripDraft.Problem.DISTANCE_NOT_POSITIVE -> R.string.trip_distance_not_positive
+@Composable
+private fun problemText(problem: TripDraft.Problem, words: DashboardWords): String = when (problem) {
+    TripDraft.Problem.RETURN_NOT_AFTER_DEPARTURE -> stringResource(R.string.trip_return_before_departure)
+    TripDraft.Problem.PASSED -> stringResource(R.string.trip_passed)
+    TripDraft.Problem.TOO_LONG ->
+        Trip.MAX_LENGTH.toDays().toInt().let { days -> pluralStringResource(R.plurals.trip_too_long, days, days) }
+    TripDraft.Problem.DISTANCE_NOT_A_NUMBER -> stringResource(R.string.trip_distance_not_a_number)
+    TripDraft.Problem.DISTANCE_NOT_POSITIVE -> stringResource(R.string.trip_distance_not_positive)
+    TripDraft.Problem.DISTANCE_TOO_FAR ->
+        stringResource(R.string.trip_distance_too_far, words.whole(Trip.MAX_DISTANCE_KM.toDouble()))
 }

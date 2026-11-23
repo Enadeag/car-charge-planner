@@ -322,6 +322,43 @@ class TripFileTest {
                 new Trip(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z"), 30, true));
     }
 
+    private static final String KEPT = """
+            {"departure": "2026-07-04T06:00:00Z", "return": "2026-07-04T08:00:00Z", "distanceKm": 30,
+             "canChargeAtDestination": true}""";
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "\"departure\": \"2026-07-04T06:00:00Z\", \"return\": \"2026-07-04T08:00:00Z\","
+            + " \"distanceKm\": 20000.000000000004",
+        "\"departure\": \"2026-07-04T06:00:00Z\", \"return\": \"2027-07-05T06:00:00.000000001Z\", \"distanceKm\": 30",
+        "\"departure\": \"1969-12-31T23:59:59.999999999Z\", \"return\": \"1970-01-01T08:00:00Z\", \"distanceKm\": 30",
+        "\"departure\": \"9999-12-31T06:00:00Z\", \"return\": \"+10000-01-01T00:00:00Z\", \"distanceKm\": 30"})
+    void anEntryPastATripsBoundsIsDamaged(String entry) throws IOException {
+        var path = Files.writeString(folder.resolve("trips.json"),
+                "{\"trips\": [{" + entry + ", \"canChargeAtDestination\": false}, " + KEPT + "]}");
+
+        assertThat(new TripFile(path, FILES, CLOCK).trips(NOW)).containsExactly(
+                new Trip(Instant.parse("2026-07-04T06:00:00Z"), Instant.parse("2026-07-04T08:00:00Z"), 30, true));
+        assertThatThrownBy(() -> new TripFile(path, FILES, CLOCK).add(trip(1, 300), NOW))
+                .isInstanceOf(IOException.class).hasMessageContaining("holds 1 damaged entries");
+    }
+
+    @Test
+    void entriesOnATripsBoundsAreKept() throws IOException {
+        var path = Files.writeString(folder.resolve("trips.json"), """
+                {"trips": [
+                  {"departure": "1970-01-01T00:00:00Z", "return": "1970-01-01T08:00:00Z", "distanceKm": 30,
+                   "canChargeAtDestination": false},
+                  {"departure": "9998-12-30T23:59:59.999999999Z", "return": "9999-12-31T23:59:59.999999999Z",
+                   "distanceKm": 20000, "canChargeAtDestination": false}]}
+                """);
+        var longest = new Trip(Instant.parse("9998-12-30T23:59:59.999999999Z"),
+                Instant.parse("9999-12-31T23:59:59.999999999Z"), 20_000, false);
+
+        assertThat(new TripFile(path, FILES, CLOCK).trips(NOW)).containsExactly(longest);
+        assertThat(new TripFile(path, FILES, CLOCK).add(trip(1, 300), NOW)).containsExactly(trip(1, 300), longest);
+    }
+
     @Test
     void aTripThatCannotBeSavedIsReported() throws IOException {
         Files.writeString(folder.resolve("data"), "a file where the folder should be");

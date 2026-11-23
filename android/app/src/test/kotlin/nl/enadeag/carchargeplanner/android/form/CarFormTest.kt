@@ -102,6 +102,16 @@ class CarFormTest {
     }
 
     @Test
+    fun aBatteryAboveTheEnginesBoundIsOutOfRangeAtItsField() {
+        form.load(stored)
+        form.edit(CarForm.Field.BATTERY, "1001")
+
+        assertThat(form.check(stored)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            CarForm.Field.BATTERY to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+    }
+
+    @Test
     fun aSurchargeOutsideZeroToAHundredPercentIsOutOfRange() {
         form.load(stored)
         form.edit(CarForm.Field.TRIP_SURCHARGE, "101")

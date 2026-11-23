@@ -429,10 +429,12 @@ public final class Engine {
      * Stores an away period entered by hand, so the next plan leaves that time free. Periods that ended more than a
      * day ago are forgotten at the same time. Once started, the engine plans again soon after.
      *
-     * @param period the time the car is away; one that is stored already is kept once
+     * @param period the time the car is away, starting at {@link Trip#EARLIEST_INSTANT} or later and ending before
+     *     {@link Trip#INSTANTS_END}, a trip's range of moments; one that is stored already is kept once
      * @return the stored periods after the change, in order of their start
-     * @throws IOException when the periods could not be saved, or the stored ones could not be read whole and are
-     *     left as they are; the stored ones are then unchanged
+     * @throws IOException when the period starts or ends outside a trip's range of moments, when the periods could not
+     *     be saved, or when the stored ones could not be read whole and are left as they are; the stored ones are then
+     *     unchanged
      */
     public List<OneOffAwayPeriod> addAwayPeriod(OneOffAwayPeriod period) throws IOException {
         return thenReplan(() -> awayFile.add(period, clock.instant()));

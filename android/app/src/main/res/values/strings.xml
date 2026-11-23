@@ -484,8 +484,15 @@
   <!-- why the trip entry's Save refused the trip, the desktop's: under the return's buttons, or under the distance -->
   <string name="trip_return_before_departure">The return must be after the departure.</string>
   <string name="trip_passed">That trip is over already.</string>
+  <!-- %1$d the most days a trip may last, such as 366 -->
+  <plurals name="trip_too_long">
+    <item quantity="one">A trip can last at most %1$d day.</item>
+    <item quantity="other">A trip can last at most %1$d days.</item>
+  </plurals>
   <string name="trip_distance_not_a_number">Type the distance as a number, such as 120.</string>
   <string name="trip_distance_not_positive">The distance must be more than 0.</string>
+  <!-- %1$s the longest distance there and back a trip may have, in km, written already, such as 20000 -->
+  <string name="trip_distance_too_far">The distance must be at most %1$s km.</string>
   <!-- asked by Back or Close in the trip entry with something changed, under discard_question -->
   <string name="trip_discard_text">The trip you entered is not saved yet.</string>
   <!-- the date picker's button under the calendar or the typed date, named for what it switches to, as
