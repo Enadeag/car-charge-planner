@@ -84,12 +84,49 @@ class AnnouncedWindowsTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"0, true", "1.7976931348623157E308, true", "-4.9E-324, false", "1e400, false"})
+    @CsvSource({"0, true", "3, true", "-4.9E-324, false", "1e400, false"})
     void aWindowsPowerAndEnergiesAreFiniteAndNotNegative(String value, boolean read) throws IOException {
         int windows = read ? 2 : 0;
         assertThat(loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "16", value, "3", "0")).hasSize(windows);
         assertThat(loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "16", "3", value, "0")).hasSize(windows);
         assertThat(loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "16", "3", "3", value)).hasSize(windows);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"96, true", "96.00000000000001, false", "1.7976931348623157E308, false"})
+    void aWindowsPowerIsAtMostWhatTheLargestChargerDelivers(String powerKw, boolean read) throws IOException {
+        assertThat(loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "80", powerKw, "3", "0"))
+                .hasSize(read ? 2 : 0);
+    }
+
+    /**
+     * One hour holds 96 kWh at the largest power, and 2e-9 of that more and 1e-8 kWh for the planner's own
+     * tolerances.
+     */
+    @ParameterizedTest
+    @CsvSource({"2026-07-04T11:00:00Z, 96, 0, true", "2026-07-04T11:00:00Z, 48, 48, true",
+        "2026-07-04T11:00:00Z, 96, 0.0000002019, true", "2026-07-04T11:00:00Z, 96, 0.0000002021, false",
+        "2026-07-04T11:00:00Z, 0.0000002021, 96, false", "2026-07-04T12:00:00Z, 96, 96, true",
+        "2026-07-04T12:00:00Z, 96, 96.00000039, true", "2026-07-04T12:00:00Z, 96, 96.0000004, false",
+        "2026-07-04T11:00:00Z, 96.5, 0, false", "2026-07-04T10:00:00Z, 0, 0, true",
+        "2026-07-04T10:00:00Z, 0.0000000099, 0, true", "2026-07-04T10:00:00Z, 0.0000000101, 0, false",
+        "2026-07-04T11:00:00Z, 1.7976931348623157E308, 1.7976931348623157E308, false",
+        "2026-07-04T11:00:00Z, 1.7976931348623157E308, 0, false",
+        "2026-07-04T11:00:00Z, 0, 1.7976931348623157E308, false"})
+    void aWindowsEnergyIsAtMostWhatTheLargestPowerDeliversOverItsLength(String end, String solarKwh, String importKwh,
+            boolean read) throws IOException {
+        assertThat(loaded("2026-07-04T10:00:00Z", end, "80", "96", solarKwh, importKwh)).hasSize(read ? 2 : 0);
+    }
+
+    @Test
+    void aWindowsEnergyExactlyAtTheLimitIsReadAndTheNextNumberAboveIsNot() throws IOException {
+        double limit = AnnouncedWindows.MAX_POWER_KW * (1 + AnnouncedWindows.ENERGY_TOLERANCE)
+                + AnnouncedWindows.ENERGY_SLACK_KWH;
+
+        assertThat(loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "80", "96", Double.toString(limit), "0"))
+                .hasSize(2);
+        assertThat(loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "80", "96",
+                Double.toString(Math.nextUp(limit)), "0")).isEmpty();
     }
 
     @ParameterizedTest
@@ -111,13 +148,18 @@ class AnnouncedWindowsTest {
             loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "16", "3", "1e400", "0");
             loaded("1969-12-31T23:59:59Z", "2026-07-04T11:00:00Z", "16", "3", "3", "0");
             loaded("2026-07-04T10:00:00Z", "2026-07-24T11:00:00Z", "16", "3", "3", "0");
+            loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "16", "97", "3", "0");
+            loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "16", "3", "50", "50");
 
             assertThat(log.lines()).containsExactly(
                     "WARNING " + path() + " cannot be used: window 2 must have a current, a power and energies that "
                             + "are finite numbers of 0 or more",
                     "WARNING " + path() + " cannot be used: window 2 must start at 1970-01-01T00:00:00Z or later and "
                             + "end before +10000-01-01T00:00:00Z",
-                    "WARNING " + path() + " cannot be used: window 2 must last at most 16 days");
+                    "WARNING " + path() + " cannot be used: window 2 must last at most 16 days",
+                    "WARNING " + path() + " cannot be used: window 2 must have a power of at most 96 kW",
+                    "WARNING " + path() + " cannot be used: window 2 must have at most the energy that 96 kW delivers "
+                            + "over its length");
         }
     }
 

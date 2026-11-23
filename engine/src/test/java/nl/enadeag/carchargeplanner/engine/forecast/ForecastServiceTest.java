@@ -499,6 +499,41 @@ class ForecastServiceTest {
         assertThat(main.callCount()).isEqualTo(2);
     }
 
+    /** A saved forecast of such a clock would read back as missing, so every round would ask again. */
+    @Test
+    void withAClockBeforeNineteenSeventyNoProviderIsAsked() {
+        var clock = Instant.parse("1969-12-31T23:59:59.999999999Z");
+        for (int round = 0; round < 5; round++) {
+            var at = clock.minus(Duration.ofMinutes(round));
+            assertThatThrownBy(() -> get(at)).isInstanceOf(ForecastUnavailable.class).hasMessage(
+                    "Main: not asked while the clock is before 1970-01-01T00:00:00Z or at +10000-01-01T00:00:00Z or "
+                            + "later; Backup: not asked while the clock is before 1970-01-01T00:00:00Z or at "
+                            + "+10000-01-01T00:00:00Z or later");
+        }
+        assertThat(main.callCount()).isZero();
+        assertThat(backup.callCount()).isZero();
+    }
+
+    @Test
+    void withAClockAtTheYearTenThousandNoProviderIsAsked() {
+        var clock = Instant.parse("+10000-01-01T00:00:00Z");
+
+        assertThatThrownBy(() -> get(clock)).isInstanceOf(ForecastUnavailable.class);
+        assertThat(main.callCount() + backup.callCount()).isZero();
+    }
+
+    @Test
+    void withAClockAtNineteenSeventyTheProviderIsAskedOnceAndThenTheRefreshIntervalHolds() throws ForecastUnavailable {
+        var epoch = Instant.EPOCH;
+        get(epoch);
+        get(epoch.plus(Duration.ofMinutes(30)));
+        get(epoch.plus(Duration.ofMinutes(59)));
+        assertThat(main.callCount()).isEqualTo(1);
+
+        get(epoch.plus(Duration.ofMinutes(60)));
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
     @Test
     void anAnswerThatSpansMoreThanSixteenDaysIsABadAnswer() {
         withoutFallback();

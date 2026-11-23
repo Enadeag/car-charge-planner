@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.engine.forecast;
 
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -19,7 +20,8 @@ import tools.jackson.databind.JsonNode;
  * Asking one provider for a forecast, cache first: within the minimum refresh interval the cache answers, without the
  * secret settings being read; while the provider is in a cool-down, or waiting after a failure, its last forecast is
  * used for as long as it is still useful; otherwise the provider is asked. Or, when only the stored forecast may be
- * used, the cache alone answers.
+ * used, the cache alone answers. While the clock is outside a trip's range of moments the provider is not asked at
+ * all: what the cache would save would not read back, so it would be asked every round.
  */
 final class ProviderAttempt {
 
@@ -87,6 +89,11 @@ final class ProviderAttempt {
         if (cached.isPresent() && !force && cached.get().age(now).compareTo(info.minRefresh()) < 0) {
             return held.fromCache(cached.get(), Freshness.CACHED, false);
         }
+        if (clockOutOfRange()) {
+            // nothing saved in the cache would read back, so the provider would be asked every round
+            return held.stale(false).orElseGet(() -> failure("not asked while the clock is before "
+                    + Trip.EARLIEST_INSTANT + " or at " + Trip.INSTANTS_END + " or later", false));
+        }
         var values = settings.get();
         var secrets = Stream.concat(info.secretValues(values).stream(), storedSecrets.get().stream()).toList();
         var missing = info.missingRequired(values);
@@ -113,6 +120,10 @@ final class ProviderAttempt {
         var freshness = cache.refreshFailed(info.id()) ? Freshness.STALE : Freshness.CACHED;
         return held.usable().map(forecast -> held.fromCache(forecast, freshness, false))
                 .orElseGet(() -> failure("no stored forecast that is still useful", false));
+    }
+
+    private boolean clockOutOfRange() {
+        return now.isBefore(Trip.EARLIEST_INSTANT) || !now.isBefore(Trip.INSTANTS_END);
     }
 
     private boolean stillUseful(ForecastCache.Cached forecast) {

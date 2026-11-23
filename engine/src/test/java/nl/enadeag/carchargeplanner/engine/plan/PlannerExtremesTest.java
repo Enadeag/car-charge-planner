@@ -20,7 +20,12 @@ import nl.enadeag.carchargeplanner.engine.forecast.ForecastSource;
 import nl.enadeag.carchargeplanner.engine.forecast.ForecastStep;
 import nl.enadeag.carchargeplanner.engine.forecast.Freshness;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderRole;
+import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
+import nl.enadeag.carchargeplanner.engine.store.FilePrivacy;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,6 +38,7 @@ import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -221,6 +227,68 @@ class PlannerExtremesTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource({"corners", "sweep"})
     void aRoundAtTheExtremesEndsInTimeWithFiniteFigures(Case input) {
+        var now = input.zone().firstDay.atTime(NOW).atZone(input.zone().id).toInstant();
+        var announced = input.announced() ? List.of(runningWindow(input.system().charger(), now))
+                : List.<Window>of();
+        roundEndsInTimeWithFiniteFigures(input, announced);
+    }
+
+    /** The windows of the planner at the largest charger, kept in the file and read back, are all still used. */
+    @Test
+    void everyWindowTheAppCanWriteIsReadBackFromTheFile(@TempDir Path folder) {
+        var zone = Zone.AMSTERDAM.id;
+        var day = LocalDate.of(2026, 7, 1);
+        var system = system(Zone.AMSTERDAM, new House(0), new Car(1000, 1, 0, new Percent(0)),
+                new Charger(Phases.THREE, 1, 80, 400, 1));
+        var placements = new GridPlacements(system, Forecasts.NIGHT_CHARGING);
+        var quarters = placements.quarterHours(day, day, hourly(day, zone, hour -> hour >= 10 && hour < 14 ? 40 : 0),
+                List.of());
+        var from = day.atStartOfDay(zone).toInstant();
+        var written = new ArrayList<Window>();
+        for (int amps = 1; amps <= 80; amps++) {
+            double powerKw = Charging.powerKw(amps, system.charger());
+            // from a quarter of an hour's energy up to the energy of a day, and at the edge of the planner's tolerance
+            for (double energyKwh : new double[] {1e-9, 0.01, powerKw / 4 * (1 - 1e-9), powerKw / 4,
+                powerKw / 4 * (1 + 1e-9), powerKw / 4 * (1 + 4e-10), powerKw, powerKw * 1.9, 100, 700}) {
+                written.addAll(placements.placements(quarters, energyKwh, amps, from));
+                placements.now(quarters, energyKwh, amps, from, from.plus(Duration.ofHours(24)))
+                        .ifPresent(grid -> written.add(grid.window()));
+            }
+        }
+        var preferences = new PlanningPreferences(new Percent(0), new Percent(100), 1, 0, Duration.ofMinutes(1),
+                Duration.ofMinutes(15));
+        var plan = new Planner(system, preferences, AwayTimes.NONE).planWithTrips(
+                hourly(day, zone, hour -> hour >= 10 && hour < 14 ? 1e6 : 0), new Percent(0), at(day, 8, zone),
+                List.of());
+        plan.days().forEach(planned -> written.addAll(planned.windows()));
+        assertThat(written).hasSizeGreaterThan(1000).anySatisfy(window -> assertThat(window.powerKw()).isEqualTo(96));
+
+        var announced = new AnnouncedWindows(folder.resolve("announced.json"), new PrivateFiles(FilePrivacy.NONE),
+                Clock.systemUTC());
+        announced.save(written);
+
+        assertThat(announced.load()).containsExactlyElementsOf(written);
+    }
+
+    /** The most a stored window may hold, as it runs now: the largest power, and the energy that power gives. */
+    @Test
+    void aRunningAnnouncedWindowAtTheFilesLimitsIsPlannedAndShown(@TempDir Path folder) {
+        var zone = Zone.AMSTERDAM.id;
+        var now = Zone.AMSTERDAM.firstDay.atTime(NOW).atZone(zone).toInstant();
+        var system = system(Zone.AMSTERDAM, new House(0), new Car(60, 18, 40, new Percent(0)),
+                new Charger(Phases.THREE, 1, 80, 400, 1));
+        var limits = new Window(now.minus(Duration.ofMinutes(30)), now.plus(Duration.ofMinutes(90)), 80, 96,
+                96.0000009, 96.000001);
+        var announced = new AnnouncedWindows(folder.resolve("announced.json"), new PrivateFiles(FilePrivacy.NONE),
+                Clock.systemUTC());
+        announced.save(List.of(limits));
+        assertThat(announced.load()).containsExactly(limits);
+
+        roundEndsInTimeWithFiniteFigures(new Case("limits", Zone.AMSTERDAM, system, Forecasts.PREFERENCES,
+                Power.CHARGER, TripShape.ORDINARY, new Percent(50), false), announced.load());
+    }
+
+    private static void roundEndsInTimeWithFiniteFigures(Case input, List<Window> announced) {
         assertTimeoutPreemptively(ROUND_LIMIT, () -> {
             var zone = input.zone().id;
             var first = input.zone().firstDay;
@@ -232,8 +300,6 @@ class PlannerExtremesTest {
                     LocalTime.of(15, 0)));
             var away = new AwayTimes(weekly, oneOff, trips);
             var forecast = forecast(first, 3, zone, input.power());
-            var announced = input.announced() ? List.of(runningWindow(input.system().charger(), now))
-                    : List.<Window>of();
 
             var plan = new Planner(input.system(), input.preferences(), away)
                     .planWithTrips(forecast, input.reading(), now, announced);
@@ -351,30 +417,50 @@ class PlannerExtremesTest {
     void aForecastBeyondTheHorizonIsPlannedUpToIt() {
         var zone = Zone.AMSTERDAM.id;
         var first = LocalDate.of(2026, 7, 1);
-        var beyond = first.plusDays(Planner.MAX_DAYS);
+        var beyond = first.plusDays(16);
         var trip = new Trip(at(beyond, 9, zone), at(beyond, 17, zone), 300, false);
         var away = new AwayTimes(List.of(), List.of(), List.of(trip));
-        var forecast = forecast(first, Planner.MAX_DAYS + 4, zone, Power.CHARGER);
+        var forecast = forecast(first, 20, zone, Power.CHARGER);
 
         var plan = new Planner(Forecasts.example(), Forecasts.PREFERENCES, away)
                 .planWithTrips(forecast, new Percent(50), first.atTime(NOW).atZone(zone).toInstant(), List.of());
 
         assertThat(plan.days()).extracting(DayPlan::date)
-                .containsExactlyElementsOf(IntStream.range(0, Planner.MAX_DAYS).mapToObj(first::plusDays).toList());
+                .containsExactlyElementsOf(IntStream.range(0, 16).mapToObj(first::plusDays).toList());
         assertThat(plan.trips()).isEmpty();
+    }
+
+    /** The horizon is the start of the seventeenth day: a trip leaving then is after it, one a minute before is not. */
+    @Test
+    void aTripLeavingAtTheHorizonGetsNoAdviceAndOneAMinuteEarlierDoes() {
+        var zone = Zone.AMSTERDAM.id;
+        var first = LocalDate.of(2026, 7, 1);
+        var horizon = at(first.plusDays(16), 0, zone);
+        var forecast = forecast(first, 20, zone, Power.CHARGER);
+        var now = first.atTime(NOW).atZone(zone).toInstant();
+
+        var atTheHorizon = new AwayTimes(List.of(), List.of(),
+                List.of(new Trip(horizon, horizon.plus(Duration.ofHours(8)), 300, false)));
+        var aMinuteEarlier = new AwayTimes(List.of(), List.of(), List.of(new Trip(horizon.minus(Duration.ofMinutes(1)),
+                horizon.plus(Duration.ofHours(8)), 300, false)));
+
+        assertThat(new Planner(Forecasts.example(), Forecasts.PREFERENCES, atTheHorizon)
+                .planWithTrips(forecast, new Percent(50), now, List.of()).trips()).isEmpty();
+        assertThat(new Planner(Forecasts.example(), Forecasts.PREFERENCES, aMinuteEarlier)
+                .planWithTrips(forecast, new Percent(50), now, List.of()).trips()).hasSize(1);
     }
 
     @Test
     void aForecastThatEndsAtTheHorizonIsPlannedWhole() {
         var zone = Zone.AMSTERDAM.id;
         var first = LocalDate.of(2026, 7, 1);
-        var forecast = forecast(first, Planner.MAX_DAYS, zone, Power.CHARGER);
+        var forecast = forecast(first, 16, zone, Power.CHARGER);
 
         var days = new Planner(Forecasts.example(), Forecasts.PREFERENCES, AwayTimes.NONE)
                 .plan(forecast, new Percent(50), first.atStartOfDay(zone).toInstant(), List.of());
 
-        assertThat(days).hasSize(Planner.MAX_DAYS);
-        assertThat(days.get(Planner.MAX_DAYS - 1).forecast()).hasSize(24);
+        assertThat(days).hasSize(16);
+        assertThat(days.get(15).forecast()).hasSize(24);
     }
 
     @Test
@@ -403,6 +489,7 @@ class PlannerExtremesTest {
 
         assertThat(plan.days()).isEmpty();
     }
+
 
     private static HomeSystem system(Zone zone, House house, Car car, Charger charger) {
         return new HomeSystem(new Coordinates(0, 0), Optional.empty(), zone.id, List.of(Forecasts.PANELS), house, car,

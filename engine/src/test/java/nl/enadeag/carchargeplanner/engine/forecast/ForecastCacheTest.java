@@ -95,4 +95,16 @@ class ForecastCacheTest {
         assertThat(cache().cooldownUntil(MAIN, NOW)).contains(NOW.plus(DAY));
         assertThat(cache().cooldownUntil(MAIN, NOW.plus(Duration.ofHours(1)))).contains(NOW.plus(DAY));
     }
+
+    @Test
+    void cuttingACoolDownKeepsTheForecastItsKeyAndTheFailedRefresh() {
+        cache().saveForecast(MAIN, key(), NOW, hourAt(NOW));
+        cache().saveCooldown(MAIN, NOW.plus(DAY).plusNanos(1));
+
+        assertThat(cache().cooldownUntil(MAIN, NOW)).contains(NOW.plus(DAY));
+
+        var afresh = cache();
+        assertThat(afresh.forecast(MAIN, key(), NOW)).contains(new ForecastCache.Cached(NOW, hourAt(NOW)));
+        assertThat(afresh.refreshFailed(MAIN)).isTrue();
+    }
 }
