@@ -28,6 +28,13 @@ public abstract sealed class ProviderError extends Exception {
 
     /** The provider refuses more requests for now. */
     public static final class RateLimited extends ProviderError {
+
+        /**
+         * The longest wait that counts: a later time to ask again is cut to this, so a provider that names a moment
+         * far ahead is still asked again after a day.
+         */
+        public static final Duration MAX_RETRY_AFTER = Duration.ofHours(24);
+
         private final Duration retryAfter;
 
         /**
@@ -44,10 +51,12 @@ public abstract sealed class ProviderError extends Exception {
         /**
          * When the provider may be asked again.
          *
-         * @return what the provider said, measured from the moment it said it; empty when it said nothing
+         * @return what the provider said, measured from the moment it said it, and at most {@link #MAX_RETRY_AFTER};
+         *     empty when it said nothing
          */
         public Optional<Duration> retryAfter() {
-            return Optional.ofNullable(retryAfter);
+            return Optional.ofNullable(retryAfter)
+                    .map(wait -> wait.compareTo(MAX_RETRY_AFTER) > 0 ? MAX_RETRY_AFTER : wait);
         }
     }
 

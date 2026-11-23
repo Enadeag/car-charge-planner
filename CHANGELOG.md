@@ -11,12 +11,14 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Fixed
 - The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
+- A forecast, a stored forecast or `announced.json` with a moment far in the past or the future, or a clock that was put back, no longer hangs a planning round or makes it fail. A forecast must lie between 1970 and the year 9999 and span at most 16 days, or the provider's answer is refused with that reason; a stored forecast that breaks this is fetched again, and a stored wait outside it is ignored; a plan covers at most 16 days; a provider's time to wait before it is asked again counts for at most a day; and `announced.json` is not used when a window has a power above 96 kW, more energy than that power delivers, more than 16 days, an end before its start or a moment outside 1970 to 9999, and such a window may then be announced again (#408).
 
 ### Android
 
 - A settings file with a value the app cannot plan with no longer loads, with the same bounds as the desktop app: the usable battery from 1 to 1000 kWh, the consumption from 1 to 200 kWh per 100 km, the daily distance at most 1000 km, the charging efficiency from 1 to 100%, the minimum and the maximum charge current from 1 to 80 A, and the voltage from 100 to 400 V. Earlier versions saved any value above 0, so a value outside these makes the settings file unusable, and **Set up again** starts over; Settings now refuses such a value under its field (#410).
 - The trip entry refuses a trip of more than 20,000 km there and back, or one that lasts more than 366 days, and says so (#410).
 - Trips and one-off away periods in the files beyond the bounds count as damaged entries, as on the desktop (#410).
+- A forecast, a stored forecast or the stored announced windows with a moment far in the past or the future, or a clock that was put back, no longer hangs a planning round or makes it fail, as on the desktop (#408).
 
 ## [0.7.0] - 2026-11-13
 

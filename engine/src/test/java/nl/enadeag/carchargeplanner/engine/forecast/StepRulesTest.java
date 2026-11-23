@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.engine.forecast;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -73,6 +74,46 @@ class StepRulesTest {
         var steps = List.of(new ForecastStep(hour(8), hour(8, 15), 1), new ForecastStep(hour(8, 15), hour(8, 45), 1),
                 new ForecastStep(hour(8, 45), hour(9, 45), 1));
         assertThat(StepRules.problems(steps)).isEmpty();
+    }
+
+    @Test
+    void aStepMayStartAtTheEarliestMomentButNotBefore() {
+        var earliest = Trip.EARLIEST_INSTANT;
+
+        assertThat(StepRules.problems(List.of(new ForecastStep(earliest, earliest.plusSeconds(3600), 1)))).isEmpty();
+        assertThat(StepRules.problems(List.of(new ForecastStep(earliest.minusNanos(1), earliest.plusSeconds(3600), 1))))
+                .containsExactly("step 0: must start at 1970-01-01T00:00:00Z or later");
+    }
+
+    @Test
+    void aStepMustEndBeforeTheYearTenThousand() {
+        var end = Trip.INSTANTS_END;
+
+        assertThat(StepRules.problems(List.of(new ForecastStep(end.minusSeconds(3600), end.minusNanos(1), 1))))
+                .isEmpty();
+        assertThat(StepRules.problems(List.of(new ForecastStep(end.minusSeconds(3600), end, 1))))
+                .containsExactly("step 0: must end before +10000-01-01T00:00:00Z");
+    }
+
+    @Test
+    void theStepsMaySpanSixteenDaysFromTheFirstStartToTheLastEnd() {
+        var start = hour(8);
+        var first = new ForecastStep(start, start.plusSeconds(3600), 1);
+        var lastStart = start.plus(StepRules.MAX_SPAN).minusSeconds(3600);
+
+        assertThat(StepRules.problems(List.of(first, new ForecastStep(lastStart, start.plus(StepRules.MAX_SPAN), 1))))
+                .isEmpty();
+        assertThat(StepRules.problems(List.of(first,
+                new ForecastStep(lastStart, start.plus(StepRules.MAX_SPAN).plusNanos(1), 1))))
+                .containsExactly("the steps must span at most 16 days");
+    }
+
+    @Test
+    void aSingleStepLongerThanTheSpanIsRefusedToo() {
+        var start = hour(8);
+
+        assertThat(StepRules.problems(List.of(new ForecastStep(start, start.plus(StepRules.MAX_SPAN).plusNanos(1), 1))))
+                .containsExactly("the steps must span at most 16 days");
     }
 
     @Test

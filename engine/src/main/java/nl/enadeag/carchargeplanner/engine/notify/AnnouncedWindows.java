@@ -1,5 +1,9 @@
 package nl.enadeag.carchargeplanner.engine.notify;
 
+import nl.enadeag.carchargeplanner.engine.config.Charger;
+import nl.enadeag.carchargeplanner.engine.config.Phases;
+import nl.enadeag.carchargeplanner.engine.forecast.StepRules;
+import nl.enadeag.carchargeplanner.engine.plan.Hours;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
@@ -7,10 +11,12 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.DateTimeException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,12 +26,38 @@ import tools.jackson.databind.JsonNode;
 /**
  * The windows the owner has been told about, in a file, so a restart neither announces them again nor plans them
  * differently while they run. A file that cannot be used counts as empty, and is kept as
- * {@code announced.json.damaged-<time>} when windows are saved; one that cannot be written does not stop planning. The
- * file is a list with an object per window, in this shape of its own:
+ * {@code announced.json.damaged-<time>} when windows are saved; one that cannot be written does not stop planning. A
+ * window the planner cannot have made makes the file one that cannot be used, as a window that cannot be read does:
+ * a power, current or energy that is not a finite number of 0 or more, a power above the largest a charger within
+ * the engine's bounds delivers, an energy above what that power delivers over the window's length, a moment outside
+ * a trip's range (from {@link Trip#EARLIEST_INSTANT} to before {@link Trip#INSTANTS_END}), or a window longer than a
+ * forecast's span, {@link StepRules#MAX_SPAN}. The file is a list with an object per window, in this shape of its own:
  * {@code [{"start": "2026-07-03T10:00:00Z", "end": "2026-07-03T12:00:00Z", "amps": 16, "powerKw": 3.68,
  * "solarKwh": 6.9, "importKwh": 0.46}]}.
  */
 public final class AnnouncedWindows {
+
+    /**
+     * The largest power a window may hold in kW: the highest current at the highest voltage on three phases. A
+     * larger one cannot come from a charger within the engine's bounds, and with the energies it lets two finite
+     * energies add up to infinity.
+     */
+    static final double MAX_POWER_KW = Charger.MAX_CURRENT_AMPS * Charger.MAX_VOLTS * Phases.THREE.count() / 1000.0;
+
+    /**
+     * How far a window's energy may exceed the largest power over its length, as a share of that. The planner counts
+     * a charge in whole quarters of an hour with a tolerance of one billionth of a quarter, so a window of one quarter
+     * may hold that share more than its power delivers in its length; twice that leaves room for the rounding of the
+     * figures.
+     */
+    static final double ENERGY_TOLERANCE = 2e-9;
+
+    /**
+     * How much energy a window may hold on top of that, in kWh. The planner rounds a window's end up to five minutes
+     * with a tolerance of one billionth of that, 300 nanoseconds, so a window may end that early: 8e-9 kWh at the
+     * largest power, and a tiny energy then gives a window without a length.
+     */
+    static final double ENERGY_SLACK_KWH = 1e-8;
 
     private final StoredFile<List<Window>> file;
 
@@ -81,10 +113,45 @@ public final class AnnouncedWindows {
                         || !row.path("importKwh").isNumber()) {
                     throw new FormatProblem("window " + (windows.size() + 1) + " is not a whole window");
                 }
-                windows.add(new Window(start.get(), end.get(), amps.intValue(), row.path("powerKw").doubleValue(),
-                        row.path("solarKwh").doubleValue(), row.path("importKwh").doubleValue()));
+                var window = new Window(start.get(), end.get(), amps.intValue(), row.path("powerKw").doubleValue(),
+                        row.path("solarKwh").doubleValue(), row.path("importKwh").doubleValue());
+                check(window, windows.size() + 1);
+                windows.add(window);
             }
             return List.copyOf(windows);
+        }
+
+        private static void check(Window window, int number) throws FormatProblem {
+            if (window.amps() < 0 || !finiteAndNotNegative(window.powerKw())
+                    || !finiteAndNotNegative(window.solarKwh()) || !finiteAndNotNegative(window.importKwh())) {
+                throw new FormatProblem("window " + number
+                        + " must have a current, a power and energies that are finite numbers of 0 or more");
+            }
+            if (window.start().isBefore(Trip.EARLIEST_INSTANT) || !window.end().isBefore(Trip.INSTANTS_END)) {
+                throw new FormatProblem("window " + number + " must start at " + Trip.EARLIEST_INSTANT
+                        + " or later and end before " + Trip.INSTANTS_END);
+            }
+            if (window.end().isBefore(window.start())) {
+                throw new FormatProblem("window " + number + " must not end before it starts");
+            }
+            if (Duration.between(window.start(), window.end()).compareTo(StepRules.MAX_SPAN) > 0) {
+                throw new FormatProblem("window " + number + " must last at most " + StepRules.MAX_SPAN.toDays()
+                        + " days");
+            }
+            if (window.powerKw() > MAX_POWER_KW) {
+                throw new FormatProblem("window " + number + " must have a power of at most " + (long) MAX_POWER_KW
+                        + " kW");
+            }
+            double deliverableKwh = MAX_POWER_KW * Hours.between(window.start(), window.end())
+                    * (1 + ENERGY_TOLERANCE) + ENERGY_SLACK_KWH;
+            if (window.solarKwh() + window.importKwh() > deliverableKwh) {
+                throw new FormatProblem("window " + number + " must have at most the energy that " + (long) MAX_POWER_KW
+                        + " kW delivers over its length");
+            }
+        }
+
+        private static boolean finiteAndNotNegative(double value) {
+            return value >= 0 && Double.isFinite(value);
         }
 
         @Override

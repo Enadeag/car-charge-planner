@@ -22,6 +22,14 @@ import java.util.stream.Collectors;
  */
 public final class Planner {
 
+    /**
+     * The most days a plan holds, today included. A forecast spans no more
+     * ({@link nl.enadeag.carchargeplanner.engine.forecast.StepRules#MAX_SPAN}), so with a right clock this holds back
+     * only the last hours of a forecast that reaches beyond the horizon, which no provider gives. A clock that was put
+     * back would otherwise have every day planned from its date to the forecast's.
+     */
+    public static final int MAX_DAYS = 16;
+
     /** A shortfall smaller than this, in percentage points, is forecast noise: no grid charge and no km short for it. */
     private static final double MIN_SHORTFALL_PCT = 1.0;
     /** A trip's grid charge is done this long before the departure, so an early departure still finds it done. */
@@ -60,7 +68,8 @@ public final class Planner {
      * @param levelPct the battery level now
      * @param now the current moment; nothing is planned before it
      * @param announced the windows the owner has been told about, possibly none
-     * @return one plan for each day from today to the last day of the forecast, in date order
+     * @return one plan for each day from today to the last day of the forecast, at most {@link #MAX_DAYS}, in date
+     *     order
      * @see #planWithTrips(List, Percent, Instant, List)
      */
     public List<DayPlan> plan(List<ForecastStep> forecast, Percent levelPct, Instant now, List<Window> announced) {
@@ -87,22 +96,30 @@ public final class Planner {
      *
      * @param forecast the forecast to plan on, in any order; empty gives an empty plan
      * @param levelPct the battery level now
-     * @param now the current moment; nothing is planned before it
+     * @param now the current moment; nothing is planned before it; a moment outside a trip's range
+     *     ({@link Trip#EARLIEST_INSTANT} to before {@link Trip#INSTANTS_END}) gives an empty plan, as a date cannot
+     *     always be made from it
      * @param announced the windows the owner has been told about, possibly none
-     * @return the days from today to the last day of the forecast, and the advice for each trip that departs after now
-     *     and before the forecast ends
+     * @return the days from today to the last day of the forecast, at most {@link #MAX_DAYS}, and the advice for each
+     *     trip that departs after now and before the last of those days ends
      */
     public Plan planWithTrips(List<ForecastStep> forecast, Percent levelPct, Instant now, List<Window> announced) {
-        if (forecast.isEmpty()) {
+        if (forecast.isEmpty() || now.isBefore(Trip.EARLIEST_INSTANT) || !now.isBefore(Trip.INSTANTS_END)) {
+            return new Plan(List.of(), List.of());
+        }
+        var end = planEnd(forecast, now);
+        var steps = forecast.stream().filter(step -> step.start().isBefore(end)).toList();
+        if (steps.isEmpty()) {
             return new Plan(List.of(), List.of());
         }
         var running = announced.stream()
                 .filter(window -> window.isRunningAt(now))
                 .map(window -> window.remainingAfter(now))
                 .toList();
-        var input = new Input(forecast, levelPct.value(), now, running,
-                WindowFinder.byDay(runsBeside(forecast, now, running), zone), stepsByDay(forecast), lastDay(forecast));
-        var trips = tripsAhead(forecast, now);
+        var input = new Input(steps, levelPct.value(), now, running,
+                WindowFinder.byDay(runsBeside(steps, now, running), zone), stepsByDay(steps),
+                end.minusNanos(1).atZone(zone).toLocalDate());
+        var trips = tripsAhead(end, now);
         var forNextTrips = new double[trips.size()];
         var charges = settle(trips, forNextTrips, input);
         var projection = project(input, charges);
@@ -162,9 +179,8 @@ public final class Planner {
     private record Projection(List<DayPlan> days, List<Departure> departures) {
     }
 
-    /** The trips the plan can charge for: those that depart after now and before the forecast ends. */
-    private List<Trip> tripsAhead(List<ForecastStep> forecast, Instant now) {
-        var end = forecast.stream().map(ForecastStep::end).max(Comparator.naturalOrder()).orElseThrow();
+    /** The trips the plan can charge for: those that depart after now and before the plan ends. */
+    private List<Trip> tripsAhead(Instant end, Instant now) {
         return away.trips().stream()
                 .filter(trip -> trip.departure().isAfter(now) && trip.departure().isBefore(end))
                 .sorted(Comparator.comparing(Trip::departure))
@@ -482,10 +498,13 @@ public final class Planner {
         return now.atZone(zone).toLocalDate();
     }
 
-    /** A step that ends exactly at midnight belongs to the day before. */
-    private LocalDate lastDay(List<ForecastStep> forecast) {
+    /**
+     * The end of the forecast, or the start of the day {@link #MAX_DAYS} after today when that comes first. A step that
+     * ends exactly at midnight belongs to the day before.
+     */
+    private Instant planEnd(List<ForecastStep> forecast, Instant now) {
         var end = forecast.stream().map(ForecastStep::end).max(Comparator.naturalOrder()).orElseThrow();
-        return end.minusNanos(1).atZone(zone).toLocalDate();
+        return Hours.earliest(end, today(now).plusDays(MAX_DAYS).atStartOfDay(zone).toInstant());
     }
 
     /** The share of today still to come: the driving already done is in the battery level. */
