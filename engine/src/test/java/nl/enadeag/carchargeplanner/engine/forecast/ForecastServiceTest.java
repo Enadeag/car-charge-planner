@@ -368,6 +368,44 @@ class ForecastServiceTest {
         assertThat(again.source().cooldownUntil()).isEmpty();
     }
 
+    @ParameterizedTest
+    @CsvSource({"PT23H59M59.999999999S, PT23H59M59.999999999S", "PT24H, PT24H", "PT24H0.000000001S, PT24H",
+        "P1000D, PT24H"})
+    void theWaitAProviderNamesCountsForAtMostADay(Duration named, Duration counted) throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new RateLimited("busy", named)));
+        get(T0);
+
+        assertThat(get(later(120)).source().cooldownUntil()).contains(later(120).plus(counted));
+    }
+
+    @Test
+    void afterAWaitCutToADayTheProviderIsAskedAgain() throws ForecastUnavailable {
+        main.script(steps(SunnyDays.day(DAY, 3.0)), error(new RateLimited("busy", Duration.ofDays(1000))),
+                steps(SunnyDays.day(DAY, 3.5)));
+        get(T0);
+        get(later(120));
+        get(later(120 + 24 * 60 - 1));
+        assertThat(main.callCount()).isEqualTo(2);
+
+        get(later(120 + 24 * 60));
+        assertThat(main.callCount()).isEqualTo(3);
+    }
+
+    @Test
+    void aStoredCoolDownFarAheadIsCutToADaySoTheProviderIsAskedAgain() throws Exception {
+        get(T0);
+        var json = new JsonMapper();
+        var blob = (ObjectNode) json.readTree(Files.readString(cacheFile("main")));
+        blob.put("cooldownUntil", "5000-01-01T00:00:00Z");
+        Files.writeString(cacheFile("main"), json.writeValueAsString(blob));
+
+        assertThat(get(later(61)).source().cooldownUntil()).contains(later(61 + 24 * 60));
+        get(later(61 + 24 * 60 - 1));
+        assertThat(main.callCount()).isEqualTo(1);
+        get(later(61 + 24 * 60));
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
     @Test
     void withoutARetryTimeTheCoolDownIsTheMinimumRefresh() throws ForecastUnavailable {
         main.script(steps(SunnyDays.day(DAY, 3.0)), error(new RateLimited("busy", null)), steps(SunnyDays.day(DAY, 3.0)));
@@ -442,6 +480,34 @@ class ForecastServiceTest {
         main.script(error(new Unavailable("down")));
 
         assertThat(get(later(61)).source().providerRole()).isEqualTo(ProviderRole.FALLBACK); // the damaged cache is not worth using
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"fetchedAt", "start"})
+    void aCacheWithAMomentBeforeNineteenSeventyIsFetchedAgain(String moment) throws Exception {
+        get(T0);
+        var json = new JsonMapper();
+        var blob = (ObjectNode) json.readTree(Files.readString(cacheFile("main")));
+        if (moment.equals("fetchedAt")) {
+            blob.put("fetchedAt", "1969-12-31T23:59:59.999999999Z");
+        } else {
+            ((ArrayNode) blob.path("steps").path(0)).set(0, "1969-12-31T23:59:59.999999999Z");
+        }
+        Files.writeString(cacheFile("main"), json.writeValueAsString(blob));
+
+        assertThat(get(later(5)).source().freshness()).isEqualTo(Freshness.FRESH);
+        assertThat(main.callCount()).isEqualTo(2);
+    }
+
+    @Test
+    void anAnswerThatSpansMoreThanSixteenDaysIsABadAnswer() {
+        withoutFallback();
+        var start = T0.minus(Duration.ofHours(1));
+        main.script(steps(List.of(new ForecastStep(start, start.plus(Duration.ofHours(1)), 1.0),
+                new ForecastStep(start.plus(Duration.ofDays(16)), start.plus(Duration.ofDays(16)).plusNanos(1), 1.0))));
+
+        assertThatThrownBy(() -> get(T0)).isInstanceOf(ForecastUnavailable.class)
+                .hasMessage("Main: the steps must span at most 16 days");
     }
 
     /** The clock was set back after the forecast was cached, so the cache seems to come from the future. */

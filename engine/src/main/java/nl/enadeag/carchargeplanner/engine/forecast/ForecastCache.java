@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -26,8 +27,10 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * The last good forecast of each provider, the end of its cool-down and whether it failed when it was last asked, in a
  * file per provider, so they survive a restart and reach another process, such as one woken only to plan from the
- * stored forecast. A file that cannot be read, or holds a forecast for another system, is not used; a folder that
- * cannot be written does not stop planning. Each file is kept in memory until it changes on disk.
+ * stored forecast. A file that cannot be read, or holds a forecast for another system, is not used; a part of it that
+ * is damaged, such as a moment outside a trip's range or steps that break {@link StepRules}, counts as missing, so a
+ * forecast is fetched again. A folder that cannot be written does not stop planning. Each file is kept in memory
+ * until it changes on disk.
  */
 public final class ForecastCache {
 
@@ -116,12 +119,20 @@ public final class ForecastCache {
     }
 
     /**
-     * When the provider's last cool-down ends, which may have passed already.
+     * When the provider's last cool-down ends, which may have passed already. An end more than
+     * {@link ProviderError.RateLimited#MAX_RETRY_AFTER} after {@code now}, such as one kept by an older version or
+     * before the clock was put back, is cut to that, in the file too, so the wait ends then.
      *
      * @return the end, or empty when there is none or the file cannot be read
      */
-    Optional<Instant> cooldownUntil(ProviderId providerId) {
-        return read(providerId).cooldownUntil();
+    Optional<Instant> cooldownUntil(ProviderId providerId, Instant now) {
+        var entry = read(providerId);
+        var latest = now.plus(ProviderError.RateLimited.MAX_RETRY_AFTER);
+        if (entry.cooldownUntil().filter(latest::isBefore).isPresent()) {
+            write(providerId, new Entry(entry.key(), entry.forecast(), Optional.of(latest), entry.refreshFailed()));
+            return Optional.of(latest);
+        }
+        return entry.cooldownUntil();
     }
 
     /**
@@ -215,9 +226,12 @@ public final class ForecastCache {
         }
     }
 
+    /** A moment in a trip's range, from {@link Trip#EARLIEST_INSTANT} to before {@link Trip#INSTANTS_END}. */
     private static Optional<Instant> instant(JsonNode stamp) {
         try {
-            return stamp.isString() ? Optional.of(Instant.parse(stamp.stringValue())) : Optional.empty();
+            return stamp.isString() ? Optional.of(Instant.parse(stamp.stringValue()))
+                    .filter(moment -> !moment.isBefore(Trip.EARLIEST_INSTANT) && moment.isBefore(Trip.INSTANTS_END))
+                    : Optional.empty();
         } catch (DateTimeException ignored) {
             return Optional.empty();
         }

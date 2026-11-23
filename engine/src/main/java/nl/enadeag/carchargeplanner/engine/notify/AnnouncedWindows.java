@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.engine.notify;
 
+import nl.enadeag.carchargeplanner.engine.forecast.StepRules;
 import nl.enadeag.carchargeplanner.engine.plan.Window;
 import nl.enadeag.carchargeplanner.engine.store.FileFormat;
 import nl.enadeag.carchargeplanner.engine.store.FormatProblem;
@@ -7,10 +8,12 @@ import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
 import nl.enadeag.carchargeplanner.engine.store.Stored;
 import nl.enadeag.carchargeplanner.engine.store.StoredFile;
 import nl.enadeag.carchargeplanner.engine.store.StoredJson;
+import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.DateTimeException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,8 +23,11 @@ import tools.jackson.databind.JsonNode;
 /**
  * The windows the owner has been told about, in a file, so a restart neither announces them again nor plans them
  * differently while they run. A file that cannot be used counts as empty, and is kept as
- * {@code announced.json.damaged-<time>} when windows are saved; one that cannot be written does not stop planning. The
- * file is a list with an object per window, in this shape of its own:
+ * {@code announced.json.damaged-<time>} when windows are saved; one that cannot be written does not stop planning. A
+ * window the planner cannot have made makes the file one that cannot be used, as a window that cannot be read does:
+ * a power, current or energy that is not a finite number of 0 or more, a moment outside a trip's range (from
+ * {@link Trip#EARLIEST_INSTANT} to before {@link Trip#INSTANTS_END}), or a window longer than a forecast's span,
+ * {@link StepRules#MAX_SPAN}. The file is a list with an object per window, in this shape of its own:
  * {@code [{"start": "2026-07-03T10:00:00Z", "end": "2026-07-03T12:00:00Z", "amps": 16, "powerKw": 3.68,
  * "solarKwh": 6.9, "importKwh": 0.46}]}.
  */
@@ -81,10 +87,32 @@ public final class AnnouncedWindows {
                         || !row.path("importKwh").isNumber()) {
                     throw new FormatProblem("window " + (windows.size() + 1) + " is not a whole window");
                 }
-                windows.add(new Window(start.get(), end.get(), amps.intValue(), row.path("powerKw").doubleValue(),
-                        row.path("solarKwh").doubleValue(), row.path("importKwh").doubleValue()));
+                var window = new Window(start.get(), end.get(), amps.intValue(), row.path("powerKw").doubleValue(),
+                        row.path("solarKwh").doubleValue(), row.path("importKwh").doubleValue());
+                check(window, windows.size() + 1);
+                windows.add(window);
             }
             return List.copyOf(windows);
+        }
+
+        private static void check(Window window, int number) throws FormatProblem {
+            if (window.amps() < 0 || !finiteAndNotNegative(window.powerKw())
+                    || !finiteAndNotNegative(window.solarKwh()) || !finiteAndNotNegative(window.importKwh())) {
+                throw new FormatProblem("window " + number
+                        + " must have a current, a power and energies that are finite numbers of 0 or more");
+            }
+            if (window.start().isBefore(Trip.EARLIEST_INSTANT) || !window.end().isBefore(Trip.INSTANTS_END)) {
+                throw new FormatProblem("window " + number + " must start at " + Trip.EARLIEST_INSTANT
+                        + " or later and end before " + Trip.INSTANTS_END);
+            }
+            if (Duration.between(window.start(), window.end()).compareTo(StepRules.MAX_SPAN) > 0) {
+                throw new FormatProblem("window " + number + " must last at most " + StepRules.MAX_SPAN.toDays()
+                        + " days");
+            }
+        }
+
+        private static boolean finiteAndNotNegative(double value) {
+            return value >= 0 && Double.isFinite(value);
         }
 
         @Override

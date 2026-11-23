@@ -120,7 +120,7 @@ final class ProviderAttempt {
     }
 
     private Optional<Instant> cooldownUntil() {
-        return cache.cooldownUntil(info.id()).filter(now::isBefore);
+        return cache.cooldownUntil(info.id(), now).filter(now::isBefore);
     }
 
     private Optional<Retry> waitingAfterFailure() {
