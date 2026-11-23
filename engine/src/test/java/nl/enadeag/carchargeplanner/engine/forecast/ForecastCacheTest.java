@@ -96,6 +96,20 @@ class ForecastCacheTest {
         assertThat(cache().cooldownUntil(MAIN, NOW.plus(Duration.ofHours(1)))).contains(NOW.plus(DAY));
     }
 
+    @ParameterizedTest
+    @MethodSource("clocksNearTheEndsOfTime")
+    void aCoolDownIsReadWithoutFailingAtTheEndsOfWhatAnInstantHolds(Instant clock, Optional<Instant> expected) {
+        cache().saveCooldown(MAIN, NOW.plus(DAY));
+
+        assertThat(cache().cooldownUntil(MAIN, clock)).isEqualTo(expected);
+    }
+
+    static Stream<Arguments> clocksNearTheEndsOfTime() {
+        return Stream.of(Arguments.of(Instant.MAX, Optional.of(NOW.plus(DAY))),
+                Arguments.of(Instant.MAX.minus(DAY), Optional.of(NOW.plus(DAY))),
+                Arguments.of(Instant.MIN, Optional.of(Instant.MIN.plus(DAY))));
+    }
+
     @Test
     void cuttingACoolDownKeepsTheForecastItsKeyAndTheFailedRefresh() {
         cache().saveForecast(MAIN, key(), NOW, hourAt(NOW));

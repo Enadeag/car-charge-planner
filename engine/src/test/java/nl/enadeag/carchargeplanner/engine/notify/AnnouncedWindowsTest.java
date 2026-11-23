@@ -136,7 +136,9 @@ class AnnouncedWindowsTest {
         "9999-12-31T23:00:00Z, +10000-01-01T00:00:00Z, false",
         "2026-07-04T10:00:00Z, 2026-07-20T10:00:00Z, true",
         "2026-07-04T10:00:00Z, 2026-07-20T10:00:00.000000001Z, false",
-        "1800-01-01T00:00:00Z, 2300-01-01T00:00:00Z, false"})
+        "1800-01-01T00:00:00Z, 2300-01-01T00:00:00Z, false",
+        "1970-01-01T00:00:00Z, 2300-01-01T00:00:00Z, false",
+        "1970-01-01T00:00:00Z, 9999-12-31T00:00:00Z, false"})
     void aWindowFallsWithinTheRangeOfMomentsAndLastsAtMostSixteenDays(String start, String end, boolean read)
             throws IOException {
         assertThat(loaded(start, end, "16", "3", "3", "0")).hasSize(read ? 2 : 0);

@@ -523,6 +523,59 @@ class ForecastServiceTest {
     }
 
     @Test
+    void aForecastFetchedJustBeforeTheYearTenThousandIsGivenAsStaleThereAndNoKeyIsCountedRefused()
+            throws ForecastUnavailable {
+        withoutFallback();
+        get(Instant.parse("9999-12-31T22:00:00Z"));
+
+        var result = get(Instant.parse("+10000-01-01T00:00:00Z"));
+
+        assertThat(result.source().freshness()).isEqualTo(Freshness.STALE);
+        assertThat(result.source().providerRole()).isEqualTo(ProviderRole.PRIMARY);
+        assertThat(result.source().keyRefusedBy()).isEmpty();
+        assertThat(result.steps()).isEqualTo(SunnyDays.day(DAY, 3.0));
+        assertThat(main.callCount()).isEqualTo(1);
+    }
+
+    @Test
+    void aFreshCacheAnswersAlsoWhereTheClockIsOutsideTheRange() throws ForecastUnavailable {
+        withoutFallback();
+        get(Instant.parse("9999-12-31T23:30:00Z"));
+
+        var inside = get(Instant.parse("9999-12-31T23:59:00Z")).source();
+        var outside = get(Instant.parse("+10000-01-01T00:10:00Z")).source();
+
+        assertThat(inside.freshness()).isEqualTo(Freshness.CACHED);
+        assertThat(outside.freshness()).isEqualTo(Freshness.CACHED);
+        assertThat(main.callCount()).isEqualTo(1);
+    }
+
+    @Test
+    void withAClockBeforeNineteenSeventyNoKeyIsCountedRefused() {
+        assertThat(unavailable(Instant.parse("1969-12-31T23:59:59.999999999Z")).keyRefusedBy()).isEmpty();
+    }
+
+    @Test
+    void aRefreshTheOwnerAsksForWithAClockBeforeNineteenSeventyFailsWithoutARequest() {
+        var clock = Instant.parse("1969-12-31T23:59:59.999999999Z");
+
+        assertThatThrownBy(() -> refresh(clock)).isInstanceOf(ForecastUnavailable.class)
+                .hasMessageContaining("not asked while the clock is before 1970-01-01T00:00:00Z");
+        assertThat(main.callCount() + backup.callCount()).isZero();
+    }
+
+    @Test
+    void withAClockInTheLastNanosecondBeforeTheYearTenThousandTheProviderIsAsked() throws ForecastUnavailable {
+        var clock = Instant.parse("9999-12-31T23:59:59.999999999Z");
+
+        var result = get(clock);
+
+        assertThat(result.source().freshness()).isEqualTo(Freshness.FRESH);
+        assertThat(result.source().fetchedAt()).isEqualTo(clock);
+        assertThat(main.callCount()).isEqualTo(1);
+    }
+
+    @Test
     void withAClockAtNineteenSeventyTheProviderIsAskedOnceAndThenTheRefreshIntervalHolds() throws ForecastUnavailable {
         var epoch = Instant.EPOCH;
         get(epoch);

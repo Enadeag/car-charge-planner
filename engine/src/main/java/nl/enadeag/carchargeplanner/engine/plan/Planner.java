@@ -24,8 +24,9 @@ public final class Planner {
 
     /**
      * The most days a plan holds, today included. A forecast spans no more
-     * ({@link nl.enadeag.carchargeplanner.engine.forecast.StepRules#MAX_SPAN}), so this holds back only a clock that
-     * was put back, which would otherwise have every day planned from its date to the forecast's.
+     * ({@link nl.enadeag.carchargeplanner.engine.forecast.StepRules#MAX_SPAN}), so with a right clock this holds back
+     * only the last hours of a forecast that reaches beyond the horizon, which no provider gives. A clock that was put
+     * back would otherwise have every day planned from its date to the forecast's.
      */
     public static final int MAX_DAYS = 16;
 
@@ -95,13 +96,15 @@ public final class Planner {
      *
      * @param forecast the forecast to plan on, in any order; empty gives an empty plan
      * @param levelPct the battery level now
-     * @param now the current moment; nothing is planned before it
+     * @param now the current moment; nothing is planned before it; a moment outside a trip's range
+     *     ({@link Trip#EARLIEST_INSTANT} to before {@link Trip#INSTANTS_END}) gives an empty plan, as a date cannot
+     *     always be made from it
      * @param announced the windows the owner has been told about, possibly none
      * @return the days from today to the last day of the forecast, at most {@link #MAX_DAYS}, and the advice for each
      *     trip that departs after now and before the last of those days ends
      */
     public Plan planWithTrips(List<ForecastStep> forecast, Percent levelPct, Instant now, List<Window> announced) {
-        if (forecast.isEmpty()) {
+        if (forecast.isEmpty() || now.isBefore(Trip.EARLIEST_INSTANT) || !now.isBefore(Trip.INSTANTS_END)) {
             return new Plan(List.of(), List.of());
         }
         var end = planEnd(forecast, now);

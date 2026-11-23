@@ -127,8 +127,12 @@ public final class ForecastCache {
      */
     Optional<Instant> cooldownUntil(ProviderId providerId, Instant now) {
         var entry = read(providerId);
-        var latest = now.plus(ProviderError.RateLimited.MAX_RETRY_AFTER);
-        if (entry.cooldownUntil().filter(latest::isBefore).isPresent()) {
+        var until = entry.cooldownUntil();
+        // compared as a length, never by adding to now first: that overflows near the largest moment; Duration.between
+        // holds the gap of any two moments
+        if (until.filter(end -> Duration.between(now, end).compareTo(ProviderError.RateLimited.MAX_RETRY_AFTER) > 0)
+                .isPresent()) {
+            var latest = now.plus(ProviderError.RateLimited.MAX_RETRY_AFTER);
             write(providerId, new Entry(entry.key(), entry.forecast(), Optional.of(latest), entry.refreshFailed()));
             return Optional.of(latest);
         }

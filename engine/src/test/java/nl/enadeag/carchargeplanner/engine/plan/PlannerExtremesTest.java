@@ -31,6 +31,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * The planner, the grid advice and the dashboard at the ends of what the settings, the forecast and the stored files
@@ -463,6 +465,36 @@ class PlannerExtremesTest {
         assertThat(days.get(15).forecast()).hasSize(24);
     }
 
+    /**
+     * With a right clock the horizon cuts nothing. The planner has no way to plan without it, so this pins what a cut
+     * would change: every step of the forecast is in a day of the plan, the days run to the forecast's last day, and a
+     * trip in the forecast's last hours has its advice, at the figure worked out by hand.
+     */
+    @ParameterizedTest(name = "a forecast of {0} days")
+    @ValueSource(ints = {2, 4})
+    void aForecastOfTwoOrFourDaysIsPlannedWholeIncludingATripInItsLastHours(int days) {
+        var zone = Zone.AMSTERDAM;
+        var first = zone.firstDay;
+        var forecast = forecast(first, days, zone.id, Power.CHARGER);
+        var lastDay = first.plusDays(days - 1L);
+        var trip = new Trip(at(lastDay, 22, zone.id), at(lastDay, 23, zone.id), 100, false);
+        var away = new AwayTimes(List.of(), List.of(), List.of(trip));
+        var now = first.atTime(NOW).atZone(zone.id).toInstant();
+
+        var plan = new Planner(Forecasts.example(), Forecasts.PREFERENCES, away).planWithTrips(forecast,
+                new Percent(50), now, List.of());
+
+        assertThat(forecast).hasSize(24 * days + 1);
+        assertThat(plan.days()).extracting(DayPlan::date)
+                .containsExactlyElementsOf(IntStream.range(0, days).mapToObj(first::plusDays).toList());
+        assertThat(plan.days().stream().flatMap(day -> day.forecast().stream()).toList()).isEqualTo(forecast);
+        assertThat(plan.trips()).hasSize(1);
+        assertThat(plan.trips().get(0).trip()).isEqualTo(trip);
+        // the trip's 100 km at 18 kWh per 100 km plus 15 % is 20.7 kWh of 70 (29.5714 %), the day's 85.714 km
+        // are 22.0408 %, and the minimum level is 30 %
+        assertThat(plan.trips().get(0).neededPct().value()).isCloseTo(81.6122, within(0.001));
+    }
+
     @Test
     void aClockPutBackToNineteenSeventyPlansNothingOfAForecastOfNow() {
         var zone = Zone.AMSTERDAM.id;
@@ -490,6 +522,54 @@ class PlannerExtremesTest {
         assertThat(plan.days()).isEmpty();
     }
 
+    static Stream<Instant> clocksOutsideTheRangeOfMoments() {
+        return Stream.of(Instant.MAX, Instant.MIN, Trip.INSTANTS_END, Trip.INSTANTS_END.plusSeconds(1),
+                Trip.EARLIEST_INSTANT.minusNanos(1));
+    }
+
+    @ParameterizedTest
+    @MethodSource("clocksOutsideTheRangeOfMoments")
+    void aClockOutsideTheRangeOfMomentsPlansNothingAndTheAdviceAndTheFooterGoOn(Instant now) {
+        var zone = Zone.AMSTERDAM;
+        var away = new AwayTimes(List.of(), List.of(), List.of());
+        var forecast = forecast(LocalDate.of(2026, 7, 1), 3, zone.id, Power.CHARGER);
+        var system = Forecasts.example();
+
+        var plan = new Planner(system, Forecasts.PREFERENCES, away).planWithTrips(forecast, new Percent(50), now,
+                List.of());
+        var advice = new GridAdvisor(system, Forecasts.PREFERENCES, away).advise(plan, forecast, now);
+        var planned = new Outlook.Planned(now, zone.id, plan.days(), new Percent(50), false, advice, plan.trips(),
+                source(now), system.house().baseloadKw(), Forecasts.PREFERENCES.minimumPct(),
+                Forecasts.PREFERENCES.targetPct());
+        planned.footer();
+
+        assertThat(plan.days()).isEmpty();
+        assertThat(plan.trips()).isEmpty();
+        assertThat(advice).isEmpty();
+    }
+
+    @Test
+    void aClockAtTheStartOfTheRangeOfMomentsPlansTheForecastFromItsFirstDay() {
+        var plan = new Planner(Forecasts.example(), Forecasts.PREFERENCES, AwayTimes.NONE).plan(
+                hours(Trip.EARLIEST_INSTANT, 71, Power.CHARGER), new Percent(50), Trip.EARLIEST_INSTANT, List.of());
+
+        assertThat(plan).extracting(DayPlan::date).containsExactly(LocalDate.of(1970, 1, 1),
+                LocalDate.of(1970, 1, 2), LocalDate.of(1970, 1, 3));
+    }
+
+    @Test
+    void aClockInTheLastNanosecondOfTheRangeOfMomentsPlansTheDayItIsIn() {
+        var now = Trip.INSTANTS_END.minusNanos(1);
+        var forecast = new ArrayList<>(hours(Trip.INSTANTS_END.minus(Duration.ofHours(48)), 47, Power.CHARGER));
+        var lastStart = Trip.INSTANTS_END.minus(Duration.ofHours(1));
+        forecast.add(new ForecastStep(lastStart, now, 5));
+
+        var plan = new Planner(Forecasts.example(), Forecasts.PREFERENCES, AwayTimes.NONE).plan(forecast,
+                new Percent(50), now, List.of());
+
+        assertThat(plan).extracting(DayPlan::date).containsExactly(LocalDate.of(10000, 1, 1));
+    }
+
 
     private static HomeSystem system(Zone zone, House house, Car car, Charger charger) {
         return new HomeSystem(new Coordinates(0, 0), Optional.empty(), zone.id, List.of(Forecasts.PANELS), house, car,
@@ -514,6 +594,17 @@ class PlannerExtremesTest {
         var end = first.plusDays(days).atStartOfDay(zone).toInstant();
         for (var at = first.atStartOfDay(zone).toInstant(); at.isBefore(end); at = at.plus(Duration.ofHours(1))) {
             steps.add(new ForecastStep(at, at.plus(Duration.ofHours(1)), power.at(at.atZone(zone).getHour())));
+        }
+        return steps;
+    }
+
+    /** Hourly steps from the given moment, as many as given. */
+    private static List<ForecastStep> hours(Instant from, int count, HourlyPower power) {
+        var steps = new ArrayList<ForecastStep>();
+        for (int i = 0; i < count; i++) {
+            var at = from.plus(Duration.ofHours(i));
+            int hour = at.atOffset(ZoneOffset.UTC).getHour();
+            steps.add(new ForecastStep(at, at.plus(Duration.ofHours(1)), power.at(hour)));
         }
         return steps;
     }
