@@ -142,6 +142,16 @@ class AnnouncedWindowsTest {
         assertThat(loaded(start, end, "16", "3", "3", "0")).hasSize(read ? 2 : 0);
     }
 
+    /** A window of zero length is one the app itself writes, so it is read; one that ends first never is. */
+    @ParameterizedTest
+    @CsvSource({"2026-07-04T10:00:00Z, 2026-07-04T10:00:00Z, true",
+        "2026-07-04T10:00:00Z, 2026-07-04T09:59:59.999999999Z, false",
+        "9000-01-01T00:00:00Z, 2000-01-01T00:00:00Z, false",
+        "2026-07-04T10:00:00Z, 2026-07-04T10:00:00.000000001Z, true"})
+    void aWindowDoesNotEndBeforeItStarts(String start, String end, boolean read) throws IOException {
+        assertThat(loaded(start, end, "16", "3", "0", "0")).hasSize(read ? 2 : 0);
+    }
+
     @Test
     void aWindowOutsideTheRulesIsNamedByItsPlaceAndTheLimit() throws IOException {
         try (var log = LogCapture.of(StoredFile.class)) {
@@ -150,6 +160,7 @@ class AnnouncedWindowsTest {
             loaded("2026-07-04T10:00:00Z", "2026-07-24T11:00:00Z", "16", "3", "3", "0");
             loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "16", "97", "3", "0");
             loaded("2026-07-04T10:00:00Z", "2026-07-04T11:00:00Z", "16", "3", "50", "50");
+            loaded("2026-07-04T10:00:00Z", "2026-07-04T09:00:00Z", "16", "3", "3", "0");
 
             assertThat(log.lines()).containsExactly(
                     "WARNING " + path() + " cannot be used: window 2 must have a current, a power and energies that "
@@ -159,7 +170,8 @@ class AnnouncedWindowsTest {
                     "WARNING " + path() + " cannot be used: window 2 must last at most 16 days",
                     "WARNING " + path() + " cannot be used: window 2 must have a power of at most 96 kW",
                     "WARNING " + path() + " cannot be used: window 2 must have at most the energy that 96 kW delivers "
-                            + "over its length");
+                            + "over its length",
+                    "WARNING " + path() + " cannot be used: window 2 must not end before it starts");
         }
     }
 

@@ -131,6 +131,9 @@ public final class AnnouncedWindows {
                 throw new FormatProblem("window " + number + " must start at " + Trip.EARLIEST_INSTANT
                         + " or later and end before " + Trip.INSTANTS_END);
             }
+            if (window.end().isBefore(window.start())) {
+                throw new FormatProblem("window " + number + " must not end before it starts");
+            }
             if (Duration.between(window.start(), window.end()).compareTo(StepRules.MAX_SPAN) > 0) {
                 throw new FormatProblem("window " + number + " must last at most " + StepRules.MAX_SPAN.toDays()
                         + " days");
@@ -139,7 +142,7 @@ public final class AnnouncedWindows {
                 throw new FormatProblem("window " + number + " must have a power of at most " + (long) MAX_POWER_KW
                         + " kW");
             }
-            double deliverableKwh = MAX_POWER_KW * Math.max(0, Hours.between(window.start(), window.end()))
+            double deliverableKwh = MAX_POWER_KW * Hours.between(window.start(), window.end())
                     * (1 + ENERGY_TOLERANCE) + ENERGY_SLACK_KWH;
             if (window.solarKwh() + window.importKwh() > deliverableKwh) {
                 throw new FormatProblem("window " + number + " must have at most the energy that " + (long) MAX_POWER_KW
