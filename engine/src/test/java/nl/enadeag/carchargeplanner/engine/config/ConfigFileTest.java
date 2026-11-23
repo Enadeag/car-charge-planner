@@ -113,19 +113,6 @@ class ConfigFileTest {
         "\"kmPerDay\": 40      | \"kmPerDay\": 40, \"tripSurchargePct\": -1 | system.car.tripSurchargePct",
         "\"kmPerDay\": 40      | \"kmPerDay\": 40, \"tripSurchargePct\": \"15%\" | system.car.tripSurchargePct",
         "\"notifyLeadMinutes\": 15 | \"notifyLeadMinutes\": -5 | notifyLeadMinutes",
-        "\"usableBatteryKwh\": 60 | \"usableBatteryKwh\": 1001 | system.car: usableBatteryKwh must be from 1 to 1000, not 1001.0",
-        "\"consumptionKwhPer100km\": 18 | \"consumptionKwhPer100km\": 0.5 | system.car: consumptionKwhPer100km must be from 1 to 200, not 0.5",
-        "\"kmPerDay\": 40      | \"kmPerDay\": 1000.5   | system.car: kmPerDay must be from 0 to 1000, not 1000.5",
-        "\"minAmps\": 6        | \"minAmps\": 0         | system.charger: minAmps must be from 1 to 80, not 0",
-        "\"maxAmps\": 16       | \"maxAmps\": 81        | system.charger: maxAmps must be from 1 to 80, not 81",
-        "\"volts\": 230,       | \"volts\": 99,         | system.charger: volts must be from 100 to 400, not 99.0",
-        "\"efficiency\": 0.9   | \"efficiency\": 0.009  | system.charger: efficiency must be from 0.01 to 1.0, not 0.009",
-        "\"usableBatteryKwh\": 60 | \"usableBatteryKwh\": 0.5 | system.car: usableBatteryKwh must be from 1 to 1000, not 0.5",
-        "\"consumptionKwhPer100km\": 18 | \"consumptionKwhPer100km\": 201 | system.car: consumptionKwhPer100km must be from 1 to 200, not 201.0",
-        "\"kmPerDay\": 40      | \"kmPerDay\": -1       | system.car: kmPerDay must be from 0 to 1000, not -1.0",
-        "\"minAmps\": 6        | \"minAmps\": 81        | system.charger: minAmps must be from 1 to 80, not 81",
-        "\"volts\": 230,       | \"volts\": 401,        | system.charger: volts must be from 100 to 400, not 401.0",
-        "\"efficiency\": 0.9   | \"efficiency\": 1.01   | system.charger: efficiency must be from 0.01 to 1.0, not 1.01",
         "\"usableBatteryKwh\": 60 | \"usableBatteryKwh\": 1e400 | usableBatteryKwh",
         "\"consumptionKwhPer100km\": 18 | \"consumptionKwhPer100km\": 1e400 | consumptionKwhPer100km",
         "\"kmPerDay\": 40      | \"kmPerDay\": 1e400    | kmPerDay",
@@ -167,6 +154,34 @@ class ConfigFileTest {
         assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read())
                 .isInstanceOf(ConfigProblem.class)
                 .hasMessageContaining(named);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "usableBatteryKwh       | 60  | 1001   | system.car: usableBatteryKwh must be from 1 to 1000, not 1001.0",
+        "usableBatteryKwh       | 60  | 0.5    | system.car: usableBatteryKwh must be from 1 to 1000, not 0.5",
+        "consumptionKwhPer100km | 18  | 0.5    | system.car: consumptionKwhPer100km must be from 1 to 200, not 0.5",
+        "consumptionKwhPer100km | 18  | 201    | system.car: consumptionKwhPer100km must be from 1 to 200, not 201.0",
+        "kmPerDay               | 40  | 1000.5 | system.car: kmPerDay must be from 0 to 1000, not 1000.5",
+        "kmPerDay               | 40  | -1     | system.car: kmPerDay must be from 0 to 1000, not -1.0",
+        "minAmps                | 6   | 0      | system.charger: minAmps must be from 1 to 80, not 0",
+        "minAmps                | 6   | 81     | system.charger: minAmps must be from 1 to 80, not 81",
+        "maxAmps                | 16  | 81     | system.charger: maxAmps must be from 1 to 80, not 81",
+        "volts                  | 230 | 99     | system.charger: volts must be from 100 to 400, not 99.0",
+        "volts                  | 230 | 401    | system.charger: volts must be from 100 to 400, not 401.0",
+        "efficiency             | 0.9 | 0.009  | system.charger: efficiency must be from 0.01 to 1.0, not 0.009",
+        "efficiency             | 0.9 | 1.01   | system.charger: efficiency must be from 0.01 to 1.0, not 1.01",
+    })
+    void aNumberOutsideItsBoundIsRejectedWithAMessageThatNamesItsPlaceLimitsAndValue(String name, String stored,
+            String outside, String message) throws IOException {
+        var example = Files.readString(EXAMPLE);
+        var original = "\"" + name + "\": " + stored;
+        assertThat(example).contains(original);
+        var file = write(example.replace(original, "\"" + name + "\": " + outside));
+
+        assertThatThrownBy(() -> new ConfigFile(file, FILES, CLOCK).read())
+                .isInstanceOf(ConfigProblem.class)
+                .hasMessageContaining(message);
     }
 
     @Test

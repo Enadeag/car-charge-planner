@@ -60,8 +60,7 @@ public record Trip(Instant departure, Instant returnTime, double distanceKm, boo
             throw new IllegalArgumentException("a trip must return at most " + MAX_LENGTH.toDays()
                     + " days after its departure, not " + Duration.between(departure, returnTime));
         }
-        // written as a negation, so that a NaN is refused
-        if (!(distanceKm > 0 && distanceKm <= MAX_DISTANCE_KM)) {
+        if (distanceKm <= 0 || distanceKm > MAX_DISTANCE_KM || Double.isNaN(distanceKm)) {
             throw new IllegalArgumentException("a trip's distance must be more than 0 km and at most "
                     + MAX_DISTANCE_KM + " km, not " + distanceKm);
         }

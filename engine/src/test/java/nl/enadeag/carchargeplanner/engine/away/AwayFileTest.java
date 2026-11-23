@@ -211,9 +211,20 @@ class AwayFileTest {
         var period = new OneOffAwayPeriod(Instant.parse(ends[0]), Instant.parse(ends[1]));
 
         assertThatThrownBy(() -> new AwayFile(path, FILES, CLOCK).add(period, NOW))
-                .isInstanceOf(IOException.class).hasMessageContaining("is not added");
+                .isInstanceOf(IOException.class).message().doesNotContain(period.start().toString());
         assertThat(Files.readString(path)).isEqualTo(before);
-        assertThat(new AwayFile(path, FILES, CLOCK).periods()).containsExactly(OneOffAwayPeriod.allDay(DAY, TZ));
+    }
+
+    @Test
+    void periodsOnTheEdgesOfATripsRangeOfMomentsAreAdded() throws IOException {
+        var now = Instant.parse("1970-01-01T01:00:00Z");
+        var first = new OneOffAwayPeriod(Instant.parse("1970-01-01T00:00:00Z"), Instant.parse("1970-01-01T08:00:00Z"));
+        var last = new OneOffAwayPeriod(Instant.parse("9999-12-31T06:00:00Z"),
+                Instant.parse("9999-12-31T23:59:59.999999999Z"));
+
+        assertThat(file().add(first, now)).containsExactly(first);
+        assertThat(file().add(last, now)).containsExactly(first, last);
+        assertThat(file().periods()).containsExactly(first, last);
     }
 
     @Test

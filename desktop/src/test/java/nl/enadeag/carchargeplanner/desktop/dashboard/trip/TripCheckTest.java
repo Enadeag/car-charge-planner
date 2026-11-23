@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -185,6 +186,17 @@ class TripCheckTest {
 
         assertThat(check.check(new Entered(day, "8:00", day.plusDays(1), "18:00", "300", false, false)))
                 .isEqualTo(new Checked.Refused(TextKey.TRIP_PASSED, Field.DEPARTURE_TIME));
+    }
+
+    @Test
+    void aDepartureAtTheFirstMomentOf1970IsAccepted() {
+        var check = new TripCheck(ZoneOffset.UTC, InstantSource.fixed(Instant.parse("1970-01-01T00:00:30Z")),
+                Units.METRIC, ENGLISH);
+        var day = LocalDate.of(1970, 1, 1);
+
+        assertThat(check.check(new Entered(day, "0:00", day, "18:00", "300", false, false)))
+                .isEqualTo(new Checked.Valid(new Trip(Instant.parse("1970-01-01T00:00:00Z"),
+                        Instant.parse("1970-01-01T18:00:00Z"), 300, false, false)));
     }
 
     @Test

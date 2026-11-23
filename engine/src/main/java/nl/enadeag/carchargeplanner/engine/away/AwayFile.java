@@ -78,8 +78,7 @@ public final class AwayFile {
     public synchronized List<OneOffAwayPeriod> add(OneOffAwayPeriod period, Instant now) throws IOException {
         if (!withinRange(period.start(), period.end())) {
             throw new IOException("an away period must start at " + Trip.EARLIEST_INSTANT + " or later and end before "
-                    + Trip.INSTANTS_END + ", so " + period.start() + " to " + period.end() + " is not added to "
-                    + file.path());
+                    + Trip.INSTANTS_END + ", so it is not added to " + file.path());
         }
         var keepFrom = now.minus(KEEP_AFTER_END);
         var periods = new ArrayList<>(storedForChange().stream()

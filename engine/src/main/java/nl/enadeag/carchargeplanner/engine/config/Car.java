@@ -46,19 +46,19 @@ public record Car(double usableBatteryKwh, double consumptionKwhPer100km, double
      * @throws InvalidSetting when a value is outside the range given for it
      */
     public Car {
-        // written as a negation, so that a NaN is refused
-        if (!(usableBatteryKwh >= MIN_USABLE_BATTERY_KWH && usableBatteryKwh <= MAX_USABLE_BATTERY_KWH)) {
+        if (usableBatteryKwh < MIN_USABLE_BATTERY_KWH || usableBatteryKwh > MAX_USABLE_BATTERY_KWH
+                || Double.isNaN(usableBatteryKwh)) {
             throw new InvalidSetting(ConfigSetting.CAR_BATTERY, InvalidSetting.Rule.OUT_OF_RANGE,
                     "usableBatteryKwh must be from " + MIN_USABLE_BATTERY_KWH + " to " + MAX_USABLE_BATTERY_KWH
                             + ", not " + usableBatteryKwh);
         }
-        if (!(consumptionKwhPer100km >= MIN_CONSUMPTION_KWH_PER_100KM
-                && consumptionKwhPer100km <= MAX_CONSUMPTION_KWH_PER_100KM)) {
+        if (consumptionKwhPer100km < MIN_CONSUMPTION_KWH_PER_100KM
+                || consumptionKwhPer100km > MAX_CONSUMPTION_KWH_PER_100KM || Double.isNaN(consumptionKwhPer100km)) {
             throw new InvalidSetting(ConfigSetting.CAR_CONSUMPTION, InvalidSetting.Rule.OUT_OF_RANGE,
                     "consumptionKwhPer100km must be from " + MIN_CONSUMPTION_KWH_PER_100KM + " to "
                             + MAX_CONSUMPTION_KWH_PER_100KM + ", not " + consumptionKwhPer100km);
         }
-        if (!(kmPerDay >= MIN_KM_PER_DAY && kmPerDay <= MAX_KM_PER_DAY)) {
+        if (kmPerDay < MIN_KM_PER_DAY || kmPerDay > MAX_KM_PER_DAY || Double.isNaN(kmPerDay)) {
             throw new InvalidSetting(ConfigSetting.CAR_DAILY_DISTANCE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "kmPerDay must be from " + MIN_KM_PER_DAY + " to " + MAX_KM_PER_DAY + ", not " + kmPerDay);
         }

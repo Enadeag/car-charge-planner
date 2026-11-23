@@ -59,12 +59,11 @@ public record Charger(Phases phases, int minAmps, int maxAmps, double volts, dou
             throw new InvalidSetting(ConfigSetting.CHARGER_MAX_CURRENT, InvalidSetting.Rule.OUT_OF_RANGE,
                     "maxAmps must be from " + MIN_CURRENT_AMPS + " to " + MAX_CURRENT_AMPS + ", not " + maxAmps);
         }
-        // written as a negation, so that a NaN is refused
-        if (!(volts >= MIN_VOLTS && volts <= MAX_VOLTS)) {
+        if (volts < MIN_VOLTS || volts > MAX_VOLTS || Double.isNaN(volts)) {
             throw new InvalidSetting(ConfigSetting.CHARGER_VOLTAGE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "volts must be from " + MIN_VOLTS + " to " + MAX_VOLTS + ", not " + volts);
         }
-        if (!(efficiency >= MIN_EFFICIENCY && efficiency <= MAX_EFFICIENCY)) {
+        if (efficiency < MIN_EFFICIENCY || efficiency > MAX_EFFICIENCY || Double.isNaN(efficiency)) {
             throw new InvalidSetting(ConfigSetting.CHARGER_EFFICIENCY, InvalidSetting.Rule.OUT_OF_RANGE,
                     "efficiency must be from " + MIN_EFFICIENCY + " to " + MAX_EFFICIENCY + ", not " + efficiency);
         }
