@@ -85,4 +85,4 @@ The apps share the dashboard's model too, not only the planner: the rules of the
 
 ## Note, 2026-11-27 (#280, #539)
 
-F-Droid is dropped. The build no longer enforces the rule against Google libraries (the `checkNoGoogleLibraries` check is gone), and the recipe and the listing for F-Droid are removed. The bullets above stay as they were decided.
+F-Droid is dropped. The build no longer enforces the rule against Google libraries (the `checkNoGoogleLibraries` check is gone), and the recipe and the listing for F-Droid are removed. Google Play comes beside GitHub Releases (#527). The bullets above stay as they were decided.
