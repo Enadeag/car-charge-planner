@@ -188,6 +188,20 @@ class TripCardTest {
     }
 
     @Test
+    void aTripUnderHalfAKmShownAsNothingIsSavedWithItsOwnDistanceWhenTheDistanceIsLeftAsItShowed() throws Exception {
+        var trip = new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 18, 0), 0.3, false, false);
+        var listed = Models.LISTED_SATURDAY;
+        show(Models.CLOUDY_TOMORROW.withTrips(List.of(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
+                listed.text(), listed.originText(), listed.changeSpoken(), listed.removeSpoken()))), Models.TRIPS);
+
+        Fx.run(control(Button.class, listed.changeSpoken())::fire);
+        Fx.run(() -> card.editor().save());
+
+        assertThat(Fx.call(() -> card.editor().problem())).isEmpty();
+        assertThat(changed).containsExactly(List.of(trip, trip));
+    }
+
+    @Test
     void aTripInMilesIsShownAndSavedInMiles() throws Exception {
         var miles = new TripsModel(Models.BRUSSELS, Units.IMPERIAL);
         show(Models.CLOUDY_TOMORROW.withTrips(List.of()), miles);

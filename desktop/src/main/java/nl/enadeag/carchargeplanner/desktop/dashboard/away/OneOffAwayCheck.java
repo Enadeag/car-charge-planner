@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayEntryRules;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.InstantSource;
 import java.time.LocalDate;
@@ -14,7 +15,7 @@ import java.util.Optional;
 
 /**
  * Whether what the owner entered for an away period on one day can be saved, and as which period: the times must be
- * times, the end must be after the start and the period must not have ended yet.
+ * times, and the rest are the engine's {@link OneOffAwayEntryRules}, each problem in the owner's words.
  */
 final class OneOffAwayCheck {
 
@@ -45,7 +46,7 @@ final class OneOffAwayCheck {
      * @return the period of the day, or why the day has passed
      */
     Checked wholeDay() {
-        return notPassed(OneOffAwayPeriod.allDay(day, zone));
+        return of(OneOffAwayEntryRules.allDay(day, clock.instant(), zone));
     }
 
     /**
@@ -61,19 +62,17 @@ final class OneOffAwayCheck {
         if (from.isEmpty() || to.isEmpty()) {
             return new Checked.Refused(TextKey.PROBLEM_NOT_A_TIME);
         }
-        OneOffAwayPeriod period;
-        try {
-            period = OneOffAwayPeriod.on(day, from.get(), to.get(), zone);
-        } catch (IllegalArgumentException _) {
-            // also when the clock is put forward between the two times, so both are the same moment
-            return new Checked.Refused(TextKey.ONE_OFF_END_BEFORE_START);
-        }
-        return notPassed(period);
+        return of(OneOffAwayEntryRules.partOfDay(day, from.get(), to.get(), clock.instant(), zone));
     }
 
-    private Checked notPassed(OneOffAwayPeriod period) {
-        return period.end().isAfter(clock.instant()) ? new Checked.Valid(period)
-                : new Checked.Refused(TextKey.ONE_OFF_PASSED);
+    private static Checked of(OneOffAwayEntryRules.Checked checked) {
+        return switch (checked) {
+            case OneOffAwayEntryRules.Checked.Valid(var period) -> new Checked.Valid(period);
+            case OneOffAwayEntryRules.Checked.Refused(var problem) -> new Checked.Refused(switch (problem) {
+                case END_NOT_AFTER_START -> TextKey.ONE_OFF_END_BEFORE_START;
+                case PASSED -> TextKey.ONE_OFF_PASSED;
+            });
+        };
     }
 
     private static Optional<LocalTime> time(String text) {

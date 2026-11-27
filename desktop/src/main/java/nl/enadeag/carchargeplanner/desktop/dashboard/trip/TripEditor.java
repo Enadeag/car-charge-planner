@@ -6,10 +6,10 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
+import nl.enadeag.carchargeplanner.engine.trip.TripEntryRules;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -39,11 +39,9 @@ import javafx.util.StringConverter;
 final class TripEditor extends VBox {
 
     /** How many days from today the days of departure and return offer, beyond those of a trip being changed. */
-    static final int DAYS_OFFERED = 21;
+    static final int DAYS_OFFERED = TripEntryRules.DAYS_OFFERED;
 
     private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
-    private static final LocalTime FIRST_DEPARTURE = LocalTime.of(8, 0);
-    private static final LocalTime FIRST_RETURN = LocalTime.of(18, 0);
 
     private final Messages messages;
     private final Consumer<Trip> saved;
@@ -173,9 +171,9 @@ final class TripEditor extends VBox {
     void prepare(LocalDate day, ZoneId zone, InstantSource clock, Units distanceUnits) {
         start(zone, clock, distanceUnits, day, day);
         departureDay.setValue(day);
-        departureTime.setText(SHOWN.format(FIRST_DEPARTURE));
+        departureTime.setText(SHOWN.format(TripEntryRules.FIRST_DEPARTURE));
         returnDay.setValue(day);
-        returnTime.setText(SHOWN.format(FIRST_RETURN));
+        returnTime.setText(SHOWN.format(TripEntryRules.FIRST_RETURN));
         distance.setText("");
         distanceShown = "";
         canCharge.setSelected(false);
@@ -211,13 +209,12 @@ final class TripEditor extends VBox {
     void save() {
         var entered = new TripCheck.Entered(departureDay.getValue(), departureTime.getText(), returnDay.getValue(),
                 returnTime.getText(), distance.getText(), canCharge.isSelected(), notWithThisCar);
-        switch (check.check(entered)) {
+        // a distance shown rounded, or in miles, stays as it was unless the owner typed another
+        var kept = !distanceShown.isEmpty() && distanceShown.equals(distance.getText().strip());
+        switch (kept ? check.check(entered, distanceKm) : check.check(entered)) {
             case TripCheck.Checked.Valid(var trip) -> {
                 showProblem("");
-                // a distance shown rounded, or in miles, stays as it was unless the owner typed another
-                saved.accept(distanceShown.isEmpty() || !distanceShown.equals(distance.getText().strip()) ? trip
-                        : new Trip(trip.departure(), trip.returnTime(), distanceKm, trip.canChargeAtDestination(),
-                                trip.notWithThisCar()));
+                saved.accept(trip);
                 closed.run();
             }
             case TripCheck.Checked.Refused(var why, var where, var values) -> {

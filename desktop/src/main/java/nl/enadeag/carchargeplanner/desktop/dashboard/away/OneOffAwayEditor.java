@@ -4,11 +4,11 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayEntryRules;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -33,8 +33,6 @@ import javafx.scene.layout.VBox;
 final class OneOffAwayEditor extends VBox {
 
     private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
-    private static final LocalTime FIRST_START = LocalTime.of(9, 0);
-    private static final LocalTime FIRST_END = LocalTime.of(17, 0);
 
     private final Messages messages;
     private final Consumer<OneOffAwayPeriod> saved;
@@ -127,8 +125,8 @@ final class OneOffAwayEditor extends VBox {
     void prepare(LocalDate day, ZoneId zone, InstantSource clock) {
         check = new OneOffAwayCheck(day, zone, clock);
         wholeDay.setSelected(true);
-        from.setText(SHOWN.format(FIRST_START));
-        to.setText(SHOWN.format(FIRST_END));
+        from.setText(SHOWN.format(OneOffAwayEntryRules.FIRST_START));
+        to.setText(SHOWN.format(OneOffAwayEntryRules.FIRST_END));
         showProblem("");
         wholeDay.requestFocus();
     }
