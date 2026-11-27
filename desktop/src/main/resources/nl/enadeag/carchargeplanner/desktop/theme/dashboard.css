@@ -161,37 +161,6 @@
     -fx-text-fill: -fg;
 }
 
-/*
- * a card's focus ring lies outside it, so its content does not move; the coloured cards keep their edge beside it
- * (and name their own rules, as a class outweighs a pseudo-class in JavaFX)
- */
-.card:focus-visible {
-    -fx-border-color: -focus;
-    -fx-border-width: 2;
-    -fx-border-radius: 16;
-    -fx-border-insets: -4;
-}
-
-.card.solar:focus-visible,
-.card.grid:focus-visible,
-.card.warning-card:focus-visible {
-    -fx-border-width: 2, 0 0 0 4;
-    -fx-border-radius: 16, 0;
-    -fx-border-insets: -4, 0.6em 0 0.6em 0;
-}
-
-.card.solar:focus-visible {
-    -fx-border-color: -focus, -solar;
-}
-
-.card.grid:focus-visible {
-    -fx-border-color: -focus, -grid;
-}
-
-.card.warning-card:focus-visible {
-    -fx-border-color: -focus, -danger-text;
-}
-
 .card-label {
     -fx-font-size: 0.85em;
     -fx-font-weight: bold;
@@ -257,8 +226,7 @@
     -fx-min-height: 9.5em;
 }
 
-.solar-chart:focus-visible,
-.battery-bar:focus-visible {
+.solar-chart:focus-visible {
     -fx-border-color: -focus;
     -fx-border-width: 2;
     -fx-border-radius: 6;
@@ -565,6 +533,17 @@
     -fx-max-height: 0.6em;
 }
 
+/* the dot's colour is not the only sign: a "!" stands beside it */
+.problem-mark {
+    -fx-alignment: center-left;
+    -fx-spacing: 0.3em;
+}
+
+.settings-categories .list-cell .problem-sign {
+    -fx-text-fill: -danger-text;
+    -fx-font-weight: bold;
+}
+
 .settings-body,
 .settings-body > .viewport {
     -fx-background-color: -panel;
@@ -765,8 +744,8 @@
  * The focus ring, the same on every control: a 2 px line in -focus, 2 px outside the control. AtlantaFX shows none on
  * flat buttons, check boxes, radio buttons and links, and in dark only a border that differs too little from the one
  * it replaces. A border drawn outside the control does not move its content. It shows whenever the control has the
- * focus, as AtlantaFX's own does: the app also moves the focus itself after a key, such as to what a Save says, and
- * JavaFX counts only Tab as making the focus visible.
+ * focus, as AtlantaFX's own does: the app also moves the focus itself after a key, such as to a field with a
+ * problem, and JavaFX counts only Tab as making the focus visible.
  */
 .button:focused,
 .toggle-button:focused,
@@ -774,9 +753,7 @@
 .check-box:focused,
 .radio-button:focused,
 .combo-box-base:focused,
-.text-input:focused,
-.status-text:focused,
-.message-text:focused {
+.text-input:focused {
     -fx-border-color: -focus;
     -fx-border-width: 2;
     -fx-border-insets: -4;

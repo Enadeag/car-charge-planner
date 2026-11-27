@@ -7,8 +7,6 @@ package nl.enadeag.carchargeplanner.desktop.text;
 public enum TextKey {
     /** The tooltip of the dashboard's button that opens it in a window. */
     DASHBOARD_DETACH,
-    /** What a screen reader calls the strip of day tabs. */
-    DASHBOARD_DAYS,
     /** The footer's button for the away periods. */
     FOOTER_AWAY,
     /** What the footer's Away button opens: the weekly away periods, in Settings. */
@@ -39,18 +37,6 @@ public enum TextKey {
     CHART_SCALE,
     /** One step's values on hover: {0} its start time, {1} the solar power in kW, {2} the baseload in kW. */
     CHART_READOUT,
-    /** The solar chart in words: {0} the day, {1} the peak power in kW, {2} the peak's time, {3} the baseload in kW. */
-    CHART_SPOKEN,
-    /** The solar chart in words on a day without solar power: {0} the day. */
-    CHART_SPOKEN_NO_SOLAR,
-    /** The charge windows in words, after the chart's: {0} one window, or several joined with commas. */
-    CHART_SPOKEN_WINDOWS,
-    /** One window in words: {0} its start, {1} its end. */
-    CHART_SPOKEN_SPAN,
-    /** The current time in words, after the chart's: {0} the time. */
-    CHART_SPOKEN_NOW,
-    /** What the arrow keys do on the solar chart, read by a screen reader after the chart's text. */
-    CHART_KEYS,
     /** The battery's heading. */
     BATTERY_HEADING,
     /** The battery's levels: {0} at the start, {1} after charging, in %. */
@@ -66,20 +52,10 @@ public enum TextKey {
     BATTERY_MINIMUM,
     /** The label of the target charge level's mark: {0} the target, a number of percent without the sign. */
     BATTERY_TARGET,
-    /** Today's battery in words: {0} now, {1} after charging, {2} the minimum, {3} the target, all in %. */
-    BATTERY_SPOKEN_TODAY,
-    /** Another day's battery in words: {0} at its start, {1} the day, {2} after charging, {3} the minimum, {4} the target. */
-    BATTERY_SPOKEN_DAY,
-    /** Added to the battery in words on a day a trip leaves: {0} the level at the end of the day, in %. */
-    BATTERY_SPOKEN_AFTER_TRIP,
-    /** Added to today's battery in words while its level is assumed. */
-    BATTERY_ASSUMED,
     /** The button that opens the battery level's entry. */
     BATTERY_UPDATE,
     /** What the update button does. */
     BATTERY_UPDATE_HINT,
-    /** The name of the field the battery level is entered in. */
-    BATTERY_LEVEL_FIELD,
     /** The button that saves the entered battery level. */
     BATTERY_SAVE,
     /** The button that closes the battery level's entry without saving. */
@@ -114,8 +90,6 @@ public enum TextKey {
     ONE_OFF_DAYS,
     /** The button that removes an away period. */
     ONE_OFF_REMOVE,
-    /** What a screen reader calls the remove button: {0} the period, such as "Tomorrow, all day". */
-    ONE_OFF_REMOVE_SPOKEN,
     /** The heading of the card with the trips of the selected day. */
     TRIP_HEADING,
     /** The button that opens the entry of a trip that leaves on the selected day. */
@@ -138,31 +112,14 @@ public enum TextKey {
     TRIP_CAN_CHARGE,
     /** The button that opens the entry of a trip to change it. */
     TRIP_CHANGE,
-    /**
-     * What a screen reader calls the change button: {0} the trip, such as "Away 07:30 – 18:00 · 300 km there and
-     * back".
-     */
-    TRIP_CHANGE_SPOKEN,
     /** The button that removes a trip. */
     TRIP_REMOVE,
-    /** What a screen reader calls the remove button: {0} the trip, as for {@link #TRIP_CHANGE_SPOKEN}. */
-    TRIP_REMOVE_SPOKEN,
     /** The label before a trip's day and time of departure. */
     TRIP_DEPARTURE,
     /** The label before a trip's day and time of return. */
     TRIP_RETURN,
-    /** What a screen reader calls the field of the day of departure. */
-    TRIP_DEPARTURE_DAY,
-    /** What a screen reader calls the field of the time of departure. */
-    TRIP_DEPARTURE_TIME,
-    /** What a screen reader calls the field of the day of return. */
-    TRIP_RETURN_DAY,
-    /** What a screen reader calls the field of the time of return. */
-    TRIP_RETURN_TIME,
     /** The label before a trip's distance, there and back. */
     TRIP_DISTANCE_FIELD,
-    /** What a screen reader calls the distance field: {0} the unit's symbol, "km" or "mi". */
-    TRIP_DISTANCE_SPOKEN,
     /** The button that saves the entered trip. */
     TRIP_SAVE,
     /** The button that closes the trip's entry without saving. */
@@ -222,7 +179,7 @@ public enum TextKey {
     TRIP_ADVICE_ENTERED,
     /** The button on a trip's advice that opens the entry of the battery level. */
     TRIP_ADVICE_ADJUST,
-    /** What the adjust button does, for its tooltip and a screen reader. */
+    /** What the adjust button does, for its tooltip. */
     TRIP_ADVICE_ADJUST_HINT,
     /** The chip above the grid advice. */
     ADVICE_LABEL,
@@ -301,11 +258,6 @@ public enum TextKey {
     DAY_SOLAR_SHARE,
     /** A window's energy from the grid: {0} kWh. */
     DAY_FROM_GRID,
-    /**
-     * A day with a charge window for a screen reader: {0} the day, {1} start, {2} end, {3} the charge current in A,
-     * {4} the solar share in %.
-     */
-    DAY_SPOKEN,
     /** The heading of a day with a charge window. */
     DAY_WINDOW,
     /** The heading of the day that needs a grid charge. */
@@ -452,16 +404,12 @@ public enum TextKey {
     SETTINGS_TITLE,
     /** The heading above Settings' categories. */
     SETTINGS_HEADING,
-    /** What a screen reader calls the list of Settings' categories. */
-    SETTINGS_CATEGORIES,
     /** The category of the planning preferences. */
     CATEGORY_PLANNING,
     /** The category of the desktop app's own settings. */
     CATEGORY_APP,
     /** The category with the version, the licence and the files. */
     CATEGORY_ABOUT,
-    /** What a screen reader says for a category with a refused value: {0} the category. */
-    CATEGORY_HAS_PROBLEMS,
     /** The button that saves and keeps Settings open. */
     SETTINGS_SAVE,
     /** The button that saves and closes Settings. */
@@ -556,8 +504,6 @@ public enum TextKey {
     FIELD_CHARGING_HOURS_HINT,
     /** The word between the two times of the charging hours. */
     CHARGING_HOURS_AND,
-    /** What a screen reader calls the end of the charging hours. */
-    CHARGING_HOURS_END_FIELD,
     /** The title of the card with the notification lead time. */
     CARD_NOTIFICATIONS,
     /** What notifications do. */
@@ -664,11 +610,6 @@ public enum TextKey {
     PROBLEM_BELOW_MINIMUM_CURRENT,
     /** The button that fills a card with typical values. */
     USE_TYPICAL,
-    /**
-     * A control's name for a screen reader where the same control shows more than once: {0} the control's own name,
-     * {1} what tells it apart, such as "Panel array 2" or a provider's name.
-     */
-    IN_GROUP,
     /** The title of a panel array's card: {0} its number. */
     CARD_PANEL_ARRAY,
     /** What a panel array is. */
@@ -735,7 +676,7 @@ public enum TextKey {
     CARD_PLACE,
     /** What the place search does. */
     CARD_PLACE_HINT,
-    /** What a screen reader calls the place search's text field. */
+    /** The label of the place search's text field. */
     PLACE_FIELD,
     /** The text in the empty place search field. */
     PLACE_PROMPT,
@@ -938,8 +879,6 @@ public enum TextKey {
     SECRET_LOCKED,
     /** The button that lets the owner enter a new key in place of one that could not be read. */
     SECRET_REPLACE,
-    /** What a screen reader says for that button: {0} the key's field. */
-    SECRET_LOCKED_SPOKEN,
     /** The title of the card about where the keys are kept. */
     CARD_KEYS,
     /** The note on the keys' card when the API keys are in the keychain, not in the settings files. */
@@ -964,14 +903,6 @@ public enum TextKey {
     AWAY_FROM,
     /** The word between the start and the end. */
     AWAY_TO,
-    /** What a screen reader calls the weekday. */
-    AWAY_WEEKDAY,
-    /** What a screen reader calls the start. */
-    AWAY_FROM_FIELD,
-    /** What a screen reader calls the end. */
-    AWAY_TO_FIELD,
-    /** One weekly away period, to tell its fields apart for a screen reader: {0} its number, from 1. */
-    AWAY_PERIOD_NUMBER,
     /** The title of the set-up card. */
     CARD_SET_UP,
     /** What running set-up again does. */
@@ -992,8 +923,6 @@ public enum TextKey {
     SET_UP_TITLE,
     /** Above set-up's page: {0} the step's number, {1} how many steps there are. */
     SET_UP_STEP,
-    /** What a screen reader says of set-up's progress bar: {0} the step's number, {1} how many steps there are, {2} the step's name. */
-    SET_UP_PROGRESS,
     /** Set-up's button to the step before. */
     SET_UP_BACK,
     /** Set-up's button to the step after. */
