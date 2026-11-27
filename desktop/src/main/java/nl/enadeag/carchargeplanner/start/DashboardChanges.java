@@ -10,8 +10,9 @@ import java.io.UncheckedIOException;
 
 /**
  * The changes the owner makes on the dashboard, handed to the engine away from the JavaFX thread, one at a time and in
- * the order they were made. The desktop's planning, told through the engine's change listener, plans again after each, and the dashboard shows that plan; a change that could
- * not be saved is logged, and the next plan shows the stored data as it was.
+ * the order they were made. The desktop's planning, told through the engine's change listener, plans again after
+ * each, and the dashboard shows that plan; a change that could not be saved is logged, and the next plan shows the
+ * stored data as it was.
  */
 final class DashboardChanges {
 
