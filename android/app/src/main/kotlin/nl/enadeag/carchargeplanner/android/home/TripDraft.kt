@@ -55,11 +55,11 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
          */
         TOO_LONG(TripEntry.Field.RETURN),
 
-        /** The distance is no number, or too large to be one. */
-        DISTANCE_NOT_A_NUMBER(TripEntry.Field.DISTANCE),
-
         /** The distance is 0 or less. */
         DISTANCE_NOT_POSITIVE(TripEntry.Field.DISTANCE),
+
+        /** The distance is no number, or too large to be one. */
+        DISTANCE_NOT_A_NUMBER(TripEntry.Field.DISTANCE),
 
         /** The distance is more than a trip may have, [Trip.MAX_DISTANCE_KM]. */
         DISTANCE_TOO_FAR(TripEntry.Field.DISTANCE),

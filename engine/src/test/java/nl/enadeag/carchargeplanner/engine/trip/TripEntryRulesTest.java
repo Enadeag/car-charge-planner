@@ -70,6 +70,18 @@ class TripEntryRulesTest {
     }
 
     @Test
+    void aTimeTheClockRepeatsCountsAsItsFirstOccurrence() {
+        // in Amsterdam 02:00 to 03:00 happens twice on 25 October 2026, first in summer time
+        var amsterdam = ZoneId.of("Europe/Amsterdam");
+        var autumn = LocalDate.of(2026, 10, 25);
+        var now = autumn.minusDays(1).atStartOfDay(amsterdam).toInstant();
+
+        assertThat(TripEntryRules.check(entered(autumn.atTime(2, 30), autumn.atTime(2, 45), 10), now, amsterdam))
+                .isEqualTo(new Checked.Valid(new Trip(Instant.parse("2026-10-25T00:30:00Z"),
+                        Instant.parse("2026-10-25T00:45:00Z"), 10, false, false)));
+    }
+
+    @Test
     void aReturnAtNowIsPassedAndOneAMinuteLaterIsNot() {
         var now = at(DAY.atTime(18, 0));
 

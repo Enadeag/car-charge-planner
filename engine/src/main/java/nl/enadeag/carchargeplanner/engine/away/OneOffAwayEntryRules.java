@@ -35,7 +35,7 @@ public final class OneOffAwayEntryRules {
 
     /**
      * Part of one day, from a start time to an end time. A time that the clock skips when it is put forward counts as
-     * the time after the gap.
+     * the time after the gap, and one it repeats as its first.
      *
      * @param day the day the car is away
      * @param start the local time the car leaves

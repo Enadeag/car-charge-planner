@@ -18,6 +18,9 @@ class OneOffAwayEntryRulesTest {
     /** In Amsterdam the clock goes from 02:00 to 03:00 on this day. */
     private static final LocalDate SPRING = LocalDate.of(2026, 3, 29);
 
+    /** In Amsterdam 02:00 to 03:00 happens twice on this day. */
+    private static final LocalDate AUTUMN = LocalDate.of(2026, 10, 25);
+
     private static Instant at(LocalDate day, int hour, int minute) {
         return day.atTime(hour, minute).atZone(AMSTERDAM).toInstant();
     }
@@ -39,6 +42,13 @@ class OneOffAwayEntryRulesTest {
     void partOfTheDayIsReadInTheHomesZone() {
         assertThat(partOfDay(DAY, "09:00", "17:30", at(DAY, 6, 0)))
                 .isEqualTo(new Checked.Valid(new OneOffAwayPeriod(at(DAY, 9, 0), at(DAY, 17, 30))));
+    }
+
+    @Test
+    void aTimeTheClockRepeatsCountsAsItsFirstOccurrence() {
+        assertThat(partOfDay(AUTUMN, "02:30", "02:45", at(AUTUMN.minusDays(1), 12, 0)))
+                .isEqualTo(new Checked.Valid(new OneOffAwayPeriod(Instant.parse("2026-10-25T00:30:00Z"),
+                        Instant.parse("2026-10-25T00:45:00Z"))));
     }
 
     @ParameterizedTest
