@@ -56,7 +56,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 - The hourly work (`hourly-round`, 60 minutes with 15 of flex, `UPDATE`) and the round now (`round-now`) wait for a network, unmetered with "Wi-Fi only", never for the battery, and end as a success. Their names never change after a release, or old work is orphaned on phones (#362).
 - While a round now only waits, asking again adds nothing; while one runs, exactly one more waits after it (`APPEND_OR_REPLACE`) (#362).
-- The schedule is refreshed at every `onStart`, when notifications are allowed through the card, and after the settings file is written or set aside, changed API keys, a saved battery level, and a changed away period or trip. With ready settings and notifications allowed it schedules both; without either it cancels both with the alarm; an unusable file leaves them (#362).
+- The schedule is refreshed at every `onStart`, when notifications are allowed through the card, and after each change the engine tells its change listener of: the settings file written or set aside, the API keys, the battery level, an away period or a trip, also after one that failed (#392). With ready settings and notifications allowed it schedules both; without either it cancels both with the alarm; an unusable file leaves them (#362).
 - A "Wi-Fi only" change moves the hourly work and a waiting round now to the new network; a running one is left alone (#362).
 - WorkManager's database lies in `no_backup/`, which Android never backs up or transfers, and no backup rule names it (#362, #397).
 

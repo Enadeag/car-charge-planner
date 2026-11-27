@@ -462,9 +462,8 @@ dependencies {
 // review.
 val pitLogic = listOf("form.*", "setup.*", "settings.*", "store.*", "home.*", "start.*", "licences.*", "logging.*",
     "secrets.*", "notify.*", "prefs.*", "OwnCode*", "MainThreadViolations*", "AndroidHttpGet*", "AndroidPlatform*",
-    // the background work's rules, its rounds, its schedule and the engine's access that tells it of a change
+    // the background work's rules, its rounds and its schedule, which the engine tells of each change
     "background.BackgroundRules*", "background.BackgroundRounds*", "background.BackgroundSchedule*",
-    "background.ReschedulingAccess*",
     // ChartGeometry.kt: the charts' geometry and the shapes they draw, apart from the Compose code in DayCharts.kt
     "ui.home.ChartGeometryKt*", "ui.home.PlotArea*", "ui.home.CurvePoint*", "ui.home.PlacedTick*",
     "ui.home.TimeAxis*", "ui.home.Point*", "ui.home.Shape*", "ui.home.SolarDrawing*", "ui.home.BatteryBarLayout*",

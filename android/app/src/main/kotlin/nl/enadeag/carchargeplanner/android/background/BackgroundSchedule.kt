@@ -11,12 +11,12 @@ import org.slf4j.LoggerFactory
 
 /**
  * Sets up the work in the background as the app is used: at each start of the screen, at Finish and after each change
- * the owner saved, the hourly round and one round now are scheduled once the app is set up and notifications are
- * allowed, so the first alarm is set at once and a changed place gets its forecast; both are cancelled, with the alarm,
- * when the settings file is gone or notifications are not allowed. A round now that only waits is not doubled, as it
- * reads the settings when it runs; one that runs already gets exactly one more after it ([RoundWork.once]). After the
- * phone starts or the app is updated, only the round now is asked: WorkManager keeps the hourly one itself. A failure
- * is logged by its kind only.
+ * the owner stored, also one that failed, the hourly round and one round now are scheduled once the app is set up and
+ * notifications are allowed, so the first alarm is set at once and a changed place gets its forecast; both are
+ * cancelled, with the alarm, when the settings file is gone or notifications are not allowed. A round now that only
+ * waits is not doubled, as it reads the settings when it runs; one that runs already gets exactly one more after it
+ * ([RoundWork.once]). After the phone starts or the app is updated, only the round now is asked: WorkManager keeps the
+ * hourly one itself. A failure is logged by its kind only.
  *
  * @param access the engine's reads and writes, asked anew each time so a test can put another in place
  * @param work the work that asks the providers

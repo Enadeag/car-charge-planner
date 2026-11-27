@@ -53,7 +53,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - A trip reads as the desktop's ("Away 07:30 – 18:00 · 300 km there and back", with the days when it returns on another day), on the phone's clock in whole km, spoken "Away from 07:30 to 18:00, 300 km there and back" (#375).
 - Its two choices are checkboxes in whole toggleable rows; a tap saves at once and shows the new state while saving. A failed choice springs back with "Not saved: the trip could not be written." and no Undo; one that worked says nothing (#375).
 - Rows are keyed by the trip, and a trip a choice changed keeps the key of the trip it was, so the focus stays on it (#375).
-- Remove acts at once with Undo, as the away list's. After each saved change the work in the background is told, so a trip's charge start gets its alarm at once (#375).
+- Remove acts at once with Undo, as the away list's. After each change, also one that failed, the engine's change listener tells the work in the background, so a trip's charge start gets its alarm at once (#375, #392).
 - Two trips with the same departure share one told-state in `trip-notices.json`, as on the desktop: a known limit (#375).
 
 ### Trip entry

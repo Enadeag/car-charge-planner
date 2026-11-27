@@ -40,7 +40,7 @@ In each Maven module the code is in `src/main/java/` and the tests in `src/test/
 
 Nothing slow runs on the JavaFX thread: a window hands work that can wait on the keychain, a file, the system or the network to `desktop.app.Background`, which runs it on a virtual thread, logs a failure, and hands the outcome back to the JavaFX thread. A test gives it executors of its own, such as one that runs the work at once or one that holds it.
 
-The engine's changes to the away periods and to the trips may be called from any thread, also at the same time: `AwayFile` and `TripFile` read, change and write their file as one step, so no change is lost to another and no client needs a lock of its own. Every change of `Engine`'s stored data goes through its `thenReplan`, which has the engine plan again soon after, also when the change failed; a new one does too.
+The engine's changes to the away periods and to the trips may be called from any thread, also at the same time: `AwayFile` and `TripFile` read, change and write their file as one step, so no change is lost to another and no client needs a lock of its own. Every change of `Engine`'s stored data goes through its `thenTell`, which tells the engine's `ChangeListener`s after it, also when the change failed; a new one does too, and `EngineChangeListenerTest` fails on a public method it does not know as a read or a change. The engine has no thread: the desktop plans every minute and after each change on the timer of its `start` package (`PlanSchedule`), and Android in the work in the background.
 
 How to add a forecast provider is in [docs/providers.md](../providers.md). `CONTEXT.md` explains the words the project uses (window, charge power, away and so on), and `docs/adr/` records the larger decisions.
 
