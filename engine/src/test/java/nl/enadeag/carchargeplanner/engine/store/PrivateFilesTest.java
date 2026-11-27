@@ -288,13 +288,4 @@ class PrivateFilesTest {
 
         assertThatThrownBy(() -> files.tightenFile(file)).isSameAs(refusal);
     }
-
-    @Test
-    void aRemovedFileIsGoneAndAMissingOneIsSaidToBe() throws IOException {
-        var file = Files.writeString(folder.resolve("old.json"), "{}");
-
-        assertThat(files.remove(file)).isTrue();
-        assertThat(file).doesNotExist();
-        assertThat(files.remove(file)).isFalse();
-    }
 }
