@@ -11,7 +11,7 @@ Decisions about how the app keeps and removes the owner's secrets (API keys) tha
 ### The fallback file, `secrets.json`
 
 - Whether the API keys may fall back to `secrets.json` is a setting of `ApiKeys`, `KeyFallback`: `PRIVATE_FILE` on the desktop, `NONE` on Android (#305).
-- With `PRIVATE_FILE`, a save waits for the owner only when the keychain is locked, or refuses an unlock, which `ApiKeys` counts as not answered, so the save ends locked. A prompt to unlock that the owner dismisses, and every other failure of a save, unavailable or refused, write the keys to the private file, except a save of the owner's changes into a keychain that holds keys, readable or not (below) (#268, #394).
+- With `PRIVATE_FILE`, a save waits for the owner only when the keychain is locked, or refuses an unlock, which `ApiKeys` counts as not answered, so the save ends locked. A prompt to unlock that the owner dismisses, and every other failure of a save, unavailable or refused, write the keys to the private file, except a save of the owner's changes into a keychain that was read and holds keys, readable or not (below) (#268, #394).
 - With `PRIVATE_FILE`, a load whose first read of the `index` fails takes the file as the keys' place; a failure later in a load, of an entry or from a damaged index, is reported as keys that could not be read, and the file is not used (#268).
 - The keychain is asked whether it can be used by reading the `index`; with `PRIVATE_FILE` a refused read of it counts as no usable keychain, so the keys go to `secrets.json` (#292).
 - With `NONE` the API keys never end up unencrypted: `secrets.json` is never read, written, deleted or moved, and `moveFileIntoKeychain` does nothing, so a file that is there anyway is left alone and ignored (#305).

@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 /**
  * The keychain's states and what a load, a move of the file and a save do in each, with the file as fallback where it
  * is one: {@link #way(Use, KeychainEntries.State)} decides that for every state in one place. Not safe for threads:
- * whoever holds {@link ApiKeys}' turn calls it, but for {@link #unlock(Runnable)}, which must not hold it.
+ * whoever holds {@link ApiKeys}' turn calls it, but for {@link #unlock(Duration, Runnable)}, which must not hold it.
  */
 final class KeychainWithFallback {
 
@@ -266,7 +266,8 @@ final class KeychainWithFallback {
             if (e.kind() != KeychainException.Kind.LOCKED && stored.inKeychain().holdsKeys()) {
                 throw new SecretsProblem("The API keys could not be stored in the system keychain ("
                         + e.getMessage() + ")." + (file.isTheFallback()
-                                ? " As it holds keys the file would hide, they were not stored in the file either."
+                                ? " They were not stored in the file either: it would hide the keys the keychain"
+                                        + " holds, or bring back a removed one when moved in."
                                 : ""));
             }
             return notInKeychain(e, edit);
