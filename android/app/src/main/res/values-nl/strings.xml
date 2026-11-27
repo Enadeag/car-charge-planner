@@ -140,6 +140,11 @@
   <string name="finish_failed">Niet opgeslagen: de instellingen konden niet worden geschreven.</string>
 
   <string name="problem_out_of_range">Deze waarde valt buiten wat hier mag.</string>
+  <string name="problem_from_to">Typ een getal van %1$s tot en met %2$s.</string>
+  <string name="problem_at_least">Typ een getal van %1$s of meer.</string>
+  <string name="problem_more_than">Typ een getal groter dan %1$s.</string>
+  <string name="problem_more_than_at_most">Typ een getal groter dan %1$s en hoogstens %2$s.</string>
+  <string name="problem_at_least_below">Typ een getal van %1$s of meer en kleiner dan %2$s.</string>
   <string name="problem_not_below_target">Moet lager zijn dan het doelniveau.</string>
   <string name="problem_below_minimum_current">Mag niet lager zijn dan de minimale laadstroom.</string>
   <string name="problem_same_as_primary">Kies een andere dienst dan de eerste.</string>

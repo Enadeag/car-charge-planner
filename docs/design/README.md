@@ -5,6 +5,7 @@ Each folder here is one feature and holds a **`decisions.md`**: a short list of 
 | Folder | What it covers |
 | --- | --- |
 | `secrets/` | Decisions about keeping and removing API keys and links |
+| `settings-window/` | Decisions about the desktop's Settings and set-up: how a number field reads, steps and checks what is typed against the engine's rules |
 | `android/` | Decisions about the Android app: [set-up](android/setup.md), [the home and dashboard](android/dashboard.md), [Settings](android/settings.md), [notifications and the work in the background](android/notifications.md), [every screen](android/screens.md), and [build, tests and CI](android/build.md) |
 | `engine/` | Decisions about the engine that both apps share: files of a newer version, the round, the stored forecast, a refused key, the next notice, the engine factory, the dashboard model |
 | `trips/` | Decisions about trips entered by hand that ADR 0009 does not carry: the charging hours' edge cases and the trip notices |

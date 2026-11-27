@@ -369,7 +369,7 @@ class SettingsScreenTest {
 
         foldIs(R.string.fold_expanded)
         field(text(R.string.household_use)).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_out_of_range)))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_at_least, "0")))
         assertThat(access.written).isEmpty()
         click(R.string.more_settings)
         foldIs(R.string.fold_expanded)
@@ -545,7 +545,7 @@ class SettingsScreenTest {
 
         foldIs(R.string.fold_expanded)
         field(text(R.string.planning_min_window)).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_out_of_range)))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_more_than, "0")))
         click(R.string.more_settings)
         foldIs(R.string.fold_expanded)
 

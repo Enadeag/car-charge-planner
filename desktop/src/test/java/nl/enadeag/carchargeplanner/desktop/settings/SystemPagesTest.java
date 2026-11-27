@@ -368,20 +368,19 @@ class SystemPagesTest {
     }
 
     @Test
-    void aTripSurchargeOutsideZeroToHundredIsBroughtIntoThatRange() throws Exception {
+    void aTripSurchargeOutsideZeroToHundredIsRefusedAndNothingIsWritten() throws Exception {
         var view = open();
+        var before = Files.readString(settings.configPath);
 
-        Fx.call(() -> {
-            settings.type(view, TextKey.FIELD_CAR_TRIP_SURCHARGE, "150");
-            return SettingsFixture.save(view);
-        });
-        assertThat(stored().system().car().tripSurcharge()).isEqualTo(new Percent(100));
-
-        Fx.call(() -> {
-            settings.type(view, TextKey.FIELD_CAR_TRIP_SURCHARGE, "-5");
-            return SettingsFixture.save(view);
-        });
-        assertThat(stored().system().car().tripSurcharge()).isEqualTo(new Percent(0));
+        for (var typed : List.of("150", "-5")) {
+            assertThat(Fx.call(() -> {
+                settings.type(view, TextKey.FIELD_CAR_TRIP_SURCHARGE, typed);
+                return SettingsFixture.save(view);
+            })).isFalse();
+            assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_TRIP_SURCHARGE).getAccessibleHelp()))
+                    .startsWith("Type a number from 0 to 100.");
+        }
+        assertThat(settings.configPath).hasContent(before);
     }
 
     @Test
@@ -701,28 +700,29 @@ class SystemPagesTest {
         assertThat(stored().system().car()).isEqualTo(new Car(200, 60, 0));
     }
 
-    /** In miles the fields' ends are 620 mi, 1 and 12.5 mi/kWh, which in km also lie within the engine's bounds. */
+    /**
+     * In miles the engine's ends, rounded inward to what the fields show, are 621 mi and 0.32 to 62.13 mi/kWh, which
+     * in km lie within the engine's bounds.
+     */
     @Test
     void theEndsOfTheCarsFieldsInMilesAreSaved() throws Exception {
         var view = open();
 
         assertThat(Fx.call(() -> {
             settings.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL);
-            settings.type(view, TextKey.FIELD_CAR_DAILY_DISTANCE, "620");
-            settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "1");
+            settings.type(view, TextKey.FIELD_CAR_DAILY_DISTANCE, "621");
+            settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "0.32");
             return SettingsFixture.save(view);
         })).isTrue();
         var car = stored().system().car();
-        assertThat(car.kmPerDay()).isCloseTo(997.793_28, within(1e-9));
-        assertThat(car.consumptionKwhPer100km())
-                .isCloseTo(62.137_119_223_733, within(1e-9));
+        assertThat(car.kmPerDay()).isCloseTo(999.402_624, within(1e-9));
+        assertThat(car.consumptionKwhPer100km()).isCloseTo(194.178_497_574_17, within(1e-9));
 
         assertThat(Fx.call(() -> {
-            settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "12.5");
+            settings.type(view, TextKey.FIELD_CAR_CONSUMPTION, "62.13");
             return SettingsFixture.save(view);
         })).isTrue();
-        assertThat(stored().system().car().consumptionKwhPer100km())
-                .isCloseTo(4.970_969_537_898_7, within(1e-9));
+        assertThat(stored().system().car().consumptionKwhPer100km()).isCloseTo(1.000_114_6, within(1e-6));
     }
 
     /** The ends of the charger's fields lie within the engine's bounds, so each is saved as typed. */
@@ -1099,7 +1099,7 @@ class SystemPagesTest {
     }
 
     @Test
-    void aTypedHouseholdUseIsSavedAsTheAverageInKwAndBroughtIntoZeroToFourHundredEighty() throws Exception {
+    void aTypedHouseholdUseIsSavedAsTheAverageInKwWithNoHighestEnd() throws Exception {
         var view = openWithHouse(Language.ENGLISH, 0.5);
 
         Fx.call(() -> {
@@ -1113,14 +1113,14 @@ class SystemPagesTest {
             settings.type(view, TextKey.FIELD_HOUSEHOLD_USE, "480.1");
             return SettingsFixture.save(view);
         });
-        assertThat(stored().system().house()).isEqualTo(new House(20));
-        assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("480.0");
+        assertThat(stored().system().house().baseloadKw()).isCloseTo(20.004_166, within(1e-6));
+        assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("480.1");
 
-        Fx.call(() -> {
+        assertThat(Fx.call(() -> {
             settings.type(view, TextKey.FIELD_HOUSEHOLD_USE, "-0.1");
             return SettingsFixture.save(view);
-        });
-        assertThat(stored().system().house()).isEqualTo(new House(0));
+        })).isFalse();
+        assertThat(stored().system().house().baseloadKw()).isCloseTo(20.004_166, within(1e-6));
     }
 
     @Test

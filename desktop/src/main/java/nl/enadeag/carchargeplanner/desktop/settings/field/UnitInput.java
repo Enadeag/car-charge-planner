@@ -4,13 +4,14 @@ import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.form.Quantity;
 import nl.enadeag.carchargeplanner.desktop.settings.form.UnitValue;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import java.util.Optional;
 import javafx.scene.Node;
 
 /**
  * A number the engine keeps metric, shown in the owner's units. {@link UnitValue} keeps what it stands for when the
  * units change.
  */
-public final class UnitInput implements Input {
+public final class UnitInput implements NumberField {
 
     private final UnitValue value;
     private final NumberInput field;
@@ -65,7 +66,8 @@ public final class UnitInput implements Input {
      * The value as the engine keeps it, with what the owner typed but did not confirm yet; the field does not change,
      * see {@link #commitTyped()}.
      *
-     * @return the metric value; exactly the loaded or last set one while the field shows it unchanged
+     * @return the metric value; exactly the loaded or last set one while the field shows it unchanged; NaN while the
+     *     text is not a number, see {@link #problem()}
      */
     public double value() {
         return value.kept(field.value());
@@ -73,12 +75,25 @@ public final class UnitInput implements Input {
 
     /**
      * Confirms what the owner typed, as {@link NumberInput#commitTyped()} does, and holds what it stands for, so it
-     * stays the same when the units change.
+     * stays the same when the units change. A text that is not a number is not held, and gives way to the value held
+     * when the units change.
      */
     @Override
     public void commitTyped() {
         field.commitTyped();
-        value.hold(field.value());
+        if (field.problem().isEmpty()) {
+            value.hold(field.value());
+        }
+    }
+
+    @Override
+    public Optional<String> problem() {
+        return field.problem();
+    }
+
+    @Override
+    public String outOfRange() {
+        return field.outOfRange();
     }
 
     @Override

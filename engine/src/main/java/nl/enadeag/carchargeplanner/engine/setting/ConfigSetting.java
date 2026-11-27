@@ -31,6 +31,8 @@ public enum ConfigSetting {
     CAR_CONSUMPTION,
     /** The distance the car is driven on a typical day. */
     CAR_DAILY_DISTANCE,
+    /** The share added to the car's consumption for the energy of a trip. */
+    CAR_TRIP_SURCHARGE,
     /** The phases the charger charges on. */
     CHARGER_PHASES,
     /** The lowest current per phase the charger and the car accept. */

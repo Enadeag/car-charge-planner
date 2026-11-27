@@ -1184,7 +1184,7 @@ class SetUpScreenTest {
         compose.onNodeWithText(text(R.string.more_settings))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.fold_expanded)))
         field(R.string.car_trip_surcharge).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_out_of_range)))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_from_to, "0", "100")))
     }
 
     /** The text is on screen inside a live region of that mode, which a screen reader reads when it changes. */

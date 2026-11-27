@@ -73,7 +73,7 @@ class ChargerFormTest {
 
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            ChargerForm.Field.MAX_CURRENT to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            ChargerForm.Field.MAX_CURRENT to FieldProblem.OutOfRange(Limit.fromTo(1.0, 80.0))))
     }
 
     @Test
@@ -83,7 +83,7 @@ class ChargerFormTest {
 
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            ChargerForm.Field.EFFICIENCY to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            ChargerForm.Field.EFFICIENCY to FieldProblem.OutOfRange(Limit.fromTo(1.0, 100.0))))
     }
 
     @Test

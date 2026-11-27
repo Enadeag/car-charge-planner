@@ -45,20 +45,22 @@ class FieldReader<F : Enum<F>>(private val state: FormState<F>, private val numb
     }
 
     /**
-     * A percentage field's value, from 0 to 100 as [Percent] has it.
+     * A percentage field's value, which the engine's [Percent.of] checks.
      *
      * @param field the field
+     * @param setting the setting the percentage is the value of
      * @param stored the stored percentage
      * @param decimals the decimals the field shows
      * @return the percentage; the stored one when the text is refused
      */
-    fun percent(field: F, stored: Percent, decimals: Int): Percent {
+    fun percent(field: F, setting: ConfigSetting, stored: Percent, decimals: Int): Percent {
         val value = number(field, stored.value(), decimals)
-        if (!(value >= 0 && value <= 100)) {
-            problems.putIfAbsent(field, FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE))
-            return stored
+        return try {
+            Percent.of(setting, value)
+        } catch (refused: InvalidSetting) {
+            problems.putIfAbsent(field, problemOf(refused))
+            stored
         }
-        return Percent(value)
     }
 
     /**
@@ -106,8 +108,15 @@ class FieldReader<F : Enum<F>>(private val state: FormState<F>, private val numb
         return try {
             make()
         } catch (refused: InvalidSetting) {
-            problems[fieldOf(refused.setting())] = FieldProblem.Refused(refused.rule())
+            problems[fieldOf(refused.setting())] = problemOf(refused)
             null
         }
+    }
+
+    /** A number outside its setting's limit names the limit; any other refusal its rule. */
+    private fun problemOf(refused: InvalidSetting): FieldProblem {
+        val limit = Limit.of(refused.setting())
+        return if (refused.rule() == InvalidSetting.Rule.OUT_OF_RANGE && limit != null) FieldProblem.OutOfRange(limit)
+            else FieldProblem.Refused(refused.rule())
     }
 }

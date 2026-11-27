@@ -95,8 +95,8 @@ class PlanningForm(handle: SavedStateHandle, numbers: NumberText) :
 
     override fun readInto(config: EngineConfig, reader: FieldReader<Field>): EngineConfig? {
         val stored = config.planning()
-        val minimum = reader.percent(Field.MINIMUM_CHARGE, stored.minimumPct(), 0)
-        val target = reader.percent(Field.TARGET_CHARGE, stored.targetPct(), 0)
+        val minimum = reader.percent(Field.MINIMUM_CHARGE, ConfigSetting.MINIMUM_CHARGE, stored.minimumPct(), 0)
+        val target = reader.percent(Field.TARGET_CHARGE, ConfigSetting.TARGET_CHARGE, stored.targetPct(), 0)
         val margin = reader.number(Field.MARGIN, stored.margin(), 0, scale = 100.0)
         val tolerance = reader.number(Field.IMPORT_TOLERANCE, stored.importToleranceKwh(), IMPORT_DECIMALS)
         val window = reader.minutes(Field.MINIMUM_WINDOW, stored.minWindow())

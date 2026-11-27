@@ -9,9 +9,11 @@ import java.time.Duration;
  *
  * @param minimumPct the minimum charge level of the battery, below {@code targetPct}
  * @param targetPct the target charge level of the battery, above {@code minimumPct}
- * @param margin the share of the forecast surplus to count on, more than 0 and at most 1
- * @param importToleranceKwh the grid energy in kWh a charge window may take, 0 or more
- * @param minWindow the shortest charge window, in whole minutes, more than 0
+ * @param margin the share of the forecast surplus to count on, more than {@link #MARGIN_ABOVE} and at most
+ *     {@link #MAX_MARGIN}
+ * @param importToleranceKwh the grid energy in kWh a charge window may take, {@link #MIN_IMPORT_TOLERANCE_KWH} or
+ *     more
+ * @param minWindow the shortest charge window, in whole minutes, more than {@link #MIN_WINDOW_ABOVE_MINUTES}
  * @param notifyLead how long before a charge window the owner is told, in whole minutes, 0 or more
  * @param chargingHours the hours in which the owner can start a charge
  */
@@ -23,6 +25,18 @@ public record PlanningPreferences(
         Duration minWindow,
         Duration notifyLead,
         ChargingHours chargingHours) {
+
+    /** The margin is more than this: a plan that counts on none of the surplus has nothing to plan with. */
+    public static final int MARGIN_ABOVE = 0;
+
+    /** The highest margin, the whole forecast surplus. */
+    public static final int MAX_MARGIN = 1;
+
+    /** The lowest import tolerance, in kWh: no grid energy at all. There is no highest. */
+    public static final int MIN_IMPORT_TOLERANCE_KWH = 0;
+
+    /** The shortest charge window is more than this many minutes. There is no highest. */
+    public static final int MIN_WINDOW_ABOVE_MINUTES = 0;
 
     /**
      * What a new owner starts with: charge to 80 % and never below 30 %, count on 85 % of the surplus, take up to
@@ -44,17 +58,17 @@ public record PlanningPreferences(
             throw new InvalidSetting(ConfigSetting.MINIMUM_CHARGE, InvalidSetting.Rule.NOT_BELOW_TARGET,
                     "minimumPct and targetPct must satisfy 0 <= minimumPct < targetPct <= 100");
         }
-        if (margin <= 0 || margin > 1 || !Double.isFinite(margin)) {
+        if (margin <= MARGIN_ABOVE || margin > MAX_MARGIN || !Double.isFinite(margin)) {
             throw new InvalidSetting(ConfigSetting.PLANNING_MARGIN, InvalidSetting.Rule.OUT_OF_RANGE,
-                    "margin must be more than 0 and at most 1");
+                    "margin must be more than " + MARGIN_ABOVE + " and at most " + MAX_MARGIN);
         }
-        if (importToleranceKwh < 0 || !Double.isFinite(importToleranceKwh)) {
+        if (importToleranceKwh < MIN_IMPORT_TOLERANCE_KWH || !Double.isFinite(importToleranceKwh)) {
             throw new InvalidSetting(ConfigSetting.IMPORT_TOLERANCE, InvalidSetting.Rule.OUT_OF_RANGE,
                     "importToleranceKwh must not be negative");
         }
-        if (minWindow.isNegative() || minWindow.isZero()) {
+        if (minWindow.compareTo(Duration.ofMinutes(MIN_WINDOW_ABOVE_MINUTES)) <= 0) {
             throw new InvalidSetting(ConfigSetting.MINIMUM_WINDOW, InvalidSetting.Rule.OUT_OF_RANGE,
-                    "minWindowMinutes must be more than 0");
+                    "minWindowMinutes must be more than " + MIN_WINDOW_ABOVE_MINUTES);
         }
         if (notifyLead.isNegative()) {
             throw new InvalidSetting(ConfigSetting.NOTIFY_LEAD, InvalidSetting.Rule.OUT_OF_RANGE,

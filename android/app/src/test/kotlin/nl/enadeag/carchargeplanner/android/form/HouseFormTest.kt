@@ -6,7 +6,6 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.House
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
-import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -75,7 +74,7 @@ class HouseFormTest {
 
         assertThat(form.check(DRAFT)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            HouseForm.Field.BASELOAD to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            HouseForm.Field.BASELOAD to FieldProblem.OutOfRange(Limit.atLeast(0.0))))
     }
 
     @Test

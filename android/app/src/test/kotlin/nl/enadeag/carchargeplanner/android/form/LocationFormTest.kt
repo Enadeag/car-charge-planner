@@ -7,7 +7,6 @@ import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.engine.config.Coordinates
 import nl.enadeag.carchargeplanner.engine.config.PlaceName
 import nl.enadeag.carchargeplanner.engine.forecast.Place
-import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -173,7 +172,7 @@ class LocationFormTest {
 
         assertThat(form.check(DRAFT)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            LocationForm.Field.LONGITUDE to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            LocationForm.Field.LONGITUDE to FieldProblem.OutOfRange(Limit.fromTo(-180.0, 180.0))))
     }
 
     @Test

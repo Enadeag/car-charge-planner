@@ -17,9 +17,8 @@ import javafx.scene.layout.VBox;
 
 /**
  * The car, with typical values on request, and under "More settings" the car's trip surcharge and the house's own use,
- * with a typical value of its own. The fold is closed each time the page loads; its fields keep every value in
- * their ranges, so none has a problem that would open it. Distances and consumption show in the units the App page
- * chooses, also before they are saved.
+ * with a typical value of its own. The fold is closed each time the page loads, and opens while one of its fields
+ * shows a problem. Distances and consumption show in the units the App page chooses, also before they are saved.
  */
 public final class CarHousePage implements ConfigPage {
 
@@ -81,6 +80,7 @@ public final class CarHousePage implements ConfigPage {
     public void load(EngineConfig config) {
         house.load(config);
         car.load(config);
+        more.holdOpen(false);
         more.setOpen(false);
         view.show(car.view(), moreCard);
     }
@@ -95,11 +95,12 @@ public final class CarHousePage implements ConfigPage {
         return car.read(config).flatMap(house::read);
     }
 
-    /** Both cards are checked, so each shows its own problems. */
+    /** Both cards are checked, so each shows its own problems; the fold opens to show one of its fields'. */
     @Override
     public boolean showProblems() {
         var carRefused = car.showProblems();
         var houseRefused = house.showProblems();
+        more.holdOpen(houseRefused || car.foldedShowsProblem());
         return carRefused || houseRefused;
     }
 }

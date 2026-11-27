@@ -10,7 +10,6 @@ import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting
-import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -98,7 +97,7 @@ class CarFormTest {
 
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            CarForm.Field.CONSUMPTION to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            CarForm.Field.CONSUMPTION to FieldProblem.OutOfRange(Limit.fromTo(1.0, 200.0))))
     }
 
     @Test
@@ -108,7 +107,7 @@ class CarFormTest {
 
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            CarForm.Field.BATTERY to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            CarForm.Field.BATTERY to FieldProblem.OutOfRange(Limit.fromTo(1.0, 1000.0))))
     }
 
     @Test
@@ -118,7 +117,7 @@ class CarFormTest {
 
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            CarForm.Field.TRIP_SURCHARGE to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            CarForm.Field.TRIP_SURCHARGE to FieldProblem.OutOfRange(Limit.fromTo(0.0, 100.0))))
 
         form.edit(CarForm.Field.TRIP_SURCHARGE, "100")
         assertThat(form.check(stored)!!.system().car().tripSurcharge()).isEqualTo(Percent(100.0))
@@ -126,7 +125,7 @@ class CarFormTest {
         form.edit(CarForm.Field.TRIP_SURCHARGE, "-1")
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            CarForm.Field.TRIP_SURCHARGE to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            CarForm.Field.TRIP_SURCHARGE to FieldProblem.OutOfRange(Limit.fromTo(0.0, 100.0))))
 
         form.edit(CarForm.Field.TRIP_SURCHARGE, "0")
         assertThat(form.check(stored)!!.system().car().tripSurcharge()).isEqualTo(Percent(0.0))

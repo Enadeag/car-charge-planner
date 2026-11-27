@@ -7,6 +7,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Changed
 - A settings file with a value the app cannot plan with no longer loads: the usable battery must be from 1 to 1000 kWh, the consumption from 1 to 200 kWh per 100 km, the daily distance at most 1000 km, the charging efficiency from 1 to 100%, the minimum and the maximum charge current from 1 to 80 A, and the voltage from 100 to 400 V. Settings keeps every value within these, so only a file edited by hand can hold another; the app then asks you to fix `engine.json` and names the setting and its limits (#410).
 - The trip entry refuses a trip of more than 20,000 km (12,427 mi) there and back, or one that lasts more than 366 days, and says so (#410).
+- Settings and set-up no longer cut a number to a range of their own: a value the settings file allows, such as a 250 kWh battery, a household use of 600 kWh per day or a planning margin of 0.5%, shows and is saved as it is, where a save of anything used to cut it. A value the app cannot plan with is refused under its field, which names the limit ("Type a number from 1 to 1000."), in miles too (621 mi); a text that is not a number, or a decimal in the charge currents or the minutes, is refused rather than taken for the value before or rounded; and both a decimal point and a decimal comma are read, in English and in Dutch (#317).
 - A trip in `trips.json` of more than 20,000 km or 366 days, leaving before 1970 or back on 1 January 10000 (UTC) or later, and a one-off away period in `away.json` that starts before 1970 or ends on 1 January 10000 (UTC) or later, count as damaged entries: such an entry is left out of the plan, and no entry of that file can be added, changed or removed while it is there (#410).
 
 ### Fixed
@@ -16,6 +17,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Android
 
 - A settings file with a value the app cannot plan with no longer loads, with the same bounds as the desktop app: the usable battery from 1 to 1000 kWh, the consumption from 1 to 200 kWh per 100 km, the daily distance at most 1000 km, the charging efficiency from 1 to 100%, the minimum and the maximum charge current from 1 to 80 A, and the voltage from 100 to 400 V. Earlier versions saved any value above 0, so a value outside these makes the settings file unusable, and **Set up again** starts over; Settings now refuses such a value under its field (#410).
+- Settings and set-up name the limit when they refuse a number, as on the desktop ("Type a number from 1 to 1000.") (#317).
 - The trip entry refuses a trip of more than 20,000 km there and back, or one that lasts more than 366 days, and says so (#410).
 - Trips and one-off away periods in the files beyond the bounds count as damaged entries, as on the desktop (#410).
 - A forecast, a stored forecast or the stored announced windows with a moment far in the past or the future, or a clock that was put back, no longer hangs a planning round or makes it fail, as on the desktop (#408).

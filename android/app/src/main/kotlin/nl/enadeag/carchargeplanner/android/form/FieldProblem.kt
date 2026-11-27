@@ -15,6 +15,13 @@ sealed interface FieldProblem {
      */
     data class Refused(val rule: InvalidSetting.Rule) : FieldProblem
 
+    /**
+     * The engine refused a number as outside its setting's limit, which the field names.
+     *
+     * @property limit what the engine allows, in the field's unit
+     */
+    data class OutOfRange(val limit: Limit) : FieldProblem
+
     /** The text is not a number: empty, letters, a thousands separator, an exponent, a space or a plus sign. */
     data object NotANumber : FieldProblem
 

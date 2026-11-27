@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
 import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChosenPlace;
+import nl.enadeag.carchargeplanner.desktop.settings.form.Limit;
 import nl.enadeag.carchargeplanner.desktop.settings.form.LocationEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberText;
@@ -24,6 +25,7 @@ import nl.enadeag.carchargeplanner.engine.config.PlaceName;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.Place;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
+import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,8 +46,10 @@ import javafx.scene.layout.VBox;
  */
 public final class LocationPage implements ConfigPage {
 
-    private static final NumberRange LATITUDE = new NumberRange(-90, 90, 0.01, ChosenPlace.DECIMALS);
-    private static final NumberRange LONGITUDE = new NumberRange(-180, 180, 0.01, ChosenPlace.DECIMALS);
+    private static final NumberRange LATITUDE = NumberRange.of(Limit.of(ConfigSetting.LATITUDE), 0.01,
+            ChosenPlace.DECIMALS);
+    private static final NumberRange LONGITUDE = NumberRange.of(Limit.of(ConfigSetting.LONGITUDE), 0.01,
+            ChosenPlace.DECIMALS);
 
     private final Messages messages;
     private final NumberText numbers;
@@ -163,19 +167,39 @@ public final class LocationPage implements ConfigPage {
 
     @Override
     public Optional<EngineConfig> read(EngineConfig config) {
-        // the fields keep each coordinate in its range, so the location is never refused
-        return Optional.of(isChanged() ? entry().applyTo(config) : config);
+        if (!isChanged()) {
+            return Optional.of(config);
+        }
+        if (problems.typingIsWrong()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(entry().applyTo(config));
+        } catch (InvalidSetting e) {
+            return Optional.empty();
+        }
     }
 
+    /** A refused coordinate opens the coordinates to show it; set-up marks a missing place itself. */
     @Override
     public boolean showProblems() {
         problems.clear();
         fold.holdOpen(false);
-        if (isChanged()) {
-            inputs().forEach(Input::commitTyped);
+        if (!isChanged()) {
+            return false;
         }
-        // the fields keep each coordinate in its range, so nothing is refused; set-up marks a missing place itself
-        return false;
+        inputs().forEach(Input::commitTyped);
+        var refused = problems.showTyping();
+        if (!refused) {
+            try {
+                entry().coordinates();
+            } catch (InvalidSetting e) {
+                problems.show(e);
+                refused = true;
+            }
+        }
+        fold.holdOpen(refused);
+        return refused;
     }
 
     /**

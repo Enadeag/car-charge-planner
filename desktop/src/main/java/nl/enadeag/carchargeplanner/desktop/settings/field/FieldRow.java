@@ -10,8 +10,8 @@ import javafx.scene.layout.VBox;
 
 /**
  * One setting on a card: its name and its control side by side, a sentence that explains it below them, and room for
- * a problem with its value. A screen reader reads the name with the control, and the explanation and problem as its
- * help.
+ * a problem with its value, which goes when the value is edited. A screen reader reads the name with the control, and
+ * the explanation and problem as its help.
  */
 public final class FieldRow extends VBox {
 
@@ -54,6 +54,16 @@ public final class FieldRow extends VBox {
         getChildren().addAll(line, this.hint, problem);
         setHint(hint);
         getStyleClass().add("field-row");
+        input.onChange(this::clearProblem);
+    }
+
+    /**
+     * The control the setting is entered in.
+     *
+     * @return the control this row was made with
+     */
+    public Input input() {
+        return input;
     }
 
     /**
@@ -122,7 +132,12 @@ public final class FieldRow extends VBox {
         return name;
     }
 
-    boolean hasProblem() {
+    /**
+     * Whether the row shows a problem now.
+     *
+     * @return true from {@link #showProblem(String)} until the problem is taken away or the value is edited
+     */
+    public boolean hasProblem() {
         return problem.isVisible();
     }
 

@@ -6,6 +6,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
 import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChargerEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
+import nl.enadeag.carchargeplanner.desktop.settings.form.Limit;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
@@ -76,11 +77,11 @@ public final class ChargerPage implements ConfigPage {
         var names = new ChoiceNames(messages);
         power = new ChoiceInput<>(List.of(ChargePowerChoice.values()), names::chargePower);
         phases = new ChoiceInput<>(List.of(Phases.values()), names::phases);
-        var amps = new NumberRange(1, 80, 1, 0);
-        minAmps = new NumberInput(amps, "A", messages);
-        maxAmps = new NumberInput(amps, "A", messages);
-        volts = new NumberInput(new NumberRange(100, 400, 1, 0), "V", messages);
-        efficiency = new NumberInput(new NumberRange(1, 100, 1, 0), "%", messages);
+        minAmps = new NumberInput(NumberRange.whole(Limit.of(ConfigSetting.CHARGER_MIN_CURRENT), 1), "A", messages);
+        maxAmps = new NumberInput(NumberRange.whole(Limit.of(ConfigSetting.CHARGER_MAX_CURRENT), 1), "A", messages);
+        volts = new NumberInput(NumberRange.of(Limit.of(ConfigSetting.CHARGER_VOLTAGE), 1, 0), "V", messages);
+        efficiency = new NumberInput(NumberRange.of(Limit.of(ConfigSetting.CHARGER_EFFICIENCY), 1, 0), "%",
+                messages);
         problems = new ProblemRows(messages);
         typical = new TypicalMarks();
         powerRow = FieldRow.of(messages, TextKey.FIELD_CHARGE_POWER, TextKey.FIELD_CHARGE_POWER_HINT, power);
@@ -166,14 +167,17 @@ public final class ChargerPage implements ConfigPage {
         if (!isChanged()) {
             return Optional.of(config);
         }
+        if (problems.typingIsWrong()) {
+            return Optional.empty();
+        }
         return charger(_ -> { }).map(charger -> config.withSystem(config.system().withCharger(charger),
                 new TypicalValues(typical.appliedTo(config.typical().system()), config.typical().panels())));
     }
 
     /**
-     * Shows "Choose one." at the power while none is chosen, and a value the records refuse at its field. The fields
-     * keep every value in their ranges, so the one value refused is a highest current below the lowest, under the
-     * fold, which then opens and stays open until the next check finds it put right.
+     * Shows "Choose one." at the power while none is chosen, a text that is no number the field takes at its field,
+     * and else a value the records refuse at its field. Every such field is under the fold, which then opens and stays
+     * open until the next check finds it put right.
      */
     @Override
     public boolean showProblems() {
@@ -188,6 +192,10 @@ public final class ChargerPage implements ConfigPage {
             return refused;
         }
         inputs().forEach(Input::commitTyped);
+        if (problems.showTyping()) {
+            more.holdOpen(true);
+            return true;
+        }
         return charger(problem -> {
             problems.show(problem);
             more.holdOpen(true);
@@ -195,12 +203,13 @@ public final class ChargerPage implements ConfigPage {
     }
 
     /**
-     * The charger as entered, after its record checked it; a refused value goes to {@code refused}. An efficiency the
-     * owner left alone is the loaded one exactly, as a share in % divided by 100 can differ from it in the last digit.
+     * The charger as entered, after its record checked it; a refused value goes to {@code refused}. The currents are
+     * whole numbers in an int's range, as their fields take no other. An efficiency the owner left alone is the
+     * loaded one exactly, as a share in % divided by 100 can differ from it in the last digit.
      */
     private Optional<Charger> charger(Consumer<InvalidSetting> refused) {
         try {
-            var entered = new ChargerEntry(phases.value(), minAmps.value(), maxAmps.value(), volts.value(),
+            var entered = new ChargerEntry(phases.value(), (int) minAmps.value(), (int) maxAmps.value(), volts.value(),
                     efficiency.value()).charger();
             return Optional.of(efficiency.isChanged() ? entered : new Charger(entered.phases(), entered.minAmps(),
                     entered.maxAmps(), entered.volts(), loadedEfficiency));
