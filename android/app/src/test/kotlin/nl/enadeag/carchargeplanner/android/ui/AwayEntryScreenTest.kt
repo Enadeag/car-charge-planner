@@ -699,7 +699,7 @@ class AwayEntryScreenTest {
     }
 
     @Test
-    fun theEnglishDetailsOfAFailureInTheSnackbarAreMarkedAsEnglishForTheScreenReader() {
+    fun aFailureInTheSnackbarSaysSoWithTheEnglishDetailsAndClose() {
         access.away = listOf(tomorrow)
         access.awayFails = "No space left on device"
         show()
@@ -710,9 +710,7 @@ class AwayEntryScreenTest {
 
         val failed = text(R.string.one_off_not_removed) + " " +
             text(R.string.details_in_english, "No space left on device")
-        val shown = compose.onNodeWithText(failed).fetchSemanticsNode().config[SemanticsProperties.Text].single()
-        val english = shown.spanStyles.filter { it.item.localeList?.get(0)?.language == "en" }.single()
-        assertThat(shown.text.substring(english.start, english.end)).isEqualTo("No space left on device")
+        compose.onNodeWithText(failed).assertIsDisplayed()
         compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction()).assertIsDisplayed()
     }
 

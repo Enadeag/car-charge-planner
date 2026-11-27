@@ -366,8 +366,6 @@ class HomeScreenTest {
 
         val footer = "${Plans.CREDIT} · ${text(R.string.footer_updated, "08:51")}"
         compose.onNodeWithText(footer).performScrollTo().assertIsDisplayed()
-        val shown = compose.onNodeWithText(footer).fetchSemanticsNode().config[SemanticsProperties.Text].single()
-        assertThat(shown.spanStyles.single { it.start == 0 }.item.localeList?.first()?.language).isEqualTo("en")
         compose.onNodeWithText(text(R.string.stale_warning, "08:51")).assertDoesNotExist()
     }
 

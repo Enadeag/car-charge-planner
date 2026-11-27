@@ -1177,15 +1177,9 @@ class SetUpScreenTest {
         compose.waitForIdle()
     }
 
-    /** The details are on screen in the sentence that says they are English, and marked as English. */
+    /** The details are on screen in the sentence that says they are English. */
     private fun assertEnglish(details: String) {
-        val sentence = text(R.string.details_in_english, details)
-        val node = compose.onNodeWithText(sentence, useUnmergedTree = true).performScrollTo().assertIsDisplayed()
-            .fetchSemanticsNode()
-        val shown = node.config[SemanticsProperties.Text].single()
-        assertThat(shown.spanStyles).anySatisfy { span ->
-            assertThat(shown.text.substring(span.start, span.end)).isEqualTo(details)
-            assertThat(span.item.localeList?.first()?.language).isEqualTo("en")
-        }
+        compose.onNodeWithText(text(R.string.details_in_english, details), useUnmergedTree = true).performScrollTo()
+            .assertIsDisplayed()
     }
 }

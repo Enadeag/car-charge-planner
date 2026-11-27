@@ -65,7 +65,6 @@ import nl.enadeag.carchargeplanner.android.ui.components.AppTextButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarIconButton
 import nl.enadeag.carchargeplanner.android.ui.components.BarScaffold
 import nl.enadeag.carchargeplanner.android.ui.components.EnglishDetails
-import nl.enadeag.carchargeplanner.android.ui.components.inEnglish
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
@@ -419,7 +418,7 @@ private fun TripAdviceCard(advice: TripAdviceText, source: EnergySource, adjust:
 /** The forecast's credit, which stays in the provider's English, its source and freshness. */
 @Composable
 private fun FooterLine(footer: Footer, words: DashboardWords) {
-    Text(inEnglish(words.footer(footer), footer.credit()), style = MaterialTheme.typography.bodySmall,
+    Text(words.footer(footer), style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
