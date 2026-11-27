@@ -44,6 +44,7 @@ import nl.enadeag.carchargeplanner.android.ui.components.SaveAction
 import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 import nl.enadeag.carchargeplanner.android.ui.components.TimeButton
 import nl.enadeag.carchargeplanner.android.ui.components.TimeDialog
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayProblem
 
 /** Which of the entry's two times the picker is open for. */
 private enum class Picked {
@@ -165,7 +166,7 @@ private fun Kinds(chosen: AwayEntry.Kind, focus: FocusRequester, enabled: Boolea
     }
 }
 
-private fun problemId(problem: AwayEntry.Problem): Int = when (problem) {
-    AwayEntry.Problem.END_NOT_AFTER_START -> R.string.one_off_end_before_start
-    AwayEntry.Problem.PASSED -> R.string.one_off_passed
+private fun problemId(problem: OneOffAwayProblem): Int = when (problem) {
+    OneOffAwayProblem.END_NOT_AFTER_START -> R.string.one_off_end_before_start
+    OneOffAwayProblem.PASSED -> R.string.one_off_passed
 }

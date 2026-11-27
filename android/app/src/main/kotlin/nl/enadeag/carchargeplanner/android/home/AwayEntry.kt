@@ -15,7 +15,11 @@ import nl.enadeag.carchargeplanner.android.form.forget
 import nl.enadeag.carchargeplanner.android.form.readKept
 import nl.enadeag.carchargeplanner.android.store.AwaySave
 import nl.enadeag.carchargeplanner.android.store.EngineAccess
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayEntryRules
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayEntryRules.FIRST_END
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayEntryRules.FIRST_START
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayProblem
 import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway
 
 /**
@@ -54,15 +58,6 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         PART_OF_DAY,
     }
 
-    /** Why Save refused what was entered. */
-    enum class Problem {
-        /** The end is not after the start, also when the clocks go forward between them so both are one moment. */
-        END_NOT_AFTER_START,
-
-        /** The period ended by the time of Save. */
-        PASSED,
-    }
-
     /**
      * What the open entry holds.
      *
@@ -78,42 +73,15 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
         val edited: Boolean get() = kind != Kind.ALL_DAY || start != FIRST_START || end != FIRST_END
 
         /**
-         * The period entered, or why it cannot be saved.
+         * The period entered, or why it cannot be saved, by the engine's entry rules.
          *
          * @param now the time of Save
          * @return the period, or the problem
          */
-        fun check(now: Instant): Checked {
-            val period = when (kind) {
-                Kind.ALL_DAY -> OneOffAwayPeriod.allDay(day, zone)
-                Kind.PART_OF_DAY -> try {
-                    OneOffAwayPeriod.on(day, start, end, zone)
-                } catch (_: IllegalArgumentException) {
-                    // also when the clocks go forward between the two times, so both are the same moment or the
-                    // start comes after the end
-                    return Checked.Refused(Problem.END_NOT_AFTER_START)
-                }
-            }
-            return if (period.end().isAfter(now)) Checked.Valid(period) else Checked.Refused(Problem.PASSED)
+        fun check(now: Instant): OneOffAwayEntryRules.Checked = when (kind) {
+            Kind.ALL_DAY -> OneOffAwayEntryRules.allDay(day, now, zone)
+            Kind.PART_OF_DAY -> OneOffAwayEntryRules.partOfDay(day, start, end, now, zone)
         }
-    }
-
-    /** What the entry holds, checked. */
-    sealed interface Checked {
-
-        /**
-         * A period that can be saved.
-         *
-         * @property period the period entered
-         */
-        data class Valid(val period: OneOffAwayPeriod) : Checked
-
-        /**
-         * Why it cannot be saved.
-         *
-         * @property problem the problem
-         */
-        data class Refused(val problem: Problem) : Checked
     }
 
     /**
@@ -160,12 +128,6 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     }
 
     companion object {
-        /** The start the entry opens with. */
-        val FIRST_START: LocalTime = LocalTime.of(9, 0)
-
-        /** The end the entry opens with. */
-        val FIRST_END: LocalTime = LocalTime.of(17, 0)
-
         private const val PREFIX = "oneOffAway"
         private const val DAY = "$PREFIX.day"
         private const val ZONE = "$PREFIX.zone"
@@ -183,7 +145,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     }
 
     private val draftNow = MutableStateFlow(kept())
-    private val problemNow = MutableStateFlow<Problem?>(null)
+    private val problemNow = MutableStateFlow<OneOffAwayProblem?>(null)
     private val changes = ChangeQueue<Notice>(scope)
     private val flow = EntryFlow(handle, DISCARD, changes, { draftNow.value != null },
         { draftNow.value?.edited == true }, ::closed)
@@ -192,7 +154,7 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
     val draft: StateFlow<Draft?> = draftNow.asStateFlow()
 
     /** Why Save refused what was entered, until it is changed; null when nothing is wrong. */
-    val problem: StateFlow<Problem?> = problemNow.asStateFlow()
+    val problem: StateFlow<OneOffAwayProblem?> = problemNow.asStateFlow()
 
     /** True while Back asks whether to throw what was entered away. */
     val discardAsked: StateFlow<Boolean> = flow.discardAsked
@@ -324,11 +286,11 @@ class AwayEntry(private val handle: SavedStateHandle, private val access: Engine
 
     /** The period entered; null when Save refuses it, its problem then shown. */
     private fun checked(draft: Draft): OneOffAwayPeriod? = when (val checked = draft.check(clock.instant())) {
-        is Checked.Refused -> {
-            problemNow.value = checked.problem
+        is OneOffAwayEntryRules.Checked.Refused -> {
+            problemNow.value = checked.problem()
             null
         }
-        is Checked.Valid -> checked.period
+        is OneOffAwayEntryRules.Checked.Valid -> checked.period()
     }
 
     private fun change(edit: (Draft) -> Draft) {

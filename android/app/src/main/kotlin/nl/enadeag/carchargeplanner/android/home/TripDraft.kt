@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.android.home
 
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -8,6 +7,8 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.engine.trip.Trip
+import nl.enadeag.carchargeplanner.engine.trip.TripEntryRules
+import nl.enadeag.carchargeplanner.engine.trip.TripProblem
 
 /**
  * What the open trip entry ([TripEntry]) holds.
@@ -33,7 +34,8 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
     }
 
     /**
-     * Why Save refused what was entered, in the order the entry checks.
+     * Why Save refused what was entered, as the entry shows the engine's [TripProblem], in the order the engine
+     * checks.
      *
      * @property field where the owner fixes it
      */
@@ -77,23 +79,19 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         val returnTime: LocalTime, val distance: String, val canCharge: Boolean) {
 
         companion object {
-            /** The departure time a new trip opens with, the desktop's. */
-            val FIRST_DEPARTURE: LocalTime = LocalTime.of(8, 0)
-
-            /** The return time a new trip opens with, the desktop's. */
-            val FIRST_RETURN: LocalTime = LocalTime.of(18, 0)
-
             /** The most characters the distance takes, more than any distance needs. */
             const val DISTANCE_LENGTH = 16
 
             /**
-             * A new trip's fields as the entry opens on them: both days the same, from [FIRST_DEPARTURE] to
-             * [FIRST_RETURN], with no distance and "I can charge at the destination" off.
+             * A new trip's fields as the entry opens on them: both days the same, from
+             * [TripEntryRules.FIRST_DEPARTURE] to [TripEntryRules.FIRST_RETURN], with no distance and "I can charge
+             * at the destination" off.
              *
              * @param day the day the trip leaves and returns
              * @return the fields
              */
-            fun new(day: LocalDate) = Fields(day, FIRST_DEPARTURE, day, FIRST_RETURN, "", false)
+            fun new(day: LocalDate) =
+                Fields(day, TripEntryRules.FIRST_DEPARTURE, day, TripEntryRules.FIRST_RETURN, "", false)
 
             /**
              * A stored trip's fields as the entry opens on them.
@@ -131,17 +129,13 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         data class Refused(val problem: Problem) : Checked
     }
 
-    companion object {
-        /** How many days, from today, the entry offers, as the desktop does. */
-        const val DAYS_OFFERED = 21
-    }
-
     /**
-     * The days offered for the departure and the return, as the desktop's: from today to 20 days after it, widened
-     * to the days the entry opened on, so a changed trip's own days stay offered.
+     * The days offered for the departure and the return: [TripEntryRules.DAYS_OFFERED] from today, widened to the
+     * days the entry opened on, so a changed trip's own days stay offered.
      */
     val days: ClosedRange<LocalDate>
-        get() = minOf(today, first.departureDay)..maxOf(today.plusDays(DAYS_OFFERED - 1L), first.returnDay)
+        get() = minOf(today, first.departureDay)..maxOf(today.plusDays(TripEntryRules.DAYS_OFFERED - 1L),
+            first.returnDay)
 
     /**
      * True when something differs from how the entry opened, so Back asks before throwing it away; spaces around
@@ -157,36 +151,25 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
      * @return the trip, with "Not with this car" as the trip opened had it; or the first problem
      */
     fun check(now: Instant, numbers: NumberText): Checked {
-        // a time the clocks skip counts as the time after the gap, one they repeat as its first
-        val departure = fields.departureDay.atTime(fields.departureTime).atZone(zone).toInstant()
-        val back = fields.returnDay.atTime(fields.returnTime).atZone(zone).toInstant()
-        if (departure.isBefore(Trip.EARLIEST_INSTANT)) {
-            // only a phone whose clock was put back near 1970 offers such a day, and such a trip is over
-            return Checked.Refused(Problem.PASSED)
-        }
-        if (!back.isAfter(departure)) {
-            return Checked.Refused(Problem.RETURN_NOT_AFTER_DEPARTURE)
-        }
-        if (!back.isAfter(now)) {
-            return Checked.Refused(Problem.PASSED)
-        }
-        if (Duration.between(departure, back) > Trip.MAX_LENGTH) {
-            return Checked.Refused(Problem.TOO_LONG)
-        }
         val typed = fields.distance.trim()
-        // a distance left as it first showed, in whole km, stays the trip's own
-        val km = opened?.takeIf { typed == first.distance }?.distanceKm()
-            ?: numbers.read(typed) ?: return Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER)
-        if (km <= 0) {
-            return Checked.Refused(Problem.DISTANCE_NOT_POSITIVE)
+        // a distance left as it first showed, in whole km, stays the trip's own; one that is no number is refused
+        // in its place among the problems, after those of the times
+        val km = opened?.takeIf { typed == first.distance }?.distanceKm() ?: numbers.read(typed) ?: Double.NaN
+        val entered = TripEntryRules.Entered(fields.departureDay.atTime(fields.departureTime),
+            fields.returnDay.atTime(fields.returnTime), km, fields.canCharge, opened?.notWithThisCar() == true)
+        return when (val checked = TripEntryRules.check(entered, now, zone)) {
+            is TripEntryRules.Checked.Valid -> Checked.Valid(checked.trip())
+            is TripEntryRules.Checked.Refused -> Checked.Refused(problem(checked.problem()))
         }
-        if (km > Trip.MAX_DISTANCE_KM) {
-            return Checked.Refused(Problem.DISTANCE_TOO_FAR)
-        }
-        if (!back.isBefore(Trip.INSTANTS_END)) {
-            // only a trip edited by hand, or a clock put forward to the end of the year 9999, offers such a day
-            return Checked.Refused(Problem.TOO_LONG)
-        }
-        return Checked.Valid(Trip(departure, back, km, fields.canCharge, opened?.notWithThisCar() == true))
+    }
+
+    private fun problem(problem: TripProblem): Problem = when (problem) {
+        // only a phone whose clock was put back near 1970 offers such a day, and such a trip is over
+        TripProblem.DEPARTURE_BEFORE_EARLIEST, TripProblem.PASSED -> Problem.PASSED
+        TripProblem.RETURN_NOT_AFTER_DEPARTURE -> Problem.RETURN_NOT_AFTER_DEPARTURE
+        TripProblem.TOO_LONG -> Problem.TOO_LONG
+        TripProblem.DISTANCE_NOT_POSITIVE -> Problem.DISTANCE_NOT_POSITIVE
+        TripProblem.DISTANCE_NOT_A_NUMBER -> Problem.DISTANCE_NOT_A_NUMBER
+        TripProblem.DISTANCE_TOO_FAR -> Problem.DISTANCE_TOO_FAR
     }
 }

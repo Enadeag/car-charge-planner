@@ -17,9 +17,9 @@ import kotlinx.coroutines.test.runTest
 import nl.enadeag.carchargeplanner.android.afterTheSystemEndedTheApp
 import nl.enadeag.carchargeplanner.android.home.AwayEntry.Kind
 import nl.enadeag.carchargeplanner.android.home.AwayEntry.Notice
-import nl.enadeag.carchargeplanner.android.home.AwayEntry.Problem
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
+import nl.enadeag.carchargeplanner.engine.away.OneOffAwayProblem
 import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
 import org.assertj.core.api.Assertions.assertThat
@@ -127,7 +127,7 @@ class AwayEntryTest {
         val entry = partOfDay(start, end, today.plusDays(1))
 
         assertThat(saved(entry)).isNull()
-        assertThat(entry.problem.value).isEqualTo(Problem.END_NOT_AFTER_START)
+        assertThat(entry.problem.value).isEqualTo(OneOffAwayProblem.END_NOT_AFTER_START)
         assertThat(entry.draft.value).isNotNull()
         assertThat(entry.busy.value).isFalse()
         assertThat(changes).isEmpty()
@@ -138,7 +138,7 @@ class AwayEntryTest {
         val entry = partOfDay("06:00", "08:00")
 
         assertThat(saved(entry)).isNull()
-        assertThat(entry.problem.value).isEqualTo(Problem.PASSED)
+        assertThat(entry.problem.value).isEqualTo(OneOffAwayProblem.PASSED)
     }
 
     @Test
@@ -147,7 +147,7 @@ class AwayEntryTest {
         clock.now = at(today, "09:00")
 
         assertThat(saved(entry)).isNull()
-        assertThat(entry.problem.value).isEqualTo(Problem.PASSED)
+        assertThat(entry.problem.value).isEqualTo(OneOffAwayProblem.PASSED)
     }
 
     @Test
@@ -164,7 +164,7 @@ class AwayEntryTest {
         val entry = opened(today)
 
         assertThat(saved(entry)).isNull()
-        assertThat(entry.problem.value).isEqualTo(Problem.PASSED)
+        assertThat(entry.problem.value).isEqualTo(OneOffAwayProblem.PASSED)
     }
 
     @Test
@@ -197,7 +197,7 @@ class AwayEntryTest {
         val entry = partOfDay(start, end, spring)
 
         assertThat(saved(entry)).isNull()
-        assertThat(entry.problem.value).isEqualTo(Problem.END_NOT_AFTER_START)
+        assertThat(entry.problem.value).isEqualTo(OneOffAwayProblem.END_NOT_AFTER_START)
     }
 
     @Test
@@ -314,7 +314,7 @@ class AwayEntryTest {
     fun aRefusalGoesWhenTheChoiceOrATimeChanges(changed: String) = runTest {
         val entry = partOfDay("12:00", "10:00", today.plusDays(1))
         entry.save()
-        assertThat(entry.problem.value).isEqualTo(Problem.END_NOT_AFTER_START)
+        assertThat(entry.problem.value).isEqualTo(OneOffAwayProblem.END_NOT_AFTER_START)
 
         when (changed) {
             "kind" -> entry.choose(Kind.ALL_DAY)

@@ -10,6 +10,13 @@ Decisions about trips entered by hand ([ADR 0009](../../adr/0009-trips-and-calen
 - A departure before 1970, which only a device whose clock was put back can offer, is refused with "That trip is over already.", as such a trip is over: on the desktop at the departure's time, on Android at the return, where that text shows already, so the trip entry's layout does not change; the range of moments has no text of its own (#410).
 - A row of `trips.json` or `away.json` outside these bounds is a damaged row, as any row the engine cannot read: left out when planning, and while it is in the file no entry of that file can be added, changed or removed. Neither app shows such rows (#410).
 
+### Entering a trip or a one-off away period
+
+- Both apps hold what the owner enters to the engine's entry rules, `TripEntryRules` and `OneOffAwayEntryRules` beside the records: a pure check of the values the app read, the moment of Save and the home's zone, which names the first problem as a `TripProblem` or a `OneOffAwayProblem`. A trip's are, in this order: a departure before 1970, a return not after the departure, a return at or before now, more than 366 days, a distance of 0 or less, a distance that is no number (the app hands NaN for a text it cannot read), more than 20,000 km, and a return in the year 10000. An away period's: an end not after the start, as typed or as moments after a time the clock skips, then an end at or before now. The records themselves keep accepting a trip or period that has ended, so a stored one still loads (#390).
+- Reading the typed times and distance, miles, and the field and words of each problem stay with each app; so does the limit named in miles, rounded down (#390).
+- The entries open on the engine's defaults: an away period part of the day from 09:00 to 17:00, a new trip from 08:00 to 18:00, with the 21 days from today offered for its departure and return, widened to a changed trip's own days (#390).
+- A changed trip whose distance the owner left as it first showed keeps its stored distance in km on both apps, before it is checked, so a trip too short to show more than 0 is saved as it was (#390).
+
 ### Grid charges and the charging hours
 
 - Every grid charge starts within the charging hours, a trip's and the everyday grid advice's alike, and may run on after them (#227).

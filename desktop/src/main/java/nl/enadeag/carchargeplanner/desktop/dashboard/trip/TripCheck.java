@@ -4,8 +4,8 @@ import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
-import java.time.Duration;
-import java.time.Instant;
+import nl.enadeag.carchargeplanner.engine.trip.TripEntryRules;
+import nl.enadeag.carchargeplanner.engine.trip.TripProblem;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -18,10 +18,9 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Whether what the owner entered for a trip can be saved, and as which trip: the times must be times, the departure
- * must not be before a trip's earliest moment, the return must be after the departure, not have passed and not be
- * later than a trip may last, the distance must be a number more than 0 and at most a trip's longest, in the
- * owner's units, and the return must be before a trip's latest moment.
+ * Whether what the owner entered for a trip can be saved, and as which trip: the times must be times, the distance is
+ * read in the owner's units and language, and the rest are the engine's {@link TripEntryRules}, each problem shown in
+ * the owner's words at the field where the owner fixes it.
  */
 final class TripCheck {
 
@@ -56,6 +55,20 @@ final class TripCheck {
      * @return the trip, or why it cannot be saved and where to fix it; the first problem in the order of the fields
      */
     Checked check(Entered entered) {
+        var typed = messages.parseNumber(entered.distance());
+        return check(entered, typed.isEmpty() ? Double.NaN : units.km(typed.getAsDouble()));
+    }
+
+    /**
+     * The trip as entered, with its distance read already: also the stored distance of a trip being changed, whose
+     * field shows it rounded, or in miles, and which the owner left as it showed.
+     *
+     * @param entered what the owner entered; its distance as typed is not read
+     * @param distanceKm the distance there and back in km; NaN for a distance typed that is no number, which is
+     *     refused in its place among the problems, after those of the times
+     * @return the trip, or why it cannot be saved and where to fix it, as {@link #check(Entered)}
+     */
+    Checked check(Entered entered, double distanceKm) {
         var leaves = time(entered.departureTime());
         if (leaves.isEmpty()) {
             return new Checked.Refused(TextKey.PROBLEM_NOT_A_TIME, Field.DEPARTURE_TIME);
@@ -64,54 +77,32 @@ final class TripCheck {
         if (back.isEmpty()) {
             return new Checked.Refused(TextKey.PROBLEM_NOT_A_TIME, Field.RETURN_TIME);
         }
-        var departure = moment(entered.departureDay(), leaves.get());
-        var returnTime = moment(entered.returnDay(), back.get());
-        if (departure.isBefore(Trip.EARLIEST_INSTANT)) {
+        var read = new TripEntryRules.Entered(entered.departureDay().atTime(leaves.get()),
+                entered.returnDay().atTime(back.get()), distanceKm, entered.canChargeAtDestination(),
+                entered.notWithThisCar());
+        return switch (TripEntryRules.check(read, clock.instant(), zone)) {
+            case TripEntryRules.Checked.Valid(var trip) -> new Checked.Valid(trip);
+            case TripEntryRules.Checked.Refused(var problem) -> refused(problem);
+        };
+    }
+
+    private Checked.Refused refused(TripProblem problem) {
+        return switch (problem) {
             // only a computer whose clock was put back near 1970 offers such a day, and such a trip is over
-            return new Checked.Refused(TextKey.TRIP_PASSED, Field.DEPARTURE_TIME);
-        }
-        if (!returnTime.isAfter(departure)) {
-            return new Checked.Refused(TextKey.TRIP_RETURN_BEFORE_DEPARTURE, Field.RETURN_DAY);
-        }
-        if (!returnTime.isAfter(clock.instant())) {
-            return new Checked.Refused(TextKey.TRIP_PASSED, Field.RETURN_DAY);
-        }
-        if (Duration.between(departure, returnTime).compareTo(Trip.MAX_LENGTH) > 0) {
-            return tooLong();
-        }
-        var typed = messages.parseNumber(entered.distance());
-        if (typed.isEmpty()) {
-            return new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_A_NUMBER, Field.DISTANCE);
-        }
-        if (typed.getAsDouble() <= 0) {
-            return new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_POSITIVE, Field.DISTANCE);
-        }
-        var km = units.km(typed.getAsDouble());
-        if (!Double.isFinite(km)) {
-            return new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_A_NUMBER, Field.DISTANCE);
-        }
-        if (km > Trip.MAX_DISTANCE_KM) {
+            case DEPARTURE_BEFORE_EARLIEST -> new Checked.Refused(TextKey.TRIP_PASSED, Field.DEPARTURE_TIME);
+            case RETURN_NOT_AFTER_DEPARTURE ->
+                    new Checked.Refused(TextKey.TRIP_RETURN_BEFORE_DEPARTURE, Field.RETURN_DAY);
+            case PASSED -> new Checked.Refused(TextKey.TRIP_PASSED, Field.RETURN_DAY);
+            // the most days go as a number, for the text's plural
+            case TOO_LONG -> new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY,
+                    List.of(Trip.MAX_LENGTH.toDays()));
+            case DISTANCE_NOT_POSITIVE -> new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_POSITIVE, Field.DISTANCE);
+            case DISTANCE_NOT_A_NUMBER -> new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_A_NUMBER, Field.DISTANCE);
             // rounded down, so a trip of the distance named is never refused
-            var longest = Math.floor(units.distance(Trip.MAX_DISTANCE_KM));
-            return new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE,
-                    List.of(messages.number(longest, 0), units.distanceUnit()));
-        }
-        if (!returnTime.isBefore(Trip.INSTANTS_END)) {
-            // only a trip edited by hand, or a clock put forward to the end of the year 9999, offers such a day
-            return tooLong();
-        }
-        return new Checked.Valid(new Trip(departure, returnTime, km, entered.canChargeAtDestination(),
-                entered.notWithThisCar()));
-    }
-
-    /** A return later than a trip may last, at the return; the most days go as a number, for the text's plural. */
-    private static Checked.Refused tooLong() {
-        return new Checked.Refused(TextKey.TRIP_TOO_LONG, Field.RETURN_DAY, List.of(Trip.MAX_LENGTH.toDays()));
-    }
-
-    /** A time that the clock skips when it is put forward counts as the time after the gap. */
-    private Instant moment(LocalDate day, LocalTime time) {
-        return day.atTime(time).atZone(zone).toInstant();
+            case DISTANCE_TOO_FAR -> new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE,
+                    List.of(messages.number(Math.floor(units.distance(Trip.MAX_DISTANCE_KM)), 0),
+                            units.distanceUnit()));
+        };
     }
 
     private static Optional<LocalTime> time(String text) {
