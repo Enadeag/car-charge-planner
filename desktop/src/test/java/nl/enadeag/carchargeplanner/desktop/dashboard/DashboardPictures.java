@@ -12,7 +12,6 @@ import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.Engine;
-import nl.enadeag.carchargeplanner.engine.ManualScheduler;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
@@ -224,17 +223,12 @@ public final class DashboardPictures {
                 new BatteryFile(folder.resolve("battery.json"), FILES, CLOCK),
                 CLOCK,
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, CLOCK),
-                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK), _ -> { }),
-                new ManualScheduler());
-        try {
-            for (var trip : trips) {
-                engine.addTrip(trip);
-            }
-            return new OutlookMapper(new Messages(language), engine.providers()).map(engine.outlook(),
-                    awayFile.periods(), engine.trips(), Units.METRIC);
-        } finally {
-            engine.stop();
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK), _ -> { }));
+        for (var trip : trips) {
+            engine.addTrip(trip);
         }
+        return new OutlookMapper(new Messages(language), engine.providers()).map(engine.outlook(),
+                awayFile.periods(), engine.trips(), Units.METRIC);
     }
 
     /** Open-Meteo's texts and settings, with the forecast of {@link #PEAKS} instead of an answer from the network. */

@@ -20,7 +20,6 @@ import nl.enadeag.carchargeplanner.android.background.BackgroundHost
 import nl.enadeag.carchargeplanner.android.background.BackgroundRounds
 import nl.enadeag.carchargeplanner.android.background.BackgroundSchedule
 import nl.enadeag.carchargeplanner.android.background.NoticeAlarm
-import nl.enadeag.carchargeplanner.android.background.ReschedulingAccess
 import nl.enadeag.carchargeplanner.android.background.WorkManagerRounds
 import nl.enadeag.carchargeplanner.android.notify.ProblemEpisode
 import nl.enadeag.carchargeplanner.android.prefs.PhoneSettings
@@ -38,8 +37,8 @@ import nl.enadeag.carchargeplanner.android.ui.notify.createNoticeChannels
  * The app's composition root, made once per process before any screen: the platform's parts, the one engine on
  * them, which tells the owner through Android's notifications, the notification channels, the phone's own preferences
  * stores, the work in the background, and the app-wide scope that saves run in, so a save outlives the screen that
- * started it. The screens reach the engine only through [engine] and [saves], off the main thread. The engine is built
- * but not started: only the work in the background makes its rounds ([rounds]), which WorkManager, the alarm and the
+ * started it. The screens reach the engine only through [engine] and [saves], off the main thread. The engine has no
+ * thread of its own: only the work in the background makes its rounds ([rounds]), which WorkManager, the alarm and the
  * phone's start also start while the app is closed, in a process that Android starts for them without a screen.
  */
 open class CarChargePlannerApp : Application(), BackgroundHost {
@@ -98,11 +97,13 @@ open class CarChargePlannerApp : Application(), BackgroundHost {
         val work = WorkManagerRounds(this)
         val notify = { allowed(this) }
         val oneRoundAtATime = Mutex()
+        val built = AppEngine.build(platform, notifications, clock)
+        engine = EngineOnDispatcher(built, Dispatchers.IO)
         rounds = BackgroundRounds({ engine }, problems::afterRound, alarm, work, notify, clock, phoneState,
             oneRoundAtATime)
         schedule = BackgroundSchedule({ engine }, work, alarm, phoneSettings.on, oneRoundAtATime, notify)
-        engine = ReschedulingAccess(EngineOnDispatcher(AppEngine.build(platform, notifications, clock),
-            Dispatchers.IO)) { scope.launch { schedule.refresh() } }
+        // after each change the engine stores, also one that failed, without making its caller wait
+        built.addChangeListener { scope.launch { schedule.refresh() } }
         saves = Saves(engine, scope)
         scope.launch { phoneSettings.on.distinctUntilChanged().drop(1).collect { schedule.wifiSwitched(it) } }
         // only now: the parts above may touch the disk while they are made

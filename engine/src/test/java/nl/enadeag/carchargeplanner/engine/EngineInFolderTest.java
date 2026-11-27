@@ -42,8 +42,7 @@ class EngineInFolderTest {
     Path folder;
 
     private Engine inFolder(Instant now) {
-        return Engine.inFolder(folder, SUNNY, FILES, apiKeys(), notice -> { }, Clock.fixed(now, ZoneOffset.UTC),
-                new ManualScheduler());
+        return Engine.inFolder(folder, SUNNY, FILES, apiKeys(), notice -> { }, Clock.fixed(now, ZoneOffset.UTC));
     }
 
     private Engine inFolder() {
@@ -69,7 +68,7 @@ class EngineInFolderTest {
         Files.createDirectories(configFile.getParent());
         Files.copy(EXAMPLE, configFile);
         var engine = Engine.inFolder(data, configFile, SUNNY, FILES, apiKeys(), notice -> { },
-                CLOCK, new ManualScheduler());
+                CLOCK);
 
         assertThat(engine.config()).isEqualTo(new ConfigFile(EXAMPLE, FILES, CLOCK).read());
         assertThat(data.resolve("engine.json")).doesNotExist();
@@ -81,7 +80,7 @@ class EngineInFolderTest {
         var data = folder.resolve("data");
         var example = new ConfigFile(EXAMPLE, FILES, CLOCK).read();
         var engine = Engine.inFolder(data, configFile, SUNNY, FILES, apiKeys(), notice -> { },
-                CLOCK, new ManualScheduler());
+                CLOCK);
 
         engine.saveConfig(example);
 

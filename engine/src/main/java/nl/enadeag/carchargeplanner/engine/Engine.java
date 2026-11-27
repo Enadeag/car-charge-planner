@@ -49,16 +49,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Consumer;
+import java.util.concurrent.CopyOnWriteArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Plans, fetches forecasts and owns the stored data, without any user interface. Clients get plain records back.
  *
- * <p>Once {@linkplain #start(Consumer) started}, the engine plans on its own thread every minute, and again after
- * each change to its config, keys, battery level, away periods or trips, and tells its listener each new outlook.
- * Each plan uses the stored files as they are on disk, reading one again only when it changed; the forecast service
- * decides whether a provider is asked or its cache answers.
+ * <p>The engine has no thread of its own: each app plans at moments of its own with a {@linkplain #round(ForecastUse)
+ * round}, and learns of each change to the config, keys, battery level, away periods or trips from the
+ * {@linkplain #addChangeListener(ChangeListener) listeners} it adds. Each plan uses the stored files as they are on
+ * disk, reading one again only when it changed; the forecast service decides whether a provider is asked or its cache
+ * answers.
  *
  * <p>The changes to the away periods and to the trips may be called from any thread, also at the same time: each
  * reads, changes and writes its file as one step, so no change is lost to another.
@@ -71,6 +73,8 @@ public final class Engine {
     /** Until the owner enters the battery level, the plan starts from this one. */
     static final Percent ASSUMED_BATTERY_PCT = new Percent(50);
 
+    private static final Logger LOG = LoggerFactory.getLogger(Engine.class);
+
     private final ConfigFile configFile;
     private final ForecastService forecasts;
     private final Providers providers;
@@ -80,8 +84,9 @@ public final class Engine {
     private final BatteryFile batteryFile;
     private final Clock clock;
     private final Announcer announcer;
-    private final PlanSchedule schedule;
     private final ConfigHealth configHealth = new ConfigHealth();
+    // changes may come from any thread, also while a listener is added
+    private final List<ChangeListener> listeners = new CopyOnWriteArrayList<>();
 
     /**
      * Makes the engine; nothing is read or fetched yet.
@@ -98,12 +103,9 @@ public final class Engine {
      * @param clock the time plans are made at, and that decides which away periods and trips are old
      * @param announcer tells the owner about the plan's windows shortly before they start, and keeps the ones it told
      *     about as they were told
-     * @param executor the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
-     *     #stop()} shuts it down. Nothing runs on it before the start; never null.
      */
     public Engine(ConfigFile configFile, ForecastService forecasts, Providers providers, ApiKeys apiKeys,
-            AwayFile awayFile, TripFile tripFile, BatteryFile batteryFile, Clock clock, Announcer announcer,
-            ScheduledExecutorService executor) {
+            AwayFile awayFile, TripFile tripFile, BatteryFile batteryFile, Clock clock, Announcer announcer) {
         this.configFile = configFile;
         this.forecasts = forecasts;
         this.providers = providers;
@@ -113,7 +115,6 @@ public final class Engine {
         this.batteryFile = batteryFile;
         this.clock = clock;
         this.announcer = announcer;
-        this.schedule = new PlanSchedule(executor);
     }
 
     /**
@@ -127,14 +128,11 @@ public final class Engine {
      * @param apiKeys where the providers' secret settings are kept; never null
      * @param notifier tells the owner what a round finds due; never null
      * @param clock the time plans are made at, and a file that cannot be used is renamed with; never null
-     * @param planner the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
-     *     #stop()} shuts it down; never null
-     * @return the engine, not started
+     * @return the engine, without listeners yet
      */
     public static Engine inFolder(Path dataFolder, HttpGet http, PrivateFiles files, ApiKeys apiKeys,
-            Notifier notifier, Clock clock, ScheduledExecutorService planner) {
-        return inFolder(dataFolder, dataFolder.resolve(CONFIG_FILE_NAME), http, files, apiKeys, notifier, clock,
-                planner);
+            Notifier notifier, Clock clock) {
+        return inFolder(dataFolder, dataFolder.resolve(CONFIG_FILE_NAME), http, files, apiKeys, notifier, clock);
     }
 
     /**
@@ -150,12 +148,10 @@ public final class Engine {
      * @param apiKeys where the providers' secret settings are kept; never null
      * @param notifier tells the owner what a round finds due; never null
      * @param clock the time plans are made at, and a file that cannot be used is renamed with; never null
-     * @param planner the engine's own thread, where it plans once {@linkplain #start(Consumer) started}; {@link
-     *     #stop()} shuts it down; never null
-     * @return the engine, not started
+     * @return the engine, without listeners yet
      */
     public static Engine inFolder(Path dataFolder, Path configFile, HttpGet http, PrivateFiles files,
-            ApiKeys apiKeys, Notifier notifier, Clock clock, ScheduledExecutorService planner) {
+            ApiKeys apiKeys, Notifier notifier, Clock clock) {
         var providers = Providers.standard(http);
         var announcer = new Announcer(new AnnouncedWindows(dataFolder.resolve("announced.json"), files, clock),
                 new ToldTrips(dataFolder.resolve("trip-notices.json"), files, clock), notifier);
@@ -164,32 +160,24 @@ public final class Engine {
                         apiKeys),
                 providers, apiKeys, new AwayFile(dataFolder.resolve("away.json"), files, clock),
                 new TripFile(dataFolder.resolve("trips.json"), files, clock),
-                new BatteryFile(dataFolder.resolve("battery.json"), files, clock), clock, announcer, planner);
+                new BatteryFile(dataFolder.resolve("battery.json"), files, clock), clock, announcer);
     }
 
     /**
-     * Starts planning on the engine's own thread: at once, then every minute, and again after each change made through
-     * the engine, also one that could not be saved, so the listener sees what is stored. Each is a
-     * {@linkplain #round(ForecastUse) round} that may ask the providers; the rounds come often enough to tell the owner
-     * about a window within the notification lead time. A round that fails, even with an {@link Error}, is logged, and
-     * the next one is made as planned.
+     * Adds a listener that is told after each change of the stored data the plan depends on, also one that failed:
+     * {@link #saveConfig(EngineConfig)}, {@link #setConfigAside()}, {@link #setBatteryLevel(Percent)}, the changes to
+     * the away periods and the trips, {@link #saveApiKeys(Secrets)} and {@link #applyKeyChanges(KeyChanges,
+     * Runnable)}. Each listener is told once per change, on the thread that made it, in the order they were added; one
+     * that throws is logged, and neither fails the change nor keeps the others from being told. A listener stays as
+     * long as the engine.
      *
-     * @param listener gets each new outlook, on the engine's thread, so it should hand slow work on; never null
-     * @throws IllegalStateException when the engine was started before
+     * @param listener told after each change; it must not block; never null
      */
-    public void start(Consumer<Outlook> listener) {
+    public void addChangeListener(ChangeListener listener) {
         if (listener == null) {
             throw new IllegalArgumentException("the listener must not be null");
         }
-        schedule.start(() -> listener.accept(round(ForecastUse.ASK_PROVIDERS)));
-    }
-
-    /**
-     * Stops planning, the counterpart of {@link #start(Consumer)}: a plan that is being made may finish for a few
-     * seconds, and no listener is told after this returns. Stopping again does nothing.
-     */
-    public void stop() {
-        schedule.stop();
+        listeners.add(listener);
     }
 
     /**
@@ -207,13 +195,13 @@ public final class Engine {
     }
 
     /**
-     * One planning round, as {@link #start(Consumer)} makes one every minute, for a client that plans at moments of
-     * its own instead: first, in a round that may ask the providers, the API keys move from their file into the
-     * keychain when they can, so the move follows the keychain's unlocking within a round, while a round on the stored
-     * forecast only reads no key at all; then the outlook, and on a plan the owner is told what is due: each
-     * window within the notification lead time before its start, and what is due about the trips. What was told is
-     * kept, so no round tells it again. Blocks while the forecast is fetched: call it away from the user interface's
-     * thread.
+     * One planning round, for a client that plans at moments of its own, such as every minute and after each change
+     * its {@linkplain #addChangeListener(ChangeListener) listener} hears of: first, in a round that may ask the
+     * providers, the API keys move from their file into the keychain when they can, so the move follows the keychain's
+     * unlocking within a round, while a round on the stored forecast only reads no key at all; then the outlook, and
+     * on a plan the owner is told what is due: each window within the notification lead time before its start, and
+     * what is due about the trips. What was told is kept, so no round tells it again. Blocks while the forecast is
+     * fetched: call it away from the user interface's thread.
      *
      * @param use where the forecast may come from: the providers as their rules allow, or only the stored forecast,
      *     which never asks a provider; without a stored forecast that is still useful the outlook has no forecast, and
@@ -373,7 +361,7 @@ public final class Engine {
      * Replaces the config file by this config, at once and whole, so the next plan uses it; a provider that failed
      * before is asked again at the next plan instead of after its wait, as a corrected setting deserves a try. A value
      * the owner entered is checked as the config's records are made, which refuse it with an {@link InvalidSetting}
-     * that names the setting. Once started, the engine plans again soon after.
+     * that names the setting. Its listeners are told after it, also when it fails.
      *
      * @param config the whole config to keep
      * @throws IOException when the file was written by a newer version of the app
@@ -381,7 +369,7 @@ public final class Engine {
      *     left as it was
      */
     public void saveConfig(EngineConfig config) throws IOException {
-        thenReplan(() -> {
+        thenTell(() -> {
             configFile.write(config);
             forecasts.forgetFailures();
             return null;
@@ -391,7 +379,7 @@ public final class Engine {
     /**
      * Moves the config file aside to {@code <name>.damaged-<time>}, so the owner can set up again over a file that
      * cannot be used while what it held is kept; the engine is then not set up. A file of a newer version is never
-     * moved ({@link ConfigProblem.Kind#NEWER_VERSION}). Once started, the engine plans again soon after.
+     * moved ({@link ConfigProblem.Kind#NEWER_VERSION}). Its listeners are told after it, also when it fails.
      *
      * @return where the file is kept now, so the owner can be told
      * @throws java.nio.file.NoSuchFileException when there is no config file
@@ -399,18 +387,19 @@ public final class Engine {
      *     version, or it could not be moved; it is then left as it was
      */
     public Path setConfigAside() throws IOException {
-        return thenReplan(() -> configFile.setAside());
+        return thenTell(() -> configFile.setAside());
     }
 
     /**
      * Stores the battery level the owner read off the car, so the next plan starts from it instead of an assumed
-     * level. The level is kept until the owner enters another one. Once started, the engine plans again soon after.
+     * level. The level is kept until the owner enters another one. Its listeners are told after it, also when it
+     * fails.
      *
      * @param level the charge level of the car's battery now
      * @throws IOException when the level could not be saved; the stored one is then unchanged
      */
     public void setBatteryLevel(Percent level) throws IOException {
-        thenReplan(() -> {
+        thenTell(() -> {
             batteryFile.save(new BatteryReading(level, clock.instant()));
             return null;
         });
@@ -427,7 +416,7 @@ public final class Engine {
 
     /**
      * Stores an away period entered by hand, so the next plan leaves that time free. Periods that ended more than a
-     * day ago are forgotten at the same time. Once started, the engine plans again soon after.
+     * day ago are forgotten at the same time. Its listeners are told after it, also when it fails.
      *
      * @param period the time the car is away, starting at {@link Trip#EARLIEST_INSTANT} or later and ending before
      *     {@link Trip#INSTANTS_END}, a trip's range of moments; one that is stored already is kept once
@@ -437,12 +426,12 @@ public final class Engine {
      *     unchanged
      */
     public List<OneOffAwayPeriod> addAwayPeriod(OneOffAwayPeriod period) throws IOException {
-        return thenReplan(() -> awayFile.add(period, clock.instant()));
+        return thenTell(() -> awayFile.add(period, clock.instant()));
     }
 
     /**
-     * Forgets an away period entered by hand, so the next plan may use that time again. Once started, the engine
-     * plans again soon after.
+     * Forgets an away period entered by hand, so the next plan may use that time again. Its listeners are told after
+     * it, also when it fails.
      *
      * @param period the period as {@link #awayPeriods()} gave it; one that is not stored changes nothing
      * @return the stored periods after the change, in order of their start
@@ -450,7 +439,7 @@ public final class Engine {
      *     left as they are; the stored ones are then unchanged
      */
     public List<OneOffAwayPeriod> removeAwayPeriod(OneOffAwayPeriod period) throws IOException {
-        return thenReplan(() -> awayFile.remove(period));
+        return thenTell(() -> awayFile.remove(period));
     }
 
     /**
@@ -464,7 +453,7 @@ public final class Engine {
 
     /**
      * Stores a trip, so the next plan leaves the time it takes free. Trips that returned more than a day ago are
-     * forgotten at the same time. Once started, the engine plans again soon after.
+     * forgotten at the same time. Its listeners are told after it, also when it fails.
      *
      * @param trip the trip; one that is stored already is kept once
      * @return the stored trips after the change, as {@link #trips()} gives them
@@ -472,12 +461,12 @@ public final class Engine {
      *     as they are; the stored ones are then unchanged
      */
     public List<Trip> addTrip(Trip trip) throws IOException {
-        return thenReplan(() -> tripFile.add(trip, clock.instant()));
+        return thenTell(() -> tripFile.add(trip, clock.instant()));
     }
 
     /**
      * Replaces a stored trip by the owner's changed version of it. Trips that returned more than a day ago are
-     * forgotten at the same time. Once started, the engine plans again soon after.
+     * forgotten at the same time. Its listeners are told after it, also when it fails.
      *
      * @param trip the trip as {@link #trips()} gave it; when it is no longer stored, the changed one is added
      * @param changed the trip as the owner changed it
@@ -486,11 +475,11 @@ public final class Engine {
      *     as they are; the stored ones are then unchanged
      */
     public List<Trip> changeTrip(Trip trip, Trip changed) throws IOException {
-        return thenReplan(() -> tripFile.change(trip, changed, clock.instant()));
+        return thenTell(() -> tripFile.change(trip, changed, clock.instant()));
     }
 
     /**
-     * Forgets a trip, so the next plan may use its time again. Once started, the engine plans again soon after.
+     * Forgets a trip, so the next plan may use its time again. Its listeners are told after it, also when it fails.
      *
      * @param trip the trip as {@link #trips()} gave it; one that is not stored changes nothing
      * @return the stored trips after the change, as {@link #trips()} gives them
@@ -498,7 +487,7 @@ public final class Engine {
      *     as they are; the stored ones are then unchanged
      */
     public List<Trip> removeTrip(Trip trip) throws IOException {
-        return thenReplan(() -> tripFile.remove(trip, clock.instant()));
+        return thenTell(() -> tripFile.remove(trip, clock.instant()));
     }
 
     /**
@@ -600,7 +589,7 @@ public final class Engine {
 
     /**
      * Stores the providers' secret settings, replacing all of them; a provider that failed before is asked again at
-     * the next plan instead of after its wait. Once started, the engine plans again soon after. When the system
+     * the next plan instead of after its wait. Its listeners are told after it, also when it fails. When the system
      * keychain is locked, the system asks the owner to unlock it, and this waits for their answer, up to
      * {@link ApiKeys#UNLOCK_WAIT}: call it away from the user interface's thread.
      *
@@ -609,7 +598,7 @@ public final class Engine {
      *     {@link SecretsProblem.Kind#LOCKED} when the keychain stayed locked and nothing was stored
      */
     public void saveApiKeys(Secrets secrets) throws SecretsProblem {
-        thenReplan(() -> {
+        thenTell(() -> {
             apiKeys.save(secrets);
             forecasts.forgetFailures();
             return null;
@@ -627,7 +616,7 @@ public final class Engine {
      *     write: the private file, which would hide those keys, is then not used
      */
     public void applyKeyChanges(KeyChanges changes, Runnable prompting) throws SecretsProblem {
-        thenReplan(() -> {
+        thenTell(() -> {
             apiKeys.applyChanges(changes, prompting);
             forecasts.forgetFailures();
             return null;
@@ -642,12 +631,22 @@ public final class Engine {
         apiKeys.stopUnlocking();
     }
 
-    /** Runs a change of the stored data, then plans again soon, also when the change failed. */
-    private <T, X extends Exception> T thenReplan(Change<T, X> change) throws X {
+    /** Runs a change of the stored data, then tells the listeners, also when the change failed. */
+    private <T, X extends Exception> T thenTell(Change<T, X> change) throws X {
         try {
             return change.run();
         } finally {
-            schedule.runSoon();
+            tellListeners();
+        }
+    }
+
+    private void tellListeners() {
+        for (var listener : listeners) {
+            try {
+                listener.changed();
+            } catch (RuntimeException e) {
+                LOG.error("a listener to the engine's changes failed; the change stands", e);
+            }
         }
     }
 

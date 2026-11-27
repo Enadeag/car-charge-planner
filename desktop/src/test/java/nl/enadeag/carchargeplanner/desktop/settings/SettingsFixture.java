@@ -21,7 +21,6 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Engine;
-import nl.enadeag.carchargeplanner.engine.ManualScheduler;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
@@ -132,8 +131,7 @@ public final class SettingsFixture {
                 new TripFile(folder.resolve("trips.json"), FILES, clock),
                 new BatteryFile(folder.resolve("battery.json"), FILES, clock), clock,
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, clock),
-                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, clock), _ -> { }),
-                new ManualScheduler());
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, clock), _ -> { }));
     }
 
     /**

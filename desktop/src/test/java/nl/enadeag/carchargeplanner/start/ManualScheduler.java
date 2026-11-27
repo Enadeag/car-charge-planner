@@ -1,4 +1,4 @@
-package nl.enadeag.carchargeplanner.engine;
+package nl.enadeag.carchargeplanner.start;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -14,9 +14,10 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * An executor whose time only moves when a test says so; tasks run on the test's thread in {@link #advance(Duration)}
- * and {@link #runPending()}. It knows {@code execute} and {@code scheduleWithFixedDelay}, which the engine uses.
+ * and {@link #runPending()}. It knows {@code execute} and {@code scheduleWithFixedDelay}, which {@link PlanSchedule}
+ * uses.
  */
-public final class ManualScheduler extends AbstractExecutorService implements ScheduledExecutorService {
+final class ManualScheduler extends AbstractExecutorService implements ScheduledExecutorService {
 
     private final List<Task> tasks = new ArrayList<>();
     private Duration now = Duration.ZERO;

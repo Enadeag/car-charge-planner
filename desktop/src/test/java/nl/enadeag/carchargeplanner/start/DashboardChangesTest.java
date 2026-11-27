@@ -6,7 +6,6 @@ import nl.enadeag.carchargeplanner.LogCapture;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.engine.Engine;
-import nl.enadeag.carchargeplanner.engine.ManualScheduler;
 import nl.enadeag.carchargeplanner.engine.away.AwayFile;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
@@ -66,8 +65,7 @@ class DashboardChangesTest {
                 new TripFile(folder.resolve("trips.json"), FILES, CLOCK),
                 new BatteryFile(folder.resolve("battery.json"), FILES, CLOCK), CLOCK,
                 new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), FILES, CLOCK),
-                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK), _ -> { }),
-                new ManualScheduler());
+                        new ToldTrips(folder.resolve("trip-notices.json"), FILES, CLOCK), _ -> { }));
         changes = new DashboardChanges(engine, new Background(handedOn::add, Runnable::run));
     }
 

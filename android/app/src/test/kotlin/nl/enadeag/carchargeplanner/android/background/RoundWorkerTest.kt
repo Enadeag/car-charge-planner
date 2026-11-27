@@ -31,6 +31,7 @@ import nl.enadeag.carchargeplanner.android.MainActivity
 import nl.enadeag.carchargeplanner.android.testPlatform
 import nl.enadeag.carchargeplanner.android.notify.ProblemEpisode
 import nl.enadeag.carchargeplanner.android.notify.EpisodeFlag
+import nl.enadeag.carchargeplanner.android.store.EngineAccess
 import nl.enadeag.carchargeplanner.android.store.EngineOnDispatcher
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.TripSave
@@ -174,10 +175,10 @@ class RoundWorkerTest {
 
     /**
      * The app's engine in a folder of its own with the docs' example settings and a forecast stored five minutes
-     * before [at], on a clock fixed at [at], behind the app's own [ReschedulingAccess] that schedules the work in
-     * memory as the app's does, through [BackgroundSchedule].
+     * before [at], on a clock fixed at [at], whose change listener schedules the work in memory as the app's does,
+     * through [BackgroundSchedule].
      */
-    private fun appAccess(name: String, at: Instant): ReschedulingAccess {
+    private fun appAccess(name: String, at: Instant): EngineAccess {
         val folder = onDisk { Files.createDirectories(app.filesDir.toPath().resolve(name)) }
         onDisk {
             Files.copy(EXAMPLE, folder.resolve(Engine.CONFIG_FILE_NAME))
@@ -186,12 +187,10 @@ class RoundWorkerTest {
         val clock = Clock.fixed(at, ZoneOffset.UTC)
         val engine = AppEngine.build(folder, { throw IOException("offline") }, PrivateFiles(FilePrivacy.NONE),
             platform().apiKeys(), Notifications(app, clock), clock)
-        lateinit var access: ReschedulingAccess
+        val access = EngineOnDispatcher(engine, Dispatchers.IO)
         val schedule = BackgroundSchedule({ access }, background.work, background.alarm, flowOf(false),
             background.oneRoundAtATime) { true }
-        access = ReschedulingAccess(EngineOnDispatcher(engine, Dispatchers.IO)) {
-            runBlocking { schedule.refresh() }
-        }
+        engine.addChangeListener { runBlocking { schedule.refresh() } }
         app.rounds = BackgroundRounds({ access }, { _, _ -> }, background.alarm, background.work, { true }, clock,
             background.missed, background.oneRoundAtATime)
         return access

@@ -145,10 +145,6 @@ class EngineTest {
     }
 
     private Engine engine(Clock clock, ForecastProvider... providers) {
-        return engine(clock, new ManualScheduler(), providers);
-    }
-
-    private Engine engine(Clock clock, ManualScheduler scheduler, ForecastProvider... providers) {
         var known = new Providers(List.of(providers));
         var apiKeys = new ApiKeys(keychain, new SecretsFile(folder.resolve("secrets.json"), FILES, clock),
                 KeyFallback.PRIVATE_FILE, Clock.systemUTC());
@@ -156,20 +152,19 @@ class EngineTest {
         return new Engine(new ConfigFile(config, FILES, clock), service, known, apiKeys,
                 new AwayFile(folder.resolve("away.json"), FILES, clock),
                 new TripFile(folder.resolve("trips.json"), FILES, clock),
-                new BatteryFile(folder.resolve("battery.json"), FILES, clock), clock, announcer(clock), scheduler);
+                new BatteryFile(folder.resolve("battery.json"), FILES, clock), clock, announcer(clock));
     }
 
-    /** Starts the engine and runs its first round, which announces what is due; its outlooks go to {@link #rounds}. */
-    private void start(Engine engine, ManualScheduler scheduler) {
-        engine.start(rounds::add);
-        scheduler.runPending();
+    /** A round that may ask the providers, as the desktop makes every minute; its outlook goes to {@link #rounds}. */
+    private void round(Engine engine) {
+        rounds.add(engine.round(ForecastUse.ASK_PROVIDERS));
     }
 
-    /** A new engine at that time, started as by {@link #start(Engine, ManualScheduler)}. */
-    private ManualScheduler startedAt(Clock clock) {
-        var scheduler = new ManualScheduler();
-        start(engine(clock, scheduler, main, backup), scheduler);
-        return scheduler;
+    /** A new engine at that time, after its first round, as the app starts. */
+    private Engine startedAt(Clock clock) {
+        var engine = engine(clock, main, backup);
+        round(engine);
+        return engine;
     }
 
     /** Kept in the test's folder, so a new engine is like the app after a restart. */
@@ -376,12 +371,10 @@ class EngineTest {
     @Test
     void aConfigFileSetAsideIsKeptBesideItAndTheEngineIsNotSetUpThen() throws IOException {
         Files.writeString(config, "{\"version\": 1}");
-        var scheduler = new ManualScheduler();
-        var engine = engine(clockAt(7), scheduler, main, backup);
-        start(engine, scheduler);
+        var engine = startedAt(clockAt(7));
 
         var aside = engine.setConfigAside();
-        scheduler.runPending();
+        round(engine);
 
         assertThat(aside).hasContent("{\"version\": 1}").hasParent(folder);
         assertThat(rounds).last().isEqualTo(new Outlook.NotSetUp(config));
@@ -634,7 +627,7 @@ class EngineTest {
                 new AwayFile(folder.resolve("away.json"), FILES, clock),
                 new TripFile(folder.resolve("trips.json"), FILES, clock),
                 new BatteryFile(folder.resolve("battery.json"), FILES, clock), clock,
-                announcer(clock), new ManualScheduler());
+                announcer(clock));
         withoutKeychain.saveApiKeys(new Secrets(Map.of(new ProviderId("main"), Map.of("api_key", "x"))));
         assertThat(withoutKeychain.keyStorage()).isEqualTo(KeyStorage.FILE);
     }
@@ -663,11 +656,11 @@ class EngineTest {
         var file = Files.writeString(folder.resolve("secrets.json"),
                 "{\"version\": 1, \"main\": {\"api_key\": \"KEPT-IN-FILE\"}}");
         keychain.locked = true;
-        var scheduler = startedAt(clockAt(7));
+        var engine = startedAt(clockAt(7));
         assertThat(file).exists();
 
         keychain.locked = false; // by the owner, outside the app
-        scheduler.advance(PlanSchedule.EVERY);
+        round(engine);
 
         assertThat(file).doesNotExist();
         assertThat(keychain.entries).containsEntry("forecast/main/api_key", "KEPT-IN-FILE");
@@ -749,12 +742,10 @@ class EngineTest {
         // the charging hours
         main.script(steps(days(3, 0)));
         var seven = DAY.plusDays(1).atTime(7, 0).atZone(BRUSSELS).toInstant();
-        var scheduler = new ManualScheduler();
-        var engine = engine(Clock.fixed(seven.minus(Duration.ofMinutes(10)), ZoneOffset.UTC), scheduler, main,
-                backup);
+        var engine = engine(Clock.fixed(seven.minus(Duration.ofMinutes(10)), ZoneOffset.UTC), main, backup);
         engine.setBatteryLevel(new Percent(35));
 
-        start(engine, scheduler);
+        round(engine);
 
         assertThat(told).extracting(Announcement::kind, announcement -> announcement.window().start())
                 .containsExactly(tuple(AnnouncementKind.GRID_CHARGE, seven));
@@ -781,11 +772,11 @@ class EngineTest {
 
     @Test
     void aLongerLeadTimeInTheConfigFileTellsTheOwnerSooner() throws IOException {
-        var scheduler = startedAt(clockAt(9, 30));
+        var engine = startedAt(clockAt(9, 30));
         assertThat(told).isEmpty();
 
         Files.writeString(config, Files.readString(config).replace("\"notifyLeadMinutes\": 15", "\"notifyLeadMinutes\": 30"));
-        scheduler.advance(PlanSchedule.EVERY);
+        round(engine);
 
         assertThat(told).hasSize(1);
     }

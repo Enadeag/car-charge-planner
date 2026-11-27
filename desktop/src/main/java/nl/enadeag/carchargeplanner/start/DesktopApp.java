@@ -24,6 +24,7 @@ import nl.enadeag.carchargeplanner.desktop.system.Tray;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
 import nl.enadeag.carchargeplanner.desktop.theme.WindowTheme;
 import nl.enadeag.carchargeplanner.engine.Engine;
+import nl.enadeag.carchargeplanner.engine.ForecastUse;
 import nl.enadeag.carchargeplanner.engine.forecast.HttpGet;
 import nl.enadeag.carchargeplanner.engine.notify.Notifier;
 import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
@@ -177,13 +178,16 @@ public final class DesktopApp {
                 files, Clock.systemUTC());
         // folders made before the app made its folders private; a folder named with --config= stays as it is
         files.tighten(appSettingsFile.path().toAbsolutePath().getParent());
-        // the engine's thread reads the units the JavaFX thread sets: a notice just after a Save may keep the old ones
+        // the planning thread reads the units the JavaFX thread sets: a notice just after a Save may keep the old ones
         var texts = new AnnouncementTexts(language, units::get);
         var keychain = parts.keychain();
         closing.add("the keychain", keychain::close);
         var apiKeys = new ApiKeys(keychain, secretsFile, KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var engine = engine(http, apiKeys, dataFolder, notice -> notifications.send(texts.notification(notice)));
-        closing.add("the engine", engine::stop);
+        var planning = new PlanSchedule(
+                Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
+        closing.add("the planning", planning::stop);
+        engine.addChangeListener(planning::runSoon);
         var saving = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory());
         closing.add("the dashboard's saving", saving::close);
         var changes = new DashboardChanges(engine, new Background(saving, Platform::runLater));
@@ -201,7 +205,8 @@ public final class DesktopApp {
                         () -> windows.setUpOffer().openSettingsOrSetUp(Category.SOLAR),
                         () -> windows.settings().open(Category.ABOUT), this::quit));
         // only now: on Windows the first announcement needs the tray icon to show it
-        engine.start(outlook -> {
+        planning.start(() -> {
+            var outlook = engine.round(ForecastUse.ASK_PROVIDERS);
             dashboard.show(outlook, engine.awayPeriods(), engine.trips());
             trayPresenter.show(outlook);
             windows.setUpOffer().follow(outlook);
@@ -216,8 +221,8 @@ public final class DesktopApp {
             AppIcon icon, FxPreferences preferences) throws InterruptedException, ExecutionException {
         var dashboardMade = new CompletableFuture<Dashboard>();
         var stores = new SettingsStores(engine, appSettingsFile, parts.startAtLogin(), ZoneId::systemDefault);
-        // a Save may have chosen another language, appearance or units: every part follows at once; the engine plans
-        // again by itself after a save of its config. This runs on the JavaFX thread.
+        // a Save may have chosen another language, appearance or units: every part follows at once; a save of the
+        // engine's config reaches the planning through the engine's change listener. This runs on the JavaFX thread.
         Consumer<AppSettings> saved = chosen -> {
             chosen.language().ifPresentOrElse(language::choose, language::followSystem);
             appearance.set(chosen.appearance());
@@ -307,8 +312,7 @@ public final class DesktopApp {
     }
 
     private Engine engine(HttpGet http, ApiKeys apiKeys, Path dataFolder, Notifier notifier) {
-        return Engine.inFolder(dataFolder, configPath, http, files, apiKeys, notifier, Clock.systemUTC(),
-                Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
+        return Engine.inFolder(dataFolder, configPath, http, files, apiKeys, notifier, Clock.systemUTC());
     }
 
     /** In the owner's browser, away from the JavaFX thread: the browser may take a moment to answer. */

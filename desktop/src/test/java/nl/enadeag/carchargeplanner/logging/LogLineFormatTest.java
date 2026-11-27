@@ -23,8 +23,8 @@ class LogLineFormatTest {
 
     @Test
     void theAppsOwnLoggersAreNamedWithoutTheAppsPackage() {
-        assertThat(line(Main.class.getPackageName() + ".engine.PlanSchedule"))
-                .isEqualTo("2026-10-17 14:30:00.123 +02:00 INFO engine.PlanSchedule: planned");
+        assertThat(line(Main.class.getPackageName() + ".start.PlanSchedule"))
+                .isEqualTo("2026-10-17 14:30:00.123 +02:00 INFO start.PlanSchedule: planned");
     }
 
     @Test

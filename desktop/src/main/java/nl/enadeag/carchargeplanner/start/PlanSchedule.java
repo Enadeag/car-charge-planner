@@ -1,16 +1,17 @@
-package nl.enadeag.carchargeplanner.engine;
+package nl.enadeag.carchargeplanner.start;
 
+import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * Runs the engine's planning round on the engine's own thread: once at the start, then every {@link #EVERY}, and once
- * more soon after each change. A round that throws, even an {@link Error}, is logged and the next one runs as planned.
+ * Runs the desktop's planning round on a thread of its own: once at the start, then every {@link #EVERY}, and once more
+ * soon after a change. Changes that come while a round runs or waits to run get at most one more round between them,
+ * which reads what they stored. A round that throws, even an {@link Error}, is logged and the next one runs as planned.
  *
  * <p>Its methods may be called from any thread.
  */
@@ -25,15 +26,16 @@ final class PlanSchedule {
     /** How long {@link #stop()} lets a round that is running finish, such as one waiting for a provider. */
     static final Duration STOP_WAIT = Duration.ofSeconds(3);
 
-    private static final Logger LOG = LoggerFactory.getLogger(PlanSchedule.class);
+    private static final System.Logger LOG = System.getLogger(PlanSchedule.class.getName());
 
     private final ScheduledExecutorService executor;
     private final AtomicReference<Runnable> round = new AtomicReference<>();
+    private final AtomicBoolean soonWaits = new AtomicBoolean();
 
     /**
      * Makes the schedule; nothing runs until {@link #start(Runnable)}.
      *
-     * @param executor the engine's own thread, which {@link #stop()} shuts down; never null
+     * @param executor the planning's own thread, which {@link #stop()} shuts down; never null
      */
     PlanSchedule(ScheduledExecutorService executor) {
         if (executor == null) {
@@ -59,15 +61,22 @@ final class PlanSchedule {
         executor.scheduleWithFixedDelay(guarded, 0, EVERY.toMillis(), TimeUnit.MILLISECONDS);
     }
 
-    /** Runs a round soon, after a change; does nothing before {@link #start(Runnable)} or after {@link #stop()}. */
+    /**
+     * Runs a round soon, after a change, unless one already waits to run, which then reads the change too; does
+     * nothing before {@link #start(Runnable)} or after {@link #stop()}. Never blocks.
+     */
     void runSoon() {
         var guarded = round.get();
-        if (guarded == null || executor.isShutdown()) {
+        if (guarded == null || executor.isShutdown() || !soonWaits.compareAndSet(false, true)) {
             return;
         }
         try {
-            executor.execute(guarded);
-        } catch (RejectedExecutionException ignored) {
+            executor.execute(() -> {
+                // from here on a change may have come after this round read the files: it gets a round of its own
+                soonWaits.set(false);
+                guarded.run();
+            });
+        } catch (RejectedExecutionException _) {
             // stopped between the check and now: the change is saved, and no one waits for a plan any more
         }
     }
@@ -80,10 +89,10 @@ final class PlanSchedule {
         executor.shutdown();
         try {
             if (!executor.awaitTermination(STOP_WAIT.toMillis(), TimeUnit.MILLISECONDS)) {
-                LOG.warn("a planning round did not finish in " + STOP_WAIT + "; interrupting it");
+                LOG.log(Level.WARNING, "a planning round did not finish in " + STOP_WAIT + "; interrupting it");
                 executor.shutdownNow();
             }
-        } catch (InterruptedException ignored) {
+        } catch (InterruptedException _) {
             executor.shutdownNow();
             Thread.currentThread().interrupt();
         }
@@ -94,7 +103,7 @@ final class PlanSchedule {
         try {
             round.run();
         } catch (RuntimeException | Error e) {
-            LOG.error("planning failed; trying again at the next round", e);
+            LOG.log(Level.ERROR, "planning failed; trying again at the next round", e);
         }
     }
 }
