@@ -2,10 +2,8 @@ package nl.enadeag.carchargeplanner.desktop.settings.field;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import javafx.beans.binding.Bindings;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
@@ -42,21 +40,9 @@ public final class SecretInput implements Input {
             hidden.setVisible(!visible);
             toggle.setText(messages.text(visible ? TextKey.SECRET_HIDE : TextKey.SECRET_SHOW));
         });
-        shown.accessibleTextProperty().bind(hidden.accessibleTextProperty());
-        // a text field is named only by its label on Windows; the row's label names the hidden field
-        var name = new Label();
-        name.accessibleTextProperty().bind(hidden.accessibleTextProperty());
-        name.setLabelFor(shown);
-        toggle.accessibleTextProperty().bind(Bindings.createStringBinding(() -> hidden.getAccessibleText() == null
-                        ? null : messages.text(TextKey.IN_GROUP, toggle.getText(), hidden.getAccessibleText()),
-                toggle.textProperty(), hidden.accessibleTextProperty()));
-        shown.accessibleHelpProperty().bind(hidden.accessibleHelpProperty());
         lockedText = messages.text(TextKey.SECRET_LOCKED);
-        // a disabled field takes no focus: the button is what the keyboard and a screen reader reach
+        // a disabled field takes no focus: the button is what the keyboard reaches
         replace = new Button(messages.text(TextKey.SECRET_REPLACE));
-        replace.accessibleTextProperty().bind(Bindings.createStringBinding(() -> hidden.getAccessibleText() == null
-                        ? null : messages.text(TextKey.SECRET_LOCKED_SPOKEN, hidden.getAccessibleText()),
-                hidden.accessibleTextProperty()));
         replace.setOnAction(_ -> {
             makeEditable();
             hidden.requestFocus();

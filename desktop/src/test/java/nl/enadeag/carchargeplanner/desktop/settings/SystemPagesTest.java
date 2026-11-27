@@ -283,7 +283,7 @@ class SystemPagesTest {
 
         assertThat(texts(view)).contains("Together about 3.6 kWp");
         assertThat(Fx.call(() -> fields(view, TextKey.FIELD_PANEL_POWER).get(0).getPromptText())).isEqualTo("360");
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_PANEL_POWER).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_PANEL_POWER))))
                 .contains("the app then counts on 360 Wp, usual for 2021");
         Fx.run(() -> fields(view, TextKey.FIELD_PANEL_YEAR).get(0).setText("2023"));
         assertThat(texts(view)).contains("Together about 4.0 kWp");
@@ -377,8 +377,8 @@ class SystemPagesTest {
                 settings.type(view, TextKey.FIELD_CAR_TRIP_SURCHARGE, typed);
                 return SettingsFixture.save(view);
             })).isFalse();
-            assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_TRIP_SURCHARGE).getAccessibleHelp()))
-                    .startsWith("Type a number from 0 to 100.");
+            var surcharge = Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_TRIP_SURCHARGE));
+            assertThat(Fx.call(() -> SettingsFixture.shownWith(surcharge))).startsWith("Type a number from 0 to 100.");
         }
         assertThat(settings.configPath).hasContent(before);
     }
@@ -459,7 +459,7 @@ class SystemPagesTest {
 
         assertThat(Fx.call(() -> powerShown(view))).containsExactly("3.7 kW");
         assertThat(Fx.call(() -> chargerFoldOpen(view))).isFalse();
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CHARGE_POWER).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_CHARGE_POWER))))
                 .contains("The power the car charges with at home: the lower of what the charger and the car can "
                         + "take.");
     }
@@ -546,7 +546,7 @@ class SystemPagesTest {
 
         assertThat(saved).isFalse();
         assertThat(Fx.call(() -> chargerFoldOpen(view))).isTrue();
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_MAX_CURRENT))))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
         assertThat(Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_MIN_CURRENT)).getText()))
                 .isEqualTo("20");
@@ -565,10 +565,9 @@ class SystemPagesTest {
     @Test
     void iDontKnowInsideTheFoldSetsTheMinimumTheVoltageAndTheEfficiencyOnlyMarkedAsTypical() throws Exception {
         var view = openWithCharger(new Charger(Phases.THREE, 8, 32, 400, 0.95));
-        var typical = settings.messages.text(TextKey.IN_GROUP, settings.messages.text(TextKey.USE_TYPICAL),
-                settings.messages.text(TextKey.CARD_CHARGER));
+        var typical = settings.messages.text(TextKey.USE_TYPICAL);
         var button = Fx.call(() -> Scenes.all(chargerFoldRow(view).getParent()).stream()
-                .filter(node -> node instanceof Button found && typical.equals(found.getAccessibleText()))
+                .filter(node -> node instanceof Button found && typical.equals(found.getText()))
                 .map(Button.class::cast).findFirst().orElseThrow());
         assertThat(Fx.call(() -> Scenes.reallyVisible(button))).isTrue();
 
@@ -656,7 +655,7 @@ class SystemPagesTest {
 
         assertThat(saved).isFalse();
         assertThat(Fx.call(view::shown)).isEqualTo(Category.CHARGER);
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_MAX_CURRENT))))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
         assertThat(Fx.call(() -> chargerFoldOpen(view))).isTrue();
     }
@@ -987,7 +986,7 @@ class SystemPagesTest {
         var car = stored().system().car();
         var value = Fx.call(() -> ((TextField) settings.field(view, TextKey.FIELD_CAR_BATTERY)).getText());
         var before = texts(view);
-        var help = Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp());
+        var help = Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_CAR_BATTERY)));
 
         Fx.run(() -> {
             settings.type(view, TextKey.FIELD_CAR_BATTERY, "");
@@ -995,7 +994,7 @@ class SystemPagesTest {
         });
 
         assertThat(texts(view)).isEqualTo(before);
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CAR_BATTERY).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_CAR_BATTERY))))
                 .isEqualTo(help);
         assertThat(Fx.call(view::isChanged)).isTrue();
         assertThat(Fx.call(() -> settings.button(view, TextKey.SETTINGS_CANCEL).getText()))
@@ -1046,7 +1045,7 @@ class SystemPagesTest {
         assertThat(Fx.call(() -> houseUseShown(view))).isTrue();
         assertThat(Fx.call(() -> houseUseText(view))).isEqualTo("8.4");
         assertThat(texts(view)).contains("Household use", "kWh per day");
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_HOUSEHOLD_USE).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_HOUSEHOLD_USE))))
                 .contains("kWh per day, without charging the car. Your energy supplier shows your use per day.");
         assertThat(Fx.call(view::isChanged)).isFalse();
     }
@@ -1142,12 +1141,11 @@ class SystemPagesTest {
     void theTypicalHouseholdUseInsideTheFoldPutsTwelveKwhPerDayBackMarked() throws Exception {
         var view = openWithHouse(Language.ENGLISH, 0.35);
         Fx.run(() -> houseFoldRow(view).fire());
-        var typical = settings.messages.text(TextKey.IN_GROUP, settings.messages.text(TextKey.USE_TYPICAL),
-                "Household use");
+        var typical = settings.messages.text(TextKey.USE_TYPICAL);
 
         Fx.call(() -> {
             Scenes.all(houseFoldRow(view).getParent()).stream()
-                    .filter(node -> node instanceof Button button && typical.equals(button.getAccessibleText()))
+                    .filter(node -> node instanceof Button button && typical.equals(button.getText()))
                     .map(Button.class::cast).findFirst().orElseThrow().fire();
             return SettingsFixture.save(view);
         });

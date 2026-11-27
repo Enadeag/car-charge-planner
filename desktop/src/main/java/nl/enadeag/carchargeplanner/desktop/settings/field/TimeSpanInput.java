@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.desktop.settings.field;
 
-import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import java.time.LocalTime;
 import java.util.List;
 import javafx.scene.Node;
@@ -8,8 +7,8 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 
 /**
- * Two times of day with a word between them, such as 07:00 and 22:00. The field's row names the first; the second has
- * a name of its own for a screen reader.
+ * Two times of day with a word between them, such as 07:00 and 22:00. The field's row names the first; the word
+ * between them is the second's label.
  */
 public final class TimeSpanInput implements Input {
 
@@ -21,14 +20,13 @@ public final class TimeSpanInput implements Input {
      * Makes the field, at 00:00 and 00:00 until {@link #load(LocalTime, LocalTime)}.
      *
      * @param between the word between the times, such as "and", in the owner's language
-     * @param endName what a screen reader calls the second time, in the owner's language; not blank
      */
-    public TimeSpanInput(String between, String endName) {
+    public TimeSpanInput(String between) {
         var word = new Label(between);
+        word.setLabelFor(end.focusable());
         word.getStyleClass().add("time-span-word");
         view = new HBox(start.view(), word, end.view());
         view.getStyleClass().add("time-span-input");
-        ScreenReader.name(end.focusable(), endName);
     }
 
     /**

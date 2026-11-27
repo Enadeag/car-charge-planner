@@ -114,11 +114,8 @@ public final class WeeklyAwayCard implements ConfigPart {
         listeners.forEach(Runnable::run);
     }
 
-    /** Gives each row its place among the rows, and says so when there are none. */
+    /** Says so when there are no rows. */
     private void refreshRows() {
-        for (int i = 0; i < shown.size(); i++) {
-            shown.get(i).placeAmong(i, shown.size());
-        }
         empty.setVisible(shown.isEmpty());
         empty.setManaged(shown.isEmpty());
     }

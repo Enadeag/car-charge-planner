@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -124,8 +126,10 @@ class ForecastAwayPagesTest {
         });
 
         assertThat(saved).isFalse();
-        assertThat(Fx.call(address::getAccessibleHelp)).contains(settings.messages.text(TextKey.PROBLEM_SERVER_ADDRESS));
-        assertThat(Fx.call(key::getAccessibleHelp)).contains(settings.messages.text(TextKey.PROBLEM_LETTERS_AND_DIGITS));
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(address)))
+                .contains(settings.messages.text(TextKey.PROBLEM_SERVER_ADDRESS));
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(key)))
+                .contains(settings.messages.text(TextKey.PROBLEM_LETTERS_AND_DIGITS));
         assertThat(settings.engine.storedApiKeys().of(OPEN_METEO)).isEmpty();
 
         boolean savedAfterwards = Fx.call(() -> {
@@ -149,10 +153,8 @@ class ForecastAwayPagesTest {
                 new FakeProvider(FakeProvider.info("forecast-solar", "Forecast.Solar", withAddress), steps)));
         var view = settings.open();
         var address = settings.messages.text(TextKey.PROVIDER_BASE_URL);
-        var primary = (TextInputControl) SettingsFixture.field(view,
-                settings.messages.text(TextKey.IN_GROUP, address, "Open-Meteo"));
-        var fallback = (TextInputControl) SettingsFixture.field(view,
-                settings.messages.text(TextKey.IN_GROUP, address, "Forecast.Solar"));
+        var primary = (TextInputControl) onCard(view, "Open-Meteo", address);
+        var fallback = (TextInputControl) onCard(view, "Forecast.Solar", address);
         var problem = settings.messages.text(TextKey.PROBLEM_SERVER_ADDRESS);
 
         boolean saved = Fx.call(() -> {
@@ -162,16 +164,16 @@ class ForecastAwayPagesTest {
         });
 
         assertThat(saved).isFalse();
-        assertThat(Fx.call(primary::getAccessibleHelp)).contains(problem);
-        assertThat(Fx.call(fallback::getAccessibleHelp)).contains(problem);
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(primary))).contains(problem);
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(fallback))).contains(problem);
 
         Fx.run(() -> {
             fallback.setText("http://[::1]:8080/");
             SettingsFixture.save(view);
         });
 
-        assertThat(Fx.call(primary::getAccessibleHelp)).contains(problem);
-        assertThat(Fx.call(fallback::getAccessibleHelp)).as("the fixed fallback is marked no more")
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(primary))).contains(problem);
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(fallback))).as("the fixed fallback is marked no more")
                 .doesNotContain(problem);
     }
 
@@ -186,7 +188,7 @@ class ForecastAwayPagesTest {
 
         assertThat(saved).isFalse();
         assertThat(Fx.call(view::shown)).isEqualTo(Category.FORECAST);
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_FALLBACK).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_FALLBACK))))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_SAME_AS_PRIMARY));
         assertThat(stored().forecast().primary()).isEqualTo(OPEN_METEO);
     }
@@ -241,6 +243,17 @@ class ForecastAwayPagesTest {
                 .filter(Fold.class::isInstance).map(Fold.class::cast).toList();
     }
 
+    /** The field this name is the label of, on the card under the provider's title. */
+    private static Node onCard(SettingsView view, String provider, String name) {
+        return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
+                .filter(node -> node.getStyleClass().contains("settings-card") && node instanceof Parent card
+                        && card.getChildrenUnmodifiable().stream().anyMatch(child -> child instanceof Label title
+                                && title.getStyleClass().contains("card-title") && provider.equals(title.getText())))
+                .flatMap(card -> Scenes.all(card).stream())
+                .filter(node -> SettingsFixture.named(node, name))
+                .findFirst().orElseThrow(() -> new AssertionError("no field " + name + " for " + provider));
+    }
+
     private static Button row(Fold fold) {
         return Scenes.all(fold).stream().filter(Button.class::isInstance).map(Button.class::cast).findFirst()
                 .orElseThrow();
@@ -258,11 +271,10 @@ class ForecastAwayPagesTest {
     }
 
     @Test
-    void theKeysFoldAwayClosedWhileNothingIsStoredWithTheTestOutsideAndTwoOfOneNameAreReadWithTheirProvider()
-            throws Exception {
+    void theKeysFoldAwayClosedWhileNothingIsStoredWithTheTestOutside() throws Exception {
         var view = open();
         Fx.run(() -> view.show(Category.FORECAST));
-        var key = SettingsFixture.field(view, settings.messages.text(TextKey.IN_GROUP, "API key", "Open-Meteo"));
+        var key = onCard(view, "Open-Meteo", "API key");
 
         var folds = Fx.call(() -> folds(view));
 
@@ -272,15 +284,9 @@ class ForecastAwayPagesTest {
                 .filter(button -> button.getText().equals(settings.messages.text(TextKey.PROVIDER_TEST)))
                 .filter(Scenes::reallyVisible).count())).isEqualTo(2);
         assertThat(Fx.call(() -> folds.stream().map(Fold::name).toList())).containsExactly("API key", "API key");
-        assertThat(Fx.call(() -> folds.stream().map(fold -> row(fold).getAccessibleText()).toList()))
-                .containsExactly("API key (Open-Meteo)", "API key (Forecast.Solar)");
 
         Fx.run(() -> row(folds.getFirst()).fire());
         assertThat(Fx.call(() -> Scenes.reallyVisible(key))).isTrue();
-
-        Fx.run(() -> settings.choose(view, TextKey.FIELD_FALLBACK, Optional.empty()));
-        assertThat(Fx.call(() -> folds(view).stream().map(fold -> row(fold).getAccessibleText()).toList()))
-                .as("one fold of its name").containsExactly("API key");
     }
 
     @Test
@@ -363,8 +369,7 @@ class ForecastAwayPagesTest {
         Fx.run(() -> view.show(Category.FORECAST));
 
         assertThat(Fx.call(() -> folds(view))).isEmpty();
-        assertThat(Fx.call(() -> Scenes.reallyVisible(SettingsFixture.field(view,
-                settings.messages.text(TextKey.IN_GROUP, "Region", "Open-Meteo"))))).isTrue();
+        assertThat(Fx.call(() -> Scenes.reallyVisible(onCard(view, "Open-Meteo", "Region")))).isTrue();
     }
 
     @Test
@@ -378,8 +383,8 @@ class ForecastAwayPagesTest {
                 Optional.of(FORECAST_SOLAR), Map.of(OPEN_METEO, Map.of("region", "north")))));
         var view = settings.open();
         Fx.run(() -> view.show(Category.FORECAST));
-        var region1 = SettingsFixture.field(view, settings.messages.text(TextKey.IN_GROUP, "Region", "Open-Meteo"));
-        var key1 = SettingsFixture.field(view, settings.messages.text(TextKey.IN_GROUP, "API key", "Open-Meteo"));
+        var region1 = onCard(view, "Open-Meteo", "Region");
+        var key1 = onCard(view, "Open-Meteo", "API key");
 
         var folds = Fx.call(() -> folds(view));
 
@@ -417,13 +422,13 @@ class ForecastAwayPagesTest {
         Fx.call(() -> {
             button(view, TextKey.AWAY_ADD).fire();
             var weekdays = all(view, ComboBox.class).stream()
-                    .filter(box -> SettingsFixture.named(box, settings.messages.text(TextKey.AWAY_WEEKDAY)))
+                    .filter(box -> box.getParent() != null && box.getParent().getStyleClass().contains("away-line"))
                     .toList();
             @SuppressWarnings("unchecked")
             var added = (ComboBox<DayOfWeek>) weekdays.getLast();
             added.setValue(DayOfWeek.WEDNESDAY);
-            times(view, TextKey.AWAY_FROM_FIELD).getLast().setText("07:30");
-            times(view, TextKey.AWAY_TO_FIELD).getLast().setText("18:00");
+            times(view, TextKey.AWAY_FROM).getLast().setText("07:30");
+            times(view, TextKey.AWAY_TO).getLast().setText("18:00");
             return SettingsFixture.save(view);
         });
 
@@ -438,14 +443,14 @@ class ForecastAwayPagesTest {
         var original = Files.readString(settings.configPath);
 
         boolean saved = Fx.call(() -> {
-            times(view, TextKey.AWAY_FROM_FIELD).getFirst().setText("20:00");
+            times(view, TextKey.AWAY_FROM).getFirst().setText("20:00");
             return SettingsFixture.save(view);
         });
 
         assertThat(saved).isFalse();
         assertThat(settings.configPath).hasContent(original);
         assertThat(Fx.call(view::shown)).isEqualTo(Category.AWAY);
-        assertThat(Fx.call(() -> times(view, TextKey.AWAY_FROM_FIELD).getFirst().getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(times(view, TextKey.AWAY_FROM).getFirst())))
                 .isEqualTo(settings.messages.text(TextKey.PROBLEM_NOT_AFTER_START));
     }
 
@@ -454,12 +459,12 @@ class ForecastAwayPagesTest {
         var view = open();
 
         boolean saved = Fx.call(() -> {
-            times(view, TextKey.AWAY_TO_FIELD).getFirst().setText("7 pm");
+            times(view, TextKey.AWAY_TO).getFirst().setText("7 pm");
             return SettingsFixture.save(view);
         });
 
         assertThat(saved).isFalse();
-        assertThat(Fx.call(() -> times(view, TextKey.AWAY_TO_FIELD).getFirst().getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(times(view, TextKey.AWAY_TO).getFirst())))
                 .isEqualTo(settings.messages.text(TextKey.PROBLEM_NOT_A_TIME));
     }
 

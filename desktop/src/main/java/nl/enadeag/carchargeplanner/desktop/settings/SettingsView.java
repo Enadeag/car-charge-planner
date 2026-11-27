@@ -20,7 +20,6 @@ import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.config.ConfigProblem;
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
@@ -50,8 +49,8 @@ import javafx.scene.layout.VBox;
 /**
  * Settings itself: the categories in a sidebar, the chosen one's page beside them, and Save and Cancel below. Closing
  * with unsaved changes asks first, in the bar where the buttons are. Enter saves and Escape closes; while the question
- * shows, Escape keeps editing. After a Save the focus goes to what it says, so a screen reader reads it: the status
- * line, or the category with a refused value.
+ * shows, Escape keeps editing. A refused value takes the focus to its category, which the sidebar marks with a dot
+ * and a "!".
  *
  * <p>The stores are read and written in the background, as the keychain can take seconds to answer: until they are
  * read the pages cannot be edited and the status line says that they are being read, and while a Save runs it says
@@ -111,7 +110,6 @@ final class SettingsView extends BorderPane {
 
         categories.getItems().setAll(pages.stream().map(Page::category).toList());
         categories.setCellFactory(_ -> new CategoryCell());
-        categories.setAccessibleText(messages.text(TextKey.SETTINGS_CATEGORIES));
         categories.getStyleClass().add("settings-categories");
         categories.getSelectionModel().selectedItemProperty().subscribe(this::showPage);
         // a list takes Enter and Escape for editing a row, even one that cannot be edited: here they save and close
@@ -154,7 +152,6 @@ final class SettingsView extends BorderPane {
         // a scene has one Escape: the bar that shows has it, and the other lets go of it first
         cancel.cancelButtonProperty().bind(actions.visibleProperty());
         keepEditing.cancelButtonProperty().bind(confirm.visibleProperty());
-        status.focusTraversableProperty().bind(status.textProperty().isNotEmpty());
 
         setLeft(sidebar);
         setCenter(body);
@@ -339,14 +336,10 @@ final class SettingsView extends BorderPane {
         return state == State.SAVING ? Optional.empty() : Optional.ofNullable(outcome);
     }
 
-    /**
-     * The system asks the owner to unlock the keychain for the Save that runs: the status says where, and a screen
-     * reader reads it.
-     */
+    /** The system asks the owner to unlock the keychain for the Save that runs: the status says where. */
     private void showUnlockPrompt() {
         if (state == State.SAVING) {
             showBusy(messages.text(TextKey.SETTINGS_SAVING_UNLOCK));
-            ScreenReader.focus(status);
         }
     }
 
@@ -355,20 +348,16 @@ final class SettingsView extends BorderPane {
             form.showStartAtLoginFailure(detail);
         }
         showOutcome(result);
-        categories.refresh(); // before the focus moves there: the marked category says it has a problem
-        switch (result) {
-            case SaveOutcome.Saved _ -> ScreenReader.focus(status);
-            case SaveOutcome.StartAtLoginRefused _ -> show(Category.APP);
-            case SaveOutcome.KeychainLocked _ -> ScreenReader.focus(status);
-            case SaveOutcome.KeysNotSaved _ -> ScreenReader.focus(status);
-            case SaveOutcome.Failed _ -> ScreenReader.focus(status);
+        categories.refresh();
+        if (result instanceof SaveOutcome.StartAtLoginRefused) {
+            show(Category.APP);
         }
         updateCancelText();
     }
 
     private void afterRefused(List<Category> refusing) {
         showRefused(refusing);
-        categories.refresh(); // before the focus moves there: the marked category says it has a problem
+        categories.refresh();
         show(refusing.getFirst());
         updateCancelText();
     }
@@ -406,7 +395,7 @@ final class SettingsView extends BorderPane {
 
     /**
      * Goes over to another state: the pages can be edited only when ready, Save only then, and the status line says
-     * what Settings is doing; the page's own text says it to a screen reader too.
+     * what Settings is doing.
      */
     private void goTo(State next) {
         state = next;
@@ -422,12 +411,8 @@ final class SettingsView extends BorderPane {
                     status.setText("");
                 }
                 status.getStyleClass().remove("busy");
-                body.setAccessibleText(null);
             }
-            case UNREADABLE -> {
-                status.getStyleClass().remove("busy");
-                body.setAccessibleText(null);
-            }
+            case UNREADABLE -> status.getStyleClass().remove("busy");
         }
         updateCancelText();
     }
@@ -438,7 +423,6 @@ final class SettingsView extends BorderPane {
             status.getStyleClass().add("busy");
         }
         status.setText(text);
-        body.setAccessibleText(text);
     }
 
     /** Closes Settings, after asking when that would throw edits away. */
@@ -514,7 +498,7 @@ final class SettingsView extends BorderPane {
         return bar;
     }
 
-    /** A category in the sidebar, marked while one of its values was refused. */
+    /** A category in the sidebar, marked with a dot and a "!" while one of its values was refused. */
     private final class CategoryCell extends ListCell<Category> {
 
         @Override
@@ -524,20 +508,22 @@ final class SettingsView extends BorderPane {
             if (empty || category == null) {
                 setText(null);
                 setGraphic(null);
-                setAccessibleText(null);
                 return;
             }
             var title = messages.text(category.title());
             setText(title);
             if (refused.contains(category)) {
                 getStyleClass().add("has-problem");
-                var mark = new Region();
-                mark.getStyleClass().add("problem-dot");
+                var dot = new Region();
+                dot.getStyleClass().add("problem-dot");
+                var sign = new Label("!");
+                sign.getStyleClass().add("problem-sign");
+                var mark = new HBox(dot, sign);
+                mark.getStyleClass().add("problem-mark");
                 setGraphic(mark);
-                setAccessibleText(messages.text(TextKey.CATEGORY_HAS_PROBLEMS, title));
+                mark.applyCss(); // a cell can be made while the list is laid out, after the styles of this pass
             } else {
                 setGraphic(null);
-                setAccessibleText(title);
             }
         }
     }

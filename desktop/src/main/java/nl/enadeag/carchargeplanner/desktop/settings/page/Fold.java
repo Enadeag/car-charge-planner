@@ -6,8 +6,7 @@ import javafx.scene.layout.VBox;
 
 /**
  * Settings that are seldom changed, folded under a row with an arrow, such as "▸ More settings"; the row shows or
- * hides them. It starts folded. The row is a button, so the keyboard reaches it and Space folds it; a screen reader
- * reads its name without the arrow.
+ * hides them. It starts folded. The row is a button, so the keyboard reaches it and Space folds it.
  */
 public final class Fold extends VBox {
 
@@ -33,20 +32,9 @@ public final class Fold extends VBox {
         row.setOnAction(_ -> setOpen(held || !isOpen()));
         row.setMaxWidth(Double.MAX_VALUE);
         row.setWrapText(true);
-        row.setAccessibleText(name);
         getChildren().addAll(row, this.content);
         getStyleClass().add("fold");
         setOpen(false);
-    }
-
-    /**
-     * Gives the row a longer name for a screen reader, where the same fold shows more than once, such as on a second
-     * panel array; the row on screen keeps its own name.
-     *
-     * @param spoken the name to read, such as "More settings (Panel array 2)"
-     */
-    public void setSpokenName(String spoken) {
-        row.setAccessibleText(spoken);
     }
 
     /**

@@ -215,7 +215,6 @@ class LockedKeychainTest {
         assertThat(keychain.prompting.await(10, TimeUnit.SECONDS)).as("the prompt shows").isTrue();
         SettingsFixture.waitFor(() -> Scenes.visibleTexts(view)
                 .contains(settings.messages.text(TextKey.SETTINGS_SAVING_UNLOCK)));
-        assertThat(Fx.call(() -> view.lookup(".busy").isFocused())).as("read out").isTrue();
 
         Fx.run(view::cancel);
 
@@ -237,8 +236,7 @@ class LockedKeychainTest {
             assertThat(field.getText()).isEmpty();
             assertThat(field.getPromptText()).isEqualTo(settings.messages.text(TextKey.SECRET_LOCKED));
         });
-        assertThat(Fx.call(() -> replaceButtons(view).getFirst().getAccessibleText())).isEqualTo(
-                settings.messages.text(TextKey.SECRET_LOCKED_SPOKEN, "API key (Open-Meteo)"));
+        assertThat(Fx.call(() -> replaceButtons(view))).as("a button to enter a new key").isNotEmpty();
         assertThat(Fx.call(view::isChanged)).isFalse();
     }
 

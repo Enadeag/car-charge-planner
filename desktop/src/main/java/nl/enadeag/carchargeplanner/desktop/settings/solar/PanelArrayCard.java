@@ -24,7 +24,6 @@ import nl.enadeag.carchargeplanner.engine.config.PanelSize;
 import nl.enadeag.carchargeplanner.engine.config.TiltChoice;
 import nl.enadeag.carchargeplanner.engine.setting.ConfigSetting;
 import java.time.Year;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -60,7 +59,6 @@ final class PanelArrayCard {
     private final ProblemRows problems;
     private final TypicalMarks typical;
     private final Button remove;
-    private final List<FieldRow> rows = new ArrayList<>();
     private final CardView card;
     private OptionalDouble storedTilt = OptionalDouble.empty();
     private OptionalDouble storedDirection = OptionalDouble.empty();
@@ -91,7 +89,7 @@ final class PanelArrayCard {
         powerRow = row(ConfigSetting.PANEL_POWER, TextKey.FIELD_PANEL_POWER, power);
         more = new Fold(messages.text(TextKey.MORE_SETTINGS),
                 row(ConfigSetting.PANEL_LOSSES, TextKey.FIELD_PANEL_LOSSES, TextKey.FIELD_PANEL_LOSSES_HINT, losses),
-                listed(FieldRow.of(messages, TextKey.FIELD_PANEL_NAME, TextKey.FIELD_PANEL_NAME_HINT, name)));
+                FieldRow.of(messages, TextKey.FIELD_PANEL_NAME, TextKey.FIELD_PANEL_NAME_HINT, name));
         card = new CardView("", messages.text(TextKey.CARD_PANEL_ARRAY_HINT), nowSet,
                 row(ConfigSetting.PANEL_COUNT, TextKey.FIELD_PANEL_COUNT, count),
                 row(ConfigSetting.PANEL_DIRECTION, TextKey.FIELD_PANEL_DIRECTION, direction),
@@ -143,8 +141,7 @@ final class PanelArrayCard {
     }
 
     /**
-     * Gives the card its place among the arrays, for its title; with one array there is nothing to remove. With more
-     * than one, a screen reader reads each field and button with the array's title, so the arrays' twins differ.
+     * Gives the card its place among the arrays, for its title; with one array there is nothing to remove.
      *
      * @param index the array's place, from 0
      * @param count how many arrays there are, at least 1
@@ -154,12 +151,6 @@ final class PanelArrayCard {
         card.setTitle(title);
         remove.setVisible(count > 1);
         remove.setManaged(count > 1);
-        // with more than one array, a screen reader tells their fields and buttons apart by the array's number
-        for (var row : rows) {
-            row.setSpokenName(count > 1 ? messages.text(TextKey.IN_GROUP, row.name(), title) : row.name());
-        }
-        remove.setAccessibleText(count > 1 ? messages.text(TextKey.IN_GROUP, remove.getText(), title) : null);
-        more.setSpokenName(count > 1 ? messages.text(TextKey.IN_GROUP, more.name(), title) : more.name());
     }
 
     /**
@@ -258,17 +249,12 @@ final class PanelArrayCard {
         return List.of(count, direction, tilt, year, power, losses, name);
     }
 
-    private FieldRow listed(FieldRow row) {
-        rows.add(row);
-        return row;
-    }
-
     private FieldRow row(ConfigSetting setting, TextKey label, Input input) {
-        return followed(setting, listed(problems.add(setting, new FieldRow(messages.text(label), "", input))), input);
+        return followed(setting, problems.add(setting, new FieldRow(messages.text(label), "", input)), input);
     }
 
     private FieldRow row(ConfigSetting setting, TextKey label, TextKey hint, Input input) {
-        return followed(setting, listed(problems.add(setting, FieldRow.of(messages, label, hint, input))), input);
+        return followed(setting, problems.add(setting, FieldRow.of(messages, label, hint, input)), input);
     }
 
     private FieldRow followed(ConfigSetting setting, FieldRow row, Input input) {

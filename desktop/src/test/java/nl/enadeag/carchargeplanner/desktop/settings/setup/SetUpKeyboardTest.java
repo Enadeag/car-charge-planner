@@ -2,10 +2,10 @@ package nl.enadeag.carchargeplanner.desktop.settings.setup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import nl.enadeag.carchargeplanner.desktop.AccessibleNames;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Keyboard;
+import nl.enadeag.carchargeplanner.desktop.VisibleNames;
 import nl.enadeag.carchargeplanner.desktop.settings.SettingsFixture;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -22,9 +22,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 /**
- * Set-up with only a keyboard, and with a screen reader on Windows: Tab reaches every control of every step in
- * reading order, each with a name of its own and a focus ring that stands out 3:1; Enter goes on, Escape asks before
- * leaving or keeps going, and a refused value gets the focus with its problem.
+ * Set-up with only a keyboard: Tab reaches every control of every step in reading order, each with a name it shows
+ * and a focus ring that stands out 3:1; Enter goes on, Escape asks before leaving or keeps going, and a refused value
+ * gets the focus, with its problem below it.
  */
 @FxTest
 class SetUpKeyboardTest {
@@ -45,12 +45,12 @@ class SetUpKeyboardTest {
     }
 
     private static Node focused(SetUpView view) throws Exception {
-        return Fx.call(() -> AccessibleNames.focusTarget(view.getScene().getFocusOwner()));
+        return Fx.call(() -> VisibleNames.focusTarget(view.getScene().getFocusOwner()));
     }
 
     @ParameterizedTest
     @EnumSource(ColorScheme.class)
-    void everyStepIsReachedInOrderWithNamesOfTheirOwnAndAVisibleFocus(ColorScheme scheme) throws Exception {
+    void everyStepIsReachedInOrderWithAShownNameAndAVisibleFocus(ColorScheme scheme) throws Exception {
         var view = open(scheme);
         var problems = new ArrayList<String>();
         for (var step : SetUpStep.values()) {
@@ -99,7 +99,7 @@ class SetUpKeyboardTest {
     }
 
     @Test
-    void aRefusedValueTakesTheFocusToItsFieldWhereAScreenReaderReadsTheProblemFirst() throws Exception {
+    void aRefusedValueTakesTheFocusToItsFieldWhichShowsTheProblem() throws Exception {
         var view = open(ColorScheme.LIGHT);
         Fx.run(() -> {
             view.show(SetUpStep.CHARGER);
@@ -112,8 +112,8 @@ class SetUpKeyboardTest {
 
         var field = focused(view);
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.CHARGER);
-        assertThat(Fx.call(() -> AccessibleNames.of(field))).isEqualTo(setUp.messages.text(TextKey.FIELD_MAX_CURRENT));
-        assertThat(Fx.call(() -> AccessibleNames.help(field)))
+        assertThat(Fx.call(() -> VisibleNames.of(field))).isEqualTo(setUp.messages.text(TextKey.FIELD_MAX_CURRENT));
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(field)))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
     }
 }

@@ -50,7 +50,7 @@ public final class HouseCard implements ConfigPart {
         perDay.onChange(() -> typical.edited(ConfigSetting.HOUSE_BASELOAD));
         // named by its field, as the car's button is by its own
         rows = List.of(row,
-                TypicalButton.line(this::useTypical, messages.text(TextKey.FIELD_HOUSEHOLD_USE), messages));
+                TypicalButton.line(this::useTypical, messages));
     }
 
     /**

@@ -13,7 +13,7 @@ public interface Input {
     Node view();
 
     /**
-     * The node that takes the keyboard focus, which the field's label and the screen reader's name belong to. For a
+     * The node that takes the keyboard focus, which the field's label belongs to. For a
      * spinner or a combo box that is the control itself, not the text field inside it.
      *
      * @return the control the owner types in or chooses with
