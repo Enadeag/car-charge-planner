@@ -9,14 +9,8 @@ import nl.enadeag.carchargeplanner.engine.trip.TripEntryRules;
 import nl.enadeag.carchargeplanner.engine.trip.TripProblem;
 import java.time.InstantSource;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.format.ResolverStyle;
 import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
 
 /**
  * Whether what the owner entered for a trip can be saved, and as which trip: the times must be times, the distance is
@@ -24,10 +18,6 @@ import java.util.Optional;
  * {@link TripEntryRules}, each problem shown in the owner's words at the field where the owner fixes it.
  */
 final class TripCheck {
-
-    /** Both of the app's languages write a time on a 24-hour clock; a leading zero may be left out. */
-    private static final DateTimeFormatter TYPED = DateTimeFormatter.ofPattern("H:mm", Locale.ROOT)
-            .withResolverStyle(ResolverStyle.STRICT);
 
     private final ZoneId zone;
     private final InstantSource clock;
@@ -41,7 +31,8 @@ final class TripCheck {
      * @param zone the time zone of the owner's home, in which the days and times are read
      * @param clock tells the time at which a trip must not have returned yet
      * @param units the units the distance is typed in
-     * @param messages writes the numbers the way the owner's language does and says the problems
+     * @param messages writes the numbers the way the owner's language does, reads the times on either clock and says
+     *     the problems
      */
     TripCheck(ZoneId zone, InstantSource clock, Units units, Messages messages) {
         this.zone = zone;
@@ -82,11 +73,11 @@ final class TripCheck {
 
     /** A distance typed that cannot be read is NaN; it is refused with {@code unreadable} in its place. */
     private Checked check(Entered entered, double distanceKm, TextKey unreadable) {
-        var leaves = time(entered.departureTime());
+        var leaves = messages.readTime(entered.departureTime());
         if (leaves.isEmpty()) {
             return new Checked.Refused(TextKey.PROBLEM_NOT_A_TIME, Field.DEPARTURE_TIME);
         }
-        var back = time(entered.returnTime());
+        var back = messages.readTime(entered.returnTime());
         if (back.isEmpty()) {
             return new Checked.Refused(TextKey.PROBLEM_NOT_A_TIME, Field.RETURN_TIME);
         }
@@ -116,14 +107,6 @@ final class TripCheck {
                     List.of(messages.number(Math.floor(units.distance(Trip.MAX_DISTANCE_KM)), 0),
                             units.distanceUnit()));
         };
-    }
-
-    private static Optional<LocalTime> time(String text) {
-        try {
-            return Optional.of(LocalTime.parse(text.strip(), TYPED));
-        } catch (DateTimeParseException _) {
-            return Optional.empty();
-        }
     }
 
     /**

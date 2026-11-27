@@ -3,6 +3,9 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.away.OneOffAwayCheck.Checked;
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
+import nl.enadeag.carchargeplanner.desktop.text.Language;
+import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.Instant;
@@ -19,13 +22,14 @@ class OneOffAwayCheckTest {
 
     private static final ZoneId BRUSSELS = ZoneId.of("Europe/Brussels");
     private static final LocalDate DAY = LocalDate.of(2026, 7, 3);
+    private static final Messages ENGLISH = new Messages(Language.ENGLISH);
 
     private static Instant at(LocalDate day, int hour, int minute) {
         return day.atTime(hour, minute).atZone(BRUSSELS).toInstant();
     }
 
     private static OneOffAwayCheck onDayAt(LocalDate day, Instant now) {
-        return new OneOffAwayCheck(day, BRUSSELS, InstantSource.fixed(now));
+        return new OneOffAwayCheck(day, BRUSSELS, InstantSource.fixed(now), ENGLISH);
     }
 
     private static OneOffAwayCheck morning() {
@@ -54,9 +58,18 @@ class OneOffAwayCheckTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "ten", "24:00", "10:60", "10", "10.30", "1000", "-1:00", "10:5", "10:00 am", "1 0:00"})
+    @ValueSource(strings = {"", "ten", "24:00", "10:60", "10", "10.30", "1000", "-1:00", "10:5", "13:00 pm", "1 0:00"})
     void aStartThatIsNotATimeIsRefusedAsSuch(String typed) {
         assertThat(morning().partOfDay(typed, "17:00")).isEqualTo(new Checked.Refused(TextKey.PROBLEM_NOT_A_TIME));
+    }
+
+    @Test
+    void timesOnA12HourClockAreReadInDutchToo() {
+        var dutch = new OneOffAwayCheck(DAY, BRUSSELS, InstantSource.fixed(at(DAY, 6, 0)),
+                new Messages(Language.DUTCH, ClockFormat.TWELVE_HOUR));
+
+        assertThat(dutch.partOfDay("10:00 a.m.", "4:30 p.m.")).isEqualTo(new Checked.Valid(
+                OneOffAwayPeriod.on(DAY, LocalTime.of(10, 0), LocalTime.of(16, 30), BRUSSELS)));
     }
 
     @ParameterizedTest
@@ -102,7 +115,8 @@ class OneOffAwayCheckTest {
 
     @Test
     void theTimesAreReadInTheHomesZoneNotInUtc() {
-        var check = new OneOffAwayCheck(DAY, ZoneId.of("America/New_York"), InstantSource.fixed(at(DAY, 6, 0)));
+        var check = new OneOffAwayCheck(DAY, ZoneId.of("America/New_York"), InstantSource.fixed(at(DAY, 6, 0)),
+                ENGLISH);
 
         assertThat(check.partOfDay("9:00", "10:00")).isEqualTo(new Checked.Valid(OneOffAwayPeriod.on(DAY,
                 LocalTime.of(9, 0), LocalTime.of(10, 0), ZoneId.of("America/New_York"))));
@@ -111,7 +125,7 @@ class OneOffAwayCheckTest {
     @Test
     void theClockIsReadWhenTheEntryIsChecked() {
         var now = new Instant[] {at(DAY, 6, 0)};
-        var check = new OneOffAwayCheck(DAY, BRUSSELS, () -> now[0]);
+        var check = new OneOffAwayCheck(DAY, BRUSSELS, () -> now[0], ENGLISH);
         assertThat(check.partOfDay("10:00", "11:00")).isInstanceOf(Checked.Valid.class);
 
         now[0] = at(DAY, 11, 0);

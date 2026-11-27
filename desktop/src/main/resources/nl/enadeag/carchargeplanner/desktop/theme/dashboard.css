@@ -374,6 +374,11 @@
     -fx-pref-width: 4.5em;
 }
 
+/* a 12-hour time has its marker too: "10:30 p.m." */
+.text-input.away-time.twelve-hour {
+    -fx-pref-width: 7em;
+}
+
 /* the trips of the selected day, and their entry */
 .trip-list {
     -fx-spacing: 0.75em;
@@ -425,6 +430,10 @@
 
 .text-input.trip-time {
     -fx-pref-width: 4.5em;
+}
+
+.text-input.trip-time.twelve-hour {
+    -fx-pref-width: 7em;
 }
 
 .text-input.trip-distance {
@@ -685,7 +694,9 @@
 
 .away-line {
     -fx-alignment: center-left;
-    -fx-spacing: 0.5em;
+    -fx-row-valignment: center;
+    -fx-hgap: 0.5em;
+    -fx-vgap: 0.5em;
 }
 
 .away-line .label {
@@ -697,12 +708,23 @@
     -fx-min-width: 4.5em;
 }
 
+.time-input.twelve-hour {
+    -fx-pref-width: 7em;
+    -fx-min-width: 7em;
+}
+
 /* as wide as a number field with its unit, so the first time lines up with the numbers above it */
 .time-span-input {
     -fx-alignment: center-left;
     -fx-spacing: 0.5em;
     -fx-min-width: 14.4em;
     -fx-pref-width: 14.4em;
+}
+
+/* two wider times with the word between them do not fit in the number fields' width */
+.time-span-input.twelve-hour {
+    -fx-min-width: 17em;
+    -fx-pref-width: 17em;
 }
 
 .time-span-word {

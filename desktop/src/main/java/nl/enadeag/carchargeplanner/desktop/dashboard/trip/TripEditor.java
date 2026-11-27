@@ -11,9 +11,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import javafx.scene.Node;
@@ -40,8 +38,6 @@ final class TripEditor extends VBox {
 
     /** How many days from today the days of departure and return offer, beyond those of a trip being changed. */
     static final int DAYS_OFFERED = TripEntryRules.DAYS_OFFERED;
-
-    private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
 
     private final Messages messages;
     private final Consumer<Trip> saved;
@@ -100,6 +96,9 @@ final class TripEditor extends VBox {
         }
         for (var time : List.of(departureTime, returnTime)) {
             time.getStyleClass().add("trip-time");
+            if (messages.twelveHour()) {
+                time.getStyleClass().add("twelve-hour");
+            }
             time.setPrefColumnCount(4);
         }
         var when = new GridPane();
@@ -163,9 +162,9 @@ final class TripEditor extends VBox {
     void prepare(LocalDate day, ZoneId zone, InstantSource clock, Units distanceUnits) {
         start(zone, clock, distanceUnits, day, day);
         departureDay.setValue(day);
-        departureTime.setText(SHOWN.format(TripEntryRules.FIRST_DEPARTURE));
+        departureTime.setText(messages.time(TripEntryRules.FIRST_DEPARTURE));
         returnDay.setValue(day);
-        returnTime.setText(SHOWN.format(TripEntryRules.FIRST_RETURN));
+        returnTime.setText(messages.time(TripEntryRules.FIRST_RETURN));
         distance.setText("");
         distanceShown = "";
         canCharge.setSelected(false);
@@ -186,9 +185,9 @@ final class TripEditor extends VBox {
         var back = trip.returnTime().atZone(zone);
         start(zone, clock, distanceUnits, leaves.toLocalDate(), back.toLocalDate());
         departureDay.setValue(leaves.toLocalDate());
-        departureTime.setText(SHOWN.format(leaves));
+        departureTime.setText(messages.time(leaves.toLocalTime()));
         returnDay.setValue(back.toLocalDate());
-        returnTime.setText(SHOWN.format(back));
+        returnTime.setText(messages.time(back.toLocalTime()));
         distanceShown = new NumberText(messages).write(units.distance(trip.distanceKm()), 0);
         distanceKm = trip.distanceKm();
         distance.setText(distanceShown);

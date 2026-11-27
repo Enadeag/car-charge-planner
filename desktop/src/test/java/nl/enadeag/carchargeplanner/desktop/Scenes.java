@@ -14,7 +14,9 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Labeled;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.StackPane;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 /** Shows nodes on the headless platform as the app does, and finds what they show. Call on the JavaFX thread. */
@@ -63,7 +65,12 @@ public final class Scenes {
 
     /** Shows a node with larger text, in a window no larger than the headless screen, at its top. */
     public static Stage show(Node node, ColorScheme scheme, TextScale scale) {
-        var stage = stage(node, scheme, scale);
+        return show(node, scheme, scale.size());
+    }
+
+    /** Shows a node with the system's text at a size, in a window no larger than the headless screen, at its top. */
+    public static Stage show(Node node, ColorScheme scheme, TextSize size) {
+        var stage = stage(node, scheme, size);
         stage.show();
         stage.setHeight(Math.min(stage.getHeight(), TextScale.SCREEN));
         stage.setWidth(Math.min(stage.getWidth(), TextScale.SCREEN));
@@ -84,9 +91,9 @@ public final class Scenes {
         return scene;
     }
 
-    private static Stage stage(Node node, ColorScheme scheme, TextScale scale) {
+    private static Stage stage(Node node, ColorScheme scheme, TextSize size) {
         var scene = new Scene(new StackPane(node));
-        theme(scheme, scale.size()).style(scene);
+        theme(scheme, size).style(scene);
         var stage = new Stage();
         stage.setScene(scene);
         stage.setY(0);
@@ -196,6 +203,25 @@ public final class Scenes {
                 .flatMap(node -> node instanceof Labeled labeled && (labeled.isTextTruncated() || clipped(labeled))
                         ? Stream.of(labeled.getText()) : Stream.empty())
                 .toList();
+    }
+
+    /**
+     * The texts of visible text fields that are wider than the field, so their start or end scrolls out of sight,
+     * such as a time with its marker in a field made for "07:30".
+     */
+    public static List<String> textFieldsTooNarrow(Node root) {
+        return Scenes.all(root).stream()
+                .filter(Scenes::reallyVisible)
+                .flatMap(node -> node instanceof TextField field && !field.getText().isEmpty()
+                        && textWidth(field) > field.getWidth() - field.snappedLeftInset() - field.snappedRightInset()
+                        ? Stream.of(field.getText()) : Stream.empty())
+                .toList();
+    }
+
+    private static double textWidth(TextField field) {
+        var text = new Text(field.getText());
+        text.setFont(field.getFont());
+        return text.getLayoutBounds().getWidth();
     }
 
     /** Only sideways: a day taller than the screen scrolls, which clips it from below on purpose. */

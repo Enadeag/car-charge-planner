@@ -1,17 +1,12 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
+import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayEntryRules;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.InstantSource;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.format.ResolverStyle;
-import java.util.Locale;
-import java.util.Optional;
 
 /**
  * Whether what the owner entered for an away period on one day can be saved, and as which period: the times must be
@@ -19,13 +14,10 @@ import java.util.Optional;
  */
 final class OneOffAwayCheck {
 
-    /** Both of the app's languages write a time on a 24-hour clock; a leading zero may be left out. */
-    private static final DateTimeFormatter TYPED = DateTimeFormatter.ofPattern("H:mm", Locale.ROOT)
-            .withResolverStyle(ResolverStyle.STRICT);
-
     private final LocalDate day;
     private final ZoneId zone;
     private final InstantSource clock;
+    private final Messages messages;
 
     /**
      * Makes the check for one day.
@@ -33,11 +25,13 @@ final class OneOffAwayCheck {
      * @param day the day the car is away
      * @param zone the time zone of the owner's home, in which the times are read
      * @param clock tells the time at which a period must not have ended yet
+     * @param messages reads the times, on either clock and with the language's own marker
      */
-    OneOffAwayCheck(LocalDate day, ZoneId zone, InstantSource clock) {
+    OneOffAwayCheck(LocalDate day, ZoneId zone, InstantSource clock, Messages messages) {
         this.day = day;
         this.zone = zone;
         this.clock = clock;
+        this.messages = messages;
     }
 
     /**
@@ -52,13 +46,13 @@ final class OneOffAwayCheck {
     /**
      * Part of the day.
      *
-     * @param start the start as typed, such as "9:00" or "09:00"; spaces around it are ignored
+     * @param start the start as typed, such as "9:00", "09:00" or "9:00 am"; spaces around it are ignored
      * @param end the end as typed, in the same way
      * @return the period from the start to the end, or why it cannot be saved
      */
     Checked partOfDay(String start, String end) {
-        var from = time(start);
-        var to = time(end);
+        var from = messages.readTime(start);
+        var to = messages.readTime(end);
         if (from.isEmpty() || to.isEmpty()) {
             return new Checked.Refused(TextKey.PROBLEM_NOT_A_TIME);
         }
@@ -73,14 +67,6 @@ final class OneOffAwayCheck {
                 case PASSED -> TextKey.ONE_OFF_PASSED;
             });
         };
-    }
-
-    private static Optional<LocalTime> time(String text) {
-        try {
-            return Optional.of(LocalTime.parse(text.strip(), TYPED));
-        } catch (DateTimeParseException _) {
-            return Optional.empty();
-        }
     }
 
     /** What the entry holds: a period that can be saved, or why it cannot. */

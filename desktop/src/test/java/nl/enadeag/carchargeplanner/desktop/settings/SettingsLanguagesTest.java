@@ -8,7 +8,9 @@ import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.TextScale;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
+import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
@@ -19,6 +21,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import javafx.application.ColorScheme;
 import org.junit.jupiter.api.AfterEach;
@@ -87,6 +90,40 @@ class SettingsLanguagesTest {
     static Stream<Arguments> languagesAndScales() {
         return Stream.of(Language.values()).flatMap(language -> Stream.of(TextScale.values())
                 .map(scale -> Arguments.of(language, scale)));
+    }
+
+    static Stream<Arguments> languagesAndScalesOnA12HourClock() {
+        return Stream.of(Language.values()).flatMap(language -> Stream.concat(Stream.of(Optional.<TextScale>empty()),
+                Stream.of(TextScale.values()).map(Optional::of)).map(scale -> Arguments.of(language, scale)));
+    }
+
+    /**
+     * On a 12-hour clock, whose times are longer ("10:00 p.m."), with the system's text at normal size and larger:
+     * the pages of the charging hours and the weekly away periods show their times whole, and every text beside them.
+     */
+    @ParameterizedTest
+    @MethodSource("languagesAndScalesOnA12HourClock")
+    void onA12HourClockNoTimeIsCutOffOrOverlaps(Language language, Optional<TextScale> scale) throws Exception {
+        settings = new SettingsFixture(folder, new Messages(language, ClockFormat.TWELVE_HOUR),
+                SettingsFixture.realProviders());
+        var file = new ConfigFile(settings.configPath, FILES, CLOCK);
+        var example = file.read();
+        file.write(example.withSystem(example.system().withPanels(List.of(PanelArray.TYPICAL, PanelArray.TYPICAL)),
+                TypicalValues.NONE));
+        var view = scale.isPresent() ? settings.open(scale.get()) : settings.open(false);
+
+        assertThat(Fx.call(() -> {
+            var found = new ArrayList<String>();
+            for (var category : List.of(Category.PLANNING, Category.AWAY)) {
+                view.show(category);
+                view.applyCss();
+                view.layout();
+                found.addAll(Scenes.cutOff(view));
+                found.addAll(Scenes.overlapping(view));
+                found.addAll(Scenes.textFieldsTooNarrow(view));
+            }
+            return found;
+        })).isEmpty();
     }
 
     /** As the owner's system makes the text larger, at 150 and 200 %, in a window as much larger as the screen allows. */

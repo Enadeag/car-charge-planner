@@ -106,19 +106,26 @@ public final class SettingsFixture {
     /** With this keychain, and this way to do the slow work, such as on virtual threads as the app does. */
     SettingsFixture(Path folder, Language language, List<ForecastProvider> known, Keychain keychain,
             Background background) throws IOException {
-        this(folder, language, known, keychain, background, Clock.systemUTC());
+        this(folder, new Messages(language), known, keychain, background, Clock.systemUTC());
+    }
+
+    /** In a language on a clock, such as on a 12-hour one, with these forecast providers. */
+    SettingsFixture(Path folder, Messages messages, List<ForecastProvider> known) throws IOException {
+        this(folder, messages, known, new NoKeychain(), new Background(Runnable::run, Runnable::run),
+                Clock.systemUTC());
     }
 
     /** At a fixed time, such as for a picture that must be the same on every run. */
     SettingsFixture(Path folder, Language language, Clock clock) throws IOException {
-        this(folder, language, List.of(), new NoKeychain(), new Background(Runnable::run, Runnable::run), clock);
+        this(folder, new Messages(language), List.of(), new NoKeychain(), new Background(Runnable::run, Runnable::run),
+                clock);
     }
 
-    private SettingsFixture(Path folder, Language language, List<ForecastProvider> known, Keychain keychain,
+    private SettingsFixture(Path folder, Messages messages, List<ForecastProvider> known, Keychain keychain,
             Background background, Clock clock) throws IOException {
         this.folder = folder;
         this.background = background;
-        this.messages = new Messages(language);
+        this.messages = messages;
         configPath = folder.resolve("engine.json");
         Files.copy(EXAMPLE, configPath);
         appSettings = new AppSettingsFile(folder.resolve("app.json"), Units.METRIC, FILES, clock);

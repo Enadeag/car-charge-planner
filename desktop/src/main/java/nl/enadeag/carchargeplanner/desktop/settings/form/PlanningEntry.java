@@ -62,13 +62,14 @@ public record PlanningEntry(double minimumPct, double targetPct, double marginPc
      * What the page shows for the planning preferences.
      *
      * @param planning the preferences as the engine keeps them
+     * @param messages the owner's language and the system's clock, which the charging hours are shown on
      * @return their values as the fields show them
      */
-    public static PlanningEntry of(PlanningPreferences planning) {
+    public static PlanningEntry of(PlanningPreferences planning, Messages messages) {
         var hours = planning.chargingHours();
         return new PlanningEntry(planning.minimumPct().value(), planning.targetPct().value(), planning.margin() * 100,
                 planning.importToleranceKwh(), planning.minWindow().toMinutes(), planning.notifyLead(),
-                TimeText.write(hours.start()), TimeText.write(hours.end()));
+                TimeText.write(hours.start(), messages), TimeText.write(hours.end(), messages));
     }
 
     /**
@@ -79,8 +80,8 @@ public record PlanningEntry(double minimumPct, double targetPct, double marginPc
      * @return the preferences, or the problem and the field that shows it
      */
     public Checked check(Messages messages, Function<InvalidSetting, String> say) {
-        var start = TimeText.read(chargingStart);
-        var end = TimeText.read(chargingEnd);
+        var start = TimeText.read(chargingStart, messages);
+        var end = TimeText.read(chargingEnd, messages);
         if (start.isEmpty() || end.isEmpty()) {
             return new Checked.Refused(ConfigSetting.CHARGING_HOURS, messages.text(TextKey.PROBLEM_NOT_A_TIME));
         }
