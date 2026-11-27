@@ -21,41 +21,26 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import nl.enadeag.carchargeplanner.android.R
 
 /**
  * Settings that are seldom changed, folded under a row with an arrow, such as the panels' "▸ More settings" and the
  * location page's "Coordinates and time zone". The row is one button, at least 48 dp high, whose arrow points to the
- * end while folded and down while open; a screen reader reads its label and "Collapsed" or "Expanded".
+ * end while folded and down while open.
  *
  * @param open whether the content shows, kept by the caller so it survives as the caller wants
  * @param onToggle called with the new state when the row is pressed
- * @param spoken what a screen reader reads for the row instead of [label], where two rows on a page would read the
- *     same; null to read the label
  * @param content what the row folds away, shown below it while open
  */
 @Composable
-internal fun Fold(label: String, open: Boolean, onToggle: (Boolean) -> Unit, spoken: String? = null,
-    content: @Composable () -> Unit) {
-    val state = stringResource(if (open) R.string.fold_expanded else R.string.fold_collapsed)
+internal fun Fold(label: String, open: Boolean, onToggle: (Boolean) -> Unit, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                 .clickable(role = Role.Button) { onToggle(!open) }
-                .semantics(mergeDescendants = true) {
-                    stateDescription = state
-                    if (spoken != null) {
-                        contentDescription = spoken
-                    }
-                }
                 .padding(vertical = 8.dp),
         ) {
             Icon(if (open) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -119,5 +104,5 @@ internal fun rememberProblemFold(problem: Boolean, startFolded: Boolean = true, 
 
 /** A [Fold] that a problem in its fields opens, as [rememberProblemFold] says. */
 @Composable
-internal fun Fold(label: String, fold: ProblemFold, spoken: String? = null, content: @Composable () -> Unit) =
-    Fold(label, fold.open, fold::toggle, spoken, content)
+internal fun Fold(label: String, fold: ProblemFold, content: @Composable () -> Unit) =
+    Fold(label, fold.open, fold::toggle, content)

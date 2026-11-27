@@ -281,9 +281,8 @@ internal fun AwayPeriods(away: WeeklyAwayForm, edits: Edits, problems: ProblemFo
 
 /**
  * One weekly away period: its place in the list as a heading, the weekday, the times, each chosen on the time picker,
- * and Remove. The weekday group, each time's button and Remove are named with the period's number, so a screen reader
- * that lands on one, as on a problem after Next, says which period; the weekday's radio buttons are named by the day,
- * inside that group.
+ * and Remove. The weekday's label, each time's button and Remove are named with the period's number, so one that
+ * takes the focus, as on a problem after Next, says which period it is.
  */
 @Composable
 private fun AwayPeriod(away: WeeklyAwayForm, row: Int, index: Int, rows: List<Int>, edits: Edits,

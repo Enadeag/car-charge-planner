@@ -26,10 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -130,12 +127,11 @@ private fun CoordinateFields(location: LocationForm, edits: Edits, problems: Pro
     TimeZone(edits.shown { location.timeZone()?.id.orEmpty() }) { zone -> edits.make { location.choose(zone) } }
 }
 
-/** What the search found, or why it found nothing, as a live region that a screen reader reads when it changes. */
+/** What the search found, or why it found nothing. */
 @Composable
 private fun SearchResults(places: PlaceSearch, onChoose: (PlaceSearch.Result) -> Unit) {
     val state by places.state.collectAsStateWithLifecycle()
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when (val now = state) {
             PlaceSearch.State.Idle -> Unit
             PlaceSearch.State.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {

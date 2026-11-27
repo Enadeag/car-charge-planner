@@ -1,19 +1,19 @@
 # Android: every screen
 
-Decisions that hold on every screen of the app: the top app bar, buttons, snackbars, dialogs and spoken names.
+Decisions that hold on every screen of the app: the top app bar, buttons, snackbars, dialogs and names.
 
 ### Top app bar and buttons
 
 - Up is Material's `ArrowBack`, mirrored right to left, and the home's Settings is Material's gear, named "Settings" (#315).
 - The top app bar's title wraps without a line limit and the bar grows with it, so nothing is cut off at 200% (#335).
 - Every button is drawn at least 48 dp high, over Material's 40 dp, through the app's own button wrappers (#315).
-- A control that is off while a change runs stays focusable: it is marked unavailable for TalkBack, drawn as off, and ignores a press, because Compose takes the focus from a disabled control (#375).
-- A button's spoken name starts with its visible word, in Dutch too, for Voice Access: "Verwijderen: rit …", "Verwijderen: …", "Toevoegen: afwezigheid" (#375).
+- A control that is off while a change runs stays focusable: it is drawn as off and ignores a press, because Compose takes the focus from a disabled control (#375).
+- A button is named by its words; only a button without words has a name of its own: Up ("Back"), Close, the sign key ("Switch between plus and minus"), Refresh and Settings in the home's bar, and the API key's Show and Hide, whose names add the provider, as two may be on one page (#375, #435).
 
 ### Drop-downs and folding
 
 - A choice from a fixed list is the shared `ChoiceMenu` (`ui/components/ChoiceMenu.kt`), Material's exposed drop-down menu, which shows "Choose…" until a choice is made; a few choices that all fit on one line may stay radio buttons (`ChoiceRow`) (#448).
-- Settings that are seldom changed fold under the shared `Fold` row (`ui/components/Fold.kt`), "▸ More settings", "Coordinates and time zone", "API key and server" or "API key": one button with an arrow, read as "Collapsed" or "Expanded" (#448, #449).
+- Settings that are seldom changed fold under the shared `Fold` row (`ui/components/Fold.kt`), "▸ More settings", "Coordinates and time zone", "API key and server" or "API key": one button with an arrow that points to the end while folded and down while open (#448, #449).
 
 ### Times
 
@@ -25,7 +25,7 @@ Decisions that hold on every screen of the app: the top app bar, buttons, snackb
 
 ### Dialogs
 
-- An entry dialog's title is a heading; Save shows its progress, and nothing closes while it saves. A failed save is read at once with the English details. In the battery and away dialogs Back or a tap beside, with something changed, asks "Discard changes?" and Cancel closes without asking; when a dialog closes the focus goes back to the button that opened it, or to the title when that button is not on the page in view (#338).
+- An entry dialog has its title at the top; Save shows its progress, and nothing closes while it saves. A failed save shows at once with the English details. In the battery and away dialogs Back or a tap beside, with something changed, asks "Discard changes?" and Cancel closes without asking; when a dialog closes the focus goes back to the button that opened it, when that button is on the page in view (#338, #435).
 - The trip entry never closes on a tap beside it; Back is its Close (#376).
 
 ### Saved state

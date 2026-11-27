@@ -5,7 +5,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -121,7 +120,7 @@ class StartScreensTest {
     fun aFileOfANewerVersionOnlyAsksForAnUpdate() {
         compose.setContent { AppTheme { NewerVersionScreen() } }
 
-        compose.onNode(isHeading() and hasText(text(R.string.newer_title))).assertIsDisplayed()
+        compose.onNode(hasText(text(R.string.newer_title))).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.newer_text)).assertIsDisplayed()
         assertThat(compose.onAllNodes(hasClickAction()).fetchSemanticsNodes()).isEmpty()
     }
@@ -131,7 +130,7 @@ class StartScreensTest {
     fun theNewerVersionScreenIsInDutch() {
         compose.setContent { AppTheme { NewerVersionScreen() } }
 
-        compose.onNode(isHeading() and hasText("Werk de app bij")).assertIsDisplayed()
+        compose.onNode(hasText("Werk de app bij")).assertIsDisplayed()
         compose.assertShowsNoneOf(englishOnlyTexts())
     }
 
@@ -148,7 +147,7 @@ class StartScreensTest {
     fun theNewerVersionScreenShowsAllItsTextAtTwiceTheFontSize() {
         compose.setContent { AppTheme { AtFontScaleTwo { NewerVersionScreen() } } }
 
-        compose.onNode(isHeading() and hasText(text(R.string.newer_title))).assertIsDisplayed()
+        compose.onNode(hasText(text(R.string.newer_title))).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.newer_text)).performScrollTo().assertIsDisplayed()
     }
 

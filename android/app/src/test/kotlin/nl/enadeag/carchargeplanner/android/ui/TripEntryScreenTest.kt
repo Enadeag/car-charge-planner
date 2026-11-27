@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -23,7 +22,6 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -143,7 +141,9 @@ class TripEntryScreenTest {
         }
     }
 
-    private val add get() = compose.onNode(hasContentDescription(text(R.string.trip_add_spoken)))
+    // the away list, below the Trips card, has an Add of its own
+    private val add get() = compose.onAllNodes(hasText(text(R.string.trip_add)) and hasClickAction()
+        and !hasAnyAncestor(isDialog()))[0]
 
     private val save get() = compose.onNode(hasText(text(R.string.action_save)) and hasAnyAncestor(isDialog()))
 
@@ -155,11 +155,13 @@ class TripEntryScreenTest {
 
     private val distance get() = compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog()))
 
-    private fun spoken(trip: String, start: String = "07:30", end: String = "18:00") = text(R.string.trip_line_spoken,
-        text(R.string.time_span_spoken, start, end), text(R.string.trip_distance, trip))
+    /** A trip as the Trips card lists it. */
+    private fun line(trip: String, start: String = "07:30", end: String = "18:00") = text(R.string.trip_line,
+        text(R.string.time_span, start, end), text(R.string.trip_distance, trip))
 
-    private fun change(spokenTrip: String) =
-        compose.onNode(hasContentDescription(text(R.string.trip_change_spoken, spokenTrip)))
+    /** A trip's Change, by the trip's line. */
+    private fun change(line: String) =
+        compose.controlFor(line, hasText(text(R.string.trip_change)) and hasClickAction())
 
     private fun opened() {
         compose.waitForIdle()
@@ -234,7 +236,7 @@ class TripEntryScreenTest {
 
         openAdd()
 
-        compose.onNode(isHeading() and hasText(text(R.string.trip_add_title)) and hasAnyAncestor(isDialog()))
+        compose.onNode(hasText(text(R.string.trip_add_title)) and hasAnyAncestor(isDialog()))
             .assertIsDisplayed()
         close.assertIsDisplayed().assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
         save.assertIsDisplayed()
@@ -242,29 +244,13 @@ class TripEntryScreenTest {
         button(R.string.trip_departure_time).assert(hasText(twentyFour(LocalTime.of(8, 0))))
         button(R.string.trip_return_day).assert(hasText("Today"))
         button(R.string.trip_return_time).assert(hasText(twentyFour(LocalTime.of(18, 0))))
-        // named by its label, as every field of the app, with no spoken name over what is typed
+        // named by its label, as every field of the app
         distance.assert(hasText(text(R.string.trip_distance_field)))
-            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
         compose.onNode(hasText(text(R.string.trip_can_charge)) and hasAnyAncestor(isDialog()))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
         compose.onNodeWithText(text(R.string.home_zone, lisbon.id)).assertDoesNotExist()
         val view = entryDialog.window!!.decorView
         assertThat(view.width).isEqualTo(compose.activity.window.decorView.width)
-    }
-
-    @Test
-    fun addAndChangeAreSpokenStartingWithTheWordOnTheButton() {
-        access.trips = listOf(tomorrow)
-        show()
-        add.performScrollTo().assert(hasText(text(R.string.trip_add)))
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
-        assertThat(text(R.string.trip_add_spoken)).startsWith(text(R.string.trip_add))
-
-        compose.onNode(hasContentDescription("Tomorrow") and hasClickAction()).performClick()
-        compose.waitForIdle()
-        val spokenTrip = spoken("121")
-        change(spokenTrip).performScrollTo().assert(hasText(text(R.string.trip_change)))
-        assertThat(text(R.string.trip_change_spoken, spokenTrip)).startsWith(text(R.string.trip_change))
     }
 
     @Test
@@ -281,7 +267,6 @@ class TripEntryScreenTest {
         val line = text(R.string.trip_line, text(R.string.time_span, "08:00", "18:00"),
             text(R.string.trip_distance, "120"))
         compose.onNodeWithText(text(R.string.trip_saved, line)).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(text(R.string.trip_saved, line))).isEqualTo(LiveRegionMode.Polite)
         compose.onNodeWithText(line).assertExists()
         assertThat(access.outlooks).hasSize(2)
         add.assertIsFocused()
@@ -304,12 +289,12 @@ class TripEntryScreenTest {
     fun changeOpensOnTheTripAndItsSaveKeepsTheExactDistanceAndPutsTheFocusOnItsChange() {
         access.trips = listOf(tomorrow)
         show()
-        compose.onNode(hasContentDescription("Tomorrow") and hasClickAction()).performClick()
+        compose.dayTab("Tomorrow").performClick()
         compose.waitForIdle()
-        change(spoken("121")).performScrollTo().performClick()
+        change(line("121")).performScrollTo().performClick()
         opened()
 
-        compose.onNode(isHeading() and hasText(text(R.string.trip_change_title))).assertIsDisplayed()
+        compose.onNode(hasText(text(R.string.trip_change_title))).assertIsDisplayed()
         button(R.string.trip_departure_day).assert(hasText("Tomorrow"))
         button(R.string.trip_departure_time).assert(hasText(twentyFour(LocalTime.of(7, 30))))
         distance.assert(hasText("121"))
@@ -318,16 +303,16 @@ class TripEntryScreenTest {
 
         val changed = trip(today.plusDays(1), "07:30", today.plusDays(1), "19:00", 120.6)
         assertThat(access.trips).containsExactly(changed)
-        change(spoken("121", end = "19:00")).assertIsFocused()
+        change(line("121", end = "19:00")).assertIsFocused()
     }
 
     @Test
     fun aChangeThatMovesTheTripOffThePageInViewPutsTheFocusOnThatPagesAdd() {
         access.trips = listOf(tomorrow)
         show()
-        compose.onNode(hasContentDescription("Tomorrow") and hasClickAction()).performClick()
+        compose.dayTab("Tomorrow").performClick()
         compose.waitForIdle()
-        change(spoken("121")).performScrollTo().performClick()
+        change(line("121")).performScrollTo().performClick()
         opened()
         compose.runOnIdle {
             trips.departureDay(today.plusDays(2))
@@ -338,12 +323,12 @@ class TripEntryScreenTest {
 
         assertThat(access.trips).containsExactly(trip(today.plusDays(2), "07:30", today.plusDays(2), "18:00", 120.6))
         compose.onNode(isDialog()).assertDoesNotExist()
-        change(spoken("121")).assertDoesNotExist()
+        change(line("121")).assertDoesNotExist()
         add.assertIsFocused()
     }
 
     @Test
-    fun aTripSavedBeforeAnyPlanIsNamedAsTheEntryReadItAndTheFocusGoesToTheTitle() {
+    fun aTripSavedBeforeAnyPlanIsNamedAsTheEntryReadIt() {
         TripEntry(handle, NumberText(Locale.ENGLISH), access, scope, clock) { }.apply {
             add(today, lisbon)
             distance("75")
@@ -359,28 +344,27 @@ class TripEntryScreenTest {
             text(R.string.trip_distance, "75"))
         compose.onNodeWithText(text(R.string.trip_saved, line)).assertIsDisplayed()
         add.assertDoesNotExist()
-        compose.onNode(isHeading() and hasText(text(R.string.app_name))).assertIsFocused()
     }
 
     @Test
     fun aChangeClosedWithoutSavingPutsTheFocusBackOnItsChange() {
         access.trips = listOf(tomorrow)
         show()
-        compose.onNode(hasContentDescription("Tomorrow") and hasClickAction()).performClick()
+        compose.dayTab("Tomorrow").performClick()
         compose.waitForIdle()
-        change(spoken("121")).performScrollTo().performClick()
+        change(line("121")).performScrollTo().performClick()
         opened()
 
         click(close)
 
         compose.onNode(isDialog()).assertDoesNotExist()
-        change(spoken("121")).assertIsFocused()
+        change(line("121")).assertIsFocused()
     }
 
     @Test
     fun onATwelveHourClockTheTimesShowAsThePhoneWritesThemAndADayAfterTomorrowByItsShortDate() {
         show(hours = "12")
-        compose.onNode(hasContentDescription("Wednesday") and hasClickAction()).performClick()
+        compose.dayTab("Wednesday").performClick()
         compose.waitForIdle()
         openAdd()
 
@@ -395,7 +379,7 @@ class TripEntryScreenTest {
 
         click(button(R.string.trip_return_time))
         windowFocused(entryDialog, false)
-        compose.onNode(isHeading() and hasText(text(R.string.trip_return_time)) and hasAnyAncestor(isDialog()))
+        compose.onNode(hasText(text(R.string.trip_return_time)) and hasAnyAncestor(isDialog()) and !hasClickAction())
             .assertIsDisplayed()
         compose.onNode(hasContentDescription("10 hours") and hasClickAction())
             .performSemanticsAction(SemanticsActions.OnClick)
@@ -414,7 +398,7 @@ class TripEntryScreenTest {
 
         click(button(R.string.trip_return_day))
         windowFocused(entryDialog, false)
-        compose.onNode(isHeading() and hasText(text(R.string.trip_return_day)) and hasAnyAncestor(isDialog()))
+        compose.onNode(hasText(text(R.string.trip_return_day)) and hasAnyAncestor(isDialog()) and !hasClickAction())
             .assertIsDisplayed()
         compose.onNodeWithText(text(R.string.one_off_keyboard))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
@@ -532,7 +516,7 @@ class TripEntryScreenTest {
         }
         compose.waitForIdle()
 
-        compose.onNode(isHeading() and hasText(text(R.string.trip_add_title))).assertIsDisplayed()
+        compose.onNode(hasText(text(R.string.trip_add_title))).assertIsDisplayed()
         assertThat(trips.draft.value).isNotNull()
     }
 
@@ -547,10 +531,7 @@ class TripEntryScreenTest {
 
         val problem = text(R.string.trip_return_before_departure)
         compose.onNodeWithText(problem).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(problem)).isEqualTo(LiveRegionMode.Polite)
         button(R.string.trip_return_day).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, problem))
-        button(R.string.trip_return_time).assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, problem))
         assertThat(access.tripChanges).isEmpty()
 
         compose.runOnIdle { trips.returnTime(LocalTime.of(9, 30)) }
@@ -567,8 +548,6 @@ class TripEntryScreenTest {
 
         val problem = text(R.string.trip_distance_not_a_number)
         compose.onNodeWithText(problem).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(problem)).isEqualTo(LiveRegionMode.Polite)
-        distance.assertIsFocused().assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, problem))
     }
 
     @Test
@@ -642,7 +621,7 @@ class TripEntryScreenTest {
     }
 
     @Test
-    fun aSaveThatFailedSaysSoAtTheTopAtOnceWithTheEnglishDetailsAndPutsTheFocusOnTheTitle() {
+    fun aSaveThatFailedSaysSoAtTheTopAtOnceWithTheEnglishDetails() {
         access.tripFails = "No space left on device"
         show()
         openAdd()
@@ -651,9 +630,7 @@ class TripEntryScreenTest {
         click(save)
 
         compose.onNodeWithText(text(R.string.trip_not_saved)).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(text(R.string.trip_not_saved))).isEqualTo(LiveRegionMode.Assertive)
         compose.onNodeWithText(text(R.string.details_in_english, "No space left on device")).assertIsDisplayed()
-        compose.onNode(isHeading() and hasText(text(R.string.trip_add_title))).assertIsFocused()
         distance.assert(hasText("120"))
     }
 
@@ -668,7 +645,7 @@ class TripEntryScreenTest {
         click(save)
 
         compose.onNode(hasText(text(R.string.saving)) and hasAnyAncestor(isDialog()))
-            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Disabled))
+            .assertExists()
         close.assertIsNotEnabled()
         button(R.string.trip_departure_day).assertIsNotEnabled()
         gate.complete(Unit)
@@ -687,7 +664,7 @@ class TripEntryScreenTest {
         compose.runOnIdle { trips.choose(tomorrow, TripChoice.CAN_CHARGE, true) }
         compose.waitForIdle()
 
-        save.assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Disabled))
+        save.assertExists()
         click(save)
         assertThat(access.tripChanges).hasSize(1)
 
@@ -733,9 +710,9 @@ class TripEntryScreenTest {
     fun aChangedChangeAsksTooBeforeItIsThrownAway() {
         access.trips = listOf(tomorrow)
         show()
-        compose.onNode(hasContentDescription("Tomorrow") and hasClickAction()).performClick()
+        compose.dayTab("Tomorrow").performClick()
         compose.waitForIdle()
-        change(spoken("121")).performScrollTo().performClick()
+        change(line("121")).performScrollTo().performClick()
         opened()
         click(compose.onNode(hasText(text(R.string.trip_can_charge)) and hasAnyAncestor(isDialog())))
 
@@ -763,7 +740,7 @@ class TripEntryScreenTest {
         show(kept = handle.afterTheSystemEndedTheApp(), planned = false)
         entryDialog = ShadowDialog.getLatestDialog() as ComponentDialog
 
-        compose.onNode(isHeading() and hasText(text(R.string.trip_add_title))).assertIsDisplayed()
+        compose.onNode(hasText(text(R.string.trip_add_title))).assertIsDisplayed()
         button(R.string.trip_departure_day).assert(hasText("Tomorrow"))
         button(R.string.trip_departure_time).assert(hasText(twentyFour(LocalTime.of(10, 15))))
         distance.assert(hasText("75"))
@@ -773,7 +750,7 @@ class TripEntryScreenTest {
     fun theCardsAndTheEntrysControlsAreNamedAndLargeEnoughAtTheNormalFontSize() {
         access.trips = listOf(tomorrow)
         show()
-        compose.onNode(hasContentDescription("Tomorrow") and hasClickAction()).performClick()
+        compose.dayTab("Tomorrow").performClick()
         compose.waitForIdle()
         compose.assertEveryControlIsNamedAndLargeEnough()
 
@@ -807,16 +784,15 @@ class TripEntryScreenTest {
     fun theCardAndTheEntryAreInDutch() {
         access.trips = listOf(tomorrow)
         show()
-        add.assertExists().assert(hasContentDescription("Toevoegen: rit")).assert(hasText("Toevoegen"))
-        compose.onNode(hasContentDescription("Morgen") and hasClickAction()).performClick()
+        add.assertExists().assert(hasText("Toevoegen"))
+        compose.dayTab("Morgen").performClick()
         compose.waitForIdle()
-        compose.onNode(hasContentDescription("Wijzigen: rit ", substring = true)).performScrollTo()
-            .assert(hasText("Wijzigen"))
+        compose.onNode(hasText("Wijzigen") and hasClickAction()).performScrollTo().assertExists()
         compose.assertShowsNoneOf(englishOnlyTexts())
 
         add.performScrollTo().performClick()
         opened()
-        compose.onNode(isHeading() and hasText("Rit toevoegen")).assertIsDisplayed()
+        compose.onNode(hasText("Rit toevoegen")).assertIsDisplayed()
         button(R.string.trip_departure_day).assert(hasText("Vertrekdag", substring = true))
         compose.assertShowsNoneOf(englishOnlyTexts())
     }

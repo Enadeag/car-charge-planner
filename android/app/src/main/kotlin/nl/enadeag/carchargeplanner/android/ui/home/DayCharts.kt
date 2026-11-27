@@ -40,14 +40,10 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.hideFromAccessibility
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -69,28 +65,26 @@ import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 internal val AxisLabels = SemanticsPropertyKey<List<String>>("AxisLabels")
 private var SemanticsPropertyReceiver.axisLabels by AxisLabels
 
+/** The battery bar's drawing, for the tests, which measure its words against it. */
+internal const val BATTERY_BAR = "battery bar"
+
 /** The least height of the chart, so that a narrow column still shows its curve. */
 private val MIN_CHART_HEIGHT = 160.dp
 
 /**
  * A day's solar chart, as the desktop's: the expected solar power as an amber area, the baseload as a dashed line,
  * the charge windows as green bands with a mark on the axis, and "now" on today; a legend in words above it and the
- * same facts in a sentence under it. It takes the column's width, half as high but never lower than a minimum. A
- * screen reader reads the chart as one part, that sentence; the drawing, the legend and the line under it are not
- * read apart. The colours are fixed, on a ground of their own.
+ * same facts in a sentence under it, so the windows and now are told in words as well as in colour. It takes the
+ * column's width, half as high but never lower than a minimum. The colours are fixed, on a ground of their own.
  */
 @Composable
 internal fun SolarCard(day: DashboardDay, words: DashboardWords) {
     val colours = LocalSourceColours.current.chart
-    val spoken = words.chart(day)
     ChartCard(colours) {
-        Text(stringResource(R.string.chart_heading), style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() })
+        Text(stringResource(R.string.chart_heading), style = MaterialTheme.typography.titleMedium)
         Legend(colours)
-        SolarCanvas(day, words, colours, spoken)
-        Text(spoken, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.semantics {
-            hideFromAccessibility()
-        })
+        SolarCanvas(day, words, colours)
+        Text(words.chart(day), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -99,9 +93,8 @@ internal class BatteryAction(val open: () -> Unit, val focus: FocusRequester)
 
 /**
  * A day's battery, as the desktop's bar: the level at the start, the level after charging outlined beyond it, and
- * marks at the minimum and target charge levels with their words under them; the levels in words above it. A screen
- * reader reads the bar as one sentence, with the levels; their words are not read apart. Today's card ends with the
- * button that opens the entry of the level the car shows.
+ * marks at the minimum and target charge levels with their words under them; the levels in words above it. Today's
+ * card ends with the button that opens the entry of the level the car shows.
  *
  * @param update the button that opens the entry of the level; null on a day whose level cannot be entered, any but
  *     today
@@ -111,15 +104,13 @@ internal fun BatteryCard(day: DashboardDay, levels: ChargeLevels, words: Dashboa
     update: BatteryAction? = null) {
     val colours = LocalSourceColours.current.chart
     ChartCard(colours) {
-        Text(stringResource(R.string.battery_heading), style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() })
-        Text(words.batteryLevels(day.battery()), style = MaterialTheme.typography.titleMedium, color = colours.carText,
-            modifier = Modifier.semantics { hideFromAccessibility() })
+        Text(stringResource(R.string.battery_heading), style = MaterialTheme.typography.titleMedium)
+        Text(words.batteryLevels(day.battery()), style = MaterialTheme.typography.titleMedium, color = colours.carText)
         BatteryBar(day, levels, words, colours)
         if (update != null) {
             // filled, so its words stand on Material's own button colours, whatever the card's fixed ground; it may
-            // take the focus also in touch mode, where a button takes none, so the focus comes back to it, and a
-            // screen reader with it, when the entry closes
+            // take the focus also in touch mode, where a button takes none, so the focus comes back to it when the
+            // entry closes
             AppButton(onClick = update.open,
                 modifier = Modifier.focusProperties { canFocus = true }.focusRequester(update.focus)) {
                 Text(stringResource(R.string.battery_update))
@@ -153,21 +144,20 @@ private fun Legend(colours: SourceColours.Chart) {
 private fun LegendEntry(text: String, colours: SourceColours.Chart, sign: DrawScope.() -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Canvas(Modifier.size(14.dp), onDraw = sign)
-        Text(text, style = MaterialTheme.typography.labelMedium, color = colours.muted,
-            modifier = Modifier.semantics { hideFromAccessibility() })
+        Text(text, style = MaterialTheme.typography.labelMedium, color = colours.muted)
     }
 }
 
 /** The drawing of the chart, measured to the column: the labels of the axis are those that fit side by side. */
 @Composable
-private fun SolarCanvas(day: DashboardDay, words: DashboardWords, colours: SourceColours.Chart, spoken: String) {
+private fun SolarCanvas(day: DashboardDay, words: DashboardWords, colours: SourceColours.Chart) {
     LeftToRight {
-        SolarPlot(day, words, colours, spoken)
+        SolarPlot(day, words, colours)
     }
 }
 
 @Composable
-private fun SolarPlot(day: DashboardDay, words: DashboardWords, colours: SourceColours.Chart, spoken: String) {
+private fun SolarPlot(day: DashboardDay, words: DashboardWords, colours: SourceColours.Chart) {
     val chart = day.chart()
     val measurer = rememberTextMeasurer()
     val axis = MaterialTheme.typography.labelSmall.copy(color = colours.muted)
@@ -191,8 +181,6 @@ private fun SolarPlot(day: DashboardDay, words: DashboardWords, colours: SourceC
             }
         }
         Spacer(Modifier.fillMaxWidth().height(height).semantics {
-            contentDescription = spoken
-            role = Role.Image
             axisLabels = drawing.ticks.map { words.tick(it.tick) }
         }.drawn(drawing.shapes, colours) {
             drawing.nowAt?.let { drawText(now, topLeft = it.offset) }
@@ -218,7 +206,6 @@ private fun BatteryBarDrawing(day: DashboardDay, levels: ChargeLevels, words: Da
     val style = MaterialTheme.typography.labelSmall.copy(color = colours.muted)
     val minimumText = words.minimum(levels)
     val targetText = words.target(levels)
-    val spoken = words.battery(day, levels)
     val minimum = remember(measurer, style, minimumText) { measurer.measure(minimumText, style) }
     val target = remember(measurer, style, targetText) { measurer.measure(targetText, style) }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -231,10 +218,7 @@ private fun BatteryBarDrawing(day: DashboardDay, levels: ChargeLevels, words: Da
         }
         val height = with(density) { layout.height.toDp() }
         Box(Modifier.fillMaxWidth().height(height)) {
-            Spacer(Modifier.fillMaxWidth().height(height).semantics {
-                contentDescription = spoken
-                role = Role.Image
-            }.drawn(layout.shapes, colours))
+            Spacer(Modifier.fillMaxWidth().height(height).testTag(BATTERY_BAR).drawn(layout.shapes, colours))
             MarkLabel(minimumText, layout.minimum, layout.labelTop(layout.minimum), style.color)
             MarkLabel(targetText, layout.target, layout.labelTop(layout.target), style.color)
         }
@@ -250,12 +234,11 @@ private fun LeftToRight(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr, content = content)
 }
 
-/** A mark's words, shown as text so that they are the same facts as the bar's sentence. */
+/** A mark's words, shown as text over the bar's drawing. */
 @Composable
 private fun MarkLabel(text: String, mark: BatteryBarLayout.Mark, top: Float, colour: Color) {
     Text(text, style = MaterialTheme.typography.labelSmall, color = colour, maxLines = 1, softWrap = false,
-        modifier = Modifier.offset { IntOffset(mark.labelLeft.roundToInt(), top.roundToInt()) }
-            .semantics { hideFromAccessibility() })
+        modifier = Modifier.offset { IntOffset(mark.labelLeft.roundToInt(), top.roundToInt()) })
 }
 
 /**

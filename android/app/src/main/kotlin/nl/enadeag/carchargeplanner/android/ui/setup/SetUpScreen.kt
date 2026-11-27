@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.android.ui.setup
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,19 +15,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.enadeag.carchargeplanner.android.R
@@ -60,8 +52,8 @@ internal class Edits {
 
 /**
  * Set-up's screen: the step's heading with "step 3 of 7", the step itself, and Back and Next, or Finish on the last
- * step. Back on the welcome leaves at once; on a later step it goes one step back. A new step moves the focus to its
- * heading; a Next or Finish that shows problems moves it to the first field that has one.
+ * step. Back on the welcome leaves at once; on a later step it goes one step back. A Next or Finish that shows
+ * problems moves the focus to the first field that has one.
  */
 @Composable
 internal fun SetUpScreen(session: SetUpSession) {
@@ -69,9 +61,7 @@ internal fun SetUpScreen(session: SetUpSession) {
     val refused by session.refused.collectAsStateWithLifecycle()
     val problemsShown by session.problemsShown.collectAsStateWithLifecycle()
     val edits = remember { Edits() }
-    val heading = remember { FocusRequester() }
     val problems = remember(step) { ProblemFocus() }
-    var seenStep by rememberSaveable { mutableStateOf<SetUpStep?>(null) }
     var seenProblems by rememberSaveable { mutableIntStateOf(problemsShown) }
 
     BackHandler(enabled = step != SetUpStep.WELCOME) { session.back() }
@@ -80,21 +70,14 @@ internal fun SetUpScreen(session: SetUpSession) {
         withFrameNanos { }
         if (problemsShown != seenProblems) {
             seenProblems = problemsShown
-            seenStep = step
-            if (!problems.focusFirst()) {
-                heading.requestFocus()
-            }
-        } else if (seenStep != step) {
-            seenStep = step
-            heading.requestFocus()
+            problems.focusFirst()
         }
     }
 
     Page {
-        StepHeading(step, heading)
+        StepHeading(step)
         if (refused) {
-            Text(stringResource(R.string.setup_refused), color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            Text(stringResource(R.string.setup_refused), color = MaterialTheme.colorScheme.error)
         }
         when (step) {
             SetUpStep.WELCOME -> WelcomeStep(session.providerName())
@@ -109,10 +92,10 @@ internal fun SetUpScreen(session: SetUpSession) {
     }
 }
 
-/** The step's heading with its place among the steps, read as one heading. */
+/** The step's heading with its place among the steps. */
 @Composable
-private fun StepHeading(step: SetUpStep, focus: FocusRequester) {
-    Column(Modifier.focusRequester(focus).focusable().semantics(mergeDescendants = true) { heading() }) {
+private fun StepHeading(step: SetUpStep) {
+    Column {
         Text(stringResource(R.string.setup_step_of, step.number(), SetUpStep.entries.size),
             style = MaterialTheme.typography.labelLarge)
         Text(stringResource(step.title()), style = MaterialTheme.typography.headlineSmall)

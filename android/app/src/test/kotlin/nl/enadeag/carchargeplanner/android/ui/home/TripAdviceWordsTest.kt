@@ -25,7 +25,6 @@ import nl.enadeag.carchargeplanner.engine.config.EngineConfig
 import nl.enadeag.carchargeplanner.engine.config.Percent
 import nl.enadeag.carchargeplanner.engine.config.ProviderId
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels
-import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName
@@ -129,55 +128,11 @@ class TripAdviceWordsTest {
             "uit het net. Start het laden vanavond om 21:00. Stel 16 A in (3,7 kW), en een laadlimiet van 85% in de " +
             "auto of de laadpaal.")
         assertThat(today.level).isEqualTo("Uitgaande van een accuniveau van 45%.")
-        assertThat(today.spoken).isEqualTo(
-            "Advies voor de rit: Rit morgen om 08:15, 150 km heen en terug. Laad tot 85%: op zonnestroom vandaag " +
-                "12:00 tot 15:00, daarna uit het net. Start het laden vanavond om 21:00. Stel 16 A in (3,7 kW), " +
-                "en een laadlimiet van 85% in de auto of de laadpaal. Uitgaande van een accuniveau van 45%.",
-        )
-    }
-
-    @Test
-    fun aScreenReaderReadsTheSolarWindowsWithToNotTheDash() {
-        val later = Window(at(TODAY, 16, 0), at(TODAY, 17, 30), 6, 1.4, 2.0, 0.0)
-        val solar = model(advice(93.6, listOf(SOLAR, later), 94.0, null, 94.0, 0.0))
-        val solarThenGrid = model(advice(84.2, listOf(SOLAR), 60.0, grid(at(TODAY, 21, 0), Start.PLANNED), 84.2,
-            0.0))
-
-        assertThat(onToday(solar).spoken).isEqualTo("Trip advice: Trip tomorrow at 08:15, 150 km there and back. " +
-            "Charge to 94% on solar power: today 12:00 to 15:00, 16:00 to 17:30. Assuming a battery level of 45%.")
-        assertThat(onToday(solarThenGrid).spoken).isEqualTo("Trip advice: Trip tomorrow at 08:15, 150 km there and " +
-            "back. Charge to 85%: on solar power today 12:00 to 15:00, then from the grid. Start tonight at 21:00. " +
-            "Set 16 A (3.7 kW), and a charge limit of 85% in the car or the charger. Assuming a battery level of 45%.")
     }
 
     @Test
     @Config(qualifiers = "nl")
-    fun aScreenReaderReadsTheSolarWindowsWithTotInDutch() {
-        val dutch = Locale.forLanguageTag("nl")
-        val solar = model(advice(93.6, listOf(SOLAR), 94.0, null, 94.0, 0.0))
-
-        assertThat(onToday(solar, dutch).spoken).isEqualTo("Advies voor de rit: Rit morgen om 08:15, 150 km heen en " +
-            "terug. Laad tot 94% op zonnestroom: vandaag 12:00 tot 15:00. Uitgaande van een accuniveau van 45%.")
-    }
-
-    @Test
-    fun onA12HourClockAScreenReaderReadsTheSolarWindowsWithTo() {
-        val solar = model(advice(93.6, listOf(SOLAR), 94.0, null, 94.0, 0.0))
-        val solarThenGrid = model(advice(84.2, listOf(SOLAR), 60.0, grid(at(TODAY, 21, 0), Start.PLANNED), 84.2,
-            0.0))
-        val words = words(twentyFour = false)
-        val noon = words.time(SOLAR.start())
-        val three = words.time(SOLAR.end())
-
-        assertThat(onToday(solar, twentyFour = false).spoken)
-            .contains("Charge to 94% on solar power: today $noon to $three.").doesNotContain("–")
-        assertThat(onToday(solarThenGrid, twentyFour = false).spoken)
-            .contains("on solar power today $noon to $three, then from the grid.").doesNotContain("–")
-    }
-
-    @Test
-    @Config(qualifiers = "nl")
-    fun onA12HourClockInDutchTheTimesFollowItAndAScreenReaderSaysTot() {
+    fun onA12HourClockInDutchTheTimesFollowIt() {
         val dutch = Locale.forLanguageTag("nl")
         val model = model(advice(84.2, listOf(SOLAR), 60.0, grid(at(TODAY, 21, 0), Start.PLANNED), 84.2, 0.0))
         val words = words(dutch, twentyFour = false)
@@ -190,8 +145,6 @@ class TripAdviceWordsTest {
         assertThat(nine).doesNotContain("21")
         assertThat(shown.plan).startsWith("Laad tot 85%: op zonnestroom vandaag ${span(noon, three)}, daarna uit " +
             "het net. Start het laden vanavond om $nine.")
-        assertThat(shown.spoken).contains("op zonnestroom vandaag $noon tot $three, daarna uit het net.")
-            .doesNotContain("–")
     }
 
     @Test
@@ -330,14 +283,6 @@ class TripAdviceWordsTest {
     }
 
     @Test
-    fun aScreenReaderReadsTheWholeAdvice() {
-        val model = model(advice(70.0, listOf(), 75.0, null, 75.0, 0.0))
-
-        assertThat(onToday(model).spoken).isEqualTo("Trip advice: Trip tomorrow at 08:15, 150 km there and back. " +
-            "The plan charges enough for it: the battery is at 75% when you leave. Assuming a battery level of 45%.")
-    }
-
-    @Test
     fun tonightStartsAt18InTheHomesZoneWhateverThePhonesZone() {
         TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Auckland"))
 
@@ -407,11 +352,7 @@ class TripAdviceWordsTest {
         val notCharged = BatteryLevels(Percent(50.0), Percent(50.4), Optional.of(Percent(30.0)))
 
         assertThat(words.figure(SourceFigure.Battery(charged))).isEqualTo("Battery 50 → 74%, 70% after the trip")
-        assertThat(words.spokenFigure(SourceFigure.Battery(charged)))
-            .isEqualTo("Battery from 50% to 74%, 70% after the trip")
         assertThat(words.figure(SourceFigure.Battery(notCharged))).isEqualTo("Battery 50 → 30% after the trip")
-        assertThat(words.spokenFigure(SourceFigure.Battery(notCharged)))
-            .isEqualTo("Battery 50%, 30% after the trip")
         assertThat(words.batteryLevels(charged)).isEqualTo("50 → 74%, 70% after the trip")
         assertThat(words.batteryLevels(notCharged)).isEqualTo("50 → 30% after the trip")
         assertThat(words.batteryLevels(BatteryLevels(Percent(50.0), Percent(74.0), Optional.empty()))).isEqualTo("50 → 74%")
@@ -425,29 +366,8 @@ class TripAdviceWordsTest {
         val notCharged = BatteryLevels(Percent(50.0), Percent(50.0), Optional.of(Percent(30.0)))
 
         assertThat(words.figure(SourceFigure.Battery(charged))).isEqualTo("Accu 50 → 74%, 70% na de rit")
-        assertThat(words.spokenFigure(SourceFigure.Battery(charged))).isEqualTo("Accu van 50% naar 74%, 70% na de rit")
         assertThat(words.figure(SourceFigure.Battery(notCharged))).isEqualTo("Accu 50 → 30% na de rit")
-        assertThat(words.spokenFigure(SourceFigure.Battery(notCharged))).isEqualTo("Accu 50%, 30% na de rit")
         assertThat(words.batteryLevels(charged)).isEqualTo("50 → 74%, 70% na de rit")
-        val tomorrow = day(DayName.Tomorrow(TOMORROW), charged)
-        assertThat(words.battery(tomorrow, ChargeLevels(Percent(20.0), Percent(80.0)))).isEqualTo("Accu van de auto " +
-            "50% aan het begin van morgen, na het laden 74%; minimum 20%, doel 80%. Na de rit staat de accu aan het " +
-            "eind van de dag op 70%.")
-    }
-
-    @Test
-    fun theBatteryBarsSentenceSaysTheLevelAfterTheTripLastOnlyOnTheDayATripLeaves() {
-        val words = words()
-        val levels = ChargeLevels(Percent(20.0), Percent(80.0))
-        val today = day(DayName.Today(TODAY), BatteryLevels(Percent(50.0), Percent(74.0), Optional.of(Percent(70.0))),
-            assumed = Percent(50.0))
-        val plain = day(DayName.Tomorrow(TOMORROW), BatteryLevels(Percent(50.0), Percent(74.0), Optional.empty()))
-
-        assertThat(words.battery(today, levels)).isEqualTo("Car battery 50% now, 74% after charging; minimum 20%, " +
-            "target 80%. The battery level is assumed. Use Update battery level under it to enter the level the car " +
-            "shows. After the trip the battery is at 70% at the end of the day.")
-        assertThat(words.battery(plain, levels)).isEqualTo("Car battery 50% at the start of tomorrow, 74% after " +
-            "charging; minimum 20%, target 80%.")
     }
 
     @Test
@@ -510,7 +430,6 @@ class TripAdviceWordsTest {
         assertThat(words.heading(day)).isEqualTo("No charge window")
         assertThat(words.note(day)).isEmpty()
         assertThat(figures.map { words.figure(it) }).containsExactly("Battery 80 → 94%")
-        assertThat(figures.map { words.spokenFigure(it) }).containsExactly("Battery from 80% to 94%")
     }
 
     @Test

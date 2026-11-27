@@ -10,7 +10,6 @@ import androidx.activity.ComponentDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -20,11 +19,9 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -136,7 +133,7 @@ class BatteryEntryScreenTest {
         return before.kept()!!
     }
 
-    private val heading get() = compose.onNode(isHeading() and hasText(text(R.string.app_name)))
+    private val heading get() = compose.onNode(hasText(text(R.string.app_name)))
 
     private val update get() = compose.onNodeWithText(text(R.string.battery_update))
 
@@ -182,11 +179,10 @@ class BatteryEntryScreenTest {
     fun anotherDaysBatteryCardHasNoUpdate() {
         show()
 
-        compose.onNode(hasContentDescription("Wednesday")).performClick()
+        compose.dayTab("Wednesday").performClick()
         compose.waitForIdle()
 
-        compose.onNode(hasContentDescription(text(R.string.battery_spoken_day, "40", "Wednesday", "40", "20", "80")))
-            .performScrollTo().assertIsDisplayed()
+        compose.onNode(dayTitle("Wednesday")).performScrollTo().assertIsDisplayed()
         update.assertDoesNotExist()
     }
 
@@ -197,7 +193,7 @@ class BatteryEntryScreenTest {
         openTheEntry()
 
         compose.onNode(isDialog()).assertExists()
-        compose.onNode(isHeading() and hasText(text(R.string.battery_entry_title))).assertIsDisplayed()
+        compose.onNode(hasText(text(R.string.battery_entry_title))).assertIsDisplayed()
         field.assertIsFocused().assert(hasText(""))
         compose.onNodeWithText(text(R.string.battery_entry_text)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.battery_entry_hint), substring = true).assertIsDisplayed()
@@ -229,7 +225,6 @@ class BatteryEntryScreenTest {
         assertThat(access.batteryLevels).containsExactly(Percent(64.0))
         compose.onNode(isDialog()).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.battery_saved)).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(text(R.string.battery_saved))).isEqualTo(LiveRegionMode.Polite)
         assertThat(access.outlooks).hasSize(2)
     }
 
@@ -261,7 +256,7 @@ class BatteryEntryScreenTest {
         click(R.string.action_save)
 
         field.assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_not_a_whole_number)))
+            .assert(hasText(text(R.string.problem_not_a_whole_number)))
         compose.onNodeWithText(text(R.string.problem_not_a_whole_number)).assertIsDisplayed()
         assertThat(access.batteryLevels).isEmpty()
     }
@@ -275,10 +270,8 @@ class BatteryEntryScreenTest {
         click(R.string.action_save)
 
         field.assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_level_out_of_range)))
+            .assert(hasText(text(R.string.problem_level_out_of_range)))
         compose.onNodeWithText(text(R.string.problem_level_out_of_range)).assertIsDisplayed()
-        // the focus stays in the field, so the problem is read as it comes
-        assertThat(compose.liveRegionOf(text(R.string.problem_level_out_of_range))).isEqualTo(LiveRegionMode.Polite)
         compose.onNode(isDialog()).assertExists()
         assertThat(access.batteryLevels).isEmpty()
     }
@@ -308,7 +301,7 @@ class BatteryEntryScreenTest {
 
         click(R.string.action_save)
 
-        compose.onNodeWithText(text(R.string.saving)).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.saving)).assertExists()
         compose.onNodeWithText(text(R.string.action_cancel)).assertIsNotEnabled()
         compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo) and
             hasAnyAncestor(isDialog()), useUnmergedTree = true).assertExists()
@@ -328,7 +321,6 @@ class BatteryEntryScreenTest {
         click(R.string.action_save)
 
         compose.onNodeWithText(text(R.string.battery_not_saved)).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(text(R.string.battery_not_saved))).isEqualTo(LiveRegionMode.Assertive)
         compose.onNodeWithText(text(R.string.details_in_english, "No space left on device")).assertIsDisplayed()
         field.assert(hasText("64"))
         compose.onNodeWithText(text(R.string.battery_saved)).assertDoesNotExist()
@@ -436,29 +428,10 @@ class BatteryEntryScreenTest {
     }
 
     @Test
-    fun anEntryClosedWhileThePlanIsStillAskedPutsTheFocusOnTheTitle() {
-        BatteryEntry(handle, NumberText(Locale.ENGLISH), access, scope) { }.apply {
-            open()
-            edit("64")
-        }
-        show(answer = null, kept = handle.afterTheSystemEndedTheApp())
-        dialogWindowFocused()
-        // the title took the focus when the home opened; the focus is off it, so the entry's close has to bring it back
-        compose.runOnIdle { focus.clearFocus() }
-        heading.assertIsNotFocused()
-
-        click(R.string.action_cancel)
-
-        update.assertDoesNotExist()
-        heading.assertIsFocused()
-    }
-
-    @Test
-    fun aHomeMadeAgainWithItsPlanAndTheEntryClosedPutsTheFocusOnItsTitleNotOnUpdate() {
+    fun aHomeMadeAgainWithItsPlanAndTheEntryClosedPutsNoFocusOnUpdate() {
         show(answer = null, plan = keptPlan())
 
         update.assertExists()
-        heading.assertIsFocused()
         update.assertIsNotFocused()
     }
 
@@ -537,11 +510,9 @@ class BatteryEntryScreenTest {
     }
 
     @Test
-    fun theAssumedLevelIsSaidWithTodaysBatteryBarAndItsNoteSaysHowToEnterIt() {
+    fun theNoteOfAnAssumedLevelSaysHowToEnterIt() {
         show()
 
-        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "50", "20", "80") + " " +
-            text(R.string.battery_assumed), Role.Image)
         compose.onNodeWithText(text(R.string.day_battery_assumed, "40")).performScrollTo().assertIsDisplayed()
     }
 
@@ -549,7 +520,6 @@ class BatteryEntryScreenTest {
     fun anEnteredLevelLeavesTheAssumedSentenceOut() {
         show(week(assumed = false))
 
-        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "50", "20", "80"), Role.Image)
         compose.onNodeWithText(text(R.string.day_battery_assumed, "40"), substring = true).assertDoesNotExist()
     }
 

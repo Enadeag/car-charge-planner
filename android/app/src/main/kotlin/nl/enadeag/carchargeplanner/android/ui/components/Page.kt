@@ -28,8 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 
@@ -55,20 +53,15 @@ internal fun Page(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-/**
- * A page's heading, which takes the focus when asked, so a screen reader starts there on a new step.
- *
- * @param focus moves the focus to it; null for a heading that never takes it
- */
+/** A page's heading. */
 @Composable
-internal fun Heading(text: String, focus: FocusRequester? = null) {
-    val focused = if (focus == null) Modifier else Modifier.focusRequester(focus).focusable()
-    Text(text, style = MaterialTheme.typography.headlineSmall, modifier = focused.semantics { heading() })
+internal fun Heading(text: String) {
+    Text(text, style = MaterialTheme.typography.headlineSmall)
 }
 
 @Composable
 internal fun SectionHeading(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+    Text(text, style = MaterialTheme.typography.titleMedium)
 }
 
 /**
@@ -115,8 +108,7 @@ internal fun NoneLine(text: String, focus: RowFocus<*>) {
 /** A row's heading, such as "Array 2, east roof", which takes the focus when [RowFocus] names its row. */
 @Composable
 internal fun <K> RowHeading(text: String, style: TextStyle, focus: RowFocus<K>, row: K) {
-    Text(text, style = style, modifier = Modifier.focusRequester(rowFocus(focus, row)).focusable()
-        .semantics { heading() })
+    Text(text, style = style, modifier = Modifier.focusRequester(rowFocus(focus, row)).focusable())
 }
 
 /**

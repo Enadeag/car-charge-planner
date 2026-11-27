@@ -6,7 +6,6 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
@@ -19,10 +18,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
@@ -59,7 +58,7 @@ internal fun englishOnlyTexts(): Set<String> {
 }
 
 /**
- * Every text the screen shows or gives a screen reader, from every node.
+ * Every text the screen shows or names a control with, from every node.
  *
  * @return the texts, labels, descriptions and states
  */
@@ -73,8 +72,8 @@ internal fun SemanticsNodeInteractionsProvider.shownTexts(): List<String> =
         }
 
 /**
- * Checks what a screen reader needs of every control on the screen: each one that can be clicked has a name and a
- * role, each field has a label, and each is drawn at least 48 dp in both directions, not only touched there. A
+ * Checks every control on the screen: each one that can be clicked has a name, its words or an icon's description,
+ * and a role, each field has a label, and each is drawn at least 48 dp in both directions, not only touched there. A
  * control on a page that scrolls is scrolled to first, so one that cannot be reached fails.
  */
 internal fun SemanticsNodeInteractionsProvider.assertEveryControlIsNamedAndLargeEnough() {
@@ -144,40 +143,6 @@ internal fun SemanticsNodeInteractionsProvider.assertScrollsToShow(last: Semanti
     assertThat(shown.bottom).`as`("the bottom of the last part").isLessThanOrEqualTo(page.bottom + 0.5f)
 }
 
-/**
- * Checks that a drawing, such as a chart, is one part for a screen reader: a single node that says this sentence,
- * with this role and with nothing inside it that is read apart. Inside means the node's own children in the
- * unmerged tree: words placed over the drawing beside it, such as the battery bar's marks, are not inside it, so
- * [assertShownButNotReadApart] checks those.
- *
- * @param sentence what the node says, whole
- * @param role the node's role
- * @return the node
- */
-internal fun SemanticsNodeInteractionsProvider.assertReadAsOne(sentence: String, role: Role): SemanticsNodeInteraction {
-    val nodes = onAllNodes(hasContentDescription(sentence), useUnmergedTree = true).fetchSemanticsNodes()
-    assertThat(nodes).`as`("the parts that say %s", sentence).hasSize(1)
-    assertThat(nodes.single().config.getOrNull(SemanticsProperties.Role)).`as`("the role of %s", sentence)
-        .isEqualTo(role)
-    assertThat(nodes.single().children).`as`("what is inside %s", sentence).isEmpty()
-    return onNode(hasContentDescription(sentence), useUnmergedTree = true)
-}
-
-/**
- * Checks that a text is shown on the page that scrolls, once scrolled to, but is not read apart by a screen reader,
- * as a part beside it says the same; nor does any other part show the same text to be read.
- *
- * @param shown the text, whole
- */
-internal fun SemanticsNodeInteractionsProvider.assertShownButNotReadApart(shown: String) {
-    val read = onAllNodes(hasText(shown) and !NOT_READ_APART, useUnmergedTree = true).fetchSemanticsNodes()
-    assertThat(read).`as`("the parts that show %s to be read", shown).isEmpty()
-    onNode(hasText(shown) and NOT_READ_APART, useUnmergedTree = true).performScrollTo().assertIsDisplayed()
-}
-
-/** A part a screen reader skips, as a part beside it says the same. */
-internal val NOT_READ_APART = SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility)
-
 private val SCROLLS_UP_AND_DOWN = SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
 
 /**
@@ -189,21 +154,6 @@ internal fun SemanticsNodeInteractionsProvider.assertShowsNoneOf(texts: Set<Stri
     val shown = shownTexts()
     assertThat(shown).isNotEmpty()
     assertThat(shown.filter { it in texts }).isEmpty()
-}
-
-/**
- * The live region a text is read in, its own or that of the nearest part around it.
- *
- * @param shown the text, whole
- * @return how a screen reader reads it when it changes; null when it is in no live region
- */
-internal fun SemanticsNodeInteractionsProvider.liveRegionOf(shown: String): LiveRegionMode? {
-    var node: SemanticsNode? = onNode(hasText(shown), useUnmergedTree = true).fetchSemanticsNode()
-    while (node != null) {
-        node.config.getOrNull(SemanticsProperties.LiveRegion)?.let { return it }
-        node = node.parent
-    }
-    return null
 }
 
 /**
@@ -227,6 +177,48 @@ private val ON_A_SCROLLING_PAGE = hasAnyAncestor(hasScrollAction())
 private fun nameOf(node: SemanticsNode): String =
     (node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty() +
         node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }).joinToString(" ")
+
+/** The place of each day's tab, from a plan made on Monday 1 June 2026, as the tests' plans are. */
+private val TAB_PLACES = mapOf("Today" to 0, "Vandaag" to 0, "Tomorrow" to 1, "Morgen" to 1, "Wednesday" to 2,
+    "Thursday" to 3)
+
+/**
+ * The dashboard's tab of a day, which shows its short name, such as "Tue".
+ *
+ * @param day the day's whole name, such as "Tomorrow" or "Wednesday"
+ */
+internal fun SemanticsNodeInteractionsProvider.dayTab(day: String): SemanticsNodeInteraction =
+    onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))[TAB_PLACES.getValue(day)]
+
+/**
+ * A row's control, such as a trip's Remove or one of its choices: of those that match, the first beside or below the
+ * row's line, outside any dialog. Matches nothing when the line is not shown.
+ *
+ * @param line the row's line, whole, such as a trip as the Trips card lists it
+ * @param control which controls to look among
+ */
+internal fun SemanticsNodeInteractionsProvider.controlFor(line: String, control: SemanticsMatcher):
+    SemanticsNodeInteraction {
+    val shown = onAllNodes(hasText(line) and !hasAnyAncestor(isDialog())).fetchSemanticsNodes().singleOrNull()
+    // where each is laid out on the page, also out of view, where its bounds in the root are clipped to nothing
+    val middle = { node: SemanticsNode -> node.positionInRoot.y + node.size.height / 2f }
+    val id = shown?.let { row ->
+        onAllNodes(control and !hasAnyAncestor(isDialog())).fetchSemanticsNodes()
+            .filter { middle(it) >= row.positionInRoot.y }.minByOrNull(middle)?.id
+    }
+    return onNode(SemanticsMatcher("$control of $line") { it.id == id })
+}
+
+/** Not a tab of the dashboard's days, nor inside one. */
+private val NOT_A_TAB = !SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab) and
+    !hasAnyAncestor(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+
+/**
+ * The title of a day's card, apart from its tab, which may show the same word.
+ *
+ * @param day the day's whole name, such as "Today"
+ */
+internal fun dayTitle(day: String): SemanticsMatcher = hasText(day) and NOT_A_TAB
 
 /**
  * The content at twice the normal font size, as Android's largest font setting gives it.

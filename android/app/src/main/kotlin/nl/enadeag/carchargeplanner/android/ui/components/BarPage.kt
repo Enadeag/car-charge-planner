@@ -1,6 +1,5 @@
 package nl.enadeag.carchargeplanner.android.ui.components
 
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,15 +37,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 
@@ -61,8 +55,7 @@ internal val UNPADDED_PAGE_PADDING = 8.dp
  * that stays in view, such as that a save failed, and the column that scrolls, which opens with what the status is
  * about.
  *
- * @param title the page's title, which a screen reader reads as its heading
- * @param titleFocus moves the focus to the title, as on a new page; null for one that never takes it
+ * @param title the page's title
  * @param onUp what Up does, the same as Back; null for a screen without Up
  * @param padded false for a list whose rows have their own padding, such as Settings' pages
  * @param snackbars where a snackbar shows, such as "Saved."; null for a screen without
@@ -71,11 +64,10 @@ internal val UNPADDED_PAGE_PADDING = 8.dp
  * @param lead what opens the column, without its spacing, such as why a save failed; nothing by default
  * @param scrollToTop scrolls the column to its top whenever it changes to something other than null, so what [lead]
  *     says is in view; null for none
- * @param onClose for a full-screen dialog: what its Close does, the bar's × in Up's place, read after the title;
- *     null for a screen
+ * @param onClose for a full-screen dialog: what its Close does, the bar's × in Up's place; null for a screen
  */
 @Composable
-internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
+internal fun BarPage(title: String, onUp: (() -> Unit)?,
     actions: @Composable RowScope.() -> Unit = {}, padded: Boolean = true, snackbars: SnackbarHostState? = null,
     status: @Composable ColumnScope.() -> Unit = {}, lead: @Composable ColumnScope.() -> Unit = {},
     scrollToTop: Any? = null, onClose: (() -> Unit)? = null, closeEnabled: Boolean = true,
@@ -86,7 +78,7 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
             scroll.animateScrollTo(0)
         }
     }
-    BarScaffold(title, titleFocus, onUp, actions, snackbars, onClose, closeEnabled) {
+    BarScaffold(title, onUp, actions, snackbars, onClose, closeEnabled) {
         Column(Modifier.padding(horizontal = 16.dp), content = status)
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)
@@ -105,16 +97,15 @@ internal fun BarPage(title: String, titleFocus: FocusRequester?, onUp: (() -> Un
  * status bar and a display cutout, also one at the side; the column of those, the navigation bar and the keyboard. A
  * snackbar shows at the bottom, and the column keeps clear of it while it shows, so the last row can scroll above it.
  *
- * @param title the screen's title, which a screen reader reads as its heading
- * @param titleFocus moves the focus to the title, as on a new screen; null for one that never takes it
+ * @param title the screen's title
  * @param onUp what Up does, the same as Back; null for a screen without Up
  * @param snackbars where a snackbar shows; null for a screen without
- * @param onClose for a full-screen dialog: what its Close does, the bar's × in Up's place, read after the title, as
- *     Material's full-screen dialog has it; null for a screen
+ * @param onClose for a full-screen dialog: what its Close does, the bar's × in Up's place, as Material's
+ *     full-screen dialog has it; null for a screen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -> Unit)?,
+internal fun BarScaffold(title: String, onUp: (() -> Unit)?,
     actions: @Composable RowScope.() -> Unit = {}, snackbars: SnackbarHostState? = null,
     onClose: (() -> Unit)? = null, closeEnabled: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     var snackbarHeight by remember { mutableIntStateOf(0) }
@@ -123,16 +114,8 @@ internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -
         topBar = {
             TopAppBar(
                 title = {
-                    val focused = if (titleFocus == null) Modifier
-                        else Modifier.focusRequester(titleFocus).focusable()
                     // no line limit: Material's bar grows with its title, so a long one at a large font is whole
-                    Text(title, modifier = focused.semantics {
-                        heading()
-                        // a dialog's title is read before its Close, which comes first for the eye
-                        if (onClose != null) {
-                            traversalIndex = -1f
-                        }
-                    })
+                    Text(title)
                 },
                 navigationIcon = {
                     when {
@@ -160,7 +143,7 @@ internal fun BarScaffold(title: String, titleFocus: FocusRequester?, onUp: (() -
     }
 }
 
-/** The top app bar's Up, Material's arrow, mirrored right to left, that a screen reader names "Back". */
+/** The top app bar's Up, Material's arrow, mirrored right to left, named "Back". */
 @Composable
 private fun UpButton(onUp: () -> Unit) {
     BarIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_up), onClick = onUp)
@@ -169,7 +152,7 @@ private fun UpButton(onUp: () -> Unit) {
 /**
  * An icon in the top app bar that acts, such as Up or the home's Settings, drawn at 48 dp.
  *
- * @param name what a screen reader says for it, as the icon has no text
+ * @param name what it is called, as the icon has no text
  */
 @Composable
 internal fun BarIconButton(icon: ImageVector, name: String, enabled: Boolean = true, onClick: () -> Unit) {

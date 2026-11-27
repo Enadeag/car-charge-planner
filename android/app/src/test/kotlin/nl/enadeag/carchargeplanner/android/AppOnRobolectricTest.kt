@@ -10,7 +10,6 @@ import android.system.Os
 import android.system.OsConstants
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -37,7 +36,7 @@ class AppOnRobolectricTest {
 
     @Test
     fun withoutASettingsFileTheAppOpensOnSetUpsWelcome() {
-        val welcome = isHeading() and hasText("Welcome", substring = true)
+        val welcome = hasText("Welcome", substring = true)
 
         compose.waitUntil(10_000) { compose.onAllNodes(welcome).fetchSemanticsNodes().isNotEmpty() }
 

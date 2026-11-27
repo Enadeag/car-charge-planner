@@ -72,9 +72,6 @@
   <string name="time_zone_title">Time zone</string>
   <!-- what a drop-down shows before a choice is made -->
   <string name="choose">Choose…</string>
-  <!-- what TalkBack says of a fold's row, such as More settings: whether what it folds away shows under it -->
-  <string name="fold_expanded">Expanded</string>
-  <string name="fold_collapsed">Collapsed</string>
   <string name="time_zone_filter">Search the time zones</string>
   <string name="time_zone_none">No time zone matches.</string>
 
@@ -152,7 +149,7 @@
   <string name="away_period">Away period %1$d</string>
   <!-- %1$d the period's place in the list, from 1 -->
   <string name="away_remove">Remove away period %1$d</string>
-  <!-- %1$d the period's place in the list, from 1, so a screen reader names the period with each field -->
+  <!-- %1$d the period's place in the list, from 1, so the label names the period -->
   <string name="away_weekday">Weekday, period %1$d</string>
   <!-- %1$d the period's place in the list, from 1 -->
   <string name="away_from">Away from, period %1$d</string>
@@ -232,8 +229,9 @@
   <string name="day_not_needed">Charging not needed</string>
   <!-- %1$s a start time, such as 11:15; %2$s an end time, such as 14:30 -->
   <string name="time_span">%1$s – %2$s</string>
-  <!-- the same span as a screen reader reads it; %1$s the start time, %2$s the end time -->
-  <string name="time_span_spoken">%1$s to %2$s</string>
+  <!-- the same span in words, in a sentence such as chart_sentence_windows and a notification's title; %1$s the start
+       time, %2$s the end time -->
+  <string name="time_span_words">%1$s to %2$s</string>
   <!-- %1$d the charge current in A; %2$s the charge power in kW, written already, such as 2.3 -->
   <string name="day_set">Set %1$d A (%2$s kW)</string>
   <!-- %1$s the energy in kWh, written already, such as 7.9 -->
@@ -244,18 +242,12 @@
   <string name="day_from_grid">%1$s kWh from the grid</string>
   <!-- %1$s the battery level at the start of the day; %2$s after its charging; both written already, such as 50 -->
   <string name="day_battery">Battery %1$s → %2$s%%</string>
-  <!-- the same as a screen reader reads it -->
-  <string name="day_battery_spoken">Battery from %1$s%% to %2$s%%</string>
   <!-- on the day a trip leaves: %1$s the battery level at the start of the day; %2$s at its end, after the trip;
        both written already. Without a charge before the trip -->
   <string name="day_battery_trip">Battery %1$s → %2$s%% after the trip</string>
-  <!-- the same as a screen reader reads it -->
-  <string name="day_battery_trip_spoken">Battery %1$s%%, %2$s%% after the trip</string>
   <!-- with a charge before the trip: %1$s the level at the start of the day; %2$s after its charging; %3$s at its
        end, after the trip; all written already -->
   <string name="day_battery_charge_trip">Battery %1$s → %2$s%%, %3$s%% after the trip</string>
-  <!-- the same as a screen reader reads it -->
-  <string name="day_battery_charge_trip_spoken">Battery from %1$s%% to %2$s%%, %3$s%% after the trip</string>
   <!-- a day's note, after its later windows: why a day has no charge window; "Today" names today's tab, day_today -->
   <string name="day_grid_why">Solar power is not enough to stay above the minimum: see the grid advice on Today.</string>
   <!-- why a day without a charge window has none, on a day the car could use a charge -->
@@ -319,15 +311,8 @@
   <!-- the battery level the advice starts from, written already: assumed, or entered by the owner -->
   <string name="trip_advice_assumed">Assuming a battery level of %1$s%%.</string>
   <string name="trip_advice_entered">Based on the battery level of %1$s%% you entered.</string>
-  <!-- the advice as a screen reader reads it, in one go: %1$s trip_advice_label; %2$s the title; %3$s the plan,
-       its windows read as time_span_spoken; %4$s the battery level it starts from -->
-  <string name="trip_advice_spoken">%1$s: %2$s %3$s %4$s</string>
   <!-- the button under the advice that moves to today's tab and opens the entry of the battery level -->
   <string name="trip_advice_adjust">Adjust</string>
-  <!-- what a screen reader says for it; it starts with the visible word, so Voice Access finds it by that -->
-  <string name="trip_advice_adjust_spoken">Adjust the battery level</string>
-  <!-- what a screen reader says a double tap on it does -->
-  <string name="trip_advice_adjust_hint">Enter the battery level the car shows, on today\'s battery card</string>
 
   <!-- the solar chart's card: its heading, and its legend, the words beside the chart's signs -->
   <string name="chart_heading">Forecast</string>
@@ -338,16 +323,16 @@
   <string name="chart_now">now</string>
   <!-- the power at the top of the chart; %1$s the power in kW, written already, such as 4 -->
   <string name="chart_scale">%1$s kW</string>
-  <!-- the chart in words, which a screen reader reads for it and which shows under it, in up to three sentences:
+  <!-- the chart in words, which shows under it, in up to three sentences:
        %1$s the day (Today, Tomorrow, Sunday); %2$s the highest solar power in kW, written already; %3$s its time;
        %4$s the house's use in kW, written already -->
-  <string name="chart_spoken">%1$s, expected solar power: peak %2$s kW around %3$s; the house uses about %4$s kW.</string>
+  <string name="chart_sentence">%1$s, expected solar power: peak %2$s kW around %3$s; the house uses about %4$s kW.</string>
   <!-- %1$s the day (Today, Tomorrow, Sunday) -->
-  <string name="chart_spoken_no_solar">%1$s, expected solar power: none.</string>
-  <!-- %1$s the day's charge windows, each a time_span_spoken, joined by commas -->
-  <string name="chart_spoken_windows">Charging: %1$s.</string>
+  <string name="chart_sentence_no_solar">%1$s, expected solar power: none.</string>
+  <!-- %1$s the day's charge windows, each a time_span_words, joined by commas -->
+  <string name="chart_sentence_windows">Charging: %1$s.</string>
   <!-- %1$s the time the plan was made, today only -->
-  <string name="chart_spoken_now">Now %1$s.</string>
+  <string name="chart_sentence_now">Now %1$s.</string>
 
   <!-- the battery bar's card: its heading, and the levels at the start of the day and after its charging, both
        written already, such as 50 -->
@@ -361,18 +346,6 @@
   <!-- the marks on the battery bar; %1$s the minimum or target charge level, written already -->
   <string name="battery_minimum">min %1$s%%</string>
   <string name="battery_target">target %1$s%%</string>
-  <!-- the battery bar as a screen reader reads it, today: %1$s the level now; %2$s after charging; %3$s the minimum
-       charge level; %4$s the target charge level; all written already -->
-  <string name="battery_spoken_today">Car battery %1$s%% now, %2$s%% after charging; minimum %3$s%%, target %4$s%%.</string>
-  <!-- the same on another day: %1$s the level at its start; %2$s the day as in a sentence (tomorrow, Sunday);
-       %3$s after charging; %4$s the minimum; %5$s the target -->
-  <string name="battery_spoken_day">Car battery %1$s%% at the start of %2$s, %3$s%% after charging; minimum %4$s%%, target %5$s%%.</string>
-  <!-- added to today's battery_spoken_today while the plan starts from an assumed battery level; "Update battery
-       level" is the button (battery_update) under the bar -->
-  <string name="battery_assumed">The battery level is assumed. Use Update battery level under it to enter the level the car shows.</string>
-  <!-- added to the battery bar's sentence on the day a trip leaves; %1$s the level at the end of the day, written
-       already -->
-  <string name="battery_spoken_after_trip">After the trip the battery is at %1$s%% at the end of the day.</string>
 
   <!-- the entry of the battery level, from today's battery card: the button that opens it, its title and sentence,
        its field's label and hint -->
@@ -399,12 +372,8 @@
   <string name="one_off_days">%1$s %2$s – %3$s %4$s</string>
   <!-- the button at the end of the heading row that opens the entry of a one-off away period on the page's day -->
   <string name="one_off_add">Add</string>
-  <!-- what a screen reader says for it; it starts with the visible word, so Voice Access finds it by that -->
-  <string name="one_off_add_spoken">Add away period</string>
-  <!-- each period's button; a screen reader says it with the period, %1$s the period as the list shows it, such as
-       one_off_all_day; it starts with the visible word, so Voice Access finds it by that -->
+  <!-- each period's button, which removes it -->
   <string name="one_off_remove">Remove</string>
-  <string name="one_off_remove_spoken">Remove %1$s</string>
   <!-- the entry's title; %1$s the day: its weekday and date as the phone writes them in a sentence, such as
        "Thursday, November 5" -->
   <string name="one_off_entry_title">Car away on %1$s</string>
@@ -440,26 +409,16 @@
   <!-- a trip in the list: %1$s its times, a time_span on the day it leaves and returns, otherwise a trip_days;
        %2$s its distance, a trip_distance -->
   <string name="trip_line">Away %1$s · %2$s</string>
-  <!-- the same as a screen reader reads it: %1$s its times, a time_span_spoken or a trip_days_spoken; %2$s its
-       distance, a trip_distance -->
-  <string name="trip_line_spoken">Away from %1$s, %2$s</string>
   <!-- a trip's times when it returns on another day: %1$s the day it leaves, as in one_off_all_day; %2$s its
        departure time; %3$s the day it returns; %4$s its return time -->
   <string name="trip_days">%1$s %2$s – %3$s %4$s</string>
-  <!-- the same as a screen reader reads it -->
-  <string name="trip_days_spoken">%1$s %2$s to %3$s %4$s</string>
   <!-- %1$s the distance of the whole drive in whole km, written already, such as 300 -->
   <string name="trip_distance">%1$s km there and back</string>
   <!-- each trip's two choices, each a checkbox row that saves at once -->
   <string name="trip_not_with_this_car">Not with this car</string>
   <string name="trip_can_charge">I can charge at the destination</string>
-  <!-- what a screen reader says for a choice, with the trip: %1$s the choice, such as trip_not_with_this_car; %2$s
-       the trip, a trip_line_spoken -->
-  <string name="trip_choice_spoken">%1$s, %2$s</string>
-  <!-- each trip's button; a screen reader says it with the trip, %1$s a trip_line_spoken; it starts with the
-       visible word, so Voice Access finds it by that -->
+  <!-- each trip's button, which removes it -->
   <string name="trip_remove">Remove</string>
-  <string name="trip_remove_spoken">Remove the trip %1$s</string>
   <!-- after a change, in a snackbar; %1$s the trip as the list shows it, a trip_line; Removed has the action Undo,
        which adds it back, and Saved follows that Undo or the trip entry's Save -->
   <string name="trip_saved">Saved: %1$s.</string>
@@ -468,14 +427,10 @@
        Save, in the entry; a Remove, in a snackbar -->
   <string name="trip_not_saved">Not saved: the trip could not be written.</string>
   <string name="trip_not_removed">Not removed: the trip could not be written.</string>
-  <!-- the Trips card's button in its heading row, which opens the entry of a new trip on the page's day, and what a
-       screen reader says for it; it starts with the visible word, so Voice Access finds it by that -->
+  <!-- the Trips card's button in its heading row, which opens the entry of a new trip on the page's day -->
   <string name="trip_add">Add</string>
-  <string name="trip_add_spoken">Add trip</string>
-  <!-- each trip's button beside Remove, which opens the entry on that trip; a screen reader says it with the trip,
-       %1$s a trip_line_spoken, starting with the visible word -->
+  <!-- each trip's button beside Remove, which opens the entry on that trip -->
   <string name="trip_change">Change</string>
-  <string name="trip_change_spoken">Change the trip %1$s</string>
   <!-- the trip entry's title, in its top app bar, for a new trip and for a change -->
   <string name="trip_add_title">Add trip</string>
   <string name="trip_change_title">Change trip</string>
@@ -537,7 +492,7 @@
   <string name="no_forecast_no_days">The forecast has no days to plan.</string>
 
   <string name="action_save">Save</string>
-  <!-- the top app bar's Up, which a screen reader reads; it goes back as the system's Back does -->
+  <!-- the name of the top app bar's Up, an arrow without words; it goes back as the system's Back does -->
   <string name="action_up">Back</string>
   <string name="action_close">Close</string>
 
@@ -600,7 +555,7 @@
   <string name="panel_add">Add an array</string>
   <!-- %1$d the array's place in the list, from 1 -->
   <string name="panel_remove">Remove array %1$d</string>
-  <!-- why the last array cannot be removed, which a screen reader reads with its Remove -->
+  <!-- why the last array cannot be removed, under its Remove -->
   <string name="panel_keep_one">A system needs at least one panel array</string>
 
   <!-- %1$s the forecast provider's name, such as Forecast.Solar -->
@@ -630,7 +585,8 @@
   <string name="provider_forecast_solar_api_key_hint">Only for a paid plan, which adds more days and finer steps. The free plan needs none.</string>
   <string name="key_show">Show</string>
   <string name="key_hide">Hide</string>
-  <!-- what a screen reader says for Show and Hide: %1$s the forecast provider's name, such as Open-Meteo -->
+  <!-- the names of Show and Hide, which tell the buttons of two providers on one page apart: %1$s the forecast
+       provider's name, such as Open-Meteo -->
   <string name="key_show_of">Show the API key of %1$s</string>
   <!-- %1$s the forecast provider's name, such as Open-Meteo -->
   <string name="key_hide_of">Hide the API key of %1$s</string>
@@ -672,19 +628,16 @@
   <string name="licences_reading">Reading the licences…</string>
   <string name="licences_not_read">This text could not be read.</string>
   <string name="licences_list_not_read">The licences could not be read.</string>
-  <!-- what TalkBack says of a licence's row: whether its text shows under it -->
-  <string name="licences_expanded">Expanded</string>
-  <string name="licences_collapsed">Collapsed</string>
 
   <!-- The notifications. What to set in the charger's app, which ends a charge window's text and a trip's grid
        charge's: %1$d the charge current in A, %2$s the charge power in kW, such as 2.3 -->
   <string name="notice_set_one_phase">Set the charge current to %1$d A (%2$s kW) in your charger\'s app.</string>
   <string name="notice_set_three_phases">Set the charge current to %1$d A per phase (%2$s kW) in your charger\'s app.</string>
-  <!-- %1$s the window's times as a screen reader reads them, a time_span_spoken -->
+  <!-- %1$s the window's times in words, a time_span_words -->
   <string name="notice_window_title">Charge window %1$s</string>
   <!-- %1$s the energy in kWh, such as 7.9; %2$s the solar share in whole percent, such as 92 -->
   <string name="notice_window_body">About %1$s kWh, %2$s%% solar.</string>
-  <!-- %1$s the window's times as a screen reader reads them, a time_span_spoken -->
+  <!-- %1$s the window's times in words, a time_span_words -->
   <string name="notice_grid_title">Grid charge window %1$s</string>
   <!-- %1$s the energy in kWh, such as 8.4; %2$s the minimum charge level in whole percent; %3$s the charge limit in
        whole percent -->

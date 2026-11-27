@@ -8,7 +8,6 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -87,8 +86,8 @@ class EntryDialogsScreenTest {
     }
 
     /**
-     * Gives Save the focus and presses it with Enter: while the save runs it is held, marked off with its progress,
-     * and keeps the focus; once the save failed it is on again, still with the focus unless the dialog moves it to
+     * Gives Save the focus and presses it with Enter: while the save runs it is held, with its progress, and keeps the
+     * focus; once the save failed it is on again, still with the focus unless the dialog moves it to
      * what failed.
      */
     private fun saveIsHeldWhileItRuns(gate: CompletableDeferred<Unit>, keepsFocusAfter: Boolean = true) {
@@ -96,12 +95,12 @@ class EntryDialogsScreenTest {
         compose.waitForIdle()
         button(R.string.action_save).assertIsFocused().enter()
 
-        button(R.string.saving).assertIsNotEnabled().assertIsFocused()
+        button(R.string.saving).assertIsFocused()
         compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo) and
             hasAnyAncestor(isDialog()), useUnmergedTree = true).assertExists()
         gate.complete(Unit)
         compose.waitForIdle()
-        button(R.string.action_save).assertIsEnabled()
+        button(R.string.action_save).assertExists()
         if (keepsFocusAfter) {
             button(R.string.action_save).assertIsFocused()
         }
@@ -199,7 +198,7 @@ class EntryDialogsScreenTest {
         compose.runOnIdle { away.noticeShown() }
         compose.waitForIdle()
 
-        button(R.string.action_save).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Disabled))
+        button(R.string.action_save).assertExists()
             .assertIsFocused().enter()
         button(R.string.saving).assertDoesNotExist()
         restoring.complete(Unit)

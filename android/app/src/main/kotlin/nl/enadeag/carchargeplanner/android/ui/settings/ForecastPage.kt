@@ -24,11 +24,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.error
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -124,9 +121,7 @@ internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: Prob
         required.forEachIndexed { place, spec -> setting(place, spec) }
         val name = foldNames[index]
         if (name != null) {
-            Fold(name, folds[index],
-                spoken = if (foldNames.count { it == name } > 1) stringResource(R.string.provider_setting_of, name,
-                    info.name()) else null) {
+            Fold(name, folds[index]) {
                 optional.forEachIndexed { place, spec -> setting(required.size + place, spec) }
             }
         }
@@ -154,7 +149,7 @@ private fun foldName(info: ProviderInfo): String? {
 }
 
 /**
- * The "Wi-Fi only" switch with what it does, as one row a screen reader reads as a switch with its label and hint;
+ * The "Wi-Fi only" switch with what it does, as one row that toggles as a whole, a switch with its label and hint;
  * off until its value is read.
  */
 @Composable
@@ -174,7 +169,7 @@ private fun WifiOnlyRow(wifiOnly: WifiOnly) {
     }
 }
 
-/** Check connection for the primary or the fallback, and what it came to, in a live region. */
+/** Check connection for the primary or the fallback, and what it came to. */
 @Composable
 private fun CheckConnection(session: SettingsSession, role: SettingsSession.Role, check: SetUpCheck,
     provider: ProviderId) {
@@ -183,8 +178,7 @@ private fun CheckConnection(session: SettingsSession, role: SettingsSession.Role
     AppOutlinedButton(onClick = { session.checkConnection(role) }, enabled = state != SetUpCheck.State.Asking) {
         Text(stringResource(R.string.forecast_check, name))
     }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         when (val now = state) {
             SetUpCheck.State.NotAsked -> Unit
             SetUpCheck.State.Asking -> Waiting(stringResource(R.string.check_asking, name))
@@ -250,11 +244,7 @@ private fun KeyField(label: String, hint: String, text: String, onEdit: (String)
                 Text(hint)
             }
         },
-        modifier = Modifier.fillMaxWidth().focusRequester(focus).semantics {
-            if (problemSentence != null) {
-                error(problemSentence)
-            }
-        },
+        modifier = Modifier.fillMaxWidth().focusRequester(focus),
     )
 }
 

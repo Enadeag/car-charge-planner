@@ -36,15 +36,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
@@ -65,9 +61,9 @@ import nl.enadeag.carchargeplanner.android.ui.setup.Edits
 /**
  * Settings' screen (#315): the list of its pages, or one page with Up, its title and Save in the top app bar. System
  * Back and Up do the same: from a page with edits they ask whether to throw them away, from a page without they go to
- * the list, and from the list to the home. A new page moves the focus to its title; a Save that shows problems moves
- * it to the first field that has one. A page's save that worked says so in a snackbar, which a screen reader reads
- * when it comes and which stays while the list opens. After the pages, a row opens Android's settings of the app's
+ * the list, and from the list to the home. A Save that shows problems moves the focus to the first field that has
+ * one. A page's save that worked says so in a snackbar, which stays while the list
+ * opens. After the pages, a row opens Android's settings of the app's
  * notifications. The list's last row opens the open source licences (#331), a read-only screen and not a page, so it
  * has no Save and nothing to discard; Back and Up there return to the list, and it stays open after turning the phone
  * or the system ending the app, until Settings closes.
@@ -111,9 +107,7 @@ internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?, wifiO
 @Composable
 private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState, openLicences: () -> Unit) {
     val config by session.config.collectAsStateWithLifecycle()
-    val title = remember { FocusRequester() }
-    LaunchedEffect(Unit) { title.requestFocus() }
-    BarPage(stringResource(R.string.settings_title), title, onUp = { session.back() }, padded = false,
+    BarPage(stringResource(R.string.settings_title), onUp = { session.back() }, padded = false,
         snackbars = snackbars) {
         SettingsPage.entries.forEachIndexed { index, page ->
             if (index > 0) {
@@ -153,8 +147,6 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: 
     val loads by session.loads.collectAsStateWithLifecycle()
     val edits = remember(page) { Edits() }
     val problems = remember(page) { ProblemFocus() }
-    val title = remember { FocusRequester() }
-    var seenPage by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
     var seenProblems by rememberSaveable { mutableIntStateOf(problemsShown) }
     // the forms were filled anew, as after a save: what they hold is shown again
     LaunchedEffect(loads) { edits.make { } }
@@ -163,13 +155,7 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: 
         withFrameNanos { }
         if (problemsShown != seenProblems) {
             seenProblems = problemsShown
-            seenPage = page
-            if (!problems.focusFirst()) {
-                title.requestFocus()
-            }
-        } else if (seenPage != page) {
-            seenPage = page
-            title.requestFocus()
+            problems.focusFirst()
         }
     }
     if (page == SettingsPage.FORECAST) {
@@ -179,7 +165,7 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: 
     // keeps the page where the focus took it, to its field
     val saving by session.saving.collectAsStateWithLifecycle()
     val failed = saving is SettingsSession.SaveState.Failed || saving == SettingsSession.SaveState.KeysNotSaved
-    BarPage(stringResource(page.title()), title, onUp = { session.back() }, actions = { SaveAction(session, page) },
+    BarPage(stringResource(page.title()), onUp = { session.back() }, actions = { SaveAction(session, page) },
         snackbars = snackbars, status = { SaveStatus(session) }, lead = { SaveProblem(session) },
         scrollToTop = saving.takeIf { failed }) {
         val forms = session.forms
@@ -209,16 +195,13 @@ private fun SaveAction(session: SettingsSession, page: SettingsPage) {
 
 /**
  * That the page's Save failed, in one short line under the top app bar, so it stays in view while the page scrolls
- * and leaves the page its room at any font size; in a live region read at once. Why is at the top of the page.
+ * and leaves the page its room at any font size. Why is at the top of the page.
  */
 @Composable
 private fun SaveStatus(session: SettingsSession) {
     val saving by session.saving.collectAsStateWithLifecycle()
     val failed = saving is SettingsSession.SaveState.Failed || saving == SettingsSession.SaveState.KeysNotSaved
-    // the live region stays while empty, so what comes in later is read
-    Column(Modifier.padding(top = if (failed) 8.dp else 0.dp).semantics(mergeDescendants = true) {
-        liveRegion = LiveRegionMode.Assertive
-    }) {
+    Column(Modifier.padding(top = if (failed) 8.dp else 0.dp)) {
         if (failed) {
             Text(stringResource(R.string.settings_not_saved), color = MaterialTheme.colorScheme.error)
         }
@@ -227,18 +210,15 @@ private fun SaveStatus(session: SettingsSession) {
 
 /**
  * Why the page's Save failed, with the system's or the engine's English details, or that a value needs attention, at
- * the top of the page, which scrolls, so a long detail never crowds the page out; in a live region, read after the
- * line under the top app bar.
+ * the top of the page, which scrolls, so a long detail never crowds the page out.
  */
 @Composable
 private fun SaveProblem(session: SettingsSession) {
     val saving by session.saving.collectAsStateWithLifecycle()
     val refused by session.refused.collectAsStateWithLifecycle()
     val failed = saving is SettingsSession.SaveState.Failed || saving == SettingsSession.SaveState.KeysNotSaved
-    // the live region stays while empty, so what comes in later is read
     Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(bottom = if (refused || failed) 16.dp else 0.dp)
-            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+        modifier = Modifier.padding(bottom = if (refused || failed) 16.dp else 0.dp)) {
         if (refused) {
             Text(stringResource(R.string.setup_refused), color = MaterialTheme.colorScheme.error)
         }

@@ -28,12 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.error
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -41,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
 
-/** What a field takes, so the keyboard offers the keys it needs and a screen reader names the same kind. */
+/** What a field takes, so the keyboard offers the keys it needs. */
 internal enum class FieldKind(val keyboard: KeyboardType) {
     /** A whole number that is never below 0, such as amps. */
     WHOLE(KeyboardType.Number),
@@ -106,7 +102,7 @@ internal const val DISTANCE_UNIT = "km"
  * @param kind what it takes; [FieldKind.SIGNED] adds a key for the minus
  * @param imeAction the keyboard's action key: Next moves on to the next field; Done, on a page's last, closes the
  *     keyboard
- * @param suffix the unit after what is typed, which a screen reader reads with it, such as "km"; null for none
+ * @param suffix the unit after what is typed, such as "km"; null for none
  */
 @Composable
 internal fun NumberField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
@@ -117,16 +113,14 @@ internal fun NumberField(label: String, hint: String, text: String, onEdit: (Str
 
 /**
  * @param onAction what the action key does; null to move on to the next field
- * @param announceProblem whether a screen reader reads a problem as it comes, for a field that keeps the focus while
- *     its problem shows; otherwise the problem is read with the field once the focus moves to it
  * @param readOnly true while it keeps the focus but takes no typing, as while what it holds is saved
  * @param placeholder what the empty field shows in its place, such as an estimate the app uses; null for nothing
  */
 @Composable
 internal fun EntryField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
     problem: FieldProblem?, focus: FocusRequester, modifier: Modifier = Modifier,
-    imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null, announceProblem: Boolean = false,
-    readOnly: Boolean = false, placeholder: String? = null, suffix: String? = null) {
+    imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null, readOnly: Boolean = false,
+    placeholder: String? = null, suffix: String? = null) {
     val problemSentence = problem?.let { problemText(it) }
     OutlinedTextField(
         value = text,
@@ -145,25 +139,13 @@ internal fun EntryField(label: String, hint: String, text: String, onEdit: (Stri
         } else null,
         supportingText = {
             Column {
-                if (announceProblem) {
-                    // a node of its own, outside the field's, which stays while empty, so a problem that comes in
-                    // is read while the focus stays in the field
-                    Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
-                        problemSentence?.let { Text(it) }
-                    }
-                } else if (problemSentence != null) {
-                    Text(problemSentence)
-                }
+                problemSentence?.let { Text(it) }
                 if (hint.isNotEmpty()) {
                     Text(hint)
                 }
             }
         },
-        modifier = modifier.fillMaxWidth().focusRequester(focus).semantics {
-            if (problemSentence != null) {
-                error(problemSentence)
-            }
-        },
+        modifier = modifier.fillMaxWidth().focusRequester(focus),
     )
 }
 
@@ -176,15 +158,15 @@ private fun SignKey(text: String, onEdit: (String) -> Unit) {
         // Material draws an icon button at 40 dp; a control is 48 dp at least
         modifier = Modifier.size(48.dp).semantics { contentDescription = description },
     ) {
-        Text("±", style = MaterialTheme.typography.titleLarge, modifier = Modifier.clearAndSetSemantics { })
+        Text("±", style = MaterialTheme.typography.titleLarge)
     }
 }
 
 /**
- * A choice of one from a few, as radio buttons a screen reader reads as a group.
+ * A choice of one from a few, as a group of radio buttons under its label.
  *
  * @param options the options, in the order shown
- * @param problem the problem it shows, under it and to a screen reader with the group; null for none
+ * @param problem the problem it shows, under it; null for none
  * @param focus moves the focus to the group, as to the first problem after Save; null for a choice that never shows
  *     a problem, whose group then takes no focus of its own
  */
@@ -196,12 +178,7 @@ internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chose
     val focused = if (focus == null) Modifier else Modifier.focusRequester(focus).focusable()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.titleSmall)
-        FlowRow(modifier = Modifier.selectableGroup().then(focused).semantics {
-            contentDescription = label
-            if (problemSentence != null) {
-                error(problemSentence)
-            }
-        },
+        FlowRow(modifier = Modifier.selectableGroup().then(focused),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             options.forEach { option ->
                 val selected = option == chosen
@@ -217,8 +194,7 @@ internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chose
             }
         }
         if (problemSentence != null) {
-            Text(problemSentence, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.clearAndSetSemantics { })
+            Text(problemSentence, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
         if (hint != null) {
             Text(hint, style = MaterialTheme.typography.bodySmall)

@@ -2,7 +2,7 @@
 
 Decisions about the notifications, their channels and permission, the rounds in the background, the alarm and WorkManager, and the engine's part in them.
 
-What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken names, saved state) is in [screens.md](screens.md); read it too.
+What holds on every screen (top app bar, buttons, snackbars, dialogs, names, saved state) is in [screens.md](screens.md); read it too.
 
 ### The engine's part
 
@@ -22,7 +22,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - Taps go through an explicit, immutable `PendingIntent` to the non-exported alias `.NoticeTap`, so only the app's own intents can take a notification away or open the battery entry (#382).
 - A tap, also on an action, takes the notification away (its tag is the intent's data, `notice:<tag>`), but not for an intent from the recent apps (#361).
 - The battery check's tap and its action "Enter battery level" open the battery entry, only on the home or the home that comes next at a start; in set-up or Settings the tap only brings the app forward. `MainActivity` is `singleTop`, and the intent is followed in `onCreate` without saved state and in `onNewIntent` (#361).
-- The words are the desktop's facts with "Tap" and the spoken span ("11:15 to 14:30"), made when posted, in the app's language and the phone's 12- or 24-hour clock, the weekday in the home's zone, a distance in whole km rounded up until #311 (#361).
+- The words are the desktop's facts with "Tap" and a window's times in words ("11:15 to 14:30"), as the chart's sentence has them, made when posted, in the app's language and the phone's 12- or 24-hour clock, the weekday in the home's zone, a distance in whole km rounded up until #311 (#361).
 - Nothing is posted while notifications are not allowed; a notification that cannot be posted is logged at warn with its kind only (#361).
 - The small icon `ic_stat_charge` is the launcher icon's car and sun scaled to 24 dp, in one colour, with the launcher background as accent (#361, #486).
 - Trip and window times are logged at DEBUG only (#382).
@@ -36,7 +36,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 - The card shows on the page in view, after the save outcome and the warnings, on every home state, while notifications are not allowed and it was not closed, and is looked at again on every `ON_START` (#361).
 - "Turn on notifications" asks Android on Android 13 and later; after a refusal, or where they are blocked on an older phone, "Open notification settings" with "Android does not ask again. Turn notifications on there." The Dutch button is "Instellingen voor meldingen openen", as "Meldingsinstellingen" does not fit at 200% on a narrow phone (#361).
-- × ("Close") closes the card for good. The card is read title, text, button, Close. After Close the focus goes to the screen's title, as the card is gone; when a refusal swaps the button, to the card's title (#361).
+- × ("Close") closes the card for good. When a refusal swaps the button, the focus moves to the new "Open notification settings" button, as the one it was on is gone (#361).
 
 ### Preferences on the phone
 

@@ -8,13 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,7 +27,6 @@ import nl.enadeag.carchargeplanner.android.form.WeeklyAwayForm
 import nl.enadeag.carchargeplanner.android.settings.SettingsPage
 import nl.enadeag.carchargeplanner.android.settings.SettingsSession
 import nl.enadeag.carchargeplanner.android.ui.components.ChoiceMenu
-import nl.enadeag.carchargeplanner.android.ui.components.EntryField
 import nl.enadeag.carchargeplanner.android.ui.components.FieldKind
 import nl.enadeag.carchargeplanner.android.ui.components.Fold
 import nl.enadeag.carchargeplanner.android.ui.components.NumberField
@@ -103,7 +98,7 @@ internal fun phasesName(phases: Phases): Int = if (phases == Phases.ONE) R.strin
 
 /**
  * Every panel array, each named by its place and its name ("Array 2, east roof"), with its own Remove, which acts at
- * once; the last array's Remove is off, with the reason, which a screen reader reads with it. There is no reordering.
+ * once; the last array's Remove is off, with the reason under it. There is no reordering.
  * After Add the focus goes to the new array's heading, after Remove to the one before.
  *
  * @param problems the page's fields in order, for the focus after Save
@@ -145,16 +140,14 @@ private fun PanelArray(panels: PanelsForm, row: Int, index: Int, rows: List<Int>
     }
 }
 
-/** Remove, off for the last array with the reason, which a screen reader reads as the button's state. */
+/** Remove, off for the last array, with the reason under it. */
 @Composable
 private fun RemoveArray(number: Int, removable: Boolean, onRemove: () -> Unit) {
-    val reason = stringResource(R.string.panel_keep_one)
-    AppTextButton(onClick = onRemove, enabled = removable,
-        modifier = if (removable) Modifier else Modifier.semantics { stateDescription = reason }) {
+    AppTextButton(onClick = onRemove, enabled = removable) {
         Text(stringResource(R.string.panel_remove, number))
     }
     if (!removable) {
-        Text(reason, style = MaterialTheme.typography.bodySmall, modifier = Modifier.clearAndSetSemantics { })
+        Text(stringResource(R.string.panel_keep_one), style = MaterialTheme.typography.bodySmall)
     }
 }
 

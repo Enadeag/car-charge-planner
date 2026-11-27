@@ -63,8 +63,8 @@ internal sealed interface Said<out K> {
 
 /**
  * What the changes to a list of the dashboard came to, the one-off away periods' or the trips', each said once in a
- * snackbar, which a screen reader reads when it comes: an added or changed row; a removed one, with Undo, which adds it
- * back; a Remove or another change that failed, with the English details and a button to close it.
+ * snackbar: an added or changed row; a removed one, with Undo, which adds it back; a Remove or another change that
+ * failed, with the English details and a button to close it.
  *
  * @param going the Remove that was pressed, forgotten when it failed
  * @param restoring gets the row an Undo adds back, so the list puts the focus on it, forgotten when it failed
@@ -93,7 +93,7 @@ internal fun <K, N : Any> ChangeOutcome(notices: StateFlow<N?>, shown: () -> Uni
                     is Said.Saved -> snackbars.showSnackbar(saying.text)
                     is Said.Removed -> {
                         // it stays until the next notice or Close: Material takes one with an action away after about
-                        // 10 s, also with TalkBack, which is too soon to find Undo
+                        // 10 s, which is too soon to find Undo
                         val result = snackbars.showSnackbar(saying.text, resources.getString(R.string.action_undo),
                             withDismissAction = true, duration = SnackbarDuration.Indefinite)
                         if (result == SnackbarResult.ActionPerformed) {

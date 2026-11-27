@@ -17,12 +17,9 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
@@ -39,11 +36,11 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -73,8 +70,8 @@ import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.android.home.AwayEntry
 import nl.enadeag.carchargeplanner.android.home.BatteryEntry
-import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.CardMemory
+import nl.enadeag.carchargeplanner.android.home.HomeNotice
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 import nl.enadeag.carchargeplanner.android.home.NotificationCard
 import nl.enadeag.carchargeplanner.android.home.Plans
@@ -83,6 +80,7 @@ import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
 import nl.enadeag.carchargeplanner.android.ui.home.AxisLabels
+import nl.enadeag.carchargeplanner.android.ui.home.BATTERY_BAR
 import nl.enadeag.carchargeplanner.android.ui.home.HomeScreen
 import nl.enadeag.carchargeplanner.engine.Outlook
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod
@@ -132,7 +130,7 @@ class HomeScreenTest {
     private val lisbon = ZoneId.of("Europe/Lisbon")
     private val today = LocalDate.of(2026, 6, 1)
     private val clock = TestClock(today.atTime(9, 0).atZone(lisbon).toInstant())
-    private val title = isHeading() and hasText(text(R.string.app_name))
+    private val title = hasText(text(R.string.app_name))
 
     @After
     fun stop() {
@@ -158,10 +156,6 @@ class HomeScreenTest {
 
     /** Changes to the away periods of their own, for a home a test sets up itself. */
     private fun awayEntry() = AwayEntry(SavedStateHandle(), access, scope, clock) { }
-
-    /** Today's battery bar in words while its level is assumed, as in the plans here unless they say otherwise. */
-    private fun todaysBattery(vararg levels: String) =
-        text(R.string.battery_spoken_today, *levels) + " " + text(R.string.battery_assumed)
 
     /** What the notification card remembers, in memory. */
     private class Memory(var closed: Boolean = false, var refused: Boolean = false) : CardMemory {
@@ -205,8 +199,7 @@ class HomeScreenTest {
         compose.waitForIdle()
     }
 
-    private fun tab(name: String) = compose.onNode(hasContentDescription(name) and
-        SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+    private fun tab(name: String) = compose.dayTab(name)
 
     private val page = SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
 
@@ -251,15 +244,14 @@ class HomeScreenTest {
 
         show(lisbonWeek())
 
-        compose.onNode(isHeading() and hasText("Today"), useUnmergedTree = true).assertIsDisplayed()
-        // the chart's legend says "Charge window" too, but is not read apart
-        compose.onNode(hasText(text(R.string.day_window)) and !NOT_READ_APART).assertIsDisplayed()
-        compose.onNodeWithText("13:00 – 15:00").assert(hasContentDescription("13:00 to 15:00"))
+        compose.onNode(dayTitle("Today"), useUnmergedTree = true).assertIsDisplayed()
+        // the chart's legend, below the card, says "Charge window" too
+        compose.onAllNodesWithText(text(R.string.day_window))[0].assertIsDisplayed()
+        compose.onNodeWithText("13:00 – 15:00").assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_set, 6, "1.4")).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_energy, "2.8")).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_solar_share, "100")).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.day_battery, "40", "60"))
-            .assert(hasContentDescription(text(R.string.day_battery_spoken, "40", "60")))
+        compose.onNodeWithText(text(R.string.day_battery, "40", "60")).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_from_grid, "0.0")).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.day_later_windows, "16:00 – 17:00 at 6 A") + " " +
             text(R.string.day_battery_assumed, "40")).assertIsDisplayed()
@@ -310,7 +302,7 @@ class HomeScreenTest {
         tab("Tomorrow").performClick()
         compose.waitForIdle()
         tab("Tomorrow").assertIsSelected()
-        compose.onNode(isHeading() and hasText("Tomorrow"), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNode(dayTitle("Tomorrow"), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_none)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.day_too_little_solar)).assertIsDisplayed()
 
@@ -331,7 +323,7 @@ class HomeScreenTest {
         val advice = GridAdvice(today.plusDays(1), 12.0, 18.0, 7.4, Optional.of(window), Optional.of(Percent(60.0)))
         show(lisbonWeek(advice, minimum = 30.0))
 
-        compose.onNodeWithText(text(R.string.advice_label)).performScrollTo().assert(isHeading())
+        compose.onNodeWithText(text(R.string.advice_label)).performScrollTo().assertExists()
         compose.onNodeWithText(text(R.string.advice_title_window, "7.4", "today", "20:00 – 22:00")).assertExists()
         compose.onNodeWithText(text(R.string.advice_ends_low, "tomorrow", "12", "30") + " " +
             text(R.string.advice_set, 16, "3.7", "60")).assertExists()
@@ -353,7 +345,7 @@ class HomeScreenTest {
 
         show(lisbonWeek())
 
-        compose.onNodeWithText(text(R.string.one_off_heading)).performScrollTo().assert(isHeading())
+        compose.onNodeWithText(text(R.string.one_off_heading)).performScrollTo().assertExists()
         compose.onNodeWithText(text(R.string.one_off_all_day, "Tomorrow")).assertExists()
         compose.onNodeWithText(text(R.string.one_off_part, "Tomorrow", "10:00 – 16:30")).assertExists()
         compose.onNodeWithText(text(R.string.one_off_part, "Today", "06:00 – 08:00")).assertDoesNotExist()
@@ -374,8 +366,6 @@ class HomeScreenTest {
 
         val footer = "${Plans.CREDIT} · ${text(R.string.footer_updated, "08:51")}"
         compose.onNodeWithText(footer).performScrollTo().assertIsDisplayed()
-        val shown = compose.onNodeWithText(footer).fetchSemanticsNode().config[SemanticsProperties.Text].single()
-        assertThat(shown.spanStyles.single { it.start == 0 }.item.localeList?.first()?.language).isEqualTo("en")
         compose.onNodeWithText(text(R.string.stale_warning, "08:51")).assertDoesNotExist()
     }
 
@@ -393,7 +383,7 @@ class HomeScreenTest {
     fun noForecastShowsItsEnglishDetailsAndTryAgainAsksAgain() {
         show(Outlook.NoForecast("Open-Meteo: no network"))
 
-        compose.onNode(isHeading() and hasText(text(R.string.no_forecast))).assertIsDisplayed()
+        compose.onNode(hasText(text(R.string.no_forecast))).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.no_forecast_why)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.details_in_english, "Open-Meteo: no network")).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.action_try_again)).performScrollTo().performClick()
@@ -462,7 +452,7 @@ class HomeScreenTest {
         show(Plans.planned(day.atTime(0, 30).atZone(amsterdam), listOf(listOf(window))))
 
         compose.onNodeWithText("01:00 – 04:00").assertIsDisplayed()
-        compose.onNode(isHeading() and hasText("Today"), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNode(dayTitle("Today"), useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
@@ -481,40 +471,34 @@ class HomeScreenTest {
     }
 
     @Test
-    fun aSaveNoScreenShowedShowsWithItsEnglishDetailsInALiveRegionUntilClosed() {
+    fun aSaveNoScreenShowedShowsWithItsEnglishDetailsUntilClosed() {
         access.writeFails = true
         saves.update(KeyChanges.NONE) { it.withSystem(it.system().withHouseAndCar(House(0.9), it.system().car()),
             it.typical()) }
         show(lisbonWeek())
         compose.waitForIdle()
 
-        assertThat(compose.liveRegionOf(text(R.string.settings_save_failed))).isEqualTo(LiveRegionMode.Assertive)
+        compose.onNodeWithText(text(R.string.settings_save_failed)).assertExists()
         compose.onNodeWithText(text(R.string.details_in_english, "No space left on device"), useUnmergedTree = true)
             .assertExists()
-        // Close is a button of its own, outside the live region
-        assertThat(compose.liveRegionOf(text(R.string.action_close))).isNull()
-        // the title took the focus when the home opened; the focus is off it, so Close has to bring it back
-        compose.runOnIdle { focus.clearFocus() }
-        compose.onNode(title).assertIsNotFocused()
         compose.onNodeWithText(text(R.string.action_close)).performScrollTo().performClick()
         compose.waitForIdle()
 
         compose.onNodeWithText(text(R.string.settings_save_failed)).assertDoesNotExist()
-        compose.onNode(title).assertIsFocused()
     }
 
     @Test
-    fun aSavedNoticeIsReadPolitely() {
+    fun aSavedNoticeSaysSo() {
         saves.update(KeyChanges.NONE) { it.withSystem(it.system().withHouseAndCar(House(0.9), it.system().car()),
             it.typical()) }
         show(lisbonWeek())
         compose.waitForIdle()
 
-        assertThat(compose.liveRegionOf(text(R.string.settings_saved))).isEqualTo(LiveRegionMode.Polite)
+        compose.onNodeWithText(text(R.string.settings_saved)).assertIsDisplayed()
     }
 
     @Test
-    fun keysNotSavedOnTheHomeAreReadAtOnce() {
+    fun keysNotSavedOnTheHomeSaySo() {
         access.keysFail = true
         saves.update(KeyChanges.entering(Secrets(mapOf(ProviderId("open-meteo") to mapOf("api_key" to "K1"))))) {
             it
@@ -522,7 +506,7 @@ class HomeScreenTest {
         show(lisbonWeek())
         compose.waitForIdle()
 
-        assertThat(compose.liveRegionOf(text(R.string.settings_keys_not_saved))).isEqualTo(LiveRegionMode.Assertive)
+        compose.onNodeWithText(text(R.string.settings_keys_not_saved)).assertIsDisplayed()
     }
 
     @Test
@@ -552,8 +536,7 @@ class HomeScreenTest {
             Freshness.STALE))
 
         tab("Vandaag").assertIsSelected()
-        compose.assertReadAsOne(text(R.string.chart_spoken_no_solar, "Vandaag"), Role.Image)
-        compose.assertReadAsOne(todaysBattery("40", "60", "20", "80"), Role.Image)
+        compose.onNodeWithText(text(R.string.chart_sentence_no_solar, "Vandaag")).assertExists()
         compose.onNodeWithText(text(R.string.advice_runs_empty, "morgen", "20") + " " + text(R.string.advice_no_room))
             .assertExists()
         compose.assertShowsNoneOf(englishOnlyTexts())
@@ -595,13 +578,6 @@ class HomeScreenTest {
     }
 
     @Test
-    fun theTitleHasTheFocusWhenTheHomeOpens() {
-        show(lisbonWeek())
-
-        compose.onNode(title).assertIsFocused()
-    }
-
-    @Test
     fun refreshIsOffWhileTheFirstPlanIsMade() {
         show(null)
 
@@ -632,15 +608,15 @@ class HomeScreenTest {
     }
 
     @Test
-    fun aStaleForecastsWarningIsReadPolitely() {
+    fun aStaleForecastSaysSo() {
         clock("24")
         show(lisbonWeek(freshness = Freshness.STALE))
 
-        assertThat(compose.liveRegionOf(text(R.string.stale_warning, "08:51"))).isEqualTo(LiveRegionMode.Polite)
+        compose.onNodeWithText(text(R.string.stale_warning, "08:51")).assertIsDisplayed()
     }
 
     @Test
-    fun aRefusedKeyIsSaidByItsProviderAboveThePlanInAPoliteLiveRegion() {
+    fun aRefusedKeyIsSaidByItsProviderAboveThePlan() {
         clock("24")
         val source = Plans.source(today.atTime(8, 51).atZone(lisbon).toInstant(),
             keyRefusedBy = listOf(ProviderId("open-meteo")))
@@ -649,7 +625,6 @@ class HomeScreenTest {
 
         val warning = text(R.string.key_refused_warning, "Open-Meteo")
         compose.onNodeWithText(warning).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(warning)).isEqualTo(LiveRegionMode.Polite)
         assertThat(top(warning)).isLessThan(todaysCardTop())
         compose.onNodeWithText("13:00 – 15:00").assertIsDisplayed()
     }
@@ -698,7 +673,6 @@ class HomeScreenTest {
 
         val warning = text(R.string.key_refused_warning, "Open-Meteo")
         compose.onNodeWithText(warning).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(warning)).isEqualTo(LiveRegionMode.Polite)
         assertThat(top(warning)).isLessThan(top(text(R.string.no_forecast)))
         compose.onNodeWithText(text(R.string.details_in_english, "Open-Meteo: 401 Unauthorized")).assertExists()
     }
@@ -716,7 +690,6 @@ class HomeScreenTest {
         show(Outlook.NoForecast("Open-Meteo: no network"))
 
         compose.onNodeWithText(text(R.string.key_refused_warning, "Open-Meteo")).assertDoesNotExist()
-        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)).assertDoesNotExist()
     }
 
     @Test
@@ -761,10 +734,10 @@ class HomeScreenTest {
         compose.onNodeWithText(shown, useUnmergedTree = true).fetchSemanticsNode().positionInRoot.y
 
     private fun top(shown: String): Float =
-        compose.onNode(hasText(shown) and !NOT_READ_APART).fetchSemanticsNode().positionInRoot.y
+        compose.onAllNodes(hasText(shown)).onFirst().fetchSemanticsNode().positionInRoot.y
 
     /** The top of today's card, whose heading is the day's name. */
-    private fun todaysCardTop(): Float = compose.onNode(isHeading() and hasText("Today"), useUnmergedTree = true)
+    private fun todaysCardTop(): Float = compose.onNode(dayTitle("Today"), useUnmergedTree = true)
         .fetchSemanticsNode().positionInRoot.y
 
     @Test
@@ -773,14 +746,12 @@ class HomeScreenTest {
         show(lisbonWeek(freshness = Freshness.STALE), card = card())
 
         val title = text(R.string.notification_card_title)
-        compose.onNode(hasText(title) and isHeading()).assertIsDisplayed()
+        compose.onNode(hasText(title)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.notification_card_body)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.notification_card_ask)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.notification_card_no_ask)).assertDoesNotExist()
         assertThat(top(title)).isGreaterThan(top(text(R.string.stale_warning, "08:51")))
             .isLessThan(todaysCardTop())
-        assertThat(compose.liveRegionOf(title)).isNull()
-        assertThat(compose.liveRegionOf(text(R.string.notification_card_body))).isNull()
     }
 
     @Test
@@ -817,36 +788,15 @@ class HomeScreenTest {
         compose.onNodeWithText(text(R.string.notification_card_ask)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.notification_card_no_ask)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.notification_card_open_settings)).assertIsDisplayed()
-        // the button the focus was on is gone, so the card's title takes it
-        compose.onNode(isHeading() and hasText(text(R.string.notification_card_title))).assertIsFocused()
+        // the button the focus was on is gone, so the one in its place takes it
+        compose.onNodeWithText(text(R.string.notification_card_open_settings)).assertIsFocused()
     }
 
     @Test
-    fun aCardThatLeadsToTheSettingsFromTheStartLeavesTheFocusWithTheHomesTitle() {
+    fun aCardThatLeadsToTheSettingsFromTheStartTakesNoFocus() {
         show(lisbonWeek(), card = card(Memory(refused = true)))
 
-        compose.onNode(title).assertIsFocused()
-        compose.onNode(isHeading() and hasText(text(R.string.notification_card_title))).assertIsNotFocused()
-    }
-
-    @Test
-    fun theNotificationCardIsReadTitleTextButtonAndCloseLast() {
-        show(lisbonWeek(), card = card())
-
-        val close = compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction())
-            .fetchSemanticsNode()
-        val group = generateSequence(close.parent) { it.parent }
-            .first { it.config.getOrNull(SemanticsProperties.IsTraversalGroup) == true }
-        val inGroup = hasAnyAncestor(SemanticsMatcher("in the card's group") { it.id == group.id })
-        val read = listOf(isHeading() and hasText(text(R.string.notification_card_title)),
-            hasText(text(R.string.notification_card_body)), hasText(text(R.string.notification_card_ask)) and
-                hasClickAction()).map { compose.onNode(it and inGroup).fetchSemanticsNode() }
-        // within the card's group the order is by this index first, then by place: Close, beside the title, is last
-        read.forEach {
-            assertThat(it.config.getOrNull(SemanticsProperties.TraversalIndex) ?: 0f)
-                .isLessThan(close.config[SemanticsProperties.TraversalIndex])
-        }
-        assertThat(read.map { it.positionInRoot.y }).isSorted()
+        compose.onNodeWithText(text(R.string.notification_card_open_settings)).assertIsNotFocused()
     }
 
     /** Shows the card at twice the font size and checks that its button's words break only where a space is. */
@@ -879,7 +829,7 @@ class HomeScreenTest {
     fun theNotificationCardAndTheRefusedKeyAreInDutch() {
         show(lisbonWeek(keyRefusedBy = listOf(ProviderId("open-meteo"))), card = card())
 
-        compose.onNode(isHeading() and hasText("Krijg een melding vóór elk laadvenster")).assertExists()
+        compose.onNode(hasText("Krijg een melding vóór elk laadvenster")).assertExists()
         compose.onNodeWithText("De app meldt het kort voordat een laadvenster begint, zodat je je laadpaal op tijd " +
             "kunt instellen. Dat kun je later wijzigen bij Meldingen in Instellingen.").assertExists()
         compose.onNode(hasText("Meldingen aanzetten") and hasClickAction()).assertExists()
@@ -917,17 +867,15 @@ class HomeScreenTest {
     }
 
     @Test
-    fun theNotificationCardsCloseTakesItAwayForGoodAndTheFocusToTheTitle() {
+    fun theNotificationCardsCloseTakesItAwayForGood() {
         val memory = Memory()
         show(lisbonWeek(), card = card(memory))
-        compose.runOnIdle { focus.clearFocus() }
 
         compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction())
             .performScrollTo().performClick()
         compose.waitForIdle()
 
         compose.onNodeWithText(text(R.string.notification_card_title)).assertDoesNotExist()
-        compose.onNode(title).assertIsFocused()
         assertThat(memory.closed).isTrue()
     }
 
@@ -1048,18 +996,6 @@ class HomeScreenTest {
     private fun warningWords() = text(R.string.stale_warning, "08:51")
 
     @Test
-    fun theStaleWarningIsOnePolitePieceOfTextWithoutTheSignInIt() {
-        clock("24")
-        show(lisbonWeek(freshness = Freshness.STALE))
-
-        val region = compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
-
-        val config = region.fetchSemanticsNode().config
-        assertThat(config[SemanticsProperties.Text].joinToString("") { it.text }).isEqualTo(warningWords())
-        assertThat(config.getOrNull(SemanticsProperties.ContentDescription)).isNull()
-    }
-
-    @Test
     fun theNoticeAndTheStaleWarningFollowTheSelectedTabOnceEach() {
         clock("24")
         failedSave()
@@ -1096,42 +1032,28 @@ class HomeScreenTest {
     }
 
     @Test
-    fun theSolarChartIsOneImageThatSaysTheDayInASentenceThatAlsoShowsUnderIt() {
+    fun theSolarChartSaysTheDayItsWindowsAndNowInASentenceUnderIt() {
         clock("24")
         show(sunnyDays())
 
-        val said = listOf(text(R.string.chart_spoken, "Today", "3.2", "12:00", "0.3"),
-            text(R.string.chart_spoken_windows, "13:00 to 15:00, 16:00 to 17:00"),
-            text(R.string.chart_spoken_now, "09:00")).joinToString(" ")
-        compose.assertReadAsOne(said, Role.Image).performScrollTo().assertIsDisplayed()
-        compose.assertShownButNotReadApart(said)
-        compose.onNode(isHeading() and hasText(text(R.string.chart_heading))).performScrollTo().assertIsDisplayed()
+        val said = listOf(text(R.string.chart_sentence, "Today", "3.2", "12:00", "0.3"),
+            text(R.string.chart_sentence_windows, "13:00 to 15:00, 16:00 to 17:00"),
+            text(R.string.chart_sentence_now, "09:00")).joinToString(" ")
+        compose.onNodeWithText(said).performScrollTo().assertIsDisplayed()
+        assertThat(shown(said).top).isGreaterThanOrEqualTo(chart().boundsInRoot.bottom - 0.5f)
+        compose.onNode(hasText(text(R.string.chart_heading))).performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun theLegendNamesTheSolarCurveTheBaseloadAndTheChargeWindowsInWords() {
         show(sunnyDays())
-        // on a day without a window, as today's card says "Charge window" too, to be read
+        // on a day without a window, as today's card says "Charge window" too
         tab("Tomorrow").performClick()
         compose.waitForIdle()
 
         listOf(R.string.chart_legend_solar, R.string.chart_legend_house, R.string.chart_legend_window).forEach {
-            compose.assertShownButNotReadApart(text(it))
+            compose.onNodeWithText(text(it)).performScrollTo().assertIsDisplayed()
         }
-    }
-
-    @Test
-    fun onTodayTheLegendsThreeEntriesAreShownButNotReadApart() {
-        show(sunnyDays())
-
-        // today's own card says "Charge window" too, to be read: the legend's is the hidden one of the two
-        listOf(R.string.chart_legend_solar, R.string.chart_legend_house, R.string.chart_legend_window).forEach {
-            compose.onAllNodes(hasText(text(it)) and NOT_READ_APART, useUnmergedTree = true).assertCountEquals(1)
-        }
-        compose.onAllNodes(hasText(text(R.string.chart_legend_solar)) and !NOT_READ_APART, useUnmergedTree = true)
-            .assertCountEquals(0)
-        compose.onAllNodes(hasText(text(R.string.chart_legend_house)) and !NOT_READ_APART, useUnmergedTree = true)
-            .assertCountEquals(0)
     }
 
     @Test
@@ -1142,14 +1064,14 @@ class HomeScreenTest {
         tab("Tomorrow").performClick()
         compose.waitForIdle()
 
-        compose.assertReadAsOne(text(R.string.chart_spoken, "Tomorrow", "3.2", "12:00", "0.3"), Role.Image)
+        compose.onNodeWithText(text(R.string.chart_sentence, "Tomorrow", "3.2", "12:00", "0.3")).assertExists()
     }
 
     @Test
     fun aDayWithoutSunSaysItsChartHasNone() {
         show(lisbonWeek())
 
-        compose.assertReadAsOne(text(R.string.chart_spoken_no_solar, "Today"), Role.Image)
+        compose.onNodeWithText(text(R.string.chart_sentence_no_solar, "Today")).assertExists()
     }
 
     @Test
@@ -1192,26 +1114,24 @@ class HomeScreenTest {
     }
 
     @Test
-    fun theBatteryBarIsOneImageThatSaysTheLevelsWhichAlsoShowWithItsMarks() {
+    fun theBatteryCardShowsTheLevelsAndTheBarWithItsMarks() {
         show(lisbonWeek())
 
-        compose.assertReadAsOne(todaysBattery("40", "60", "20", "80"), Role.Image)
-            .performScrollTo().assertIsDisplayed()
-        compose.onNode(isHeading() and hasText(text(R.string.battery_heading))).performScrollTo().assertIsDisplayed()
-        compose.assertShownButNotReadApart(text(R.string.battery_levels, "40", "60"))
-        compose.assertShownButNotReadApart(text(R.string.battery_minimum, "20"))
-        compose.assertShownButNotReadApart(text(R.string.battery_target, "80"))
+        compose.onNodeWithTag(BATTERY_BAR, useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        compose.onNode(hasText(text(R.string.battery_heading))).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.battery_levels, "40", "60")).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.battery_minimum, "20")).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.battery_target, "80")).performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun onAnotherDayTheBatteryBarSaysTheLevelAtItsStart() {
+    fun onAnotherDayTheBatteryCardShowsTheLevelsOfThatDay() {
         show(lisbonWeek())
 
         tab("Wednesday").performClick()
         compose.waitForIdle()
 
-        compose.assertReadAsOne(text(R.string.battery_spoken_day, "40", "Wednesday", "50", "20", "80"), Role.Image)
-        compose.assertShownButNotReadApart(text(R.string.battery_levels, "40", "50"))
+        compose.onNodeWithText(text(R.string.battery_levels, "40", "50")).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -1221,17 +1141,16 @@ class HomeScreenTest {
 
         compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).performScrollTo()
             .assertIsDisplayed()
-        compose.onNode(hasContentDescription(todaysBattery("40", "60", "20", "80")),
-            useUnmergedTree = true).performScrollTo().assertIsDisplayed()
-        compose.assertShownButNotReadApart(text(R.string.battery_target, "80"))
+        compose.onNodeWithTag(BATTERY_BAR, useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.battery_target, "80")).performScrollTo().assertIsDisplayed()
         compose.assertScrollsToShow(hasText(Plans.CREDIT, substring = true))
     }
 
     private fun chart(): SemanticsNode =
         compose.onNode(SemanticsMatcher.keyIsDefined(AxisLabels), useUnmergedTree = true).fetchSemanticsNode()
 
-    private fun saying(sentence: String): Rect =
-        compose.onNode(hasContentDescription(sentence), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+    private fun bar(): Rect =
+        compose.onNodeWithTag(BATTERY_BAR, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
 
     private fun shown(words: String): Rect =
         compose.onNodeWithText(words, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
@@ -1269,7 +1188,7 @@ class HomeScreenTest {
         show(Plans.planned(today.atTime(9, 0).atZone(lisbon), listOf(listOf()), minimum = 70.0, target = 75.0))
         compose.onNodeWithText(text(R.string.battery_target, "75"), useUnmergedTree = true).performScrollTo()
 
-        val bar = saying(todaysBattery("40", "40", "70", "75"))
+        val bar = bar()
         val minimum = shown(text(R.string.battery_minimum, "70"))
         val target = shown(text(R.string.battery_target, "75"))
         assertThat(minimum.overlaps(target)).`as`("the marks' words %s and %s overlap", minimum, target).isFalse()
@@ -1297,7 +1216,7 @@ class HomeScreenTest {
         answer(lisbonWeek())
         compose.onNodeWithText(text(R.string.battery_target, "80"), useUnmergedTree = true).performScrollTo()
 
-        val bar = saying(todaysBattery("40", "60", "20", "80"))
+        val bar = bar()
         assertThat(shown(text(R.string.battery_minimum, "20")).center.x)
             .isCloseTo(bar.left + bar.width * 0.2f, within(1f))
         assertThat(shown(text(R.string.battery_target, "80")).center.x)
@@ -1335,39 +1254,18 @@ class HomeScreenTest {
     }
 
     @Test
-    fun onTomorrowTheBatteryBarSaysTomorrowInItsSentence() {
-        show(lisbonWeek())
-
-        tab("Tomorrow").performClick()
-        compose.waitForIdle()
-
-        compose.assertReadAsOne(text(R.string.battery_spoken_day, "40", "tomorrow", "40", "20", "80"), Role.Image)
-    }
-
-    @Test
-    @Config(qualifiers = "nl")
-    fun onTomorrowTheBatteryBarSaysTomorrowInItsSentenceInDutch() {
-        show(lisbonWeek())
-
-        tab("Morgen").performClick()
-        compose.waitForIdle()
-
-        compose.assertReadAsOne(text(R.string.battery_spoken_day, "40", "morgen", "40", "20", "80"), Role.Image)
-    }
-
-    @Test
     fun theSolarChartComesBeforeTheBatteryBar() {
         show(sunnyDays())
 
-        val chart = compose.onNode(isHeading() and hasText(text(R.string.chart_heading))).fetchSemanticsNode()
-        val battery = compose.onNode(isHeading() and hasText(text(R.string.battery_heading))).fetchSemanticsNode()
+        val chart = compose.onNode(hasText(text(R.string.chart_heading))).fetchSemanticsNode()
+        val battery = compose.onNode(hasText(text(R.string.battery_heading))).fetchSemanticsNode()
         // the positions, unlike the bounds, are not cut off where the page ends
         assertThat(chart.positionInRoot.y).isLessThan(battery.positionInRoot.y)
     }
 
     /** The colour on the card in its padding, left of its heading, once scrolled to, as the screen draws it. */
     private fun groundBeside(heading: Int): Color {
-        val node = compose.onNode(isHeading() and hasText(text(heading))).performScrollTo().fetchSemanticsNode()
+        val node = compose.onNode(hasText(text(heading))).performScrollTo().fetchSemanticsNode()
         val bounds = node.boundsInRoot
         return Color(compose.screenshot().getPixel((bounds.left - 8 * node.layoutInfo.density.density).roundToInt(),
             bounds.center.y.roundToInt()))

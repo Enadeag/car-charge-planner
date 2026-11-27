@@ -44,10 +44,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.error
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import java.time.LocalDate
@@ -61,18 +57,13 @@ import nl.enadeag.carchargeplanner.android.form.FieldProblem
  *
  * @param name what it is, such as "Away from", read first
  * @param time the time or day, as the phone writes it
- * @param problem the problem it carries for a screen reader; null for none
  * @param modifier its place in the layout; it fills the width it gets
  */
 @Composable
-internal fun TimeButton(name: String, time: String, focus: FocusRequester, problem: String?, enabled: Boolean,
+internal fun TimeButton(name: String, time: String, focus: FocusRequester, enabled: Boolean,
     modifier: Modifier = Modifier, onClick: () -> Unit) {
     AppOutlinedButton(onClick = onClick, enabled = enabled,
-        modifier = modifier.fillMaxWidth().focusProperties { canFocus = true }.focusRequester(focus).semantics {
-            if (problem != null) {
-                error(problem)
-            }
-        }) {
+        modifier = modifier.fillMaxWidth().focusProperties { canFocus = true }.focusRequester(focus)) {
         Column(Modifier.fillMaxWidth()) {
             Text(name, style = MaterialTheme.typography.labelMedium)
             Text(time, style = MaterialTheme.typography.titleMedium)
@@ -82,8 +73,8 @@ internal fun TimeButton(name: String, time: String, focus: FocusRequester, probl
 
 /**
  * A time the owner chooses on a form, such as a start of the charging hours: its [TimeButton], which shows the time on
- * the phone's 12- or 24-hour clock and opens the [TimeDialog], and under it the problem that Next or Save found,
- * which a screen reader reads with the button. The focus comes back to the button when the picker closes, once the
+ * the phone's 12- or 24-hour clock and opens the [TimeDialog], and under it the problem that Next or Save found.
+ * The focus comes back to the button when the picker closes, once the
  * page's window has it again.
  *
  * @param label what it is, such as "Start charging from": the button's name and the picker's title
@@ -106,13 +97,12 @@ internal fun TimeChoice(label: String, time: LocalTime, problem: FieldProblem?, 
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TimeButton(label, rememberClock().format(time), focus, problemSentence, enabled = true) {
+        TimeButton(label, rememberClock().format(time), focus, enabled = true) {
             returning = true
             picking = true
         }
         problemSentence?.let {
-            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.clearAndSetSemantics { })
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
     if (picking) {
@@ -135,7 +125,7 @@ internal fun TimeDialog(title: String, time: LocalTime, chosen: (LocalTime) -> U
     var typing by rememberSaveable { mutableStateOf(false) }
     TimePickerDialog(
         onDismissRequest = closed,
-        title = { Text(title, modifier = Modifier.semantics { heading() }) },
+        title = { Text(title) },
         confirmButton = {
             AppTextButton(onClick = {
                 chosen(LocalTime.of(state.hour, state.minute))
@@ -200,8 +190,7 @@ internal fun DateDialog(title: String, day: LocalDate, days: ClosedRange<LocalDa
                     Box(Modifier.horizontalScroll(rememberScrollState())) {
                         DatePicker(state, modifier = Modifier.width(PICKER_WIDTH), showModeToggle = false,
                             colors = colors, title = {
-                                Text(title, modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp)
-                                    .semantics { heading() })
+                                Text(title, modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp))
                             })
                     }
                     // as the time picker's: in words, under the picker, rather than Material's icon in the picker's

@@ -14,9 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.enadeag.carchargeplanner.android.R
@@ -55,8 +52,7 @@ internal fun UnusableScreen(again: SetUpAgain) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 Text(stringResource(R.string.set_up_again_moving), modifier = Modifier.padding(start = 8.dp))
             }
-            is SetUpAgain.State.Failed -> Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Assertive }) {
+            is SetUpAgain.State.Failed -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.set_up_again_failed), color = MaterialTheme.colorScheme.error)
                 EnglishDetails(now.detail)
                 AppButton(onClick = { again.ask() }) {

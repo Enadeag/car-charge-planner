@@ -20,9 +20,8 @@ import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 
 /**
- * A snackbar that says what failed in the app's language and then the engine's English details, which a screen reader
- * reads as English. It has a button to close it and no action, and stays until the next notice or Close, as the
- * details may take long to read.
+ * A snackbar that says what failed in the app's language and then the engine's English details. It has a button to
+ * close it and no action, and stays until the next notice or Close, as the details may take long to read.
  */
 internal class FailureVisuals(override val message: String, val details: String) : SnackbarVisuals {
     override val actionLabel: String? = null
@@ -32,8 +31,7 @@ internal class FailureVisuals(override val message: String, val details: String)
 
 /**
  * Material's snackbar, with its action as Material draws it and, on every snackbar that asks for one, the app's own
- * Close, so a screen reader reads one name for it; the English details of a [FailureVisuals] are marked as English.
- * The snackbar host around it keeps its polite live region.
+ * Close, named as every Close of the app, never Material's "Dismiss"; a [FailureVisuals] with its English details.
  */
 @Composable
 internal fun AppSnackbar(data: SnackbarData) {
@@ -60,7 +58,7 @@ internal fun AppSnackbar(data: SnackbarData) {
     Snackbar(modifier = Modifier.padding(12.dp), action = action, dismissAction = close) {
         if (visuals is FailureVisuals) {
             val sentence = visuals.message + " " + stringResource(R.string.details_in_english, visuals.details)
-            Text(inEnglish(sentence, visuals.details))
+            Text(sentence)
         } else {
             Text(visuals.message)
         }

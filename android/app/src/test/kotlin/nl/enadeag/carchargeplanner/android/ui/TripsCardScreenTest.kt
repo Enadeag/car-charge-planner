@@ -8,7 +8,6 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -20,11 +19,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -159,18 +156,16 @@ class TripsCardScreenTest {
     private fun dayTripLine(start: String = "07:30", end: String = "18:00") =
         text(R.string.trip_line, text(R.string.time_span, start, end), text(R.string.trip_distance, "300"))
 
-    private fun dayTripSpoken(start: String = "07:30", end: String = "18:00") =
-        text(R.string.trip_line_spoken, text(R.string.time_span_spoken, start, end),
-            text(R.string.trip_distance, "300"))
+    /** One of a trip's two choices, by the trip's line. */
+    private fun choice(label: Int, line: String) =
+        compose.controlFor(line, hasText(text(label)) and hasClickAction())
 
-    private fun choice(label: Int, spoken: String) =
-        compose.onNode(hasContentDescription(text(R.string.trip_choice_spoken, text(label), spoken)))
-
-    private fun remove(spoken: String) =
-        compose.onNode(hasContentDescription(text(R.string.trip_remove_spoken, spoken)))
+    /** A trip's Remove, by the trip's line. */
+    private fun remove(line: String) =
+        compose.controlFor(line, hasText(text(R.string.trip_remove)) and hasClickAction())
 
     private fun tab(name: String) {
-        compose.onNode(hasContentDescription(name) and hasClickAction()).performClick()
+        compose.dayTab(name).performClick()
         compose.waitForIdle()
     }
 
@@ -201,14 +196,13 @@ class TripsCardScreenTest {
         access.trips = listOf(dayTrip, overnight)
         show()
 
-        val heading = compose.onNode(isHeading() and hasText(text(R.string.trips_heading))).performScrollTo()
+        val heading = compose.onNode(hasText(text(R.string.trips_heading))).performScrollTo()
             .fetchSemanticsNode().boundsInRoot
-        val battery = compose.onNode(isHeading() and hasText(text(R.string.battery_heading))).fetchSemanticsNode()
+        val battery = compose.onNode(hasText(text(R.string.battery_heading))).fetchSemanticsNode()
             .boundsInRoot
         assertThat(heading.top).isGreaterThan(battery.bottom)
         compose.onNodeWithText(dayTripLine()).performScrollTo().assertIsDisplayed()
-            .assert(hasContentDescription(dayTripSpoken()))
-        remove(dayTripSpoken()).assertExists().assert(hasText(text(R.string.trip_remove)))
+        remove(dayTripLine()).assertExists()
         compose.onNode(hasText(text(R.string.trip_distance, "120"), substring = true)).assertDoesNotExist()
     }
 
@@ -220,12 +214,9 @@ class TripsCardScreenTest {
 
         val line = text(R.string.trip_line, text(R.string.trip_days, "Tomorrow", "20:00", "Wed, Jun 3", "09:00"),
             text(R.string.trip_distance, "120"))
-        val spoken = text(R.string.trip_line_spoken,
-            text(R.string.trip_days_spoken, "Tomorrow", "20:00", "Wed, Jun 3", "09:00"),
-            text(R.string.trip_distance, "120"))
         for (day in listOf("Tomorrow", "Wednesday")) {
             tab(day)
-            compose.onNodeWithText(line).assertExists().assert(hasContentDescription(spoken))
+            compose.onNodeWithText(line).assertExists()
             compose.onNodeWithText(text(R.string.trips_none)).assertDoesNotExist()
         }
     }
@@ -241,21 +232,21 @@ class TripsCardScreenTest {
     }
 
     @Test
-    fun theChoicesAreCheckboxRowsSpokenWithTheTripThatSaveAtOnce() {
+    fun theChoicesAreCheckboxRowsUnderTheTripThatSaveAtOnce() {
         access.trips = listOf(dayTrip)
         show()
-        val notWith = choice(R.string.trip_not_with_this_car, dayTripSpoken()).performScrollTo()
+        val notWith = choice(R.string.trip_not_with_this_car, dayTripLine()).performScrollTo()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
             .assert(toggle(ToggleableState.Off))
-        choice(R.string.trip_can_charge, dayTripSpoken()).assert(toggle(ToggleableState.Off))
+        choice(R.string.trip_can_charge, dayTripLine()).assert(toggle(ToggleableState.Off))
 
         notWith.performClick()
         compose.waitForIdle()
 
         val ticked = Trip(dayTrip.departure(), dayTrip.returnTime(), 300.0, false, true)
         assertThat(access.trips).containsExactly(ticked)
-        choice(R.string.trip_not_with_this_car, dayTripSpoken()).assert(toggle(ToggleableState.On))
-        choice(R.string.trip_can_charge, dayTripSpoken()).assert(toggle(ToggleableState.Off))
+        choice(R.string.trip_not_with_this_car, dayTripLine()).assert(toggle(ToggleableState.On))
+        choice(R.string.trip_can_charge, dayTripLine()).assert(toggle(ToggleableState.Off))
         assertThat(access.outlooks).hasSize(2)
         compose.onNodeWithText(text(R.string.trip_saved, dayTripLine())).assertDoesNotExist()
     }
@@ -266,7 +257,7 @@ class TripsCardScreenTest {
         access.trips = listOf(dayTrip, evening)
         show()
         keyboard()
-        val canCharge = choice(R.string.trip_can_charge, dayTripSpoken("19:00", "22:00")).performScrollTo()
+        val canCharge = choice(R.string.trip_can_charge, dayTripLine("19:00", "22:00")).performScrollTo()
         canCharge.requestFocus()
         val before = canCharge.fetchSemanticsNode().id
 
@@ -277,7 +268,7 @@ class TripsCardScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithText(dayTripLine()).assertDoesNotExist()
-        val after = choice(R.string.trip_can_charge, dayTripSpoken("19:00", "22:00"))
+        val after = choice(R.string.trip_can_charge, dayTripLine("19:00", "22:00"))
             .assert(toggle(ToggleableState.On)).assertIsFocused().fetchSemanticsNode().id
         assertThat(after).isEqualTo(before)
     }
@@ -288,10 +279,8 @@ class TripsCardScreenTest {
         access.trips = listOf(without, dayTrip)
         show()
         keyboard()
-        val notWith = hasContentDescription(text(R.string.trip_choice_spoken, text(R.string.trip_not_with_this_car),
-            dayTripSpoken()))
-        val canCharge = hasContentDescription(text(R.string.trip_choice_spoken, text(R.string.trip_can_charge),
-            dayTripSpoken()))
+        val notWith = hasText(text(R.string.trip_not_with_this_car)) and hasClickAction()
+        val canCharge = hasText(text(R.string.trip_can_charge)) and hasClickAction()
         val pressed = compose.onAllNodes(canCharge)[0].performScrollTo()
         pressed.requestFocus()
 
@@ -312,8 +301,7 @@ class TripsCardScreenTest {
         access.trips = listOf(dayTrip)
         show()
         keyboard()
-        val canCharge = hasContentDescription(text(R.string.trip_choice_spoken, text(R.string.trip_can_charge),
-            dayTripSpoken()))
+        val canCharge = hasText(text(R.string.trip_can_charge)) and hasClickAction()
         val pressed = compose.onNode(canCharge).performScrollTo()
         pressed.requestFocus()
         access.tripFails = "No space left on device"
@@ -342,11 +330,11 @@ class TripsCardScreenTest {
         access.tripGate = gate
         show()
         keyboard()
-        val canCharge = choice(R.string.trip_can_charge, dayTripSpoken()).performScrollTo()
+        val canCharge = choice(R.string.trip_can_charge, dayTripLine()).performScrollTo()
         canCharge.requestFocus()
 
         canCharge.enter()
-        canCharge.assertIsFocused().assertIsNotEnabled().assert(toggle(ToggleableState.On))
+        canCharge.assertIsFocused().assert(toggle(ToggleableState.On))
         canCharge.enter()
         gate.complete(Unit)
         compose.waitForIdle()
@@ -363,11 +351,11 @@ class TripsCardScreenTest {
         access.tripGate = gate
         show()
         keyboard()
-        val button = remove(dayTripSpoken()).performScrollTo()
+        val button = remove(dayTripLine()).performScrollTo()
         button.requestFocus()
 
         button.enter()
-        button.assertIsFocused().assertIsNotEnabled()
+        button.assertIsFocused()
         gate.complete(Unit)
         compose.waitForIdle()
 
@@ -383,10 +371,10 @@ class TripsCardScreenTest {
         access.tripGate = gate
         show()
 
-        remove(dayTripSpoken("19:00", "22:00")).performScrollTo().performClick()
+        remove(dayTripLine("19:00", "22:00")).performScrollTo().performClick()
         compose.waitForIdle()
-        remove(dayTripSpoken()).performScrollTo().performClick()
-        choice(R.string.trip_can_charge, dayTripSpoken()).performScrollTo().performClick()
+        remove(dayTripLine()).performScrollTo().performClick()
+        choice(R.string.trip_can_charge, dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
         gate.complete(Unit)
         compose.waitForIdle()
@@ -397,21 +385,19 @@ class TripsCardScreenTest {
     }
 
     @Test
-    fun whileAChoiceIsSavedItShowsTickedAndTheCardsControlsAreOff() {
+    fun whileAChoiceIsSavedItShowsTicked() {
         access.trips = listOf(dayTrip, overnight)
         val gate = CompletableDeferred<Unit>()
         access.tripGate = gate
         show()
 
-        choice(R.string.trip_can_charge, dayTripSpoken()).performScrollTo().performClick()
+        choice(R.string.trip_can_charge, dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
 
-        choice(R.string.trip_can_charge, dayTripSpoken()).assert(toggle(ToggleableState.On)).assertIsNotEnabled()
-        choice(R.string.trip_not_with_this_car, dayTripSpoken()).assertIsNotEnabled()
-        remove(dayTripSpoken()).assertIsNotEnabled()
+        choice(R.string.trip_can_charge, dayTripLine()).assert(toggle(ToggleableState.On))
         gate.complete(Unit)
         compose.waitForIdle()
-        remove(dayTripSpoken()).assertIsEnabled()
+        remove(dayTripLine()).assertExists()
     }
 
     @Test
@@ -420,13 +406,12 @@ class TripsCardScreenTest {
         access.tripFails = "trips.json is not written: written by a newer version of the app (file version 2)"
         show()
 
-        choice(R.string.trip_not_with_this_car, dayTripSpoken()).performScrollTo().performClick()
+        choice(R.string.trip_not_with_this_car, dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
 
-        choice(R.string.trip_not_with_this_car, dayTripSpoken()).assert(toggle(ToggleableState.Off))
+        choice(R.string.trip_not_with_this_car, dayTripLine()).assert(toggle(ToggleableState.Off))
         val failed = text(R.string.trip_not_saved) + " " + text(R.string.details_in_english, access.tripFails!!)
         compose.onNodeWithText(failed).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(failed)).isNotNull()
         assertThat(access.outlooks).hasSize(1)
     }
 
@@ -435,14 +420,13 @@ class TripsCardScreenTest {
         access.trips = listOf(dayTrip)
         show()
 
-        remove(dayTripSpoken()).performScrollTo().performClick()
+        remove(dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
 
         assertThat(access.trips).isEmpty()
         compose.onNodeWithText(dayTripLine()).assertDoesNotExist()
         val removed = text(R.string.trip_removed, dayTripLine())
         compose.onNodeWithText(removed).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(removed)).isEqualTo(LiveRegionMode.Polite)
         assertThat(access.outlooks).hasSize(2)
         compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction()).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.action_undo)).performClick()
@@ -458,11 +442,11 @@ class TripsCardScreenTest {
         val evening = trip(today, "19:00", today, "22:00", 300.0)
         access.trips = listOf(dayTrip, evening)
         show()
-        remove(dayTripSpoken()).performScrollTo().performClick()
+        remove(dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
         val gate = CompletableDeferred<Unit>()
         access.tripGate = gate
-        choice(R.string.trip_can_charge, dayTripSpoken("19:00", "22:00")).performScrollTo().performClick()
+        choice(R.string.trip_can_charge, dayTripLine("19:00", "22:00")).performScrollTo().performClick()
         compose.waitForIdle()
 
         compose.onNodeWithText(text(R.string.action_undo)).performClick()
@@ -474,7 +458,7 @@ class TripsCardScreenTest {
         assertThat(access.tripChanges.last()).isEqualTo("add" to dayTrip)
         compose.onNodeWithText(text(R.string.trip_saved, dayTripLine())).assertIsDisplayed()
         compose.onNodeWithText(dayTripLine()).assertIsFocused()
-        choice(R.string.trip_can_charge, dayTripSpoken("19:00", "22:00")).assert(toggle(ToggleableState.On))
+        choice(R.string.trip_can_charge, dayTripLine("19:00", "22:00")).assert(toggle(ToggleableState.On))
     }
 
     @Test
@@ -482,12 +466,12 @@ class TripsCardScreenTest {
         val evening = trip(today, "19:00", today, "22:00", 300.0)
         access.trips = listOf(dayTrip, evening)
         show()
-        remove(dayTripSpoken()).performScrollTo().performClick()
+        remove(dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
         val gate = CompletableDeferred<Unit>()
         access.tripGate = gate
-        // the snackbar covers the bottom of the page, so this Remove is pressed as TalkBack does
-        remove(dayTripSpoken("19:00", "22:00")).performSemanticsAction(SemanticsActions.OnClick)
+        // the snackbar covers the bottom of the page, so this Remove is pressed by its action
+        remove(dayTripLine("19:00", "22:00")).performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(text(R.string.action_undo)).performClick()
         compose.waitForIdle()
@@ -513,12 +497,12 @@ class TripsCardScreenTest {
         val evening = trip(today, "19:00", today, "22:00", 300.0)
         access.trips = listOf(dayTrip, evening)
         show()
-        remove(dayTripSpoken()).performScrollTo().performClick()
+        remove(dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
         val gate = CompletableDeferred<Unit>()
         access.tripGate = gate
         access.tripFails = "No space left on device"
-        remove(dayTripSpoken("19:00", "22:00")).performSemanticsAction(SemanticsActions.OnClick)
+        remove(dayTripLine("19:00", "22:00")).performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(text(R.string.action_undo)).performClick()
         compose.waitForIdle()
@@ -544,14 +528,14 @@ class TripsCardScreenTest {
         val evening = trip(today, "19:00", today, "22:00", 300.0)
         access.trips = listOf(dayTrip, evening)
         show()
-        val eveningSpoken = dayTripSpoken("19:00", "22:00")
+        val eveningLine = dayTripLine("19:00", "22:00")
 
-        remove(eveningSpoken).performScrollTo().performClick()
+        remove(eveningLine).performScrollTo().performClick()
         compose.waitForIdle()
         compose.onNodeWithText(dayTripLine()).assertIsFocused()
 
-        // the snackbar covers the bottom of the page, so the second Remove is pressed as TalkBack does
-        remove(dayTripSpoken()).performSemanticsAction(SemanticsActions.OnClick)
+        // the snackbar covers the bottom of the page, so the second Remove is pressed by its action
+        remove(dayTripLine()).performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
         compose.onNodeWithText(text(R.string.trips_none)).assertIsFocused()
     }
@@ -562,7 +546,7 @@ class TripsCardScreenTest {
         access.tripFails = "No space left on device"
         show()
 
-        remove(dayTripSpoken()).performScrollTo().performClick()
+        remove(dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
 
         val failed = text(R.string.trip_not_removed) + " " +
@@ -578,7 +562,7 @@ class TripsCardScreenTest {
         access.trips = listOf(dayTrip, evening)
         access.tripFails = "No space left on device"
         show()
-        remove(dayTripSpoken("19:00", "22:00")).performScrollTo().performClick()
+        remove(dayTripLine("19:00", "22:00")).performScrollTo().performClick()
         compose.waitForIdle()
         compose.onNodeWithText(dayTripLine("19:00", "22:00")).assertExists()
 
@@ -595,7 +579,7 @@ class TripsCardScreenTest {
         val evening = trip(today, "19:00", today, "22:00", 300.0)
         access.trips = listOf(dayTrip, evening)
         show()
-        remove(dayTripSpoken()).performScrollTo().performClick()
+        remove(dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
         compose.onNodeWithText(dayTripLine("19:00", "22:00")).assertIsFocused()
         access.tripFails = "No space left on device"
@@ -616,7 +600,7 @@ class TripsCardScreenTest {
         access.trips = listOf(dayTrip)
         val shown = mutableStateOf(true)
         show(wrap = { if (shown.value) it() })
-        remove(dayTripSpoken()).performScrollTo().performClick()
+        remove(dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
         val removed = text(R.string.trip_removed, dayTripLine())
         compose.onNodeWithText(removed).assertIsDisplayed()
@@ -635,7 +619,7 @@ class TripsCardScreenTest {
     fun anUndoThatFailedSaysNotSavedAndTheTripStaysGone() {
         access.trips = listOf(dayTrip)
         show()
-        remove(dayTripSpoken()).performScrollTo().performClick()
+        remove(dayTripLine()).performScrollTo().performClick()
         compose.waitForIdle()
         access.tripFails = "No space left on device"
 
@@ -671,7 +655,7 @@ class TripsCardScreenTest {
         show(wrap = { AtFontScaleTwo(it) })
 
         compose.assertEveryControlIsNamedAndLargeEnough()
-        val row = choice(R.string.trip_can_charge, dayTripSpoken()).performScrollTo().fetchSemanticsNode()
+        val row = choice(R.string.trip_can_charge, dayTripLine()).performScrollTo().fetchSemanticsNode()
         val words = compose.onNode(hasText(text(R.string.trip_can_charge)), useUnmergedTree = true)
             .fetchSemanticsNode()
         assertThat(words.boundsInRoot.right).isLessThanOrEqualTo(row.boundsInRoot.right + 0.5f)
@@ -684,13 +668,11 @@ class TripsCardScreenTest {
         access.trips = listOf(dayTrip)
         show()
 
-        compose.onNode(isHeading() and hasText("Ritten")).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Afwezig 07:30 – 18:00 · 300 km heen en terug").assertExists()
-            .assert(hasContentDescription("Afwezig van 07:30 tot 18:00, 300 km heen en terug"))
-        compose.onNode(hasContentDescription("Niet met deze auto, Afwezig van 07:30 tot 18:00, 300 km heen en terug"))
-            .assertExists()
-        compose.onNode(hasContentDescription("Verwijderen: rit Afwezig van 07:30 tot 18:00, 300 km heen en terug"))
-            .assert(hasText("Verwijderen"))
+        compose.onNode(hasText("Ritten")).performScrollTo().assertIsDisplayed()
+        val line = "Afwezig 07:30 – 18:00 · 300 km heen en terug"
+        compose.onNodeWithText(line).assertExists()
+        compose.controlFor(line, hasText("Niet met deze auto") and hasClickAction()).assertExists()
+        compose.controlFor(line, hasText("Verwijderen") and hasClickAction()).assertExists()
         compose.assertShowsNoneOf(englishOnlyTexts())
     }
 
@@ -724,13 +706,12 @@ class TripsCardScreenTest {
         }
         compose.onNodeWithText(text(R.string.trips_none)).performScrollTo().assertIsDisplayed()
 
-        val spoken = text(R.string.trip_line_spoken,
-            text(R.string.trip_days_spoken, "Tomorrow", "20:00", "Wed, Jun 3", "09:00"),
+        val line = text(R.string.trip_line, text(R.string.trip_days, "Tomorrow", "20:00", "Wed, Jun 3", "09:00"),
             text(R.string.trip_distance, "121"))
         for (day in listOf("Tomorrow", "Wednesday")) {
             tab(day)
-            choice(R.string.trip_not_with_this_car, spoken).performScrollTo().assert(toggle(ToggleableState.On))
-            choice(R.string.trip_can_charge, spoken).assert(toggle(ToggleableState.On))
+            choice(R.string.trip_not_with_this_car, line).performScrollTo().assert(toggle(ToggleableState.On))
+            choice(R.string.trip_can_charge, line).assert(toggle(ToggleableState.On))
         }
         compose.onNode(hasText(text(R.string.trip_distance, "50"), substring = true)).assertDoesNotExist()
         assertThat(runBlocking { engine.trips() }.map { it.distanceKm() }).containsExactly(120.6)
