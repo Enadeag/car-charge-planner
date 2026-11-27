@@ -3,22 +3,18 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
-import nl.enadeag.carchargeplanner.desktop.AccessibleNames;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.dashboard.Models;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
-import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import java.util.List;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Point2D;
-import javafx.scene.AccessibleAttribute;
-import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
@@ -192,33 +188,19 @@ class SolarChartTest {
     }
 
     @Test
-    void aScreenReaderReadsTheStepTheArrowKeysChoseAndHowToMove() throws Exception {
+    void theReadoutShowsTheStepTheArrowKeysChose() throws Exception {
         show(TODAY);
 
         key(KeyCode.RIGHT);
         key(KeyCode.RIGHT);
 
-        assertThat(Fx.call(() -> AccessibleNames.of(chart))).isEqualTo(TODAY.readouts().get(1));
-        assertThat(Fx.call(() -> AccessibleNames.help(chart)))
-                .isEqualTo(new Messages(Language.ENGLISH).text(TextKey.CHART_KEYS));
+        assertThat(readout()).isEqualTo(TODAY.readouts().get(1));
     }
 
     @Test
-    void anotherDayIsReadInWordsAgain() throws Exception {
-        show(TODAY);
-        key(KeyCode.RIGHT);
-
-        Fx.run(() -> chart.show(TOMORROW));
-
-        assertThat(Fx.call(() -> AccessibleNames.of(chart))).isEqualTo(TOMORROW.spoken());
-    }
-
-    @Test
-    void aScreenReaderReadsTheChartAsText() throws Exception {
+    void theChartIsATabStopForItsArrowKeys() throws Exception {
         show(TODAY);
 
-        assertThat(Fx.call(() -> chart.queryAccessibleAttribute(AccessibleAttribute.ROLE))).isEqualTo(AccessibleRole.TEXT);
-        assertThat(Fx.call(() -> chart.queryAccessibleAttribute(AccessibleAttribute.TEXT))).isEqualTo(TODAY.spoken());
         assertThat(Fx.call(chart::isFocusTraversable)).isTrue();
     }
 

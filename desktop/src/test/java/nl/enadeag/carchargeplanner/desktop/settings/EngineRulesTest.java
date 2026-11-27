@@ -84,7 +84,7 @@ class EngineRulesTest {
     }
 
     private String help(SettingsView view, TextKey field) throws Exception {
-        return Fx.call(() -> settings.control(view, field).getAccessibleHelp());
+        return Fx.call(() -> SettingsFixture.shownWith(settings.control(view, field)));
     }
 
     private boolean visible(SettingsView view, TextKey field) throws Exception {

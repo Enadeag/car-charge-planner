@@ -58,8 +58,10 @@ import javafx.application.ColorScheme;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
@@ -243,8 +245,8 @@ public final class SettingsFixture {
     }
 
     /**
-     * The control whose screen reader name is this field's name, the place the owner types or chooses in, on any
-     * category's page.
+     * The control this name is the label of, or a check box that says it, the place the owner types or chooses in, on
+     * any category's page.
      */
     static Node field(SettingsView view, String name) {
         // a page not shown yet has no skins, so a spinner's text field is found through the spinner
@@ -255,14 +257,38 @@ public final class SettingsFixture {
                 .findFirst().orElseThrow(() -> new AssertionError("no field " + name));
     }
 
-    /**
-     * Whether a screen reader calls a control by this name: the name itself, or the name with what tells it apart
-     * from its twin on a card that shows more than once, such as "Size (Panel array 2)".
-     */
+    /** Whether a control shows this name: a label whose {@code labelFor} it is says it, or, a check box, it does. */
     public static boolean named(Node node, String name) {
-        var text = node.getAccessibleText();
-        // a field's label can carry the longer name too: it names the field, and is no field itself
-        return !(node instanceof Label) && text != null && (text.equals(name) || text.startsWith(name + " ("));
+        if (node instanceof CheckBox box) {
+            return name.equals(box.getText());
+        }
+        return node.queryAccessibleAttribute(AccessibleAttribute.LABELED_BY) instanceof Label label
+                && name.equals(label.getText());
+    }
+
+    /**
+     * What a field's row shows below it or before it, as one text: the problem first, then the tag and the sentence
+     * that explains it; for a weekly away period, its problem.
+     *
+     * @param control the field, or a part of it
+     * @return the texts shown, separated by a space; empty when none shows
+     */
+    public static String shownWith(Node control) {
+        var row = control;
+        while (row != null && !row.getStyleClass().contains("field-row") && !row.getStyleClass().contains("away-row")) {
+            row = row.getParent();
+        }
+        if (row == null) {
+            throw new AssertionError("no field row around " + control);
+        }
+        var texts = new ArrayList<String>();
+        for (var style : List.of("field-problem", "field-tag", "note")) {
+            Scenes.all(row).stream()
+                    .filter(node -> node instanceof Label label && label.getStyleClass().contains(style)
+                            && label.isVisible() && !label.getText().isEmpty())
+                    .map(node -> ((Label) node).getText()).forEach(texts::add);
+        }
+        return String.join(" ", texts);
     }
 
     /** A fold's row can be named as the field under it, such as a provider's "API key": it is no field. */
@@ -274,7 +300,7 @@ public final class SettingsFixture {
         return field(view, messages.text(name));
     }
 
-    /** The control a screen reader reads by this name, with its help: the spinner itself, not its text field. */
+    /** The control this name is the label of: the spinner itself, not its text field. */
     Node control(SettingsView view, TextKey name) {
         return view.pages().stream().flatMap(page -> Scenes.all(page.view()).stream())
                 .filter(node -> named(node, messages.text(name)))

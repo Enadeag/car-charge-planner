@@ -1,8 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.day;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
-import nl.enadeag.carchargeplanner.desktop.text.Messages;
-import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.util.List;
 import java.util.function.IntConsumer;
 import javafx.scene.control.Tab;
@@ -11,8 +9,7 @@ import javafx.scene.control.TabPane;
 /**
  * The strip of day tabs, today first, each with a glyph of where its charge comes from. Left and Right move between
  * them. The tabs hold no content: the dashboard shows the selected day below them, where its height can follow the
- * width (a TabPane sizes its content without it, which cuts off wrapped text). A screen reader reads a tab's day
- * with what the glyph shows, such as "Charge window".
+ * width (a TabPane sizes its content without it, which cuts off wrapped text).
  */
 public final class DayTabs extends TabPane {
 
@@ -20,12 +17,10 @@ public final class DayTabs extends TabPane {
      * Makes the strip, empty.
      *
      * @param selected called with the index of the day tab that gets selected, from 0 for today
-     * @param messages the texts, in the owner's language
      */
-    public DayTabs(IntConsumer selected, Messages messages) {
+    public DayTabs(IntConsumer selected) {
         setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
         getStyleClass().add("day-tabs");
-        setAccessibleText(messages.text(TextKey.DASHBOARD_DAYS));
         getSelectionModel().selectedIndexProperty().subscribe(index -> {
             if (index.intValue() >= 0) {
                 selected.accept(index.intValue());
@@ -48,24 +43,9 @@ public final class DayTabs extends TabPane {
         }
     }
 
-    /**
-     * Lays out the strip, and gives each tab's header the help a screen reader reads after the day.
-     */
-    @Override
-    protected void layoutChildren() {
-        super.layoutChildren();
-        // JavaFX reads only a Tab's text, and its header (the skin's node, made with the skin) is the one that is read
-        for (var header : lookupAll(".tab")) {
-            if (header.getProperties().get(Tab.class) instanceof Tab tab && tab.getUserData() instanceof String help) {
-                header.setAccessibleHelp(help);
-            }
-        }
-    }
-
     private static Tab tab(DayModel day) {
         var tab = new Tab(day.tab());
         tab.setGraphic(Glyphs.of(day.kind()));
-        tab.setUserData(day.heading());
         return tab;
     }
 }

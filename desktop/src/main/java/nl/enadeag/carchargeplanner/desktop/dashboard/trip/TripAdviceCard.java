@@ -7,7 +7,6 @@ import nl.enadeag.carchargeplanner.desktop.dashboard.parts.ChipModel;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import javafx.scene.AccessibleRole;
 import javafx.scene.control.Button;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
@@ -16,7 +15,7 @@ import javafx.scene.layout.VBox;
 
 /**
  * A trip's advice, below the day's main card: the trip, what to charge and when, and the battery level it starts from,
- * with Adjust to enter the level the car shows. A screen reader reads the advice as one sentence.
+ * with Adjust to enter the level the car shows.
  */
 public final class TripAdviceCard extends VBox {
 
@@ -34,7 +33,6 @@ public final class TripAdviceCard extends VBox {
         adjust.setMinWidth(USE_PREF_SIZE);
         var hint = messages.text(TextKey.TRIP_ADVICE_ADJUST_HINT);
         adjust.setTooltip(new Tooltip(hint));
-        adjust.setAccessibleHelp(hint);
         adjust.setVisible(false);
         adjust.setManaged(false);
         var assumed = paragraph(advice.level(), "note");
@@ -47,9 +45,6 @@ public final class TripAdviceCard extends VBox {
                 paragraph(advice.plan(), "advice-detail"),
                 level);
         getStyleClass().addAll("card", "advice-card", "trip-advice", Glyphs.styleClass(advice.source()));
-        setAccessibleRole(AccessibleRole.TEXT);
-        setAccessibleText(advice.spoken());
-        setFocusTraversable(true);
     }
 
     /**

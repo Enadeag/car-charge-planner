@@ -31,7 +31,7 @@ class SolarChartModelTest {
 
         assertThat(today.stepAt(2).orElseThrow()).isEqualTo(today.chart().steps().getFirst());
         assertThat(today.stepAt(23).orElseThrow()).isEqualTo(today.chart().steps().getLast());
-        assertThat(new SolarChartModel(withoutSteps(), "1 kW", List.of(), List.of(), "").stepAt(10)).isEmpty();
+        assertThat(new SolarChartModel(withoutSteps(), "1 kW", List.of(), List.of()).stepAt(10)).isEmpty();
     }
 
     @Test
@@ -52,8 +52,8 @@ class SolarChartModelTest {
         var today = Models.curve(3.6, List.of(), OptionalDouble.empty());
 
         assertThatThrownBy(() -> new SolarChartModel(today.chart(), "4 kW", today.readouts().subList(1, 12),
-                List.of(), "")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new SolarChartModel(withoutSteps(), "1 kW", List.of("13:00"), List.of(), ""))
+                List.of())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new SolarChartModel(withoutSteps(), "1 kW", List.of("13:00"), List.of()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

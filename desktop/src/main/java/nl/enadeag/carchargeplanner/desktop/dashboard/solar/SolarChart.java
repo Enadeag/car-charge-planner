@@ -2,14 +2,12 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.solar;
 
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Tween;
-import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Point2D;
-import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
@@ -29,9 +27,6 @@ import javafx.scene.shape.Rectangle;
  * A day's expected solar power as an amber area, the baseload as a dashed line, the charge windows in green and a
  * line at "now". Pointing at the chart, tapping it or moving along it with the arrow keys reads out one step's values.
  * A new day or plan morphs the curve into its new shape. Colours come from dashboard.css.
- *
- * <p>A screen reader reads the day in words; while the arrow keys read out a step, it reads that step's values
- * instead, each time they move.
  */
 final class SolarChart extends Region {
 
@@ -70,9 +65,8 @@ final class SolarChart extends Region {
      *
      * @param reducedMotion true while the system asks for reduced motion; the curve then changes without moving
      * @param now the label on the line at the current time, such as "now"
-     * @param keys what the arrow keys do, for a screen reader to read after the chart's text
      */
-    SolarChart(ObservableValue<Boolean> reducedMotion, String now, String keys) {
+    SolarChart(ObservableValue<Boolean> reducedMotion, String now) {
         this.nowLabel = Labels.line(now, "chart-now");
         this.tween = new Tween(reducedMotion, this::frame);
         readout.getStyleClass().add("chart-readout");
@@ -81,8 +75,6 @@ final class SolarChart extends Region {
         readout.setMouseTransparent(true);
         pointer.setVisible(false);
         getStyleClass().add("solar-chart");
-        setAccessibleRole(AccessibleRole.TEXT);
-        setAccessibleHelp(keys);
         setFocusTraversable(true);
         setOnMouseMoved(this::selectStepAtPointer);
         setOnMousePressed(this::selectStepAtPointer);
@@ -294,26 +286,17 @@ final class SolarChart extends Region {
         event.consume();
     }
 
-    /** Reads out a step of the day shown; a step chosen by keyboard is read to the screen reader too. */
+    /** Reads out a step of the day shown. */
     private void select(DayChart.Step step, boolean byPointer) {
         selected = step;
         pointed = byPointer;
         readoutText.setText(model.readout(step));
-        if (byPointer) {
-            setAccessibleText(model.spoken());
-        } else {
-            setAccessibleText(model.readout(step));
-            ScreenReader.readAgain(this);
-        }
         requestLayout();
     }
 
     private void clearSelection() {
         selected = null;
         pointed = false;
-        if (model != null) {
-            setAccessibleText(model.spoken());
-        }
         requestLayout();
     }
 

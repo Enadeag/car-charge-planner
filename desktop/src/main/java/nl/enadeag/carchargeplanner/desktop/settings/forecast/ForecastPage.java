@@ -27,7 +27,6 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -218,10 +217,7 @@ public final class ForecastPage implements ConfigPage {
         return new ForecastEntry(primary.value(), fallback.value());
     }
 
-    /**
-     * Each provider's card under the role it is chosen for; one chosen for both shows once. Two folds of the same name
-     * are read with their provider's.
-     */
+    /** Each provider's card under the role it is chosen for; one chosen for both shows once. */
     private void showChosenCards() {
         if (stored == null) {
             return;
@@ -230,9 +226,6 @@ public final class ForecastPage implements ConfigPage {
         nodes.add(choice);
         var shown = entry().chosen().stream().filter(cards::containsKey).map(cards::get).toList();
         shown.forEach(card -> nodes.add(card.view()));
-        var foldNames = shown.stream().flatMap(card -> card.foldName().stream()).toList();
-        shown.forEach(card -> card.nameFoldWithProvider(
-                card.foldName().filter(name -> Collections.frequency(foldNames, name) > 1).isPresent()));
         nodes.add(keysCard);
         view.show(nodes.toArray(Node[]::new));
     }

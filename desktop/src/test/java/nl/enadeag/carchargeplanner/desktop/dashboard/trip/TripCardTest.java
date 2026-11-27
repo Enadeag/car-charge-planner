@@ -3,7 +3,6 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.trip;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
-import nl.enadeag.carchargeplanner.desktop.AccessibleNames;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Keyboard;
@@ -62,9 +61,8 @@ class TripCardTest {
     }
 
     private <T> T control(Class<T> type, String text) throws Exception {
-        return Fx.call(() -> Scenes.all(card).stream().filter(type::isInstance)
-                .filter(node -> node instanceof javafx.scene.control.Labeled labeled
-                        && (text.equals(labeled.getText()) || text.equals(labeled.getAccessibleText())))
+        return Fx.call(() -> Scenes.all(card).stream().filter(type::isInstance).filter(Scenes::reallyVisible)
+                .filter(node -> node instanceof javafx.scene.control.Labeled labeled && text.equals(labeled.getText()))
                 .map(type::cast).findFirst().orElseThrow(() -> new AssertionError("no " + text)));
     }
 
@@ -83,10 +81,8 @@ class TripCardTest {
 
         assertThat(Fx.call(() -> Scenes.visibleTexts(card))).contains("Away 07:30 – 18:00 · 300 km there and back",
                 "Entered by hand").doesNotContain("Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back");
-        var notWithThisCar = control(CheckBox.class,
-                "Not with this car (Away 07:30 – 18:00 · 300 km there and back)");
-        var canCharge = control(CheckBox.class,
-                "I can charge at the destination (Away 07:30 – 18:00 · 300 km there and back)");
+        var notWithThisCar = control(CheckBox.class, ENGLISH.text(TextKey.TRIP_NOT_WITH_THIS_CAR));
+        var canCharge = control(CheckBox.class, ENGLISH.text(TextKey.TRIP_CAN_CHARGE));
         assertThat(Fx.call(notWithThisCar::isSelected)).isFalse();
         assertThat(Fx.call(canCharge::isSelected)).isFalse();
     }
@@ -103,15 +99,14 @@ class TripCardTest {
         show(Models.CLOUDY_TOMORROW, Models.TRIPS);
         var trip = Models.TRIP_SATURDAY;
 
-        var notWithThisCar = control(CheckBox.class,
-                "Not with this car (Away 07:30 – 18:00 · 300 km there and back)");
+        var notWithThisCar = control(CheckBox.class, ENGLISH.text(TextKey.TRIP_NOT_WITH_THIS_CAR));
         Fx.run(notWithThisCar::fire);
         var withoutTheCar = new Trip(trip.departure(), trip.returnTime(), 300, false, true);
         assertThat(changed).containsExactly(List.of(trip, withoutTheCar));
 
         var listed = Models.LISTED_SATURDAY;
         var shownAgain = List.of(new TripsModel.Listed(withoutTheCar, TripOrigin.BY_HAND, listed.text(),
-                listed.originText(), listed.changeSpoken(), listed.removeSpoken()));
+                listed.originText()));
         Fx.run(() -> card.show(Models.CLOUDY_TOMORROW.date(), Models.CLOUDY_TOMORROW.title(), shownAgain,
                 Models.TRIPS));
         Fx.settle();
@@ -120,8 +115,7 @@ class TripCardTest {
         assertThat(Fx.call(() -> ((CheckBox) focused).getText())).isEqualTo(ENGLISH.text(TextKey.TRIP_NOT_WITH_THIS_CAR));
         assertThat(Fx.call(() -> ((CheckBox) focused).isSelected())).isTrue();
 
-        var canCharge = control(CheckBox.class,
-                "I can charge at the destination (Away 07:30 – 18:00 · 300 km there and back)");
+        var canCharge = control(CheckBox.class, ENGLISH.text(TextKey.TRIP_CAN_CHARGE));
         Fx.run(canCharge::fire);
         assertThat(changed.getLast()).containsExactly(withoutTheCar,
                 new Trip(trip.departure(), trip.returnTime(), 300, true, true));
@@ -131,7 +125,7 @@ class TripCardTest {
     void removeRemovesTheTripAsTheModelGaveIt() throws Exception {
         show(Models.CLOUDY_TOMORROW, Models.TRIPS);
 
-        Fx.run(control(Button.class, "Remove the trip Away 07:30 – 18:00 · 300 km there and back")::fire);
+        Fx.run(control(Button.class, ENGLISH.text(TextKey.TRIP_REMOVE))::fire);
 
         assertThat(removed).containsExactly(Models.TRIP_SATURDAY);
     }
@@ -173,9 +167,9 @@ class TripCardTest {
         var trip = new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 18, 0), 300.4, true, true);
         var listed = Models.LISTED_SATURDAY;
         show(Models.CLOUDY_TOMORROW.withTrips(List.of(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
-                listed.text(), listed.originText(), listed.changeSpoken(), listed.removeSpoken()))), Models.TRIPS);
+                listed.text(), listed.originText()))), Models.TRIPS);
 
-        Fx.run(control(Button.class, listed.changeSpoken())::fire);
+        Fx.run(control(Button.class, ENGLISH.text(TextKey.TRIP_CHANGE))::fire);
         // only the return changes: the distance shown rounded stays as it was, and so do the choices
         Fx.run(() -> {
             Scenes.all(card.editor()).stream().filter(node -> node.getStyleClass().contains("trip-time"))
@@ -192,9 +186,9 @@ class TripCardTest {
         var trip = new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 18, 0), 0.3, false, false);
         var listed = Models.LISTED_SATURDAY;
         show(Models.CLOUDY_TOMORROW.withTrips(List.of(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
-                listed.text(), listed.originText(), listed.changeSpoken(), listed.removeSpoken()))), Models.TRIPS);
+                listed.text(), listed.originText()))), Models.TRIPS);
 
-        Fx.run(control(Button.class, listed.changeSpoken())::fire);
+        Fx.run(control(Button.class, ENGLISH.text(TextKey.TRIP_CHANGE))::fire);
         Fx.run(() -> card.editor().save());
 
         assertThat(Fx.call(() -> card.editor().problem())).isEmpty();
@@ -206,13 +200,13 @@ class TripCardTest {
         var trip = new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 18, 0), 12.5, false, false);
         var listed = Models.LISTED_SATURDAY;
         show(Models.CLOUDY_TOMORROW.withTrips(List.of(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
-                listed.text(), listed.originText(), listed.changeSpoken(), listed.removeSpoken()))), Models.TRIPS);
+                listed.text(), listed.originText()))), Models.TRIPS);
 
-        Fx.run(control(Button.class, listed.changeSpoken())::fire);
+        Fx.run(control(Button.class, ENGLISH.text(TextKey.TRIP_CHANGE))::fire);
         var field = (javafx.scene.control.TextField) Fx.call(() -> card.editor().lookup(".trip-distance"));
         assertThat(Fx.call(() -> field.getText())).isEqualTo("13");
         Fx.run(() -> card.editor().save());
-        Fx.run(control(Button.class, listed.changeSpoken())::fire);
+        Fx.run(control(Button.class, ENGLISH.text(TextKey.TRIP_CHANGE))::fire);
         Fx.run(() -> {
             field.setText("12");
             card.editor().save();
@@ -227,9 +221,9 @@ class TripCardTest {
         var trip = new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 18, 0), 1234, false, false);
         var listed = Models.LISTED_SATURDAY;
         show(Models.CLOUDY_TOMORROW.withTrips(List.of(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
-                listed.text(), listed.originText(), listed.changeSpoken(), listed.removeSpoken()))), Models.TRIPS);
+                listed.text(), listed.originText()))), Models.TRIPS);
 
-        Fx.run(control(Button.class, listed.changeSpoken())::fire);
+        Fx.run(control(Button.class, ENGLISH.text(TextKey.TRIP_CHANGE))::fire);
 
         var field = (javafx.scene.control.TextField) Fx.call(() -> card.editor().lookup(".trip-distance"));
         assertThat(Fx.call(() -> field.getText())).isEqualTo("1234");
@@ -252,16 +246,16 @@ class TripCardTest {
 
     @ParameterizedTest
     @CsvSource({
-        "8:00, 18:00, far, TRIP_DISTANCE_NOT_A_NUMBER, 'Distance there and back, in km'",
-        "8:00, 18:00, 0, TRIP_DISTANCE_NOT_POSITIVE, 'Distance there and back, in km'",
-        "8:00, 18:00, 12.5, PROBLEM_NOT_A_WHOLE_NUMBER, 'Distance there and back, in km'",
-        "8:00, 18:00, 1.000, PROBLEM_THOUSANDS_SEPARATOR, 'Distance there and back, in km'",
-        "eight, 18:00, 10, PROBLEM_NOT_A_TIME, Time of departure",
-        "8:00, six, 10, PROBLEM_NOT_A_TIME, Time of return",
-        "18:00, 8:00, 10, TRIP_RETURN_BEFORE_DEPARTURE, Day of return",
+        "8:00, 18:00, far, TRIP_DISTANCE_NOT_A_NUMBER, .trip-distance, 0",
+        "8:00, 18:00, 0, TRIP_DISTANCE_NOT_POSITIVE, .trip-distance, 0",
+        "8:00, 18:00, 12.5, PROBLEM_NOT_A_WHOLE_NUMBER, .trip-distance, 0",
+        "8:00, 18:00, 1.000, PROBLEM_THOUSANDS_SEPARATOR, .trip-distance, 0",
+        "eight, 18:00, 10, PROBLEM_NOT_A_TIME, .trip-time, 0",
+        "8:00, six, 10, PROBLEM_NOT_A_TIME, .trip-time, 1",
+        "18:00, 8:00, 10, TRIP_RETURN_BEFORE_DEPARTURE, .trip-day, 1",
     })
-    void aTripThatCannotBeIsNotSavedAndTheFocusGoesWhereAScreenReaderReadsWhy(String leaves, String back,
-            String distance, TextKey why, String field) throws Exception {
+    void aTripThatCannotBeIsNotSavedAndTheFocusGoesToTheFieldToFix(String leaves, String back, String distance,
+            TextKey why, String style, int which) throws Exception {
         show(Models.CLOUDY_TOMORROW, Models.TRIPS);
         openEntry();
         Fx.run(() -> card.editor().enter(SATURDAY, leaves, SATURDAY, back, distance, false));
@@ -271,9 +265,8 @@ class TripCardTest {
         assertThat(added).isEmpty();
         assertThat(entering()).isTrue();
         assertThat(Fx.call(() -> card.editor().problem())).isEqualTo(ENGLISH.text(why));
-        var focused = Fx.call(() -> stage.getScene().getFocusOwner());
-        assertThat(Fx.call(() -> AccessibleNames.of(focused))).isEqualTo(field);
-        assertThat(Fx.call(() -> AccessibleNames.help(focused))).isEqualTo(ENGLISH.text(why));
+        var field = Fx.call(() -> List.copyOf(card.editor().lookupAll(style)).get(which));
+        assertThat(Fx.call(() -> stage.getScene().getFocusOwner())).isSameAs(field);
     }
 
     @Test

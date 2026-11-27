@@ -6,8 +6,6 @@ import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels;
 import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels;
 import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * The days of a plan as the battery bar draws them, in words: the levels, with the minimum and the target, and on a
@@ -40,19 +38,9 @@ public final class BatteryMapper {
         double after = battery.afterPct().value();
         double minimum = levels.minimumPct().value();
         double target = levels.targetPct().value();
-        boolean isToday = day.name() instanceof DayName.Today;
-        var spoken = isToday
-                ? sentences(messages.text(TextKey.BATTERY_SPOKEN_TODAY, pct(level), pct(after), pct(minimum), pct(target)),
-                        day.assumedLevel().isPresent() ? messages.text(TextKey.BATTERY_ASSUMED) : "")
-                : messages.text(TextKey.BATTERY_SPOKEN_DAY, pct(level), messages.inSentence(day.name()),
-                        pct(after), pct(minimum), pct(target));
-        if (battery.afterTripPct().isPresent()) {
-            spoken = sentences(spoken,
-                    messages.text(TextKey.BATTERY_SPOKEN_AFTER_TRIP, pct(battery.afterTripPct().get().value())));
-        }
         return new BatteryModel(level, after, minimum, target, levels(battery),
                 messages.text(TextKey.BATTERY_MINIMUM, pct(minimum)), messages.text(TextKey.BATTERY_TARGET, pct(target)),
-                isToday, spoken);
+                day.name() instanceof DayName.Today);
     }
 
     /** Without a charge before the trip, the level after charging is the start's, and is left out. */
@@ -69,9 +57,5 @@ public final class BatteryMapper {
 
     private String pct(double value) {
         return messages.whole(value);
-    }
-
-    private static String sentences(String... sentences) {
-        return Stream.of(sentences).filter(sentence -> !sentence.isEmpty()).collect(Collectors.joining(" "));
     }
 }

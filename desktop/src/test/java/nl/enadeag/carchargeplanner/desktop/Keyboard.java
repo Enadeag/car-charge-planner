@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.desktop;
 
 import com.sun.javafx.stage.WindowHelper;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
 import javafx.geometry.BoundingBox;
@@ -19,7 +18,7 @@ import javafx.scene.robot.Robot;
 /**
  * Presses keys as the owner does, through JavaFX's robot on the headless platform: a key reaches the focused window,
  * its focus owner and the scene's default and cancel buttons, as a real key does. Walks a screen with Tab and checks
- * what someone who uses only the keyboard, or a screen reader, depends on.
+ * what someone who uses only the keyboard depends on.
  */
 public final class Keyboard {
 
@@ -70,10 +69,10 @@ public final class Keyboard {
     }
 
     /**
-     * Walks a screen with Tab until the focus comes round, and says what is wrong for someone who uses the keyboard
-     * or a screen reader: a control Tab never reaches, a stop out of reading order, a control a screen reader on
-     * Windows has no name for, two stops it calls the same, a focus ring that does not stand out 3:1 from the look
-     * without the focus, and Shift+Tab not going back. Tab stuck in one place, or never coming round, fails at once.
+     * Walks a screen with Tab until the focus comes round, and says what is wrong for someone who uses the keyboard:
+     * a control Tab never reaches, a stop out of reading order, a stop that shows no name, a focus ring that does not
+     * stand out 3:1 from the look without the focus, and Shift+Tab not going back. Tab stuck in one place, or never
+     * coming round, fails at once.
      *
      * @param scene the scene of the focused window; its window should be large enough that its pages do not scroll
      * @param root the part of the scene to check, such as the view inside a test's wrapper
@@ -127,12 +126,12 @@ public final class Keyboard {
         return Fx.call(() -> {
             var node = scene.getFocusOwner();
             look(scene); // a scroll pane brings the focused control into view as it lays out
-            var bounds = sceneBounds(AccessibleNames.focusTarget(node));
+            var bounds = sceneBounds(VisibleNames.focusTarget(node));
             var with = look(scene);
             WindowHelper.setFocused(scene.getWindow(), false);
             var without = look(scene);
             WindowHelper.setFocused(scene.getWindow(), true);
-            if (!bounds.equals(sceneBounds(AccessibleNames.focusTarget(node)))) {
+            if (!bounds.equals(sceneBounds(VisibleNames.focusTarget(node)))) {
                 throw new AssertionError(describe(node) + " moved while its focus ring was compared");
             }
             return new Stop(node, with, without, bounds);
@@ -183,7 +182,7 @@ public final class Keyboard {
     private static List<String> outOfOrder(Node root, List<Stop> stops) {
         var panes = Scenes.all(root).stream().filter(ScrollPane.class::isInstance).map(ScrollPane.class::cast)
                 .filter(Scenes::reallyVisible).toList();
-        var bounds = stops.stream().map(stop -> unrolled(AccessibleNames.focusTarget(stop.node()), panes)).toList();
+        var bounds = stops.stream().map(stop -> unrolled(VisibleNames.focusTarget(stop.node()), panes)).toList();
         List<String> best = null;
         for (int start = 0; start < stops.size(); start++) {
             var problems = new ArrayList<String>();
@@ -206,20 +205,12 @@ public final class Keyboard {
         return best;
     }
 
-    /** A name for every stop, and no two stops with the same name, as a screen reader on Windows reads them. */
+    /** A name on screen for every stop: a label for it, its own text, or the choice it shows. */
     private static List<String> unnamed(List<Stop> stops) {
-        var problems = new ArrayList<String>();
-        var seen = new HashMap<String, Node>();
-        for (var stop : stops) {
-            var target = AccessibleNames.focusTarget(stop.node());
-            var name = AccessibleNames.of(target);
-            if (name.isEmpty()) {
-                problems.add("a screen reader has no name for " + describe(stop.node()));
-            } else if (seen.putIfAbsent(name, target) != null) {
-                problems.add("a screen reader reads two controls as '" + name + "'");
-            }
-        }
-        return problems;
+        return stops.stream().map(Stop::node)
+                .filter(node -> VisibleNames.of(VisibleNames.focusTarget(node)).isEmpty())
+                .map(node -> "no name shows for " + describe(node))
+                .toList();
     }
 
     /**
@@ -297,9 +288,9 @@ public final class Keyboard {
         return false;
     }
 
-    /** A node as a failure names it: its class, its style classes and what a screen reader calls it. */
+    /** A node as a failure names it: its class, its style classes and the name it shows. */
     public static String describe(Node node) {
         return node.getClass().getSimpleName() + node.getStyleClass() + " '"
-                + AccessibleNames.of(AccessibleNames.focusTarget(node)) + "'";
+                + VisibleNames.of(VisibleNames.focusTarget(node)) + "'";
     }
 }

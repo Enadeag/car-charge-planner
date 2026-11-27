@@ -4,7 +4,6 @@ import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.settings.page.CardView;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.config.ProviderId;
 import nl.enadeag.carchargeplanner.engine.forecast.Place;
@@ -45,7 +44,6 @@ final class PlaceSearchCard {
         this.background = background;
         this.messages = messages;
         text.setPromptText(messages.text(TextKey.PLACE_PROMPT));
-        ScreenReader.name(text, messages.text(TextKey.PLACE_FIELD));
         text.setOnAction(event -> {
             event.consume(); // Enter here searches, it does not save Settings
             search();
@@ -53,6 +51,8 @@ final class PlaceSearchCard {
         search = new Button(messages.text(TextKey.PLACE_SEARCH));
         search.setOnAction(_ -> search());
         HBox.setHgrow(text, Priority.ALWAYS);
+        var name = Labels.paragraph(messages.text(TextKey.PLACE_FIELD), "field-label");
+        name.setLabelFor(text);
         var line = new HBox(text, search);
         line.getStyleClass().add("field-line");
         results.getStyleClass().add("place-results");
@@ -61,8 +61,8 @@ final class PlaceSearchCard {
         // nothing to say or show yet: no empty space on the card either
         status.managedProperty().bind(status.textProperty().isNotEmpty());
         results.managedProperty().bind(Bindings.isNotEmpty(results.getChildren()));
-        card = new CardView(messages.text(TextKey.CARD_PLACE), messages.text(TextKey.CARD_PLACE_HINT), line, another,
-                status, results);
+        card = new CardView(messages.text(TextKey.CARD_PLACE), messages.text(TextKey.CARD_PLACE_HINT), name, line,
+                another, status, results);
     }
 
     /**

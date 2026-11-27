@@ -23,7 +23,6 @@ import java.util.Optional;
  * @param facts what to set and how much it brings: "Set 10 A (2.3 kW)", "about 7.9 kWh"; may be empty
  * @param chips the day's figures by source; may be empty
  * @param note a sentence about the day; may be empty
- * @param spoken the day's charge in one sentence: "Today: charge window 11:15 to 14:30, 10 A, 92% solar."
  * @param curve the day's expected solar power, baseload and charge windows, as the solar chart draws them
  * @param battery the day's battery levels, as the battery bar draws them
  * @param tripAdvice the advice of the trips the day's tab shows, in its words, in order of departure; may be empty
@@ -40,7 +39,6 @@ public record DayModel(
         List<String> facts,
         List<ChipModel> chips,
         String note,
-        String spoken,
         SolarChartModel curve,
         BatteryModel battery,
         List<TripAdviceModel> tripAdvice,
@@ -64,7 +62,7 @@ public record DayModel(
      * @return a copy of the day that shows it, in place of any it showed
      */
     public DayModel withGridAdvice(GridAdviceModel advice) {
-        return new DayModel(date, tab, title, kind, heading, hero, facts, chips, note, spoken, curve, battery,
+        return new DayModel(date, tab, title, kind, heading, hero, facts, chips, note, curve, battery,
                 tripAdvice, Optional.of(advice), trips);
     }
 
@@ -75,7 +73,7 @@ public record DayModel(
      * @return a copy of the day that lists them, in place of any it listed
      */
     public DayModel withTrips(List<TripsModel.Listed> dayTrips) {
-        return new DayModel(date, tab, title, kind, heading, hero, facts, chips, note, spoken, curve, battery,
+        return new DayModel(date, tab, title, kind, heading, hero, facts, chips, note, curve, battery,
                 tripAdvice, gridAdvice, dayTrips);
     }
 }

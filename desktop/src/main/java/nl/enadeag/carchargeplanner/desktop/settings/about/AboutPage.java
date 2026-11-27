@@ -112,7 +112,6 @@ public final class AboutPage implements Page {
         var path = new TextField(where);
         path.setEditable(false);
         path.getStyleClass().add("path-field");
-        path.setAccessibleText(messages.text(what));
         name.setLabelFor(path);
         var place = new VBox(name, path);
         place.getStyleClass().add("field-row");

@@ -19,7 +19,6 @@ import nl.enadeag.carchargeplanner.desktop.settings.store.SettingsStores;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.config.HomeSystem;
 import java.net.URI;
@@ -51,8 +50,8 @@ import javafx.scene.layout.VBox;
  * Set-up itself: the step and a progress bar above, the step's page in the middle, and Cancel, Back and Next (Finish
  * on the last step) below. Next goes on only when the engine's records accept the step's values; Finish saves
  * everything at once. Leaving after the owner started asks first, in the bar where the buttons are. Enter is Next and
- * Escape is Cancel; while the question shows, Escape keeps going. A refused value takes the focus to its field, whose
- * help a screen reader reads with the problem first.
+ * Escape is Cancel; while the question shows, Escape keeps going. A refused value takes the focus to its field, which
+ * says the problem below it.
  *
  * <p>What is stored is read in the background before set-up starts, and Finish saves in the background: meanwhile the
  * steps cannot be edited and the status line says what set-up is doing.
@@ -131,7 +130,6 @@ final class SetUpView extends BorderPane {
         // a scene has one Escape: the bar that shows has it, and the other lets go of it first
         cancel.cancelButtonProperty().bind(actions.visibleProperty());
         keepGoing.cancelButtonProperty().bind(confirm.visibleProperty());
-        status.focusTraversableProperty().bind(status.textProperty().isNotEmpty());
 
         setTop(header);
         setCenter(body);
@@ -208,7 +206,6 @@ final class SetUpView extends BorderPane {
         goTo(State.READING);
         showActions();
         status.setText(messages.text(TextKey.SETTINGS_READING));
-        body.setAccessibleText(status.getText());
     }
 
     /**
@@ -217,7 +214,6 @@ final class SetUpView extends BorderPane {
     void showUnreadable(String detail) {
         goTo(State.UNREADABLE);
         showProblem(messages.text(TextKey.SETTINGS_READ_FAILED, detail));
-        body.setAccessibleText(null);
     }
 
     /**
@@ -228,7 +224,6 @@ final class SetUpView extends BorderPane {
         goTo(State.READY);
         form.start(start, draft);
         status.setText("");
-        body.setAccessibleText(null);
         showActions();
         show(first);
     }
@@ -244,8 +239,6 @@ final class SetUpView extends BorderPane {
         step = shown;
         stepLabel.setText(messages.text(TextKey.SET_UP_STEP, shown.number(), SetUpStep.count()));
         progress.setProgress((double) shown.number() / SetUpStep.count());
-        progress.setAccessibleText(messages.text(TextKey.SET_UP_PROGRESS, shown.number(), SetUpStep.count(),
-                messages.text(shown.title())));
         back.setDisable(state != State.READY || shown == SetUpStep.WELCOME);
         next.setText(messages.text(shown.isLast() ? TextKey.SET_UP_FINISH : TextKey.SET_UP_NEXT));
         var page = pages.get(shown);
@@ -338,29 +331,21 @@ final class SetUpView extends BorderPane {
         goTo(State.SAVING);
         status.getStyleClass().remove("problem");
         status.setText(messages.text(TextKey.SETTINGS_SAVING));
-        body.setAccessibleText(status.getText());
         Runnable prompting = () -> background.onFx(this::showUnlockPrompt);
         background.run("saving set-up", () -> form.write(changes, prompting), outcome -> {
             goTo(State.READY);
-            body.setAccessibleText(null);
             status.setText("");
             afterFinish(outcome, chosen);
         }, failure -> {
             goTo(State.READY);
-            body.setAccessibleText(null);
             afterFinish(new SaveOutcome.Failed(Background.describe(failure, messages)), chosen);
         });
     }
 
-    /**
-     * The system asks the owner to unlock the keychain for the Finish that runs: the status says where, and a screen
-     * reader reads it.
-     */
+    /** The system asks the owner to unlock the keychain for the Finish that runs: the status says where. */
     private void showUnlockPrompt() {
         if (state == State.SAVING) {
             status.setText(messages.text(TextKey.SETTINGS_SAVING_UNLOCK));
-            body.setAccessibleText(status.getText());
-            ScreenReader.focus(status);
         }
     }
 
@@ -375,18 +360,10 @@ final class SetUpView extends BorderPane {
                 show(SetUpStep.APP);
                 showRefused();
             }
-            case SaveOutcome.KeychainLocked _ -> {
-                showProblem(messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
-                ScreenReader.focus(status);
-            }
-            case SaveOutcome.KeysNotSaved _ -> {
-                showProblem(messages.text(TextKey.SETTINGS_KEYS_NOT_SAVED));
-                ScreenReader.focus(status);
-            }
-            case SaveOutcome.Failed failure -> {
-                showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
-                ScreenReader.focus(status);
-            }
+            case SaveOutcome.KeychainLocked _ -> showProblem(messages.text(TextKey.SETTINGS_KEYCHAIN_LOCKED));
+            case SaveOutcome.KeysNotSaved _ -> showProblem(messages.text(TextKey.SETTINGS_KEYS_NOT_SAVED));
+            case SaveOutcome.Failed failure ->
+                    showProblem(messages.text(TextKey.SETTINGS_SAVE_FAILED, failure.detail()));
         }
     }
 
@@ -402,7 +379,7 @@ final class SetUpView extends BorderPane {
     /** The step's values were refused: the status says so, and the focus goes to the first field with a problem. */
     private void showRefused() {
         showProblem(messages.text(TextKey.SET_UP_REFUSED));
-        ScreenReader.focus(firstProblem(pages.get(step).view()).orElse(status));
+        firstProblem(pages.get(step).view()).ifPresent(Node::requestFocus);
     }
 
     private void showProblem(String text) {

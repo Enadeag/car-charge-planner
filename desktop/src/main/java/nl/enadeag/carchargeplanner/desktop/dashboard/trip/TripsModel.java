@@ -20,11 +20,7 @@ public record TripsModel(ZoneId zone, Units units) {
      * @param origin where the trip comes from
      * @param text the trip's times and distance, such as "Away 07:30 – 18:00 · 300 km there and back"
      * @param originText where the trip comes from, such as "Entered by hand"
-     * @param changeSpoken what a screen reader calls its change button, such as "Change the trip Away 07:30 – 18:00 ·
-     *     300 km there and back"
-     * @param removeSpoken what a screen reader calls its remove button, in the same way
      */
-    public record Listed(Trip trip, TripOrigin origin, String text, String originText, String changeSpoken,
-            String removeSpoken) {
+    public record Listed(Trip trip, TripOrigin origin, String text, String originText) {
     }
 }

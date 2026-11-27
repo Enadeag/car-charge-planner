@@ -14,13 +14,11 @@ import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.forecast.ConnectionResult;
 import nl.enadeag.carchargeplanner.engine.forecast.ProviderInfo;
-import nl.enadeag.carchargeplanner.engine.forecast.SettingSpec;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javafx.scene.Node;
@@ -55,8 +53,6 @@ final class ProviderCard {
         var texts = new ProviderTexts(messages);
         var terms = new Hyperlink(messages.text(TextKey.PROVIDER_TERMS));
         terms.setOnAction(_ -> openLink.accept(URI.create(info.termsUrl())));
-        // the fallback provider's card can show below the first one's: a screen reader names whose each control is
-        terms.setAccessibleText(messages.text(TextKey.IN_GROUP, terms.getText(), info.name()));
         var content = new ArrayList<Node>(List.of(
                 Labels.paragraph(messages.text(TextKey.PROVIDER_SENDS, texts.sends(info)), "note"),
                 Labels.paragraph(messages.text(TextKey.PROVIDER_LIMITS, info.minRefresh().toMinutes(),
@@ -66,7 +62,6 @@ final class ProviderCard {
         for (var setting : info.settings()) {
             Input input = setting.secret() ? new SecretInput(messages) : new TextInput();
             var row = new FieldRow(texts.label(setting), texts.hint(info, setting), input);
-            row.setSpokenName(messages.text(TextKey.IN_GROUP, row.name(), info.name()));
             if (setting.optional()) {
                 folded.add(row);
             } else {
@@ -82,7 +77,6 @@ final class ProviderCard {
         }
         test = new Button(messages.text(TextKey.PROVIDER_TEST));
         test.setOnAction(_ -> test(tester));
-        test.setAccessibleText(messages.text(TextKey.IN_GROUP, test.getText(), info.name()));
         var line = new HBox(test, result);
         line.getStyleClass().add("field-line");
         content.add(line);
@@ -165,24 +159,6 @@ final class ProviderCard {
      */
     void onChange(Runnable action) {
         inputs.values().forEach(input -> input.onChange(action));
-    }
-
-    /**
-     * The name of the fold with the provider's optional settings.
-     *
-     * @return such as "API key"; empty when the provider has no optional settings, so no fold shows
-     */
-    Optional<String> foldName() {
-        return info.settings().stream().anyMatch(SettingSpec::optional) ? Optional.of(fold.name()) : Optional.empty();
-    }
-
-    /**
-     * Has a screen reader read the fold's name with the provider's, for a page where another fold has the same name.
-     *
-     * @param withProvider true to read such as "API key (Open-Meteo)"; false for the name alone
-     */
-    void nameFoldWithProvider(boolean withProvider) {
-        fold.setSpokenName(withProvider ? messages.text(TextKey.IN_GROUP, fold.name(), info.name()) : fold.name());
     }
 
     /**

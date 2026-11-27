@@ -11,7 +11,6 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
  * @param minimumText the minimum's mark, such as "min 30"
  * @param targetText the target's mark, such as "target 80"
  * @param editable true for today, whose level the owner can enter
- * @param spoken the battery in words, for screen readers
  */
 public record BatteryModel(
         double levelPct,
@@ -21,8 +20,7 @@ public record BatteryModel(
         String levels,
         String minimumText,
         String targetText,
-        boolean editable,
-        String spoken) {
+        boolean editable) {
 
     /**
      * Checks the ranges.

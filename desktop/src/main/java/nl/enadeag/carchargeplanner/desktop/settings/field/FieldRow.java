@@ -10,15 +10,11 @@ import javafx.scene.layout.VBox;
 
 /**
  * One setting on a card: its name and its control side by side, a sentence that explains it below them, and room for
- * a problem with its value, which goes when the value is edited. A screen reader reads the name with the control, and
- * the explanation and problem as its help.
+ * a problem with its value, which goes when the value is edited.
  */
 public final class FieldRow extends VBox {
 
     private final Input input;
-    private final String name;
-    /** The name on screen; left out of the row, and so never seen, when the name is empty. */
-    private final Label label;
     private final Label hint = Labels.paragraph("", "note");
     private final Label problem = Labels.paragraph("", "field-problem");
     private final Label tag = new Label();
@@ -33,16 +29,14 @@ public final class FieldRow extends VBox {
      */
     public FieldRow(String name, String hint, Input input) {
         this.input = input;
-        this.name = name;
         var line = new HBox();
         line.getStyleClass().add("field-line");
-        label = Labels.paragraph(name, "field-label");
         if (!name.isEmpty()) {
+            var label = Labels.paragraph(name, "field-label");
             label.setLabelFor(input.focusable());
             label.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(label, Priority.ALWAYS);
             line.getChildren().add(label);
-            input.focusable().setAccessibleText(name);
         }
         tag.getStyleClass().add("field-tag");
         tag.setMinWidth(USE_PREF_SIZE);
@@ -75,7 +69,6 @@ public final class FieldRow extends VBox {
         hint.setText(text);
         hint.setVisible(!text.isEmpty());
         hint.setManaged(!text.isEmpty());
-        input.focusable().setAccessibleHelp(help());
     }
 
     /**
@@ -87,7 +80,6 @@ public final class FieldRow extends VBox {
         problem.setText(text);
         problem.setVisible(true);
         problem.setManaged(true);
-        input.focusable().setAccessibleHelp(help());
     }
 
     /** Takes a problem away again. */
@@ -95,12 +87,10 @@ public final class FieldRow extends VBox {
         problem.setText("");
         problem.setVisible(false);
         problem.setManaged(false);
-        input.focusable().setAccessibleHelp(help());
     }
 
     /**
-     * Tags the value, such as a required setting, or takes the tag away. The tag stands before the control, and a
-     * screen reader reads it with the explanation.
+     * Tags the value, such as a required setting, or takes the tag away. The tag stands before the control.
      *
      * @param text the tag, such as "Required" in the owner's language; empty to take it away
      */
@@ -108,28 +98,6 @@ public final class FieldRow extends VBox {
         tag.setText(text);
         tag.setVisible(!text.isEmpty());
         tag.setManaged(!text.isEmpty());
-        input.focusable().setAccessibleHelp(help());
-    }
-
-    /**
-     * Gives the field a longer name for a screen reader, where a card with the same fields shows more than once, such
-     * as a second panel array. The label on screen keeps the field's own name.
-     *
-     * @param spoken the name to read, such as "Size (Panel array 2)"; the field's own name to undo it
-     */
-    public void setSpokenName(String spoken) {
-        // a text field or combo box is named after its label, a spinner or check box after its own text
-        label.setAccessibleText(spoken.equals(name) ? null : spoken);
-        input.focusable().setAccessibleText(spoken);
-    }
-
-    /**
-     * The field's own name, as its label shows it.
-     *
-     * @return the name; empty when the control says it itself, as a check box does
-     */
-    public String name() {
-        return name;
     }
 
     /**
@@ -139,11 +107,6 @@ public final class FieldRow extends VBox {
      */
     public boolean hasProblem() {
         return problem.isVisible();
-    }
-
-    /** The problem first, as it is what the owner has to act on. */
-    private String help() {
-        return (problem.getText() + " " + tag.getText() + " " + hint.getText()).strip().replaceAll(" +", " ");
     }
 
     /**

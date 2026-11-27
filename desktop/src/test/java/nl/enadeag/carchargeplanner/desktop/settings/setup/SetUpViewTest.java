@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
+import nl.enadeag.carchargeplanner.desktop.VisibleNames;
 import nl.enadeag.carchargeplanner.desktop.app.Background;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.SettingsFixture;
@@ -137,7 +138,7 @@ class SetUpViewTest {
         assertThat(Fx.call(view::step)).as("the panels step starts empty").isEqualTo(SetUpStep.SOLAR);
         assertThat(Fx.call(() -> List.of(shown(view, TextKey.FIELD_PANEL_DIRECTION),
                 shown(view, TextKey.FIELD_PANEL_TILT)))).containsOnly(List.of(setUp.messages.text(TextKey.CHOOSE)));
-        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_PANEL_COUNT).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(setUp.control(view, TextKey.FIELD_PANEL_COUNT))))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_PANEL_COUNT));
         Fx.run(() -> {
             setUp.fillPanels(view);
@@ -194,7 +195,7 @@ class SetUpViewTest {
         next(view, 1);
 
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.LOCATION);
-        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_LATITUDE).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(setUp.control(view, TextKey.FIELD_LATITUDE))))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_NO_PLACE));
         assertThat(setUp.configPath).doesNotExist();
     }
@@ -283,7 +284,7 @@ class SetUpViewTest {
         next(view, 1);
 
         assertThat(Fx.call(view::step)).isEqualTo(SetUpStep.CHARGER);
-        assertThat(Fx.call(() -> setUp.control(view, TextKey.FIELD_MAX_CURRENT).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(setUp.control(view, TextKey.FIELD_MAX_CURRENT))))
                 .startsWith(setUp.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
         assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains(setUp.messages.text(TextKey.SET_UP_REFUSED));
     }
@@ -300,7 +301,7 @@ class SetUpViewTest {
 
         Fx.run(() -> view.show(SetUpStep.WELCOME));
 
-        assertThat(Fx.call(maximum::getAccessibleHelp))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(maximum)))
                 .doesNotContain(setUp.messages.text(TextKey.PROBLEM_BELOW_MINIMUM_CURRENT));
     }
 
@@ -334,7 +335,7 @@ class SetUpViewTest {
     }
 
     private String help(SetUpView view, TextKey field) {
-        return setUp.control(view, field).getAccessibleHelp();
+        return SettingsFixture.shownWith(setUp.control(view, field));
     }
 
     @Test
@@ -570,13 +571,13 @@ class SetUpViewTest {
 
         var progress = Fx.call(() -> Scenes.all(view).stream().filter(ProgressBar.class::isInstance)
                 .map(ProgressBar.class::cast).findFirst().orElseThrow());
-        assertThat(Fx.call(progress::getAccessibleText)).isEqualTo(setUp.messages.text(TextKey.SET_UP_PROGRESS,
-                SetUpStep.SOLAR.number(), SetUpStep.count(), setUp.messages.text(TextKey.CATEGORY_SOLAR)));
+        assertThat(Fx.call(() -> SetUpFixture.texts(view))).contains(setUp.messages.text(TextKey.SET_UP_STEP,
+                SetUpStep.SOLAR.number(), SetUpStep.count()));
         assertThat(Fx.call(progress::getProgress)).isEqualTo((double) SetUpStep.SOLAR.number() / SetUpStep.count());
         assertThat(Fx.call(() -> setUp.button(view, TextKey.SET_UP_NEXT).isDefaultButton())).isTrue();
         assertThat(Fx.call(() -> setUp.button(view, TextKey.SET_UP_CANCEL).isCancelButton())).isTrue();
         // the focus is on the step's first field, ready to type
-        assertThat(Fx.call(() -> view.getScene().getFocusOwner().getAccessibleText()))
+        assertThat(Fx.call(() -> VisibleNames.of(view.getScene().getFocusOwner())))
                 .isEqualTo(setUp.messages.text(TextKey.FIELD_PANEL_COUNT));
     }
 

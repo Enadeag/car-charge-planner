@@ -273,13 +273,4 @@ class TripAdviceMapperTest {
         assertThat(asks.source()).isEqualTo(EnergySource.GRID);
         assertThat(enough.source()).isEqualTo(EnergySource.CAR);
     }
-
-    @Test
-    void aScreenReaderReadsTheWholeAdvice() {
-        var model = onTomorrow(advice(70, List.of(), 75, Optional.empty(), 75, 0));
-
-        assertThat(model.spoken()).isEqualTo("Trip advice: Trip Saturday at 08:15, 150 km there and back. "
-                + "The plan charges enough for it: the battery is at 75% when you leave. "
-                + "Assuming a battery level of 45%.");
-    }
 }

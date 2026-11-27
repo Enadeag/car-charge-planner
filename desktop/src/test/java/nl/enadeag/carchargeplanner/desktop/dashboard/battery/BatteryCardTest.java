@@ -3,7 +3,6 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
-import nl.enadeag.carchargeplanner.desktop.AccessibleNames;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Keyboard;
@@ -16,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
@@ -94,21 +92,10 @@ class BatteryCardTest {
     }
 
     @Test
-    void aScreenReaderReadsTheBatteryAsText() throws Exception {
+    void theBarIsNoTabStopAsUpdateEntersTheLevel() throws Exception {
         show(TODAY, true);
 
-        assertThat(Fx.call(() -> card.bar().queryAccessibleAttribute(AccessibleAttribute.TEXT))).isEqualTo(TODAY.spoken());
-    }
-
-    @Test
-    void onTodayTheBarTellsAScreenReaderThatEnterOpensTheEntryAndOtherDaysDoNot() throws Exception {
-        show(TODAY, true);
-        var hint = new Messages(Language.ENGLISH).text(TextKey.BATTERY_UPDATE_HINT);
-        assertThat(Fx.call(() -> AccessibleNames.help(card.bar()))).isEqualTo(hint);
-
-        Fx.run(() -> card.show(TOMORROW));
-
-        assertThat(Fx.call(() -> AccessibleNames.help(card.bar()))).isEmpty();
+        assertThat(Fx.call(() -> card.bar().isFocusTraversable())).isFalse();
     }
 
     @Test
@@ -168,7 +155,8 @@ class BatteryCardTest {
         assertThat(entered).isEmpty();
         assertThat(editing()).isTrue();
         assertThat(Fx.call(() -> card.editor().problem())).isEqualTo(why);
-        assertThat(Fx.call(() -> AccessibleNames.help(card.editor().field()))).isEqualTo(why);
+        assertThat(Fx.call(() -> stage.getScene().getFocusOwner())).isIn(card.editor().field(),
+                card.editor().field().getEditor());
     }
 
     @Test
@@ -195,8 +183,8 @@ class BatteryCardTest {
 
         var update = update();
         assertThat(Fx.call(update::isVisible)).isFalse();
-        Fx.run(() -> card.bar().fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ENTER, false, false,
-                false, false)));
+        Fx.run(() -> card.bar().fireEvent(new MouseEvent(MouseEvent.MOUSE_CLICKED, 10, 5, 10, 5, MouseButton.PRIMARY, 1,
+                false, false, false, false, true, false, false, false, false, false, null)));
         assertThat(editing()).isFalse();
     }
 

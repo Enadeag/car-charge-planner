@@ -3,7 +3,6 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Tween;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
@@ -45,8 +44,6 @@ final class BatteryBar extends Region {
         this.tween = new Tween(reducedMotion, this::frame);
         getChildren().setAll(track, after, level, minimum, target, minimumText, targetText);
         getStyleClass().add("battery-bar");
-        setAccessibleRole(AccessibleRole.TEXT);
-        setFocusTraversable(true);
     }
 
     /**
@@ -56,7 +53,6 @@ final class BatteryBar extends Region {
      */
     void show(BatteryModel day) {
         model = day;
-        setAccessibleText(day.spoken());
         minimumText.setText(day.minimumText());
         targetText.setText(day.targetText());
         levelFrom = shownLevel;

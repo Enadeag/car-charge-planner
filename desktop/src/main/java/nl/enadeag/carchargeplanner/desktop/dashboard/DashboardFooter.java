@@ -28,7 +28,6 @@ final class DashboardFooter extends HBox {
         away.setText(messages.text(TextKey.FOOTER_AWAY));
         var awayHint = messages.text(TextKey.FOOTER_AWAY_HINT);
         away.setTooltip(new Tooltip(awayHint));
-        away.setAccessibleHelp(awayHint);
         settings.setText(messages.text(TextKey.FOOTER_SETTINGS));
         getChildren().setAll(forecast, away, settings);
         getStyleClass().add("dashboard-footer");

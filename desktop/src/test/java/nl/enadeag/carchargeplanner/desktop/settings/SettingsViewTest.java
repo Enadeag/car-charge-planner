@@ -105,7 +105,7 @@ class SettingsViewTest {
         assertThat(settings.configPath).hasContent(original);
         assertThat(settings.appSettings.path()).doesNotExist();
         assertThat(Fx.call(view::shown)).isEqualTo(Category.PLANNING);
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_MINIMUM_CHARGE).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_MINIMUM_CHARGE))))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_NOT_BELOW_TARGET));
         assertThat(settings.saved).isZero();
     }
@@ -235,7 +235,7 @@ class SettingsViewTest {
 
         boolean saved = Fx.call(() -> {
             settings.type(view, TextKey.FIELD_CHARGING_HOURS, "20:30");
-            settings.type(view, TextKey.CHARGING_HOURS_END_FIELD, " 01:00");
+            settings.type(view, TextKey.CHARGING_HOURS_AND, " 01:00");
             return SettingsFixture.save(view);
         });
 
@@ -255,7 +255,7 @@ class SettingsViewTest {
 
         assertThat(Fx.call(() -> ((TextInputControl) settings.field(view, TextKey.FIELD_CHARGING_HOURS)).getText()))
                 .isEqualTo("06:15");
-        assertThat(Fx.call(() -> ((TextInputControl) settings.field(view, TextKey.CHARGING_HOURS_END_FIELD))
+        assertThat(Fx.call(() -> ((TextInputControl) settings.field(view, TextKey.CHARGING_HOURS_AND))
                 .getText())).isEqualTo("23:00");
         assertThat(Fx.call(view::isChanged)).isFalse();
     }
@@ -266,13 +266,13 @@ class SettingsViewTest {
         var view = settings.open();
 
         var outcome = Fx.call(() -> {
-            settings.type(view, TextKey.CHARGING_HOURS_END_FIELD, "10 pm");
+            settings.type(view, TextKey.CHARGING_HOURS_AND, "10 pm");
             return SettingsFixture.save(view);
         });
 
         assertThat(outcome).isFalse();
         assertThat(settings.configPath).hasContent(original);
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CHARGING_HOURS).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_CHARGING_HOURS))))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_NOT_A_TIME));
     }
 
@@ -288,7 +288,7 @@ class SettingsViewTest {
 
         assertThat(outcome).isFalse();
         assertThat(settings.configPath).hasContent(original);
-        assertThat(Fx.call(() -> settings.control(view, TextKey.FIELD_CHARGING_HOURS).getAccessibleHelp()))
+        assertThat(Fx.call(() -> SettingsFixture.shownWith(settings.control(view, TextKey.FIELD_CHARGING_HOURS))))
                 .startsWith(settings.messages.text(TextKey.PROBLEM_SAME_AS_START));
     }
 

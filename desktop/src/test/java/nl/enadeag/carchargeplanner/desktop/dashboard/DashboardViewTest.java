@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.desktop.dashboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import nl.enadeag.carchargeplanner.desktop.AccessibleNames;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
@@ -21,7 +20,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.application.ColorScheme;
-import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
@@ -80,36 +78,6 @@ class DashboardViewTest {
     }
 
     @Test
-    void aScreenReaderReadsEachDayTabWithWhatItsGlyphShows() throws Exception {
-        var view = shown(Models.plan(Optional.empty()));
-
-        // the tab pane's focused item is the selected tab, as Windows asks for it; select each in turn
-        var read = new ArrayList<String>();
-        for (int day = 0; day < 3; day++) {
-            int index = day;
-            read.add(Fx.call(() -> {
-                tabs(view).getSelectionModel().select(index);
-                view.applyCss();
-                view.layout();
-                var tab = AccessibleNames.focusTarget(tabs(view));
-                return AccessibleNames.of(tab) + ": " + AccessibleNames.help(tab);
-            }));
-        }
-
-        assertThat(read).containsExactly("Today: " + Models.SUNNY_TODAY.heading(),
-                "Sat: " + Models.CLOUDY_TOMORROW.heading(), "Sun: " + Models.GRID_SUNDAY.heading());
-    }
-
-    @Test
-    void theDayCardReadsAsOneSentence() throws Exception {
-        var view = shown(Models.plan(Optional.empty()));
-
-        var spoken = Fx.call(() -> selectedPage(view).lookup(".main-card").queryAccessibleAttribute(AccessibleAttribute.TEXT));
-
-        assertThat(spoken).isEqualTo("Today: charge window 11:15 to 14:30, 10 A, 92 % sun.");
-    }
-
-    @Test
     void gridAdviceComesRightBelowTodaysDayCardAndTheChartsFollow() throws Exception {
         var view = shown(Models.plan(Optional.of(Models.ADVICE)));
 
@@ -122,12 +90,12 @@ class DashboardViewTest {
         assertThat(cards).containsExactly("main-card", "advice-card", "solar-card", "battery-card");
     }
 
-    /** What a screen reader reads of each card of the selected day above the charts. */
+    /** What each card of the selected day above the charts shows, its texts joined by a space. */
     private static List<String> cardsAboveTheCharts(DashboardView view) {
         return Scenes.all(selectedPage(view)).stream()
                 .filter(node -> node.getStyleClass().contains("card"))
                 .takeWhile(node -> !node.getStyleClass().contains("solar-card"))
-                .map(Node::getAccessibleText)
+                .map(node -> String.join(" ", Scenes.visibleTexts(node)))
                 .toList();
     }
 
@@ -138,8 +106,8 @@ class DashboardViewTest {
         var today = Fx.call(() -> cardsAboveTheCharts(view));
 
         assertThat(today).hasSize(3);
-        assertThat(today.get(1)).startsWith("Trip advice: Trip tomorrow at 07:30");
-        assertThat(today.get(2)).startsWith("Grid advice:");
+        assertThat(today.get(1)).startsWith("Trip advice Trip tomorrow at 07:30");
+        assertThat(today.get(2)).startsWith("Grid advice");
     }
 
     @Test
@@ -156,9 +124,9 @@ class DashboardViewTest {
         });
 
         assertThat(saturday).hasSize(2);
-        assertThat(saturday.get(1)).startsWith("Trip advice: Trip Saturday at 07:30");
+        assertThat(saturday.get(1)).startsWith("Trip advice Trip Saturday at 07:30");
         assertThat(sunday).hasSize(2);
-        assertThat(sunday.get(1)).isEqualTo("Trip advice: Trip Sunday at 17:00, 120 km there and back. The plan "
+        assertThat(sunday.get(1)).startsWith("Trip advice Trip Sunday at 17:00, 120 km there and back. The plan "
                 + "charges enough for it: the battery is at 62% when you leave. Assuming a battery level of 50%.");
     }
 
@@ -202,10 +170,10 @@ class DashboardViewTest {
 
         Fx.run(() -> tabs(view).getSelectionModel().select(1));
 
-        assertThat(Fx.call(() -> selectedPage(view).lookup(".solar-chart").queryAccessibleAttribute(AccessibleAttribute.TEXT)))
-                .isEqualTo(Models.CLOUDY_TOMORROW.curve().spoken());
-        assertThat(Fx.call(() -> selectedPage(view).lookup(".battery-bar").queryAccessibleAttribute(AccessibleAttribute.TEXT)))
-                .isEqualTo(Models.CLOUDY_TOMORROW.battery().spoken());
+        // tomorrow's chart has no "now", and its battery its own levels
+        assertThat(Fx.call(() -> Scenes.reallyVisible(selectedPage(view).lookup(".chart-now")))).isFalse();
+        assertThat(Fx.call(() -> Scenes.visibleTexts(selectedPage(view).lookup(".battery-card"))))
+                .contains(Models.CLOUDY_TOMORROW.battery().levels());
     }
 
     @Test
@@ -262,8 +230,8 @@ class DashboardViewTest {
             robot.keyRelease(KeyCode.RIGHT);
         });
 
-        var spoken = Fx.call(() -> selectedPage(view).lookup(".main-card").getAccessibleText());
-        assertThat(spoken).startsWith("Tomorrow:");
+        assertThat(Fx.call(() -> Scenes.visibleTexts(selectedPage(view).lookup(".main-card")).getFirst()))
+                .startsWith("Tomorrow");
     }
 
     @Test
@@ -292,7 +260,7 @@ class DashboardViewTest {
     @Test
     void aDayTallerThanTheSpaceScrollsBelowHeaderAndTabsThatStayInView() throws Exception {
         var busy = new DayModel(Models.TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.SOLAR, "Charge window", "06:00 – 06:10",
-                Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80), "",
+                Models.SUNNY_TODAY.facts(), Models.SUNNY_TODAY.chips(), "Also 06:15 – 06:25 at 6 A. ".repeat(80),
                 Models.SUNNY_TODAY.curve(), Models.CLOUDY_TOMORROW.battery(), List.of(), Optional.empty(),
                 List.of(Models.LISTED_SATURDAY));
         var plan = Models.plan(Models.CLOUDY_TOMORROW, busy);
@@ -345,10 +313,10 @@ class DashboardViewTest {
                 .toList();
     }
 
-    /** What the warning card must be: a warning sign, read as one text, and reached with Tab. */
+    /** What the warning card must be: a warning sign, and no Tab stop, as it only says something. */
     private static List<String> warningCardTraits(Node warning) {
         return List.of(String.valueOf(warning.lookup(".glyph.warning") != null),
-                String.valueOf(warning.getAccessibleRole()), String.valueOf(warning.isFocusTraversable()));
+                String.valueOf(warning.isFocusTraversable()));
     }
 
     @Test
@@ -364,16 +332,35 @@ class DashboardViewTest {
                 view.applyCss();
                 view.layout();
                 var warning = selectedPage(view).lookup(".warning-card");
-                return List.of(cardsInOrder(view), Scenes.visibleTexts(warning),
-                        List.of(String.valueOf(warning.queryAccessibleAttribute(AccessibleAttribute.TEXT))),
-                        warningCardTraits(warning));
+                return List.of(cardsInOrder(view), Scenes.visibleTexts(warning), warningCardTraits(warning));
             });
 
             assertThat(page.get(0)).as("day %d", day).startsWith("warning-card", "main-card");
             assertThat(page.get(1)).containsExactly(Models.OPEN_METEO_REFUSED, second);
-            assertThat(page.get(2)).containsExactly(Models.OPEN_METEO_REFUSED + " " + second);
-            assertThat(page.get(3)).containsExactly("true", "TEXT", "true");
+            assertThat(page.get(2)).containsExactly("true", "false");
         }
+    }
+
+    @Test
+    void theDayTripAdviceAndGridAdviceCardsAreNoTabStops() throws Exception {
+        var view = shown(Models.planWithTripAdvice(Optional.of(Models.ADVICE)));
+
+        var stops = Fx.call(() -> List.of(view.lookup(".main-card"), view.lookup(".trip-advice"),
+                        view.lookup(".grid.advice-card")).stream()
+                .map(card -> card == null ? "missing" : String.valueOf(card.isFocusTraversable())).toList());
+
+        assertThat(stops).containsExactly("false", "false", "false");
+    }
+
+    @Test
+    void theMessageWithoutAPlanIsNoTabStop() throws Exception {
+        var view = shown(new DashboardModel.NoPlan("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo",
+                false, List.of()));
+
+        var cards = Fx.call(() -> Scenes.all(view).stream()
+                .filter(node -> node.getStyleClass().contains("card")).map(Node::isFocusTraversable).toList());
+
+        assertThat(cards).isNotEmpty().containsOnly(false);
     }
 
     @Test
@@ -397,7 +384,7 @@ class DashboardViewTest {
 
         assertThat(cards).containsExactly("warning-card", "card");
         assertThat(Fx.call(() -> warningCardTraits(selectedPage(view).lookup(".warning-card"))))
-                .containsExactly("true", "TEXT", "true");
+                .containsExactly("true", "false");
         var expected = switch (language) {
             case ENGLISH -> List.of("Forecast.Solar refused the API key. Check it under Forecast in Settings.",
                     "Open-Meteo refused the API key. Check it under Forecast in Settings.", "No forecast");

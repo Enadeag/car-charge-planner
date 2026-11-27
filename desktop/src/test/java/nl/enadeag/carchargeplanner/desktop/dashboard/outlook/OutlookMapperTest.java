@@ -124,13 +124,6 @@ class OutlookMapperTest {
     }
 
     @Test
-    void theMainCardReadsAsOneSentence() {
-        var today = plan(day(TODAY, window(TODAY, 11, 14, 0.6))).days().getFirst();
-
-        assertThat(today.spoken()).isEqualTo("Today: charge window 11:15 to 14:30, 10 A, 92% solar.");
-    }
-
-    @Test
     void aDayWithAWindowShowsItInTheHomesTimeZoneWithWhatToSet() {
         var today = plan(day(TODAY, window(TODAY, 11, 14, 0))).days().getFirst();
 
@@ -153,7 +146,7 @@ class OutlookMapperTest {
 
         assertThat(tomorrow.kind()).isEqualTo(DayKind.NONE);
         assertThat(tomorrow.hero()).isEmpty();
-        assertThat(tomorrow.spoken()).startsWith("Tomorrow: no charge window.");
+        assertThat(tomorrow.heading()).isEqualTo("No charge window");
     }
 
     @Test
@@ -329,10 +322,8 @@ class OutlookMapperTest {
         assertThat(saturday.chips()).containsExactly(
                 new ChipModel(EnergySource.CAR, "Battery 94 → 32% after the trip"));
         assertThat(saturday.note()).isEmpty();
-        assertThat(saturday.spoken()).isEqualTo("Tomorrow: no charge window.");
+        assertThat(saturday.heading()).isEqualTo("No charge window");
         assertThat(saturday.battery().levels()).isEqualTo("94 → 32% after the trip");
-        assertThat(saturday.battery().spoken())
-                .endsWith("After the trip the battery is at 32% at the end of the day.");
     }
 
     @Test
@@ -344,7 +335,6 @@ class OutlookMapperTest {
         assertThat(english.battery().levels()).isEqualTo("94 → 100%, 32% after the trip");
         assertThat(dutch.chips()).extracting(ChipModel::text).containsExactly("Accu 94 → 100%, 32% na de rit");
         assertThat(dutch.battery().levels()).isEqualTo("94 → 100%, 32% na de rit");
-        assertThat(dutch.battery().spoken()).endsWith("Na de rit staat de accu aan het eind van de dag op 32%.");
     }
 
     @Test
@@ -373,11 +363,9 @@ class OutlookMapperTest {
         assertThat(english.heading()).isEqualTo("Charging not needed");
         assertThat(english.chips()).isEmpty();
         assertThat(english.note()).isEmpty();
-        assertThat(english.spoken()).isEqualTo("Tomorrow: charging not needed.");
         assertThat(english.kind()).isEqualTo(DayKind.NONE);
         assertThat(english.battery().levels()).isEqualTo("80 → 80%");
         assertThat(dutch.heading()).isEqualTo("Laden niet nodig");
-        assertThat(dutch.spoken()).isEqualTo("Morgen: laden niet nodig.");
     }
 
     @Test
@@ -389,8 +377,6 @@ class OutlookMapperTest {
         assertThat(english.heading()).isEqualTo("No charge window");
         assertThat(english.chips()).isEmpty();
         assertThat(english.note()).isEqualTo("There is too little solar power while the car is home.");
-        assertThat(english.spoken())
-                .isEqualTo("Tomorrow: no charge window. There is too little solar power while the car is home.");
         assertThat(english.kind()).isEqualTo(DayKind.NONE);
         assertThat(english.battery().levels()).isEqualTo("79 → 79%");
         assertThat(dutch.heading()).isEqualTo("Geen laadvenster");
@@ -420,11 +406,9 @@ class OutlookMapperTest {
         assertThat(english.heading()).isEqualTo("No charge window");
         assertThat(english.note()).isEmpty();
         assertThat(english.chips()).extracting(ChipModel::text).containsExactly("Battery 80 → 94%");
-        assertThat(english.spoken()).isEqualTo("Today: no charge window.");
         assertThat(english.kind()).isEqualTo(DayKind.NONE);
         assertThat(dutch.heading()).isEqualTo("Geen laadvenster");
         assertThat(dutch.note()).isEmpty();
-        assertThat(dutch.spoken()).isEqualTo("Vandaag: geen laadvenster.");
     }
 
     @Test
@@ -618,7 +602,7 @@ class OutlookMapperTest {
                 Units.METRIC);
 
         assertThat(plan.away().coming()).containsExactly(
-                new OneOffAwayModel.Listed(tomorrow, "Tomorrow, all day", "Remove Tomorrow, all day"));
+                new OneOffAwayModel.Listed(tomorrow, "Tomorrow, all day"));
         assertThat(plan.away().zone()).isEqualTo(BRUSSELS);
     }
 

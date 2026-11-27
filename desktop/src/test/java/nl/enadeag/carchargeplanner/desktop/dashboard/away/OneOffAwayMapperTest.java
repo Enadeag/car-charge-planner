@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
-import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import nl.enadeag.carchargeplanner.engine.dashboard.ComingAway;
 import java.time.LocalDate;
@@ -42,7 +41,5 @@ class OneOffAwayMapperTest {
         assertThat(model.coming()).extracting(OneOffAwayModel.Listed::text)
                 .containsExactly(today, tomorrow, nextWeek, overDays);
         assertThat(model.coming()).extracting(OneOffAwayModel.Listed::period).containsExactlyElementsOf(periods);
-        assertThat(model.coming().get(1).removeSpoken())
-                .isEqualTo(new Messages(language).text(TextKey.ONE_OFF_REMOVE_SPOKEN, tomorrow));
     }
 }

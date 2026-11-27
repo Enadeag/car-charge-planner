@@ -1,11 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 
-import static nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays.TODAY;
 import static nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays.TWO_DAYS;
-import static nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays.at;
-import static nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays.day;
-import static nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays.planned;
-import static nl.enadeag.carchargeplanner.desktop.dashboard.PlannedDays.sunny;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import nl.enadeag.carchargeplanner.desktop.text.Language;
@@ -35,9 +30,7 @@ class BatteryMapperTest {
     void todaysBatteryIsNowAndCanBeEntered() {
         var battery = map(TWO_DAYS, 0, ENGLISH);
 
-        assertThat(battery).isEqualTo(new BatteryModel(50, 74, 30, 80, "50 → 74%", "min 30%", "target 80%", true,
-                "Car battery 50% now, 74% after charging; minimum 30%, target 80%. "
-                        + "The level is assumed: enter the level the car shows."));
+        assertThat(battery).isEqualTo(new BatteryModel(50, 74, 30, 80, "50 → 74%", "min 30%", "target 80%", true));
     }
 
     @Test
@@ -46,16 +39,6 @@ class BatteryMapperTest {
 
         assertThat(battery.editable()).isFalse();
         assertThat(battery.levelPct()).isEqualTo(62);
-        assertThat(battery.spoken()).isEqualTo(
-                "Car battery 62% at the start of tomorrow, 62% after charging; minimum 30%, target 80%.");
-    }
-
-    @Test
-    void anEnteredLevelIsNotCalledAssumed() {
-        var entered = planned(at(TODAY, 8, 12), false, day(TODAY, 50, 74, sunny(TODAY, 4.2)));
-
-        assertThat(map(entered, 0, ENGLISH).spoken())
-                .isEqualTo("Car battery 50% now, 74% after charging; minimum 30%, target 80%.");
     }
 
     @Test
@@ -63,8 +46,6 @@ class BatteryMapperTest {
         var battery = map(TWO_DAYS, 1, new Messages(Language.DUTCH));
 
         assertThat(battery.minimumText()).isEqualTo("min. 30%");
-        assertThat(battery.spoken()).isEqualTo(
-                "Accu van de auto 62% aan het begin van morgen, na het laden 62%; minimum 30%, doel 80%.");
     }
 
     /** Every half from 0 to 100 and the closest numbers on either side of it, with what a language writes for each. */

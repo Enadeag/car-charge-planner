@@ -94,7 +94,7 @@ public final class ChargerPage implements ConfigPage {
                 row(ConfigSetting.CHARGER_VOLTAGE, TextKey.FIELD_VOLTAGE, TextKey.FIELD_VOLTAGE_HINT, volts),
                 row(ConfigSetting.CHARGER_EFFICIENCY, TextKey.FIELD_EFFICIENCY, TextKey.FIELD_EFFICIENCY_HINT,
                         efficiency),
-                TypicalButton.line(this::useTypical, messages.text(TextKey.CARD_CHARGER), messages));
+                TypicalButton.line(this::useTypical, messages));
         card = new CardView(messages.text(TextKey.CARD_CHARGER), messages.text(TextKey.CARD_CHARGER_HINT), powerRow,
                 more);
         power.onChange(this::powerChosen);

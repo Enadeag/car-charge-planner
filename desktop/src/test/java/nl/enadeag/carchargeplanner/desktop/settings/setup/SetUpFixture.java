@@ -222,7 +222,7 @@ final class SetUpFixture {
         }
     }
 
-    /** The control a screen reader calls by this name, on the step shown. */
+    /** The control this name is the label of, or a check box that says it, on the step shown. */
     static Node field(SetUpView view, String name) {
         view.applyCss(); // a page shown since the last pulse has its controls' skins only then
         return Scenes.all(view).stream()
@@ -236,7 +236,7 @@ final class SetUpFixture {
         return field(view, messages.text(name));
     }
 
-    /** The control a screen reader reads by this name, with its help: the spinner itself, not its text field. */
+    /** The control this name is the label of: the spinner itself, not its text field. */
     Node control(SetUpView view, TextKey name) {
         view.applyCss();
         return Scenes.all(view).stream().filter(node -> SettingsFixture.named(node, messages.text(name)))
@@ -309,9 +309,9 @@ final class SetUpFixture {
         return Scenes.reallyVisible(field(view, TextKey.FIELD_LATITUDE));
     }
 
-    /** What a screen reader reads after the latitude's name, its problem first; on the location step. */
+    /** What the latitude's row shows with it, its problem first; on the location step. */
     String latitudeHelp(SetUpView view) {
-        return control(view, TextKey.FIELD_LATITUDE).getAccessibleHelp();
+        return SettingsFixture.shownWith(control(view, TextKey.FIELD_LATITUDE));
     }
 
     /** Searches the place as the owner does and picks the one found; on the location step. */

@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.page;
 
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
-import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
@@ -22,7 +21,6 @@ public final class CardView extends VBox {
         heading.setText(title);
         heading.getStyleClass().add("card-title");
         heading.setWrapText(true);
-        heading.setAccessibleRole(AccessibleRole.TEXT);
         getChildren().add(heading);
         if (!explanation.isEmpty()) {
             getChildren().add(Labels.paragraph(explanation, "note"));

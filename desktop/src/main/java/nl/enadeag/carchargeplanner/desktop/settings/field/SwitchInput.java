@@ -16,7 +16,6 @@ public final class SwitchInput implements Input {
      */
     public SwitchInput(String text) {
         box.setText(text);
-        box.setAccessibleText(text);
         box.setWrapText(true);
         box.getStyleClass().add("switch-field");
     }

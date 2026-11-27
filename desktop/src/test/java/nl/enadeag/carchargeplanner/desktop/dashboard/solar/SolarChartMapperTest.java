@@ -100,21 +100,6 @@ class SolarChartMapperTest {
     }
 
     @Test
-    void theChartReadsAsSentencesForAScreenReader() {
-        assertThat(curve(TWO_DAYS, 0).spoken()).isEqualTo("Today, expected solar power: peak 4.2 kW around 13:00; the "
-                + "house uses about 0.4 kW. Charging: 11:15 to 14:30. Now 08:12.");
-        assertThat(curve(TWO_DAYS, 1).spoken())
-                .isEqualTo("Tomorrow, expected solar power: peak 5.3 kW around 13:00; the house uses about 0.4 kW.");
-    }
-
-    @Test
-    void aDayWithoutSunSaysSo() {
-        var dark = planned(at(TODAY, 8, 0), false, day(TODAY, 50, 50, hourly(TODAY, _ -> 0)));
-
-        assertThat(curve(dark, 0).spoken()).isEqualTo("Today, expected solar power: none.");
-    }
-
-    @Test
     void onAClockChangeDayTheTicksStayOnTheClockHours() {
         var day = planned(at(FALL_BACK, 8, 0), false, day(FALL_BACK, 50, 50,
                 hourly(FALL_BACK, hour -> hour >= 9 && hour < 16 ? 2 : 0)));
@@ -150,7 +135,5 @@ class SolarChartMapperTest {
         var curve = curve(TWO_DAYS, 0, new Messages(Language.DUTCH));
 
         assertThat(readoutFrom(curve, 13)).isEqualTo("13:00: 4,2 kW zonnestroom · 0,4 kW huis");
-        assertThat(curve.spoken()).isEqualTo("Vandaag, verwachte zonnestroom: piek 4,2 kW rond 13:00; het huis "
-                + "gebruikt ongeveer 0,4 kW. Laden: 11:15 tot 14:30. Nu 08:12.");
     }
 }

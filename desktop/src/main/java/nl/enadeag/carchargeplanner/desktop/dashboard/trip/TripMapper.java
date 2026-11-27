@@ -36,8 +36,7 @@ public final class TripMapper {
         var text = messages.text(TextKey.TRIP_AWAY, times(listed)) + " · " + messages.text(TextKey.TRIP_DISTANCE,
                 messages.whole(units.distance(listed.trip().distanceKm())), units.distanceUnit());
         var origin = TripOrigin.BY_HAND;
-        return new TripsModel.Listed(listed.trip(), origin, text, messages.text(origin.text()),
-                messages.text(TextKey.TRIP_CHANGE_SPOKEN, text), messages.text(TextKey.TRIP_REMOVE_SPOKEN, text));
+        return new TripsModel.Listed(listed.trip(), origin, text, messages.text(origin.text()));
     }
 
     /** The times alone when the trip returns on the day it leaves; otherwise each with its day. */

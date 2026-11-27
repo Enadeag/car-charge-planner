@@ -5,20 +5,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * One day's solar chart as the desktop draws it: the engine's chart with the words the desktop shows and speaks.
+ * One day's solar chart as the desktop draws it: the engine's chart with the words the desktop shows.
  *
  * @param chart the engine's chart of the day, whose hours, power, steps, windows and "now" are drawn
  * @param scaleText the power at the top of the chart in words, such as "4 kW"
  * @param readouts each step of {@code chart} in words, in the same order, such as "13:00: 4.2 kW solar · 0.4 kW house"
  * @param ticks the hours of {@code chart} that the time axis labels, in time order; the desktop labels only some
- * @param spoken the chart in words, for screen readers
  */
 public record SolarChartModel(
         DayChart chart,
         String scaleText,
         List<String> readouts,
-        List<TickLabel> ticks,
-        String spoken) {
+        List<TickLabel> ticks) {
 
     /**
      * Checks that every step has its readout and keeps copies of the lists.

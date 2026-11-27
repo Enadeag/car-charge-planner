@@ -68,11 +68,9 @@ public final class DayMapper {
         chips.add(batteryChip(day.battery()));
         main.gridKwh().ifPresent(kwh -> chips.add(new ChipModel(EnergySource.GRID,
                 messages.text(TextKey.DAY_FROM_GRID, messages.decimal(kwh)))));
-        var spoken = messages.text(TextKey.DAY_SPOKEN, title, messages.time(window.start(), zone),
-                messages.time(window.end(), zone), window.amps(), solarSharePct);
         var note = sentences(laterWindows(day.later()), assumedNote(day));
         return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(),
-                messages.text(TextKey.DAY_WINDOW), span(window), facts, chips, note, spoken, charts.map(day),
+                messages.text(TextKey.DAY_WINDOW), span(window), facts, chips, note, charts.map(day),
                 batteries.map(day, levels), tripAdvice, Optional.empty(), List.of());
     }
 
@@ -96,9 +94,8 @@ public final class DayMapper {
         };
         var chips = day.showsBattery() ? List.of(batteryChip(day.battery())) : List.<ChipModel>of();
         var title = messages.title(day.name());
-        var spoken = sentences(title + ": " + heading.toLowerCase(messages.locale()) + ".", why);
         return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(), heading, "", List.of(),
-                chips, sentences(why, assumedNote(day)), spoken, charts.map(day), batteries.map(day, levels),
+                chips, sentences(why, assumedNote(day)), charts.map(day), batteries.map(day, levels),
                 tripAdvice, Optional.empty(), List.of());
     }
 

@@ -45,40 +45,32 @@ public final class Models {
 
     /** The trip on Saturday, which Saturday lists. */
     public static final TripsModel.Listed LISTED_SATURDAY = new TripsModel.Listed(TRIP_SATURDAY, TripOrigin.BY_HAND,
-            "Away 07:30 – 18:00 · 300 km there and back", "Entered by hand",
-            "Change the trip Away 07:30 – 18:00 · 300 km there and back",
-            "Remove the trip Away 07:30 – 18:00 · 300 km there and back");
+            "Away 07:30 – 18:00 · 300 km there and back", "Entered by hand");
     /** The trip from Sunday to Monday, which Sunday and Monday list. */
     public static final TripsModel.Listed LISTED_SUNDAY_NIGHT = new TripsModel.Listed(TRIP_SUNDAY_NIGHT,
-            TripOrigin.BY_HAND, "Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back", "Entered by hand",
-            "Change the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back",
-            "Remove the trip Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back");
+            TripOrigin.BY_HAND, "Away Sun 5 Jul 17:00 – Mon 6 Jul 09:30 · 120 km there and back", "Entered by hand");
 
     public static final DayModel SUNNY_TODAY = new DayModel(TODAY, "Today", "Today", DayKind.SOLAR, "Charge window", "11:15 – 14:30",
             List.of("Set 10 A (2.3 kW)", "about 7.9 kWh"),
             List.of(new ChipModel(EnergySource.SOLAR, "92 % sun"), new ChipModel(EnergySource.CAR, "Battery 50 → 74 %"),
                     new ChipModel(EnergySource.GRID, "0.6 kWh from the grid")),
-            "The plan assumes the battery is at 50 %.", "Today: charge window 11:15 to 14:30, 10 A, 92 % sun.",
+            "The plan assumes the battery is at 50 %.",
             curve(3.6, List.of(window(11.25, 14.5)), OptionalDouble.of(8.2)),
-            new BatteryModel(50, 74, 30, 80, "50 → 74 %", "min 30", "target 80", true,
-                    "Car battery 50 % now, 74 % after charging; minimum 30 %, target 80 %."),
+            new BatteryModel(50, 74, 30, 80, "50 → 74 %", "min 30", "target 80", true),
             List.of(), Optional.empty(), List.of());
 
     public static final DayModel CLOUDY_TOMORROW = new DayModel(TODAY.plusDays(1), "Sat", "Tomorrow", DayKind.NONE, "No charge window", "",
             List.of(), List.of(),
             "There is too little solar power while the car is home.",
-            "Tomorrow: no charge window. There is too little solar power while the car is home.",
             curve(0.9, List.of(), OptionalDouble.empty()),
-            new BatteryModel(62, 62, 30, 80, "62 → 62 %", "min 30", "target 80", false,
-                    "Car battery 62 % at the start of tomorrow, 62 % after charging; minimum 30 %, target 80 %."),
+            new BatteryModel(62, 62, 30, 80, "62 → 62 %", "min 30", "target 80", false),
             List.of(), Optional.empty(), List.of(LISTED_SATURDAY));
 
     public static final DayModel GRID_SUNDAY = new DayModel(TODAY.plusDays(2), "Sun", "Sunday", DayKind.GRID, "No good window", "01:00 – 04:00",
             List.of("Set 16 A (3.7 kW)"), List.of(new ChipModel(EnergySource.GRID, "11.0 kWh from the grid")),
-            "Charge from the grid to stay above the minimum.", "Sunday: grid charge 01:00 to 04:00, 16 A.",
+            "Charge from the grid to stay above the minimum.",
             curve(2.0, List.of(), OptionalDouble.empty()),
-            new BatteryModel(20, 20, 30, 80, "20 → 20 %", "min 30", "target 80", false,
-                    "Car battery 20 % at the start of Sunday, 20 % after charging; minimum 30 %, target 80 %."),
+            new BatteryModel(20, 20, 30, 80, "20 → 20 %", "min 30", "target 80", false),
             List.of(), Optional.empty(), List.of(LISTED_SUNDAY_NIGHT));
 
     public static final GridAdviceModel ADVICE = new GridAdviceModel("Grid advice", "Charge from the grid on Saturday night.",
@@ -92,8 +84,8 @@ public final class Models {
 
     /** An away period tomorrow and one on Sunday. */
     public static final OneOffAwayModel AWAY = new OneOffAwayModel(BRUSSELS, List.of(
-            new OneOffAwayModel.Listed(AWAY_TOMORROW, "Tomorrow, all day", "Remove Tomorrow, all day"),
-            new OneOffAwayModel.Listed(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30", "Remove Sun 5 Jul, 10:00 – 16:30")));
+            new OneOffAwayModel.Listed(AWAY_TOMORROW, "Tomorrow, all day"),
+            new OneOffAwayModel.Listed(AWAY_SUNDAY, "Sun 5 Jul, 10:00 – 16:30")));
 
     /** In km. */
     public static final TripsModel TRIPS = new TripsModel(BRUSSELS, Units.METRIC);
@@ -151,8 +143,7 @@ public final class Models {
         var peak = steps.stream().filter(step -> step.kw() > 0).max(Comparator.comparingDouble(DayChart.Step::kw))
                 .map(step -> new DayChart.Peak(step.kw(), step.start()));
         var chart = new DayChart(6, 20, 4, steps, 0.4, windows, moment, ticks, peak);
-        return new SolarChartModel(chart, "4 kW", readouts, labels,
-                "Expected sun: peak %.1f kW around 13:00.".formatted(peakKw));
+        return new SolarChartModel(chart, "4 kW", readouts, labels);
     }
 
     /** A charge window today, from and to an hour from the start of the day. */
@@ -168,7 +159,7 @@ public final class Models {
     /** The day with this advice on its tab instead of its own. */
     public static DayModel with(DayModel day, List<TripAdviceModel> tripAdvice, Optional<GridAdviceModel> gridAdvice) {
         var withTrips = new DayModel(day.date(), day.tab(), day.title(), day.kind(), day.heading(), day.hero(),
-                day.facts(), day.chips(), day.note(), day.spoken(), day.curve(), day.battery(), tripAdvice,
+                day.facts(), day.chips(), day.note(), day.curve(), day.battery(), tripAdvice,
                 Optional.empty(), day.trips());
         return gridAdvice.map(withTrips::withGridAdvice).orElse(withTrips);
     }

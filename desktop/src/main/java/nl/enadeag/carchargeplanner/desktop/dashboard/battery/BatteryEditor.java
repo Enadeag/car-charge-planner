@@ -1,7 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.dashboard.battery;
 
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
-import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.util.function.IntConsumer;
@@ -14,8 +13,7 @@ import javafx.scene.layout.VBox;
 
 /**
  * Where the owner enters the battery level the car shows: a number from 0 to 100 with Save and Cancel. A text that is
- * not a whole number is not saved: the entry says why, stays open and keeps the focus in the field, where a screen
- * reader reads the reason.
+ * not a whole number is not saved: the entry says why, stays open and keeps the focus in the field.
  */
 final class BatteryEditor extends VBox {
 
@@ -37,7 +35,6 @@ final class BatteryEditor extends VBox {
         this.saved = saved;
         this.closed = closed;
         level.setEditable(true);
-        level.setAccessibleText(messages.text(TextKey.BATTERY_LEVEL_FIELD));
         level.getStyleClass().add("battery-level-field");
         var percent = Labels.line("%", "fact");
         var save = new Button(messages.text(TextKey.BATTERY_SAVE));
@@ -46,10 +43,6 @@ final class BatteryEditor extends VBox {
         var cancel = new Button(messages.text(TextKey.BATTERY_CANCEL));
         cancel.getStyleClass().add("flat");
         cancel.setOnAction(_ -> closed.run());
-        // the away entry below can be open as well, with its own Save and Cancel
-        var heading = messages.text(TextKey.BATTERY_HEADING);
-        save.setAccessibleText(messages.text(TextKey.IN_GROUP, save.getText(), heading));
-        cancel.setAccessibleText(messages.text(TextKey.IN_GROUP, cancel.getText(), heading));
         level.getEditor().setOnAction(_ -> save());
         setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
@@ -89,7 +82,7 @@ final class BatteryEditor extends VBox {
         }
         if (typed == null) {
             showProblem(messages.text(TextKey.BATTERY_NOT_A_NUMBER));
-            ScreenReader.focus(level);
+            level.requestFocus();
             return;
         }
         level.getValueFactory().setValue(typed);
@@ -108,9 +101,9 @@ final class BatteryEditor extends VBox {
     }
 
     /**
-     * The field, for the tests.
+     * The field the level is entered in, which the card's heading names.
      *
-     * @return the spinner the level is entered in
+     * @return the spinner
      */
     Spinner<Integer> field() {
         return level;
@@ -120,6 +113,5 @@ final class BatteryEditor extends VBox {
         problem.setText(text);
         problem.setVisible(!text.isEmpty());
         problem.setManaged(!text.isEmpty());
-        level.setAccessibleHelp(text);
     }
 }
