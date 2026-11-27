@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    id("ccp.no-google-libraries")
     // checkLegalFiles: android/legal names exactly the libraries and copied files the release build brings (#331)
     id("ccp.legal-files")
     alias(libs.plugins.pitest)
@@ -61,10 +60,6 @@ val robolectricOffline: Provider<List<String>> = robolectricJarsDir.map {
     listOf("-Drobolectric.offline=true", "-Drobolectric.dependency.dir=${it.asFile}")
 }
 
-// -PdebugAppName="Car charge planner" gives the debug build the name a release shows, for the listing's pictures
-// (tools/android-listing-pictures.sh); without it the debug build keeps src/debug's "(debug)"
-val debugAppName: Provider<String> = providers.gradleProperty("debugAppName")
-
 // -PtestBuildType=minified runs the instrumented tests of src/androidTestMinified against the minified build, and
 // -PminifiedKeystore names the throw-away key it is signed with; without them the tests of src/androidTestDebug run
 // against debug
@@ -90,7 +85,7 @@ android {
         minSdk = libs.versions.android.min.sdk.get().toInt()
         targetSdk = 37
         // A release commit sets the version name without -SNAPSHOT, the next one with it (docs/dev/ci-and-releasing.md,
-        // Releasing the Android app). The version code is written out because F-Droid reads it from this file; the
+        // Releasing the Android app). The version code is written out so it can be read from this file; the
         // check stops the build when it is not the code the name gives.
         versionName = "0.2.2-SNAPSHOT"
         versionCode = 202
@@ -138,7 +133,6 @@ android {
             isPseudoLocalesEnabled = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug+" + debugBuildLabel.get()
-            debugAppName.orNull?.let { resValue("string", "app_name", it) }
         }
         // R8 shrinks, but neither renames nor optimises, so the log's stack traces show the real files and lines
         // (docs/design/android/build.md, R8); checkReleaseShrunk holds it to that. The optimize file only because
@@ -176,11 +170,9 @@ android {
         compose = true
         // BuildConfig.DEBUG sets how much the app logs (LogcatServiceProvider)
         buildConfig = true
-        // only for -PdebugAppName, so every other build is made as without it
-        resValues = debugAppName.isPresent
     }
 
-    // Google's encrypted dependency list is of no use outside Play, and F-Droid refuses it
+    // Google's encrypted dependency list is of no use outside Play
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false

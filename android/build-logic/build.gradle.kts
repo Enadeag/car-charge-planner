@@ -29,10 +29,6 @@ gradlePlugin {
             id = "ccp.maven-drift"
             implementationClass = "nl.enadeag.carchargeplanner.buildlogic.MavenDriftPlugin"
         }
-        create("noGoogleLibraries") {
-            id = "ccp.no-google-libraries"
-            implementationClass = "nl.enadeag.carchargeplanner.buildlogic.NoGoogleLibrariesPlugin"
-        }
         create("legalFiles") {
             id = "ccp.legal-files"
             implementationClass = "nl.enadeag.carchargeplanner.buildlogic.LegalFilesPlugin"
