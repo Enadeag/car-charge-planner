@@ -21,7 +21,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 ### Chart and battery bar
 
 - Both are drawn on cards of a fixed ground, white in light and dark grey in dark, not the wallpaper's colours, so the tested contrast of the solar, grid and car colours holds (lines and marks 3:1, words 4.5:1). Both run left to right in every language (#336).
-- For TalkBack each is one node with the role of an image and the desktop's sentence (`CHART_SPOKEN`, `BATTERY_SPOKEN_*`), which is also shown under the chart as its text equivalent; the drawing's own words are not read apart (#336).
+- For TalkBack each is one node with the role of an image and a sentence describing it, which is also shown under the chart as its text equivalent; the drawing's own words are not read apart (#336). The desktop has no such sentence (#435).
 - The time axis marks whole hours only ("15", or "3 PM"), every 3 hours, else 6, else 12, so no two labels meet, each within the plot; a narrow phone shows fewer hours (#336).
 - On the day a trip with advice leaves, the level after the trip adds "after the trip" to the levels, the day card's battery chip and the bar's sentence, as text only; the wording with a charge is chosen by `BatteryLevels.chargesBeforeTrip` (#401).
 - Without a charge before the trip the chip is read "Battery 50%, 30% after the trip" ("Accu 50%, 30% na de rit") (#377).

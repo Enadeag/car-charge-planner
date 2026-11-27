@@ -342,6 +342,28 @@ class DashboardViewTest {
     }
 
     @Test
+    void theDayTripAdviceAndGridAdviceCardsAreNoTabStops() throws Exception {
+        var view = shown(Models.planWithTripAdvice(Optional.of(Models.ADVICE)));
+
+        var stops = Fx.call(() -> List.of(view.lookup(".main-card"), view.lookup(".trip-advice"),
+                        view.lookup(".grid.advice-card")).stream()
+                .map(card -> card == null ? "missing" : String.valueOf(card.isFocusTraversable())).toList());
+
+        assertThat(stops).containsExactly("false", "false", "false");
+    }
+
+    @Test
+    void theMessageWithoutAPlanIsNoTabStop() throws Exception {
+        var view = shown(new DashboardModel.NoPlan("No forecast", "Could not reach Open-Meteo", "Forecast: Open-Meteo",
+                false, List.of()));
+
+        var cards = Fx.call(() -> Scenes.all(view).stream()
+                .filter(node -> node.getStyleClass().contains("card")).map(Node::isFocusTraversable).toList());
+
+        assertThat(cards).isNotEmpty().containsOnly(false);
+    }
+
+    @Test
     void aPlanWithoutRefusedKeysHasNoWarning() throws Exception {
         var view = shown(Models.plan(Optional.of(Models.ADVICE)));
 
