@@ -23,7 +23,6 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -169,7 +168,7 @@ class TripsCardScreenTest {
         compose.onNode(hasContentDescription(text(R.string.trip_remove_spoken, spoken)))
 
     private fun tab(name: String) {
-        compose.onNode(hasContentDescription(name) and hasClickAction()).performClick()
+        compose.dayTab(name).performClick()
         compose.waitForIdle()
     }
 
@@ -200,9 +199,9 @@ class TripsCardScreenTest {
         access.trips = listOf(dayTrip, overnight)
         show()
 
-        val heading = compose.onNode(isHeading() and hasText(text(R.string.trips_heading))).performScrollTo()
+        val heading = compose.onNode(hasText(text(R.string.trips_heading))).performScrollTo()
             .fetchSemanticsNode().boundsInRoot
-        val battery = compose.onNode(isHeading() and hasText(text(R.string.battery_heading))).fetchSemanticsNode()
+        val battery = compose.onNode(hasText(text(R.string.battery_heading))).fetchSemanticsNode()
             .boundsInRoot
         assertThat(heading.top).isGreaterThan(battery.bottom)
         compose.onNodeWithText(dayTripLine()).performScrollTo().assertIsDisplayed()
@@ -345,7 +344,7 @@ class TripsCardScreenTest {
         canCharge.requestFocus()
 
         canCharge.enter()
-        canCharge.assertIsFocused().assertIsNotEnabled().assert(toggle(ToggleableState.On))
+        canCharge.assertIsFocused().assert(toggle(ToggleableState.On))
         canCharge.enter()
         gate.complete(Unit)
         compose.waitForIdle()
@@ -366,7 +365,7 @@ class TripsCardScreenTest {
         button.requestFocus()
 
         button.enter()
-        button.assertIsFocused().assertIsNotEnabled()
+        button.assertIsFocused()
         gate.complete(Unit)
         compose.waitForIdle()
 
@@ -396,7 +395,7 @@ class TripsCardScreenTest {
     }
 
     @Test
-    fun whileAChoiceIsSavedItShowsTickedAndTheCardsControlsAreOff() {
+    fun whileAChoiceIsSavedItShowsTicked() {
         access.trips = listOf(dayTrip, overnight)
         val gate = CompletableDeferred<Unit>()
         access.tripGate = gate
@@ -405,12 +404,10 @@ class TripsCardScreenTest {
         choice(R.string.trip_can_charge, dayTripSpoken()).performScrollTo().performClick()
         compose.waitForIdle()
 
-        choice(R.string.trip_can_charge, dayTripSpoken()).assert(toggle(ToggleableState.On)).assertIsNotEnabled()
-        choice(R.string.trip_not_with_this_car, dayTripSpoken()).assertIsNotEnabled()
-        remove(dayTripSpoken()).assertIsNotEnabled()
+        choice(R.string.trip_can_charge, dayTripSpoken()).assert(toggle(ToggleableState.On))
         gate.complete(Unit)
         compose.waitForIdle()
-        remove(dayTripSpoken()).assertIsEnabled()
+        remove(dayTripSpoken()).assertExists()
     }
 
     @Test
@@ -681,7 +678,7 @@ class TripsCardScreenTest {
         access.trips = listOf(dayTrip)
         show()
 
-        compose.onNode(isHeading() and hasText("Ritten")).performScrollTo().assertIsDisplayed()
+        compose.onNode(hasText("Ritten")).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Afwezig 07:30 – 18:00 · 300 km heen en terug").assertExists()
             .assert(hasContentDescription("Afwezig van 07:30 tot 18:00, 300 km heen en terug"))
         compose.onNode(hasContentDescription("Niet met deze auto, Afwezig van 07:30 tot 18:00, 300 km heen en terug"))

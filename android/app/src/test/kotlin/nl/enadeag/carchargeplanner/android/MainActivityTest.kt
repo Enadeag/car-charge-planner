@@ -3,7 +3,7 @@ package nl.enadeag.carchargeplanner.android
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isHeading
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -51,7 +51,9 @@ class MainActivityTest {
 
     @Test
     fun aChangeOfTheAppsLanguageReachesTheNumbersAndThePlaceSearchAndKeepsWhatWasTyped() {
-        compose.waitUntil(10_000) { compose.onAllNodes(isHeading()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText(text(R.string.action_next)).fetchSemanticsNodes().isNotEmpty()
+        }
         click(R.string.action_next)
         field(R.string.place_field).performTextInput("Utrecht")
 
@@ -76,13 +78,15 @@ class MainActivityTest {
 
     @Test
     fun withTheManifestsBackCallbacksSetUpsBackGoesOneStepBackAndOnTheWelcomeClosesTheApp() {
-        compose.waitUntil(10_000) { compose.onAllNodes(isHeading()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText(text(R.string.action_next)).fetchSemanticsNodes().isNotEmpty()
+        }
         click(R.string.action_next)
         compose.waitForIdle()
 
         compose.activity.onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
-        compose.onNode(isHeading() and hasText(text(R.string.setup_welcome_title), substring = true)).assertExists()
+        compose.onNode(hasText(text(R.string.setup_welcome_title), substring = true)).assertExists()
         assertThat(compose.activity.isFinishing).isFalse()
 
         compose.activity.onBackPressedDispatcher.onBackPressed()

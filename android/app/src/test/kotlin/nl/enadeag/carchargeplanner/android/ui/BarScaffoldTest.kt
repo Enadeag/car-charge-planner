@@ -8,7 +8,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -58,7 +57,7 @@ class BarScaffoldTest {
             AppTheme {
                 AtFontScaleTwo {
                     val bar = shown.value
-                    BarScaffold(bar.title, titleFocus = null, onUp = if (bar is Bar.Settings) ({}) else null,
+                    BarScaffold(bar.title, onUp = if (bar is Bar.Settings) ({}) else null,
                         actions = {
                             if (bar is Bar.Settings) {
                                 AppTextButton(onClick = {}) { Text(text(R.string.action_save)) }
@@ -74,10 +73,10 @@ class BarScaffoldTest {
             shown.value = bar
             compose.waitForIdle()
             val layouts = mutableListOf<TextLayoutResult>()
-            compose.onNode(isHeading() and hasText(bar.title)).fetchSemanticsNode()
+            compose.onNode(hasText(bar.title)).fetchSemanticsNode()
                 .config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
             val title = layouts.single()
-            // not hasVisualOverflow: the layout a screen reader gets is as wide as the bar allows, the text no wider
+            // not hasVisualOverflow: the layout the semantics give is as wide as the bar allows, the text no wider
             // than its longest line, so that reads as too wide whenever the title is shorter than the room
             assertThat(title.didOverflowHeight).`as`("whether the title of %s is cut off below", bar).isFalse()
             assertThat((0 until title.lineCount).filter { title.isLineEllipsized(it) })

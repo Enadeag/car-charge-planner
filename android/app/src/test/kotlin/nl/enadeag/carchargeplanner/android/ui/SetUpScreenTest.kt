@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -24,11 +25,9 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
@@ -120,9 +119,11 @@ class SetUpScreenTest {
         return session
     }
 
-    private fun heading(step: Int, title: Int) =
-        compose.onNode(isHeading() and hasText(text(R.string.setup_step_of, step, 7), substring = true) and
-            hasText(text(title), substring = true))
+    /** The step's title, once its place among the steps shows above it. */
+    private fun heading(step: Int, title: Int): SemanticsNodeInteraction {
+        compose.onNodeWithText(text(R.string.setup_step_of, step, 7)).assertExists()
+        return compose.onNodeWithText(text(title))
+    }
 
     private fun click(id: Int) = compose.onNodeWithText(text(id)).performScrollTo().performClick()
 
@@ -133,8 +134,13 @@ class SetUpScreenTest {
 
     private fun foldRow() = compose.onNodeWithText(text(R.string.coordinates_fold))
 
-    private fun foldIs(state: Int) =
-        foldRow().assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(state)))
+    /** Whether the fold of the coordinates and the time zone shows them. */
+    private fun foldIsOpen(open: Boolean) {
+        foldRow().assertExists()
+        val shown = compose.onAllNodes(hasSetTextAction() and hasText(text(R.string.latitude), substring = true))
+            .fetchSemanticsNodes().isNotEmpty()
+        assertThat(shown).`as`("whether the coordinates show").isEqualTo(open)
+    }
 
     /** Opens a drop-down by its label and chooses an option in its menu, as the owner does. */
     private fun choose(label: Int, option: Int) {
@@ -297,16 +303,6 @@ class SetUpScreenTest {
     }
 
     @Test
-    fun aNewStepMovesTheFocusToItsHeading() {
-        show()
-
-        click(R.string.action_next)
-        compose.waitForIdle()
-
-        heading(2, R.string.setup_location_title).assertIsFocused()
-    }
-
-    @Test
     fun nextWithoutAPlaceShowsTheProblemAtTheSearchAndMovesTheFocusThere() {
         show()
         click(R.string.action_next)
@@ -377,7 +373,7 @@ class SetUpScreenTest {
         assertThat(shownWords()).isEqualTo(before)
     }
 
-    /** Every text and spoken description on the screen, without what the fields hold. */
+    /** Every text and description on the screen, without what the fields hold. */
     private fun shownWords(): List<String> = compose.onAllNodes(SemanticsMatcher("any node") { true },
         useUnmergedTree = true).fetchSemanticsNodes().flatMap { node ->
         node.config.getOrElse(SemanticsProperties.Text) { emptyList() }.map { it.text } +
@@ -571,7 +567,7 @@ class SetUpScreenTest {
 
         heading(2, R.string.setup_location_title).assertExists()
         placeLine().assertExists()
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         field(R.string.place_field).assert(hasText("Amersfoort"))
     }
 
@@ -582,14 +578,14 @@ class SetUpScreenTest {
         restoration.setContent { AppTheme { SetUpScreen(session) } }
         session.next()
         compose.waitForIdle()
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         chooseUtrecht()
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
 
         restoration.emulateSavedInstanceStateRestore()
 
         placeLine().assertExists()
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
         field(R.string.latitude).assertDoesNotExist()
     }
 
@@ -607,7 +603,7 @@ class SetUpScreenTest {
         restoration.emulateSavedInstanceStateRestore()
 
         heading(2, R.string.setup_location_title).assertExists()
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         compose.onNodeWithText(text(R.string.place_not_chosen)).assertExists()
         field(R.string.latitude).assert(hasText("52.1"))
         compose.onNodeWithText(text(R.string.action_next)).assertIsEnabled()
@@ -621,7 +617,7 @@ class SetUpScreenTest {
 
         show(session(handle.afterTheSystemEndedTheApp()))
 
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         field(R.string.latitude).assertExists()
     }
 
@@ -634,7 +630,7 @@ class SetUpScreenTest {
         show(session(handle.afterTheSystemEndedTheApp()))
 
         placeLine().assertExists()
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
     }
 
     @Test
@@ -649,9 +645,8 @@ class SetUpScreenTest {
         click(R.string.action_next)
         compose.waitForIdle()
 
-        compose.onNode(isHeading() and hasText(text(R.string.away_period, 2))).assertExists()
+        compose.onNode(hasText(text(R.string.away_period, 2))).assertExists()
         compose.onNodeWithText(text(R.string.away_weekday, 2)).assertExists()
-        compose.onNodeWithContentDescription(text(R.string.away_weekday, 2)).assertExists()
         awayField(R.string.away_until, 2).assertIsFocused()
         compose.onNodeWithText(text(R.string.problem_not_after_start)).assertExists()
     }
@@ -733,7 +728,7 @@ class SetUpScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithText(text(R.string.place_not_chosen)).assertExists()
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         compose.onNode(hasText(text(R.string.place_another), substring = true)).assertDoesNotExist()
     }
 
@@ -751,7 +746,7 @@ class SetUpScreenTest {
         field(R.string.place_field).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText,
             AnnotatedString("")))
             .assert(hasText(text(R.string.place_another), substring = true))
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
         field(R.string.latitude).assertDoesNotExist()
         foldRow().performScrollTo().performClick()
         field(R.string.latitude).assert(hasText("52.0907"))
@@ -797,7 +792,7 @@ class SetUpScreenTest {
 
         compose.onNodeWithText(text(R.string.place_unavailable)).assertExists()
         placeLine().assertExists()
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         assertThat(session.flow.config().system().place()).contains(PlaceName("Utrecht, Netherlands"))
     }
 
@@ -829,17 +824,17 @@ class SetUpScreenTest {
         foldRow().performScrollTo().performClick()
         field(R.string.latitude).performTextReplacement("91")
         foldRow().performScrollTo().performClick()
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
 
         click(R.string.action_next)
         compose.waitForIdle()
 
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         foldRow().performScrollTo().performClick()
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         field(R.string.latitude).performTextReplacement("52.0907")
         compose.waitForIdle()
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
     }
 
     @Test
@@ -859,7 +854,7 @@ class SetUpScreenTest {
     }
 
     @Test
-    fun comingBackToTheStepMovesTheFocusToItsHeadingNotToThePlace() {
+    fun comingBackToTheStepDoesNotMoveTheFocusToThePlace() {
         val session = show()
         session.next()
         compose.waitForIdle()
@@ -870,7 +865,7 @@ class SetUpScreenTest {
         click(R.string.action_back)
         compose.waitForIdle()
 
-        heading(2, R.string.setup_location_title).assertIsFocused()
+        heading(2, R.string.setup_location_title).assertExists()
         placeLine().assertIsNotFocused()
     }
 
@@ -1169,8 +1164,6 @@ class SetUpScreenTest {
         compose.waitForIdle()
 
         assertThat(session.flow.step.value).isEqualTo(SetUpStep.CAR)
-        compose.onNodeWithText(text(R.string.more_settings))
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.fold_expanded)))
         field(R.string.car_trip_surcharge).assertIsFocused()
             .assert(hasText(text(R.string.problem_from_to, "0", "100")))
     }

@@ -164,7 +164,7 @@ internal fun TripsCard(dashboard: Dashboard, day: DashboardDay, words: Dashboard
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.trips_heading), style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f).semantics { heading() })
+                    modifier = Modifier.weight(1f))
                 // as the away list's Add: it may take the focus also in touch mode, so the focus comes back to it
                 val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(trips.add)
                     else Modifier
@@ -239,8 +239,8 @@ private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips:
 
 /**
  * A choice as Material's checkbox in a row that toggles as a whole, at least 48 dp high, its words wrapping; a screen
- * reader says it with the trip, then whether it is checked. While a change runs it is off as [HeldButton] is, so it
- * keeps the focus.
+ * reader says it with the trip, then whether it is checked. While a change runs it looks off and ignores a press, as
+ * [HeldButton] does, so it keeps the focus.
  *
  * @param trip the trip as a screen reader reads it
  */
@@ -251,9 +251,6 @@ private fun ChoiceRow(label: String, trip: String, checked: Boolean, busy: Boole
         .toggleable(value = checked, role = Role.Checkbox, onValueChange = { if (!busy) onChange(it) })
         .semantics {
             contentDescription = spoken
-            if (busy) {
-                disabled()
-            }
         }, verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked = checked, onCheckedChange = null, enabled = !busy)
         val colour = LocalContentColor.current

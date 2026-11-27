@@ -45,7 +45,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -84,8 +83,7 @@ internal fun SolarCard(day: DashboardDay, words: DashboardWords) {
     val colours = LocalSourceColours.current.chart
     val spoken = words.chart(day)
     ChartCard(colours) {
-        Text(stringResource(R.string.chart_heading), style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() })
+        Text(stringResource(R.string.chart_heading), style = MaterialTheme.typography.titleMedium)
         Legend(colours)
         SolarCanvas(day, words, colours, spoken)
         Text(spoken, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.semantics {
@@ -111,8 +109,7 @@ internal fun BatteryCard(day: DashboardDay, levels: ChargeLevels, words: Dashboa
     update: BatteryAction? = null) {
     val colours = LocalSourceColours.current.chart
     ChartCard(colours) {
-        Text(stringResource(R.string.battery_heading), style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() })
+        Text(stringResource(R.string.battery_heading), style = MaterialTheme.typography.titleMedium)
         Text(words.batteryLevels(day.battery()), style = MaterialTheme.typography.titleMedium, color = colours.carText,
             modifier = Modifier.semantics { hideFromAccessibility() })
         BatteryBar(day, levels, words, colours)

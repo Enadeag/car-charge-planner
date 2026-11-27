@@ -110,17 +110,10 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
         outlook.returned()
         card.recheck()
     }
-    val heading = remember { FocusRequester() }
-    LaunchedEffect(Unit) { heading.requestFocus() }
-    val closed: () -> Unit = { heading.requestFocus() }
     val update = remember { FocusRequester() }
     val snackbars = remember { SnackbarHostState() }
-    BatteryOutcome(battery, snackbars) {
-        // the button is on today's page, which may be out of view; the title then takes the focus
-        if (!update.requestFocus()) {
-            heading.requestFocus()
-        }
-    }
+    // the button is on today's page, which may be out of view; the focus then stays where the window gives it
+    BatteryOutcome(battery, snackbars) { update.requestFocus() }
     val add = remember { FocusRequester() }
     val shown = remember { Shown() }
     val planned = (state as? HomeOutlook.State.Planned)?.dashboard
@@ -143,11 +136,7 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
         }
     }, away::undo)
     val awayDraft by away.draft.collectAsStateWithLifecycle()
-    AfterClose(awayDraft != null) {
-        if (!add.requestFocus()) {
-            heading.requestFocus()
-        }
-    }
+    AfterClose(awayDraft != null) { add.requestFocus() }
     val busy by away.busy.collectAsStateWithLifecycle()
     val tripGoing = remember { Going<Trip>() }
     val tripRestoring = remember { Restoring<Trip>() }
@@ -172,25 +161,25 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
     AfterClose(tripDraft != null) {
         // the Change of the trip the entry changed, when its page is in view; otherwise that page's Add
         val back = trips.closedOn?.let(tripOpeners::focus) == true
-        if (!back && !tripAdd.requestFocus()) {
-            heading.requestFocus()
+        if (!back) {
+            tripAdd.requestFocus()
         }
     }
-    BarScaffold(stringResource(R.string.app_name), heading, onUp = null, snackbars = snackbars, actions = {
+    BarScaffold(stringResource(R.string.app_name), onUp = null, snackbars = snackbars, actions = {
         BarIconButton(Icons.Filled.Refresh, stringResource(R.string.home_refresh),
             enabled = state != HomeOutlook.State.Asking && !refreshing) { outlook.refresh() }
         BarIconButton(Icons.Filled.Settings, stringResource(R.string.home_settings), onClick = onSettings)
     }) {
-        val askCard: @Composable () -> Unit = { NotificationsCard(card, closed) }
+        val askCard: @Composable () -> Unit = { NotificationsCard(card) }
         when (val now = state) {
             is HomeOutlook.State.Planned -> Days(now.dashboard, refreshing, phoneZone(), outlook::refresh,
                 BatteryAction(battery::open, update), AwayAction(away, add, busy, going, restoring),
                 TripAction(trips, tripsBusy, pending, tripGoing, tripRestoring, tripKeys, tripAdd, tripOpeners),
                 askCard) {
-                Notice(notice, closed)
+                Notice(notice)
             }
             else -> Refreshable(refreshing, outlook::refresh) {
-                Notice(notice, closed)
+                Notice(notice)
                 KeyRefused(keyRefusedBy(now))
                 askCard()
                 NoPlan(now, outlook::refresh)
@@ -272,9 +261,8 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
     }
     PrimaryScrollableTabRow(selectedTabIndex = selected) {
         days.forEachIndexed { index, day ->
-            val name = words.title(day.name())
             Tab(selected = index == selected, onClick = { scope.launch { pager.animateScrollToPage(index) } },
-                text = { Text(words.tab(day)) }, modifier = Modifier.semantics { contentDescription = name })
+                text = { Text(words.tab(day)) })
         }
     }
     PullToRefreshBox(refreshing, refresh, Modifier.weight(1f).fillMaxWidth()) {
@@ -356,8 +344,7 @@ private fun NoPlan(state: HomeOutlook.State, tryAgain: () -> Unit) {
 private fun NoForecast(tryAgain: () -> Unit, why: @Composable () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.no_forecast), style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.no_forecast), style = MaterialTheme.typography.titleLarge)
             why()
             AppButton(onClick = tryAgain) { Text(stringResource(R.string.action_try_again)) }
         }
@@ -374,8 +361,7 @@ private fun DayCard(day: DashboardDay, words: DashboardWords) {
     val sources = LocalSourceColours.current
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(words.title(day.name()), style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.semantics { heading() })
+            Text(words.title(day.name()), style = MaterialTheme.typography.titleLarge)
             Text(words.heading(day), style = MaterialTheme.typography.titleMedium)
             day.main().orElse(null)?.window()?.let { window ->
                 val spoken = words.spokenSpan(window)
@@ -408,8 +394,7 @@ private fun DayCard(day: DashboardDay, words: DashboardWords) {
 private fun GridAdviceCard(advice: GridAdviceView, levels: ChargeLevels, words: DashboardWords) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SourceChip(stringResource(R.string.advice_label), LocalSourceColours.current.of(EnergySource.GRID),
-                modifier = Modifier.semantics { heading() })
+            SourceChip(stringResource(R.string.advice_label), LocalSourceColours.current.of(EnergySource.GRID))
             Text(words.adviceTitle(advice), style = MaterialTheme.typography.titleMedium)
             Text(words.adviceDetail(advice, levels), style = MaterialTheme.typography.bodyMedium)
         }
@@ -476,11 +461,10 @@ private fun SourceChip(text: String, colours: SourceColours.Pair, modifier: Modi
 }
 
 /**
- * What a Settings save came to, when no screen showed it, with Close beside it as a button of its own; after Close
- * the focus goes on, as the notice is gone.
+ * What a Settings save came to, when no screen showed it, with Close beside it as a button of its own.
  */
 @Composable
-private fun Notice(notice: HomeNotice, closed: () -> Unit) {
+private fun Notice(notice: HomeNotice) {
     val shown by notice.notice.collectAsStateWithLifecycle()
     val outcome = shown ?: return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -494,10 +478,7 @@ private fun Notice(notice: HomeNotice, closed: () -> Unit) {
             }
             is SaveOutcome.SettingsUnusable -> Unit
         }
-        AppOutlinedButton(onClick = {
-            notice.close()
-            closed()
-        }) {
+        AppOutlinedButton(onClick = { notice.close() }) {
             Text(stringResource(R.string.action_close))
         }
     }

@@ -212,6 +212,29 @@ private fun nameOf(node: SemanticsNode): String =
     (node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty() +
         node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }).joinToString(" ")
 
+/** The place of each day's tab, from a plan made on Monday 1 June 2026, as the tests' plans are. */
+private val TAB_PLACES = mapOf("Today" to 0, "Vandaag" to 0, "Tomorrow" to 1, "Morgen" to 1, "Wednesday" to 2,
+    "Thursday" to 3)
+
+/**
+ * The dashboard's tab of a day, which shows its short name, such as "Tue".
+ *
+ * @param day the day's whole name, such as "Tomorrow" or "Wednesday"
+ */
+internal fun SemanticsNodeInteractionsProvider.dayTab(day: String): SemanticsNodeInteraction =
+    onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))[TAB_PLACES.getValue(day)]
+
+/** Not a tab of the dashboard's days, nor inside one. */
+private val NOT_A_TAB = !SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab) and
+    !hasAnyAncestor(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+
+/**
+ * The title of a day's card, apart from its tab, which may show the same word.
+ *
+ * @param day the day's whole name, such as "Today"
+ */
+internal fun dayTitle(day: String): SemanticsMatcher = hasText(day) and NOT_A_TAB
+
 /**
  * The content at twice the normal font size, as Android's largest font setting gives it.
  *

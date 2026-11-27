@@ -28,8 +28,6 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.enadeag.carchargeplanner.android.R
@@ -85,7 +83,7 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
         onDismissRequest = { entry.back() },
         title = {
             Text(stringResource(R.string.one_off_entry_title, words.day(draft.day)),
-                modifier = Modifier.semantics { heading() })
+)
         },
         text = {
             // in the dialog's own window, also when the picker or the question over it closes

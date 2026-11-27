@@ -94,7 +94,7 @@ internal fun AwayList(dashboard: Dashboard, day: DashboardDay, words: DashboardW
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.one_off_heading), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f).semantics { heading() })
+                modifier = Modifier.weight(1f))
             // it may take the focus also in touch mode, where a button takes none, so the focus comes back to it,
             // and a screen reader with it, when the entry closes
             val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(away.focus)

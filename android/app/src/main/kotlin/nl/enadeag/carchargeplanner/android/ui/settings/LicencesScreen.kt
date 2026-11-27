@@ -16,7 +16,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -24,14 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.collapse
-import androidx.compose.ui.semantics.expand
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -57,27 +50,24 @@ private sealed interface Reading<out T> {
 }
 
 /**
- * The read-only screen of the open source licences (#331), opened from Settings' last row and not one of its pages:
- * the app's name, its copyright line and where its source code is, then one row per text, the app's own first, each
- * by its title. A row is one button that shows its text under it or hides it again, and says which it does; only a
- * text shown is read and drawn. The texts are read off the main thread; one that cannot be read says so. Back and Up
- * return to Settings' list.
+ * The read-only screen of the open source licences (#331), opened from Settings' last row and not one of its pages: the
+ * app's name, its copyright line and where its source code is, then one row per text, the app's own first, each by its
+ * title. A row is one button that shows its text under it or hides it again, its arrow pointing which way; only a text
+ * shown is read and drawn. The texts are read off the main thread; one that cannot be read says so. Back and Up return
+ * to Settings' list.
  */
 @Composable
 internal fun LicencesScreen(files: LicenceFiles, onClose: () -> Unit) {
     BackHandler(onBack = onClose)
-    val title = remember { FocusRequester() }
-    LaunchedEffect(Unit) { title.requestFocus() }
     val index by produceState<Reading<LicenceIndex>>(Reading.Busy, files) {
         value = read(files) { LicenceIndex.parse(it.read(LicenceIndex.INDEX)) }
     }
     // the texts shown, by asset; kept while the screen lives, also when the phone is turned
     var shown by rememberSaveable { mutableStateOf(listOf<String>()) }
-    BarPage(stringResource(R.string.settings_licences), title, onUp = onClose, padded = false) {
+    BarPage(stringResource(R.string.settings_licences), onUp = onClose, padded = false) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
             (index as? Reading.Read)?.let { Text(it.value.copyright) }
             Text(stringResource(R.string.licences_source, SOURCE_CODE))
         }
@@ -93,26 +83,15 @@ internal fun LicencesScreen(files: LicenceFiles, onClose: () -> Unit) {
     }
 }
 
-/**
- * A text's row: its title, and an arrow that points down while the text is hidden and up while it shows, which is
- * decoration as the row says the same to a screen reader.
- */
+/** A text's row: its title, and an arrow that points down while the text is hidden and up while it shows. */
 @Composable
 private fun PartRow(title: String, open: Boolean, toggle: () -> Unit) {
-    val state = stringResource(if (open) R.string.licences_expanded else R.string.licences_collapsed)
     ListItem(
         headlineContent = { Text(title) },
         trailingContent = {
             Icon(if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, contentDescription = null)
         },
-        modifier = Modifier.heightIn(min = 56.dp).clickable(role = Role.Button, onClick = toggle).semantics {
-            stateDescription = state
-            if (open) {
-                collapse { toggle(); true }
-            } else {
-                expand { toggle(); true }
-            }
-        },
+        modifier = Modifier.heightIn(min = 56.dp).clickable(role = Role.Button, onClick = toggle),
     )
 }
 
@@ -122,7 +101,7 @@ private fun PartText(files: LicenceFiles, asset: String) {
     val text by produceState<Reading<String>>(Reading.Busy, files, asset) { value = read(files) { it.read(asset) } }
     Status(text, R.string.licences_not_read)
     val body = (text as? Reading.Read)?.value ?: return
-    // a paragraph per part, so a screen reader moves through a long licence a paragraph at a time
+    // a paragraph per part, with room between them
     val paragraphs = remember(body) { body.split(PARAGRAPH_END).filter { it.isNotBlank() }.map { it.trimEnd() } }
     Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {

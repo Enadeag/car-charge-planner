@@ -44,7 +44,6 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -206,7 +205,7 @@ class SettingsScreenTest {
 
     private fun field(label: String) = compose.onNode(hasSetTextAction() and hasText(label, substring = true))
 
-    private fun title(page: SettingsPage) = compose.onNode(isHeading() and hasText(text(page.title())))
+    private fun title(page: SettingsPage) = compose.onNode(hasText(text(page.title())))
 
     private val apiKey get() = field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo"))
 
@@ -217,8 +216,20 @@ class SettingsScreenTest {
     /** A provider's fold on the Forecast page, by the name its row shows. */
     private fun providerFold(name: String) = compose.onNode(hasClickAction() and hasText(name))
 
-    private fun providerFoldIs(name: String, state: Int) =
-        providerFold(name).assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(state)))
+    /**
+     * Whether a provider's fold shows what it holds: the server address under "API key and server", the API key under
+     * "API key".
+     *
+     * @param provider whose fold it is; Open-Meteo's for "API key and server", Forecast.Solar's for "API key"
+     */
+    private fun providerFoldIsOpen(name: String, open: Boolean, provider: String =
+        if (name == keyAndServer) "Open-Meteo" else "Forecast.Solar") {
+        providerFold(name).assertExists()
+        val inside = if (name == keyAndServer) text(R.string.provider_base_url) else text(R.string.provider_api_key)
+        val field = hasSetTextAction() and hasText(text(R.string.provider_setting_of, inside, provider))
+        val shown = compose.onAllNodes(field).fetchSemanticsNodes().isNotEmpty()
+        assertThat(shown).`as`("whether the fold %s is open", name).isEqualTo(open)
+    }
 
     /** Presses a provider's fold row, by default Open-Meteo's, with its server address and API key. */
     private fun pressProviderFold(name: String = keyAndServer) {
@@ -229,7 +240,7 @@ class SettingsScreenTest {
     /** Opens every page from the list and goes back, each checked as it comes in the language the test runs in. */
     private fun walkEveryPage() {
         val englishOnly = englishOnlyTexts()
-        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_title))).assertExists()
         compose.assertShowsNoneOf(englishOnly)
         for (page in SettingsPage.entries) {
             open(page)
@@ -320,8 +331,18 @@ class SettingsScreenTest {
 
     private fun fold() = compose.onNodeWithText(text(R.string.more_settings))
 
-    private fun foldIs(state: Int) =
-        fold().assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(state)))
+    /** The fields a page folds away under More settings, one per page that has the fold. */
+    private val foldedAway = listOf(R.string.household_use, R.string.planning_margin, R.string.charger_min_current)
+
+    /** Whether the page's fold under More settings shows what it holds. */
+    private fun foldIsOpen(open: Boolean) {
+        fold().assertExists()
+        val shown = foldedAway.any {
+            compose.onAllNodes(hasSetTextAction() and hasText(text(it), substring = true)).fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+        assertThat(shown).`as`("whether the fold under More settings is open").isEqualTo(open)
+    }
 
     @Test
     fun theHousesUseIsFoldedAwayAlsoWhenItIsNotTheTypicalOneAndAnUntouchedOneIsSavedExactly() {
@@ -331,8 +352,8 @@ class SettingsScreenTest {
         show(session(config = own))
         open(SettingsPage.CAR_AND_HOUSE)
 
-        foldIs(R.string.fold_collapsed)
-        compose.onNode(isHeading() and hasText("House")).assertDoesNotExist()
+        foldIsOpen(false)
+        compose.onNode(hasText("House")).assertDoesNotExist()
         field(text(R.string.household_use)).assertDoesNotExist()
         compose.onAllNodesWithText(text(R.string.use_typical)).assertCountEquals(1)
         click(R.string.more_settings)
@@ -357,23 +378,23 @@ class SettingsScreenTest {
         click(R.string.more_settings)
         field(text(R.string.household_use)).performTextReplacement("-1")
         click(R.string.more_settings)
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
 
         click(R.string.action_save)
         compose.waitForIdle()
 
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         field(text(R.string.household_use)).assertIsFocused()
             .assert(hasText(text(R.string.problem_at_least, "0")))
         assertThat(access.written).isEmpty()
         click(R.string.more_settings)
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
 
         field(text(R.string.household_use)).performTextReplacement("480")
         compose.waitForIdle()
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         click(R.string.more_settings)
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
         click(R.string.action_save)
         compose.waitForIdle()
 
@@ -410,7 +431,7 @@ class SettingsScreenTest {
         timeButton(text(R.string.planning_hours_until)).assertExists()
         leadMenu().assert(hasText(ahead(15), substring = true))
             .assert(hasText(text(R.string.planning_lead_hint), substring = true))
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
         listOf(R.string.planning_margin, R.string.planning_tolerance, R.string.planning_min_window).forEach {
             field(text(it)).assertDoesNotExist()
         }
@@ -496,7 +517,7 @@ class SettingsScreenTest {
 
         timeButton(text(R.string.planning_hours_from)).performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNode(isHeading() and hasText(text(R.string.planning_hours_from)) and hasAnyAncestor(isDialog()))
+        compose.onNode(hasText(text(R.string.planning_hours_from)) and hasAnyAncestor(isDialog()))
             .assertIsDisplayed()
         compose.onNodeWithText(text(R.string.one_off_keyboard)).assertExists()
         compose.onNode(hasContentDescription("10 hours") and hasClickAction())
@@ -533,22 +554,22 @@ class SettingsScreenTest {
         click(R.string.more_settings)
         field(text(R.string.planning_min_window)).performTextReplacement("0")
         click(R.string.more_settings)
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
 
         click(R.string.action_save)
         compose.waitForIdle()
 
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         field(text(R.string.planning_min_window)).assertIsFocused()
             .assert(hasText(text(R.string.problem_more_than, "0")))
         click(R.string.more_settings)
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
 
         field(text(R.string.planning_min_window)).performTextReplacement("30")
         compose.waitForIdle()
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         click(R.string.more_settings)
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
     }
 
     @Test
@@ -562,12 +583,12 @@ class SettingsScreenTest {
         click(R.string.more_settings)
         field(text(R.string.car_trip_surcharge)).performTextReplacement("101")
         click(R.string.more_settings)
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
 
         click(R.string.action_save)
         compose.waitForIdle()
 
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         field(text(R.string.car_trip_surcharge)).assertIsFocused()
         field(text(R.string.household_use)).assertExists()
         assertThat(access.written).isEmpty()
@@ -635,12 +656,12 @@ class SettingsScreenTest {
         open(SettingsPage.CHARGER)
         powerMenu().assert(hasText("3.7 kW", substring = true))
             .assert(hasText(text(R.string.charge_power_hint), substring = true))
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
         field(text(R.string.charger_max_current)).assertDoesNotExist()
 
         choosePower(R.string.charge_power_other)
 
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         powerMenu().assert(hasText(text(R.string.charge_power_other), substring = true))
         field(text(R.string.charger_max_current)).assert(hasText("16"))
         field(text(R.string.charger_max_current)).performTextReplacement("32")
@@ -657,7 +678,7 @@ class SettingsScreenTest {
         open(SettingsPage.CHARGER)
 
         powerMenu().assert(hasText(text(R.string.charge_power_other), substring = true))
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
     }
 
     @Test
@@ -668,17 +689,17 @@ class SettingsScreenTest {
         field(text(R.string.charger_min_current)).performTextReplacement("20")
         click(R.string.more_settings)
         choosePower(R.string.charge_power_11)
-        foldIs(R.string.fold_collapsed)
+        foldIsOpen(false)
 
         click(R.string.action_save)
         compose.waitForIdle()
 
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
         field(text(R.string.charger_max_current)).assertIsFocused().assert(hasText("16"))
         field(text(R.string.charger_min_current)).assert(hasText("20"))
         assertThat(access.written).isEmpty()
         click(R.string.more_settings)
-        foldIs(R.string.fold_expanded)
+        foldIsOpen(true)
     }
 
     @Test
@@ -726,13 +747,13 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun aRowOpensItsPageAndMovesTheFocusToItsTitle() {
+    fun aRowOpensItsPage() {
         val session = show()
 
         open(SettingsPage.CHARGER)
 
         assertThat(session.page.value).isEqualTo(SettingsPage.CHARGER)
-        title(SettingsPage.CHARGER).assertIsFocused()
+        title(SettingsPage.CHARGER).assertExists()
     }
 
     @Test
@@ -876,7 +897,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         assertThat(session.page.value).isNull()
-        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_title))).assertExists()
         assertThat(access.written).isEmpty()
     }
 
@@ -951,7 +972,7 @@ class SettingsScreenTest {
         open(SettingsPage.FORECAST)
 
         compose.onNodeWithText(text(R.string.keys_unreadable)).assertExists()
-        providerFoldIs(keyAndServer, R.string.fold_collapsed)
+        providerFoldIsOpen(keyAndServer, false)
         pressProviderFold()
         field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo")).assertIsEnabled()
     }
@@ -990,12 +1011,19 @@ class SettingsScreenTest {
         compose.onNodeWithText(text(R.string.details_in_english, "Open-Meteo did not answer.")).assertExists()
     }
 
+    /** The fallback's radio buttons: the first group of choices under its label. */
+    private fun fallbackGroup(): SemanticsMatcher {
+        val label = compose.onNodeWithText(text(R.string.forecast_fallback)).fetchSemanticsNode().boundsInRoot.bottom
+        val group = compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.SelectableGroup))
+            .fetchSemanticsNodes().filter { it.boundsInRoot.top >= label }.minBy { it.boundsInRoot.top }
+        return SemanticsMatcher("the fallback's group") { it.id == group.id }
+    }
+
     @Test
     fun aFallbackThatIsThePrimaryShowsItsProblemAtTheChoiceAndTakesTheFocus() {
         show()
         open(SettingsPage.FORECAST)
-        val group = SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,
-            listOf(text(R.string.forecast_fallback)))
+        val group = fallbackGroup()
         compose.onNode(hasText("Open-Meteo") and hasAnyAncestor(group)).performScrollTo().performClick()
 
         click(R.string.action_save)
@@ -1029,14 +1057,14 @@ class SettingsScreenTest {
         show()
         open(SettingsPage.SOLAR)
         compose.onNodeWithText(text(R.string.panel_remove, 1)).assertIsNotEnabled()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.panel_keep_one)))
+        compose.onNodeWithText(text(R.string.panel_keep_one)).assertExists()
         compose.onNodeWithText(text(R.string.panel_in_array, text(R.string.more_settings), 1)).performScrollTo()
             .performClick()
         field(text(R.string.panel_in_array, text(R.string.panel_name), 1)).performTextInput("east roof")
-        compose.onNode(isHeading() and hasText(text(R.string.panel_array_named, 1, "east roof"))).assertExists()
+        compose.onNode(hasText(text(R.string.panel_array_named, 1, "east roof"))).assertExists()
 
         click(R.string.panel_add)
-        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 2))).assertExists()
+        compose.onNode(hasText(text(R.string.panel_array, 2))).assertExists()
         field(text(R.string.panel_in_array, text(R.string.panel_count), 2)).assertExists()
         listOf(R.string.panel_direction, R.string.panel_tilt).forEach { label ->
             compose.onNode(hasText(text(R.string.panel_in_array, text(label), 2), substring = true)
@@ -1046,7 +1074,7 @@ class SettingsScreenTest {
         click(R.string.panel_remove, 1)
         compose.waitForIdle()
 
-        compose.onNode(isHeading() and hasText(text(R.string.panel_array, 1))).assertExists()
+        compose.onNode(hasText(text(R.string.panel_array, 1))).assertExists()
         compose.onNodeWithText(text(R.string.panel_remove, 1)).assertIsNotEnabled()
     }
 
@@ -1074,8 +1102,7 @@ class SettingsScreenTest {
         open(SettingsPage.LOCATION)
 
         compose.onNodeWithText(text(R.string.place_chosen, "Utrecht, Netherlands")).assertExists()
-        compose.onNodeWithText(text(R.string.coordinates_fold))
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text(R.string.fold_collapsed)))
+        compose.onNodeWithText(text(R.string.coordinates_fold)).assertExists()
         field(text(R.string.latitude)).assertDoesNotExist()
         field(text(R.string.place_field)).assert(hasText(text(R.string.place_another), substring = true))
     }
@@ -1181,12 +1208,12 @@ class SettingsScreenTest {
         show()
         open(SettingsPage.FORECAST)
         compose.onNodeWithText(text(R.string.keys_reading)).assertExists()
-        providerFoldIs(keyAndServer, R.string.fold_collapsed)
+        providerFoldIsOpen(keyAndServer, false)
 
         keys.complete(Unit)
         compose.waitForIdle()
 
-        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        providerFoldIsOpen(keyAndServer, true)
         assertThat(drawn(apiKey)).isNotEqualTo("STORED1").hasSize("STORED1".length)
     }
 
@@ -1208,8 +1235,8 @@ class SettingsScreenTest {
         show()
         open(SettingsPage.FORECAST)
 
-        providerFoldIs(keyAndServer, R.string.fold_collapsed)
-        providerFoldIs(text(R.string.provider_api_key), R.string.fold_collapsed)
+        providerFoldIsOpen(keyAndServer, false)
+        providerFoldIsOpen(text(R.string.provider_api_key), false)
         apiKey.assertDoesNotExist()
         baseUrl.assertDoesNotExist()
         forecastSolarKey.assertDoesNotExist()
@@ -1218,11 +1245,11 @@ class SettingsScreenTest {
         access.checks.single().complete(ConnectionResult(false, 0,
             "Open-Meteo refused the request (status 401): check the API key"))
         compose.waitForIdle()
-        providerFoldIs(keyAndServer, R.string.fold_collapsed)
+        providerFoldIsOpen(keyAndServer, false)
 
         pressProviderFold()
 
-        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        providerFoldIsOpen(keyAndServer, true)
         baseUrl.assertExists()
         apiKey.assertExists()
         forecastSolarKey.assertDoesNotExist()
@@ -1235,8 +1262,8 @@ class SettingsScreenTest {
 
         open(SettingsPage.FORECAST)
 
-        providerFoldIs(keyAndServer, R.string.fold_expanded)
-        providerFoldIs(text(R.string.provider_api_key), R.string.fold_expanded)
+        providerFoldIsOpen(keyAndServer, true)
+        providerFoldIsOpen(text(R.string.provider_api_key), true)
         baseUrl.assert(hasText("https://forecast.example.org"))
         assertThat(drawn(forecastSolarKey)).hasSize("FS1".length)
     }
@@ -1247,9 +1274,8 @@ class SettingsScreenTest {
         show(session(config = withOwnServer()))
         open(SettingsPage.FORECAST)
         pressProviderFold()
-        providerFoldIs(keyAndServer, R.string.fold_collapsed)
-        val fallback = SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription,
-            listOf(text(R.string.forecast_fallback)))
+        providerFoldIsOpen(keyAndServer, false)
+        val fallback = fallbackGroup()
         compose.onNode(hasText("Forecast.Solar") and hasAnyAncestor(fallback)).performScrollTo().performClick()
         pressProviderFold(text(R.string.provider_api_key))
         forecastSolarKey.performTextInput("FS1")
@@ -1263,7 +1289,7 @@ class SettingsScreenTest {
         assertThat(saved.settingsOf(openMeteo)).containsEntry("base_url", "https://forecast.example.org")
         assertThat(access.keys.of(openMeteo)).containsEntry("api_key", "STORED1")
         assertThat(access.keys.of(forecastSolar)).containsEntry("api_key", "FS1")
-        providerFoldIs(keyAndServer, R.string.fold_collapsed)
+        providerFoldIsOpen(keyAndServer, false)
     }
 
     @Test
@@ -1278,11 +1304,11 @@ class SettingsScreenTest {
         click(R.string.action_save)
         compose.waitForIdle()
 
-        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        providerFoldIsOpen(keyAndServer, true)
         baseUrl.assertIsFocused()
             .assert(hasText(text(R.string.problem_server_address)))
         pressProviderFold()
-        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        providerFoldIsOpen(keyAndServer, true)
         assertThat(access.written).isEmpty()
     }
 
@@ -1318,7 +1344,7 @@ class SettingsScreenTest {
         click(R.string.action_save)
         compose.waitForIdle()
 
-        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        providerFoldIsOpen(keyAndServer, true)
         baseUrl.assertIsFocused()
             .assert(hasText(text(R.string.problem_server_address)))
         assertThat(access.written).isEmpty()
@@ -1336,7 +1362,7 @@ class SettingsScreenTest {
         click(R.string.forecast_check, "Open-Meteo")
         compose.waitForIdle()
 
-        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        providerFoldIsOpen(keyAndServer, true)
         baseUrl.assertIsFocused()
             .assert(hasText(text(R.string.problem_server_address)))
         assertThat(access.checked).isEmpty()
@@ -1355,7 +1381,7 @@ class SettingsScreenTest {
         show(session(config = withHttp))
         open(SettingsPage.FORECAST)
 
-        providerFoldIs(keyAndServer, R.string.fold_expanded)
+        providerFoldIsOpen(keyAndServer, true)
         baseUrl.assert(hasText("http://localhost:8080"))
         click(R.string.action_save)
         compose.waitForIdle()
@@ -1370,7 +1396,7 @@ class SettingsScreenTest {
         "A test provider.", "", "", "nothing", Duration.ofHours(1), Duration.ofDays(2), Duration.ofHours(6), settings)
 
     @Test
-    fun foldsOfTheSameNameAreReadWithTheirProviderAndARequiredSettingStaysAboveItsFold() {
+    fun foldsOfTheSameNameStayClosedUnderTheirProviderAndARequiredSettingStaysAboveItsFold() {
         val key = SettingSpec("api_key", "API key", "", true, true)
         val region = SettingSpec("region", "Region", "Where the panels are.", false, false)
         val station = SettingSpec("station", "Station", "The nearest station.", true, false)
@@ -1383,14 +1409,8 @@ class SettingsScreenTest {
 
         val apiKeyName = text(R.string.provider_api_key)
         compose.onAllNodes(hasClickAction() and hasText(apiKeyName)).assertCountEquals(2)
-        listOf("Open-Meteo", "Forecast.Solar").forEach { name ->
-            compose.onNode(hasClickAction() and hasText(apiKeyName)
-                and hasContentDescription(text(R.string.provider_setting_of, apiKeyName, name)))
-                .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,
-                    text(R.string.fold_collapsed)))
-        }
-        providerFold(text(R.string.more_settings))
-            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+        providerFold(text(R.string.more_settings)).assertExists()
+        forecastSolarKey.assertDoesNotExist()
         field(text(R.string.provider_setting_of, "Region", "Open-Meteo")).assertExists()
         field(text(R.string.provider_setting_of, "Station", "Elsewhere")).assertDoesNotExist()
         apiKey.assertDoesNotExist()
@@ -1406,7 +1426,7 @@ class SettingsScreenTest {
 
         open(SettingsPage.FORECAST)
 
-        providerFoldIs(text(R.string.provider_api_key), R.string.fold_expanded)
+        providerFoldIsOpen(text(R.string.provider_api_key), true, "Open-Meteo")
         compose.assertOnlyTheLastFieldIsDone()
     }
 
@@ -1450,7 +1470,7 @@ class SettingsScreenTest {
 
     private val awayTime = hasText(text(R.string.away_from, 1), substring = true) and hasClickAction()
 
-    private fun array(number: Int) = compose.onNode(isHeading() and hasText(text(R.string.panel_array, number)))
+    private fun array(number: Int) = compose.onNode(hasText(text(R.string.panel_array, number)))
 
     private fun removeArray(number: Int) {
         focusAwayFromTheHeadings()
@@ -1522,12 +1542,12 @@ class SettingsScreenTest {
             click(R.string.away_add)
             compose.waitForIdle()
         }
-        compose.onNode(isHeading() and hasText(text(R.string.away_period, 2))).assertIsFocused()
+        compose.onNode(hasText(text(R.string.away_period, 2))).assertIsFocused()
         focusAwayFromTheHeadings(awayTime)
         click(R.string.away_remove, 2)
         compose.waitForIdle()
 
-        compose.onNode(isHeading() and hasText(text(R.string.away_period, 1))).assertIsFocused()
+        compose.onNode(hasText(text(R.string.away_period, 1))).assertIsFocused()
     }
 
     @Test
@@ -1753,7 +1773,7 @@ class SettingsScreenTest {
         up()
         compose.waitForIdle()
         compose.onNodeWithText(text(R.string.settings_discard_text)).assertDoesNotExist()
-        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_title))).assertExists()
         assertThat(access.written).isEmpty()
     }
 
@@ -1797,7 +1817,7 @@ class SettingsScreenTest {
         click(R.string.settings_licences)
         compose.waitForIdle()
 
-        compose.onNode(isHeading() and hasText(text(R.string.settings_licences))).assertIsFocused()
+        compose.onNode(hasText(text(R.string.settings_licences))).assertExists()
         assertThat(session.page.value).isNull()
         // the app's own assets, as the build made them: the app's licence comes first
         compose.waitUntil(5_000) {
@@ -1807,14 +1827,14 @@ class SettingsScreenTest {
 
         compose.activity.onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
-        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_title))).assertExists()
         assertThat(closed).isZero()
 
         click(R.string.settings_licences)
         compose.waitForIdle()
         up()
         compose.waitForIdle()
-        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_title))).assertExists()
         assertThat(closed).isZero()
     }
 
@@ -1835,7 +1855,7 @@ class SettingsScreenTest {
         restoration.emulateSavedInstanceStateRestore()
         compose.waitForIdle()
 
-        compose.onNode(isHeading() and hasText(text(R.string.settings_licences))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_licences))).assertExists()
     }
 
     @Test

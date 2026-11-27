@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 
@@ -67,8 +66,8 @@ internal fun SaveButton(busy: Boolean, onClick: () -> Unit, enabled: Boolean = t
 
 /**
  * A text button that is off while a change runs yet keeps the focus: Compose takes the focus from a disabled control,
- * so a keyboard or switch user who pressed it would start again at the top of the page. It looks off, a screen reader
- * says it is, and a press does nothing until the change is done.
+ * so a keyboard or switch user who pressed it would start again at the top of the page. It looks off, and a press
+ * does nothing until the change is done.
  *
  * @param onClick what a press does while no change runs
  */
@@ -76,11 +75,8 @@ internal fun SaveButton(busy: Boolean, onClick: () -> Unit, enabled: Boolean = t
 internal fun HeldButton(busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit) {
     val colours = ButtonDefaults.textButtonColors()
-    AppTextButton(onClick = { if (!busy) onClick() }, modifier = modifier.semantics {
-        if (busy) {
-            disabled()
-        }
-    }, colors = if (busy) colours.copy(contentColor = colours.disabledContentColor) else colours, content = content)
+    AppTextButton(onClick = { if (!busy) onClick() }, modifier = modifier,
+        colors = if (busy) colours.copy(contentColor = colours.disabledContentColor) else colours, content = content)
 }
 
 /**

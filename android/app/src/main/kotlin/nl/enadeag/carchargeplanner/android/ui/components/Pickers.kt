@@ -44,8 +44,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import java.time.LocalDate
@@ -127,7 +125,7 @@ internal fun TimeDialog(title: String, time: LocalTime, chosen: (LocalTime) -> U
     var typing by rememberSaveable { mutableStateOf(false) }
     TimePickerDialog(
         onDismissRequest = closed,
-        title = { Text(title, modifier = Modifier.semantics { heading() }) },
+        title = { Text(title) },
         confirmButton = {
             AppTextButton(onClick = {
                 chosen(LocalTime.of(state.hour, state.minute))
@@ -192,8 +190,7 @@ internal fun DateDialog(title: String, day: LocalDate, days: ClosedRange<LocalDa
                     Box(Modifier.horizontalScroll(rememberScrollState())) {
                         DatePicker(state, modifier = Modifier.width(PICKER_WIDTH), showModeToggle = false,
                             colors = colors, title = {
-                                Text(title, modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp)
-                                    .semantics { heading() })
+                                Text(title, modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp))
                             })
                     }
                     // as the time picker's: in words, under the picker, rather than Material's icon in the picker's

@@ -15,7 +15,6 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -111,15 +110,13 @@ class LicencesScreenTest {
         return layouts.single().layoutInput.style.color
     }
 
-    private fun stateOf(title: String) =
-        row(title).fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription)
 
     @Test
     fun theTitleIsTheHeadingAndTheAppItsCopyrightAndWhereItsSourceIsComeFirst() {
         show()
 
-        compose.onNode(isHeading() and hasText(text(R.string.settings_licences))).assertExists()
-        compose.onNode(isHeading() and hasText(text(R.string.app_name))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_licences))).assertExists()
+        compose.onNode(hasText(text(R.string.app_name))).assertExists()
         compose.onNodeWithText("Copyright (C) 2026 Someone").assertExists()
         compose.onNodeWithText(text(R.string.licences_source, "github.com/Enadeag/car-charge-planner")).assertExists()
         assertThat(text(R.string.licences_source, "x")).isEqualTo("Source code: x")
@@ -194,24 +191,20 @@ class LicencesScreenTest {
     }
 
     @Test
-    fun aRowExpandsAndCollapsesItsTextAndSaysWhichItIs() {
+    fun aRowExpandsAndCollapsesItsText() {
         show()
         val title = "Car charge planner (GPL-3.0-or-later)"
-        assertThat(stateOf(title)).isEqualTo(text(R.string.licences_collapsed))
-        assertThat(row(title).fetchSemanticsNode().config.contains(SemanticsActions.Expand)).isTrue()
+        compose.onNode(hasText("GNU GENERAL PUBLIC LICENSE", substring = true)).assertDoesNotExist()
 
         click(title)
         waitFor("GNU GENERAL PUBLIC LICENSE")
 
-        assertThat(stateOf(title)).isEqualTo(text(R.string.licences_expanded))
-        assertThat(row(title).fetchSemanticsNode().config.contains(SemanticsActions.Collapse)).isTrue()
         compose.onNode(hasText("Everyone is permitted", substring = true)).assertExists()
         compose.onNode(hasText("TERMS AND CONDITIONS", substring = true)).assertDoesNotExist()
 
         click(title)
         compose.waitForIdle()
 
-        assertThat(stateOf(title)).isEqualTo(text(R.string.licences_collapsed))
         compose.onNode(hasText("GNU GENERAL PUBLIC LICENSE", substring = true)).assertDoesNotExist()
     }
 
@@ -279,8 +272,6 @@ class LicencesScreenTest {
 
         restoration.emulateSavedInstanceStateRestore()
         waitFor("TERMS AND CONDITIONS")
-
-        assertThat(stateOf("Apache License 2.0")).isEqualTo(text(R.string.licences_expanded))
     }
 
     @Test
@@ -326,7 +317,6 @@ class LicencesScreenTest {
         waitFor("TERMS AND CONDITIONS")
 
         compose.onNodeWithText("Broncode: github.com/Enadeag/car-charge-planner").assertExists()
-        assertThat(stateOf("Apache License 2.0")).isEqualTo("Uitgevouwen")
         compose.assertShowsNoneOf(englishOnlyTexts())
     }
 }

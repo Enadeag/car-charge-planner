@@ -72,9 +72,6 @@
   <string name="time_zone_title">Time zone</string>
   <!-- what a drop-down shows before a choice is made -->
   <string name="choose">Choose…</string>
-  <!-- what TalkBack says of a fold's row, such as More settings: whether what it folds away shows under it -->
-  <string name="fold_expanded">Expanded</string>
-  <string name="fold_collapsed">Collapsed</string>
   <string name="time_zone_filter">Search the time zones</string>
   <string name="time_zone_none">No time zone matches.</string>
 
@@ -672,9 +669,6 @@
   <string name="licences_reading">Reading the licences…</string>
   <string name="licences_not_read">This text could not be read.</string>
   <string name="licences_list_not_read">The licences could not be read.</string>
-  <!-- what TalkBack says of a licence's row: whether its text shows under it -->
-  <string name="licences_expanded">Expanded</string>
-  <string name="licences_collapsed">Collapsed</string>
 
   <!-- The notifications. What to set in the charger's app, which ends a charge window's text and a trip's grid
        charge's: %1$d the charge current in A, %2$s the charge power in kW, such as 2.3 -->

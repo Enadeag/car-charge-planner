@@ -7,17 +7,14 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -169,12 +166,11 @@ class TripAdviceScreenTest {
     }
 
     private fun tab(name: String) {
-        compose.onNode(hasContentDescription(name) and hasClickAction()).performClick()
+        compose.dayTab(name).performClick()
         compose.waitForIdle()
     }
 
-    private fun selectedTab(name: String) = compose.onNode(hasContentDescription(name) and
-        SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)).assertIsSelected()
+    private fun selectedTab(name: String) = compose.dayTab(name).assertIsSelected()
 
     private val todaysPlan = "Charge to 85% from the grid. Start tonight at 21:00. Set 16 A (3.7 kW), and a charge " +
         "limit of 85% in the car or the charger."
@@ -198,7 +194,7 @@ class TripAdviceScreenTest {
 
     private fun top(node: SemanticsNodeInteraction) = node.fetchSemanticsNode().positionInRoot.y
 
-    private fun heading(words: String) = compose.onNode(isHeading() and hasText(words), useUnmergedTree = true)
+    private fun heading(words: String) = compose.onNode(dayTitle(words), useUnmergedTree = true)
 
     /** Gives the dialog's window the focus, as Android does once it shows it and Robolectric does not. */
     private fun dialogWindowFocused() {
@@ -273,7 +269,7 @@ class TripAdviceScreenTest {
 
         selectedTab("Today")
         compose.onNode(isDialog()).assertExists()
-        compose.onNode(isHeading() and hasText(text(R.string.battery_entry_title))).assertIsDisplayed()
+        compose.onNode(hasText(text(R.string.battery_entry_title))).assertIsDisplayed()
         dialogWindowFocused()
         compose.onNodeWithText(text(R.string.action_cancel)).performClick()
         compose.waitForIdle()

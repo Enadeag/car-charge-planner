@@ -12,8 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,7 +51,7 @@ internal fun BatteryEntryDialog(entry: BatteryEntry) {
     AlertDialog(
         onDismissRequest = { entry.back() },
         title = {
-            Text(stringResource(R.string.battery_entry_title), modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.battery_entry_title))
         },
         text = {
             // in the dialog's own window, also when the question over it closes

@@ -2,10 +2,8 @@ package nl.enadeag.carchargeplanner.android.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -59,12 +57,12 @@ class AppScreenTest {
 
         compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
         compose.waitForIdle()
-        compose.onNode(isHeading() and hasText(text(R.string.settings_title))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_title))).assertExists()
         assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.Settings::class.java)
         compose.onNodeWithContentDescription(text(R.string.action_up)).performClick()
         compose.waitForIdle()
 
-        compose.onNode(isHeading() and hasText(text(R.string.app_name))).assertExists()
+        compose.onNode(hasText(text(R.string.app_name))).assertExists()
         assertThat(flow.screen.value).isInstanceOf(AppFlow.Screen.Home::class.java)
     }
 }

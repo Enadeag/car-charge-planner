@@ -48,8 +48,6 @@
   <string name="longitude_hint">Graden; positief is ten oosten van Greenwich.</string>
   <string name="coordinates_fold">Coördinaten en tijdzone</string>
   <string name="choose">Kies…</string>
-  <string name="fold_expanded">Uitgevouwen</string>
-  <string name="fold_collapsed">Ingevouwen</string>
   <string name="time_zone_now">Tijdzone: %1$s</string>
   <string name="time_zone_change">Tijdzone wijzigen</string>
   <string name="time_zone_title">Tijdzone</string>
@@ -455,8 +453,6 @@
   <string name="licences_reading">De licenties worden gelezen…</string>
   <string name="licences_not_read">Deze tekst kon niet worden gelezen.</string>
   <string name="licences_list_not_read">De licenties konden niet worden gelezen.</string>
-  <string name="licences_expanded">Uitgevouwen</string>
-  <string name="licences_collapsed">Ingevouwen</string>
 
   <string name="notice_set_one_phase">Stel in de app van je laadpaal de laadstroom in op %1$d A (%2$s kW).</string>
   <string name="notice_set_three_phases">Stel in de app van je laadpaal de laadstroom in op %1$d A per fase (%2$s kW).</string>

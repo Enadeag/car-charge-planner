@@ -28,7 +28,6 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -216,7 +215,7 @@ class AwayEntryScreenTest {
         openTheEntry()
 
         compose.onNode(isDialog()).assertExists()
-        compose.onNode(isHeading() and hasText(text(R.string.one_off_entry_title, "Monday, June 1")))
+        compose.onNode(hasText(text(R.string.one_off_entry_title, "Monday, June 1")))
             .assertIsDisplayed()
         compose.onNodeWithText(text(R.string.one_off_whole_day)).assertIsSelected().assertIsFocused()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
@@ -244,11 +243,11 @@ class AwayEntryScreenTest {
     @Test
     fun anotherDaysAddEntersAPeriodOnThatDay() {
         show()
-        compose.onNode(hasContentDescription("Wednesday")).performClick()
+        compose.dayTab("Wednesday").performClick()
         compose.waitForIdle()
 
         openTheEntry()
-        compose.onNode(isHeading() and hasText(text(R.string.one_off_entry_title, "Wednesday, June 3")))
+        compose.onNode(hasText(text(R.string.one_off_entry_title, "Wednesday, June 3")))
             .assertIsDisplayed()
         save.performClick()
         compose.waitForIdle()
@@ -291,7 +290,7 @@ class AwayEntryScreenTest {
         timeButton(R.string.one_off_from).performClick()
         compose.waitForIdle()
         windowFocused(entryDialog, false)
-        compose.onNode(isHeading() and hasText(text(R.string.one_off_from)) and hasAnyAncestor(isDialog()))
+        compose.onNode(hasText(text(R.string.one_off_from)) and hasAnyAncestor(isDialog()) and !hasClickAction())
             .assertIsDisplayed()
         compose.onNode(hasContentDescription("10 hours") and hasClickAction())
             .performSemanticsAction(SemanticsActions.OnClick)
@@ -366,7 +365,7 @@ class AwayEntryScreenTest {
         save.performClick()
         compose.waitForIdle()
 
-        compose.onNodeWithText(text(R.string.saving)).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.saving)).assertExists()
         compose.onNodeWithText(text(R.string.action_cancel)).assertIsNotEnabled()
         compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo) and
             hasAnyAncestor(isDialog()), useUnmergedTree = true).assertExists()
@@ -482,7 +481,7 @@ class AwayEntryScreenTest {
     }
 
     @Test
-    fun whileARemoveRunsAddAndRemoveAreOff() {
+    fun whileARemoveRunsAPressOnAddDoesNothing() {
         val gate = CompletableDeferred<Unit>()
         access.awayGate = gate
         access.away = listOf(tomorrow, wednesday)
@@ -493,8 +492,9 @@ class AwayEntryScreenTest {
             .performClick()
         compose.waitForIdle()
 
-        add.assertIsNotEnabled()
-        compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken, period))).assertIsNotEnabled()
+        add.performClick()
+        compose.waitForIdle()
+        compose.onNode(isDialog()).assertDoesNotExist()
         gate.complete(Unit)
         compose.waitForIdle()
         assertThat(access.away).containsExactly(wednesday)
@@ -513,7 +513,7 @@ class AwayEntryScreenTest {
 
         button.performKeyInput { pressKey(Key.Enter) }
         compose.waitForIdle()
-        button.assertIsFocused().assertIsNotEnabled()
+        button.assertIsFocused()
         gate.complete(Unit)
         compose.waitForIdle()
 
@@ -553,7 +553,7 @@ class AwayEntryScreenTest {
         show(kept = handle.afterTheSystemEndedTheApp())
         entryDialog = ShadowDialog.getLatestDialog() as ComponentDialog
 
-        compose.onNode(isHeading() and hasText(text(R.string.one_off_entry_title, "Tuesday, June 2")))
+        compose.onNode(hasText(text(R.string.one_off_entry_title, "Tuesday, June 2")))
             .assertIsDisplayed()
         timeButton(R.string.one_off_from).assert(hasText(twentyFour(LocalTime.of(10, 15))))
     }
@@ -600,7 +600,7 @@ class AwayEntryScreenTest {
         compose.onNode(hasContentDescription("Verwijderen: Morgen, hele dag")).performScrollTo()
             .assert(hasText("Verwijderen"))
         openTheEntry()
-        compose.onNode(isHeading() and hasText("Afwezig op ", substring = true) and hasAnyAncestor(isDialog()))
+        compose.onNode(hasText("Afwezig op ", substring = true) and hasAnyAncestor(isDialog()))
             .assertIsDisplayed()
         partOfTheDay()
         backInTheDialog()
@@ -734,23 +734,6 @@ class AwayEntryScreenTest {
         compose.onNodeWithText(text(R.string.one_off_not_removed), substring = true).assertDoesNotExist()
         line(period).assertDoesNotExist()
         assertThat(access.away).isEmpty()
-    }
-
-    @Test
-    fun anEntryClosedWhileThePlanIsStillAskedPutsTheFocusOnTheTitle() {
-        AwayEntry(handle, access, scope, clock) { }.open(today, lisbon)
-        show(kept = handle.afterTheSystemEndedTheApp(), planned = false)
-        entryDialog = ShadowDialog.getLatestDialog() as ComponentDialog
-        windowFocused(entryDialog, true)
-        val title = compose.onNode(isHeading() and hasText(text(R.string.app_name)) and !hasAnyAncestor(isDialog()))
-        // the title took the focus when the home opened; the focus is off it, so the entry's close has to bring it back
-        compose.runOnIdle { focus.clearFocus() }
-        title.assertIsNotFocused()
-
-        click(R.string.action_cancel)
-
-        add.assertDoesNotExist()
-        title.assertIsFocused()
     }
 
     @Test

@@ -58,9 +58,6 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
 
 /** Where the focus is in the entry, so it comes back there when a picker or the question over the entry closes. */
 private enum class Spot {
-    /** The title, after a save that failed. */
-    TOP,
-
     /** The departure day's button, where the entry starts. */
     DEPARTURE_DAY,
 
@@ -96,17 +93,17 @@ private enum class Picking(val spot: Spot) {
 }
 
 /**
- * The entry of a trip, while it is open: Material's full-screen dialog, with the title ("Add trip" or "Change trip") as
- * the heading in the top app bar, Close in Up's place and Save at its end. Under the bar, when the home's time zone is
- * not the phone's, the line "Times in <zone>"; then the departure's day and time and the return's, each a button that
- * opens Material's date or time picker, two to a row that wraps to one per line at a large font; the distance there and
- * back, in km, whose keyboard's Done saves; and "I can charge at the destination". A day is named as the Trips card
- * names it, from the home's today when the entry opened; a time as the phone's 12- or 24-hour clock writes it. Why Save
- * refused the trip shows under the return's buttons or under the distance, and the focus goes there; a save that failed
- * says so at the top, with the English details, and the focus goes to the title. The focus starts on the departure day,
- * and comes back to the control that had it when a picker or "Discard changes?" closes. While a change of the trips
- * runs, Save is held, and while its own save runs it shows its progress and nothing can be changed or closed. Back and
- * Close ask "Discard changes?" when something changed; a tap beside the dialog does nothing, as there is no beside.
+ * The entry of a trip, while it is open: Material's full-screen dialog, with the title ("Add trip" or "Change trip") in
+ * the top app bar, Close in Up's place and Save at its end. Under the bar, when the home's time zone is not the
+ * phone's, the line "Times in <zone>"; then the departure's day and time and the return's, each a button that opens
+ * Material's date or time picker, two to a row that wraps to one per line at a large font; the distance there and back,
+ * in km, whose keyboard's Done saves; and "I can charge at the destination". A day is named as the Trips card names it,
+ * from the home's today when the entry opened; a time as the phone's 12- or 24-hour clock writes it. Why Save refused
+ * the trip shows under the return's buttons or under the distance, and the focus goes there; a save that failed says so
+ * at the top, with the English details, to which the page scrolls. The focus starts on the departure day, and comes
+ * back to the control that had it when a picker or "Discard changes?" closes. While a change of the trips runs, Save is
+ * held, and while its own save runs it shows its progress and nothing can be changed or closed. Back and Close ask
+ * "Discard changes?" when something changed; a tap beside the dialog does nothing, as there is no beside.
  *
  * @param phoneZone the phone's time zone, against which the home's is named
  */
@@ -138,15 +135,9 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
             spot = if (field == TripEntry.Field.RETURN) Spot.RETURN_DAY else Spot.DISTANCE
             focus.getValue(spot).requestFocus()
         }
-        LaunchedEffect(failed) {
-            if (failed != null) {
-                spot = Spot.TOP
-                focus.getValue(Spot.TOP).requestFocus()
-            }
-        }
         val noted = { at: Spot -> Modifier.onFocusChanged { if (it.isFocused) spot = at } }
         BarPage(stringResource(if (draft.mode == TripDraft.Mode.ADD) R.string.trip_add_title
-            else R.string.trip_change_title), focus.getValue(Spot.TOP), onUp = null,
+            else R.string.trip_change_title), onUp = null,
             actions = { SaveAction(saving = savingNow, held = held) { entry.save() } },
             lead = {
                 Column(Modifier.padding(bottom = if (failed != null) 16.dp else 0.dp)) {

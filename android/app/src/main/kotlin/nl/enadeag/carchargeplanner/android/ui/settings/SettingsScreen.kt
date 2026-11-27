@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -62,8 +61,8 @@ import nl.enadeag.carchargeplanner.android.ui.setup.Edits
 /**
  * Settings' screen (#315): the list of its pages, or one page with Up, its title and Save in the top app bar. System
  * Back and Up do the same: from a page with edits they ask whether to throw them away, from a page without they go to
- * the list, and from the list to the home. A new page moves the focus to its title; a Save that shows problems moves
- * it to the first field that has one. A page's save that worked says so in a snackbar, which stays while the list
+ * the list, and from the list to the home. A Save that shows problems moves the focus to the first field that has
+ * one. A page's save that worked says so in a snackbar, which stays while the list
  * opens. After the pages, a row opens Android's settings of the app's
  * notifications. The list's last row opens the open source licences (#331), a read-only screen and not a page, so it
  * has no Save and nothing to discard; Back and Up there return to the list, and it stays open after turning the phone
@@ -108,9 +107,7 @@ internal fun SettingsScreen(session: SettingsSession, page: SettingsPage?, wifiO
 @Composable
 private fun SettingsList(session: SettingsSession, snackbars: SnackbarHostState, openLicences: () -> Unit) {
     val config by session.config.collectAsStateWithLifecycle()
-    val title = remember { FocusRequester() }
-    LaunchedEffect(Unit) { title.requestFocus() }
-    BarPage(stringResource(R.string.settings_title), title, onUp = { session.back() }, padded = false,
+    BarPage(stringResource(R.string.settings_title), onUp = { session.back() }, padded = false,
         snackbars = snackbars) {
         SettingsPage.entries.forEachIndexed { index, page ->
             if (index > 0) {
@@ -150,8 +147,6 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: 
     val loads by session.loads.collectAsStateWithLifecycle()
     val edits = remember(page) { Edits() }
     val problems = remember(page) { ProblemFocus() }
-    val title = remember { FocusRequester() }
-    var seenPage by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
     var seenProblems by rememberSaveable { mutableIntStateOf(problemsShown) }
     // the forms were filled anew, as after a save: what they hold is shown again
     LaunchedEffect(loads) { edits.make { } }
@@ -160,13 +155,7 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: 
         withFrameNanos { }
         if (problemsShown != seenProblems) {
             seenProblems = problemsShown
-            seenPage = page
-            if (!problems.focusFirst()) {
-                title.requestFocus()
-            }
-        } else if (seenPage != page) {
-            seenPage = page
-            title.requestFocus()
+            problems.focusFirst()
         }
     }
     if (page == SettingsPage.FORECAST) {
@@ -176,7 +165,7 @@ private fun PageScreen(session: SettingsSession, page: SettingsPage, snackbars: 
     // keeps the page where the focus took it, to its field
     val saving by session.saving.collectAsStateWithLifecycle()
     val failed = saving is SettingsSession.SaveState.Failed || saving == SettingsSession.SaveState.KeysNotSaved
-    BarPage(stringResource(page.title()), title, onUp = { session.back() }, actions = { SaveAction(session, page) },
+    BarPage(stringResource(page.title()), onUp = { session.back() }, actions = { SaveAction(session, page) },
         snackbars = snackbars, status = { SaveStatus(session) }, lead = { SaveProblem(session) },
         scrollToTop = saving.takeIf { failed }) {
         val forms = session.forms

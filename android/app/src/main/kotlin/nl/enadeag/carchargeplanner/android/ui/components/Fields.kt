@@ -29,7 +29,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -159,12 +158,12 @@ private fun SignKey(text: String, onEdit: (String) -> Unit) {
         // Material draws an icon button at 40 dp; a control is 48 dp at least
         modifier = Modifier.size(48.dp).semantics { contentDescription = description },
     ) {
-        Text("±", style = MaterialTheme.typography.titleLarge, modifier = Modifier.clearAndSetSemantics { })
+        Text("±", style = MaterialTheme.typography.titleLarge)
     }
 }
 
 /**
- * A choice of one from a few, as radio buttons a screen reader reads as a group.
+ * A choice of one from a few, as a group of radio buttons under its label.
  *
  * @param options the options, in the order shown
  * @param problem the problem it shows, under it; null for none
@@ -179,9 +178,7 @@ internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chose
     val focused = if (focus == null) Modifier else Modifier.focusRequester(focus).focusable()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.titleSmall)
-        FlowRow(modifier = Modifier.selectableGroup().then(focused).semantics {
-            contentDescription = label
-        },
+        FlowRow(modifier = Modifier.selectableGroup().then(focused),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             options.forEach { option ->
                 val selected = option == chosen

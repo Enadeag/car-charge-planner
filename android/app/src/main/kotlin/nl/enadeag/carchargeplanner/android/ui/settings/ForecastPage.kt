@@ -121,9 +121,7 @@ internal fun ForecastPage(session: SettingsSession, edits: Edits, problems: Prob
         required.forEachIndexed { place, spec -> setting(place, spec) }
         val name = foldNames[index]
         if (name != null) {
-            Fold(name, folds[index],
-                spoken = if (foldNames.count { it == name } > 1) stringResource(R.string.provider_setting_of, name,
-                    info.name()) else null) {
+            Fold(name, folds[index]) {
                 optional.forEachIndexed { place, spec -> setting(required.size + place, spec) }
             }
         }
