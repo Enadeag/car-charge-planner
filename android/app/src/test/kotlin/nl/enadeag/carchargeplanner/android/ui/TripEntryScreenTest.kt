@@ -586,6 +586,22 @@ class TripEntryScreenTest {
     }
 
     @Test
+    fun aDistanceWithDecimalsOrAThousandsSeparatorIsRefusedUnderTheFieldWithTheSettingsTexts() {
+        show()
+        openAdd()
+        typeDistance("12.5")
+
+        click(save)
+
+        compose.onNodeWithText(text(R.string.problem_not_a_whole_number)).assertIsDisplayed()
+        distance.assertIsFocused()
+        typeDistance("1.000")
+        click(save)
+        compose.onNodeWithText(text(R.string.problem_thousands_separator)).assertIsDisplayed()
+        assertThat(access.tripChanges).isEmpty()
+    }
+
+    @Test
     fun aDistanceOfNothingIsRefusedUnderTheField() {
         show()
         openAdd()

@@ -1,11 +1,8 @@
-package nl.enadeag.carchargeplanner.desktop.settings.form;
+package nl.enadeag.carchargeplanner.desktop.text;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import nl.enadeag.carchargeplanner.desktop.settings.form.NumberText.Read;
-import nl.enadeag.carchargeplanner.desktop.text.Language;
-import nl.enadeag.carchargeplanner.desktop.text.Messages;
-import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import nl.enadeag.carchargeplanner.desktop.text.NumberText.Read;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;

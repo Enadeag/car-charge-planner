@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import nl.enadeag.carchargeplanner.android.form.FieldProblem
 import nl.enadeag.carchargeplanner.android.form.NumberText
 import nl.enadeag.carchargeplanner.engine.trip.Trip
 import nl.enadeag.carchargeplanner.engine.trip.TripEntryRules
@@ -58,10 +59,16 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
         /** The distance is 0 or less. */
         DISTANCE_NOT_POSITIVE(TripEntry.Field.DISTANCE),
 
-        /** The distance is no number, or too large to be one. */
+        /** The distance is no number: empty, letters, an exponent, a plus sign or a point with no digit after it. */
         DISTANCE_NOT_A_NUMBER(TripEntry.Field.DISTANCE),
 
-        /** The distance is more than a trip may have, [Trip.MAX_DISTANCE_KM]. */
+        /** The distance has decimals, such as "12.5" or "12,0"; a trip's distance is typed in whole km. */
+        DISTANCE_NOT_A_WHOLE_NUMBER(TripEntry.Field.DISTANCE),
+
+        /** The distance has exactly three digits after a mark, such as "1.000", read as a thousands separator. */
+        DISTANCE_THOUSANDS_SEPARATOR(TripEntry.Field.DISTANCE),
+
+        /** The distance is more than a trip may have, [Trip.MAX_DISTANCE_KM], or too long a number to be read. */
         DISTANCE_TOO_FAR(TripEntry.Field.DISTANCE),
     }
 
@@ -147,29 +154,41 @@ data class TripDraft(val mode: Mode, val zone: ZoneId, val today: LocalDate, val
      * The trip entered, or why it cannot be saved.
      *
      * @param now the time of Save
-     * @param numbers reads the distance typed
+     * @param numbers reads the distance typed, as a whole number
      * @return the trip, with "Not with this car" as the trip opened had it; or the first problem
      */
     fun check(now: Instant, numbers: NumberText): Checked {
         val typed = fields.distance.trim()
-        // a distance left as it first showed, in whole km, stays the trip's own; one that is no number is refused
-        // in its place among the problems, after those of the times
-        val km = opened?.takeIf { typed == first.distance }?.distanceKm() ?: numbers.read(typed) ?: Double.NaN
+        // a distance left as it first showed, rounded to whole km, stays the trip's own; one that cannot be read is
+        // refused in its place among the problems, after those of the times
+        val kept = opened?.takeIf { typed == first.distance }?.distanceKm()
+        val read = if (kept == null) numbers.readWhole(typed) else null
+        val wrong = (read as? NumberText.WholeNumber.Wrong)?.problem
+        val km = when {
+            kept != null -> kept
+            read is NumberText.WholeNumber.Read -> read.value.toDouble()
+            wrong is FieldProblem.Refused -> Double.MAX_VALUE // a whole number too long for an Int: too far
+            else -> Double.NaN
+        }
         val entered = TripEntryRules.Entered(fields.departureDay.atTime(fields.departureTime),
             fields.returnDay.atTime(fields.returnTime), km, fields.canCharge, opened?.notWithThisCar() == true)
         return when (val checked = TripEntryRules.check(entered, now, zone)) {
             is TripEntryRules.Checked.Valid -> Checked.Valid(checked.trip())
-            is TripEntryRules.Checked.Refused -> Checked.Refused(problem(checked.problem()))
+            is TripEntryRules.Checked.Refused -> Checked.Refused(problem(checked.problem(), wrong))
         }
     }
 
-    private fun problem(problem: TripProblem): Problem = when (problem) {
+    private fun problem(problem: TripProblem, wrong: FieldProblem?): Problem = when (problem) {
         // only a phone whose clock was put back near 1970 offers such a day, and such a trip is over
         TripProblem.DEPARTURE_BEFORE_EARLIEST, TripProblem.PASSED -> Problem.PASSED
         TripProblem.RETURN_NOT_AFTER_DEPARTURE -> Problem.RETURN_NOT_AFTER_DEPARTURE
         TripProblem.TOO_LONG -> Problem.TOO_LONG
         TripProblem.DISTANCE_NOT_POSITIVE -> Problem.DISTANCE_NOT_POSITIVE
-        TripProblem.DISTANCE_NOT_A_NUMBER -> Problem.DISTANCE_NOT_A_NUMBER
+        TripProblem.DISTANCE_NOT_A_NUMBER -> when (wrong) {
+            FieldProblem.NotAWholeNumber -> Problem.DISTANCE_NOT_A_WHOLE_NUMBER
+            FieldProblem.ThousandsSeparator -> Problem.DISTANCE_THOUSANDS_SEPARATOR
+            else -> Problem.DISTANCE_NOT_A_NUMBER
+        }
         TripProblem.DISTANCE_TOO_FAR -> Problem.DISTANCE_TOO_FAR
     }
 }

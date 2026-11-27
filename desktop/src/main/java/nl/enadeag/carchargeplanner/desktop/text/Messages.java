@@ -4,7 +4,6 @@ import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
 import java.math.RoundingMode;
 import java.text.MessageFormat;
 import java.text.NumberFormat;
-import java.text.ParsePosition;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -12,7 +11,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.format.TextStyle;
 import java.util.Locale;
-import java.util.OptionalDouble;
 import java.util.ResourceBundle;
 
 /**
@@ -234,26 +232,5 @@ public final class Messages {
         format.setMaximumFractionDigits(decimals);
         format.setRoundingMode(RoundingMode.HALF_UP);
         return format.format(value);
-    }
-
-    /**
-     * A number the owner typed, written the way the language writes numbers. Grouping separators are not accepted,
-     * so that "0.5" typed in Dutch is not read as 5.
-     *
-     * @param text what the owner typed; may be empty, and spaces around it are ignored
-     * @return the number, or empty when the text is not wholly a finite number in this language
-     */
-    public OptionalDouble parseNumber(String text) {
-        var format = NumberFormat.getNumberInstance(locale());
-        format.setGroupingUsed(false);
-        var trimmed = text.strip();
-        var position = new ParsePosition(0);
-        var number = format.parse(trimmed, position);
-        // the format also reads its own signs for not a number and infinity, which no field can use
-        if (number == null || trimmed.isEmpty() || position.getIndex() != trimmed.length()
-                || !Double.isFinite(number.doubleValue())) {
-            return OptionalDouble.empty();
-        }
-        return OptionalDouble.of(number.doubleValue());
     }
 }

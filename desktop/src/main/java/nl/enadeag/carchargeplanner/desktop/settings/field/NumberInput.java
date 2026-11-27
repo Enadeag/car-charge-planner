@@ -1,7 +1,7 @@
 package nl.enadeag.carchargeplanner.desktop.settings.field;
 
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
-import nl.enadeag.carchargeplanner.desktop.settings.form.NumberText;
+import nl.enadeag.carchargeplanner.desktop.text.NumberText;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import java.math.BigDecimal;
 import java.util.Optional;
