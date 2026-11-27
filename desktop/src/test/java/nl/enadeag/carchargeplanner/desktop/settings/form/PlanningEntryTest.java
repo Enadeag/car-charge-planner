@@ -55,7 +55,8 @@ class PlanningEntryTest {
 
         assertThat(new PlanningEntry(30, 80, 85, 0.2, 45, FIFTEEN, "7 o'clock", "22:00").check(ENGLISH, SAY))
                 .isEqualTo(problem);
-        assertThat(new PlanningEntry(30, 80, 85, 0.2, 45, FIFTEEN, "07:00", "24:00").check(ENGLISH, SAY)).isEqualTo(problem);
+        assertThat(new PlanningEntry(30, 80, 85, 0.2, 45, FIFTEEN, "07:00", "24:00").check(ENGLISH, SAY))
+                .isEqualTo(problem);
     }
 
     @Test

@@ -9,8 +9,8 @@ import java.util.regex.Pattern;
  * or a point, without a thousands separator; it reads either mark, a leading minus and the digits 0 to 9, and nothing
  * else: no thousands separator, exponent or plus sign, and an empty field is no number. Exactly three digits after
  * the mark, in a field with fewer decimals, are taken for a thousands separator and refused, so "1.000" never becomes
- * 1. Spaces around the text are left out. A text the owner did not edit gives the value held back exactly, not as rounded for showing. Whether the
- * number fits is left to the engine's rules.
+ * 1. Spaces around the text are left out. A text the owner did not edit gives the value held back exactly, not as
+ * rounded for showing. Whether the number fits is left to the engine's rules.
  */
 public final class NumberText {
 
