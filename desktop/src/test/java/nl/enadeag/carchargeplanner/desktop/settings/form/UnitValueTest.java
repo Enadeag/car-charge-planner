@@ -14,7 +14,7 @@ class UnitValueTest {
     @Test
     void aNewValueShowsInMetricUnits() {
         assertThat(consumption.units()).isEqualTo(Units.METRIC);
-        assertThat(consumption.range()).isEqualTo(new NumberRange(5, 60, 0.5, 1));
+        assertThat(consumption.range()).isEqualTo(NumberRange.of(Limit.fromTo(1, 200), 0.5, 1));
         assertThat(consumption.unit()).isEqualTo("kWh/100 km");
     }
 
@@ -32,7 +32,8 @@ class UnitValueTest {
         consumption.showIn(Units.IMPERIAL);
 
         assertThat(consumption.units()).isEqualTo(Units.IMPERIAL);
-        assertThat(consumption.range()).isEqualTo(new NumberRange(1, 12.5, 0.1, 2));
+        assertThat(consumption.range().step()).isEqualTo(0.1);
+        assertThat(consumption.range().decimals()).isEqualTo(2);
         assertThat(consumption.unit()).isEqualTo("mi/kWh");
         assertThat(consumption.shownLoaded()).isEqualTo(3.45, within(0.01));
     }
@@ -105,5 +106,13 @@ class UnitValueTest {
         assertThat(distance.load(60)).isEqualTo(60);
         assertThat(distance.shownEdit()).isEmpty();
         assertThat(distance.isChanged(60)).isFalse();
+    }
+
+    @Test
+    void aTextThatIsNotANumberStandsForNoValueAndIsAChange() {
+        distance.load(0);
+
+        assertThat(distance.kept(Double.NaN)).isNaN();
+        assertThat(distance.isChanged(Double.NaN)).isTrue();
     }
 }

@@ -10,7 +10,9 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting
  * How a number field writes a value in the app's language and reads what the owner typed. It writes the language's
  * decimal mark, a comma or a point, with ASCII digits and no thousands separator; it reads either mark, a leading
  * minus and ASCII digits, and nothing else: no thousands separator, exponent, space or plus sign, and an empty field
- * is no number. Whether the number fits is left to the engine's rules.
+ * is no number. Exactly three digits after the mark, in a field with fewer decimals, are taken for a thousands
+ * separator ([hasThousandsSeparator]), so "1.000" never becomes 1. Whether the number fits is left to the engine's
+ * rules.
  *
  * @param locale the language the screen speaks now, asked at each write, so a change of the app's language reaches
  *     forms that outlive the screen
@@ -27,6 +29,8 @@ class NumberText(private val locale: () -> Locale) {
     private companion object {
         val NUMBER = Regex("-?[0-9]+([.,][0-9]+)?")
         val WHOLE = Regex("-?[0-9]+")
+        val THOUSANDS = Regex("-?[0-9]+[.,][0-9]{3}")
+        const val THOUSANDS_DIGITS = 3
     }
 
     /**
@@ -52,15 +56,27 @@ class NumberText(private val locale: () -> Locale) {
         if (NUMBER.matches(text)) text.replace(',', '.').toDouble().takeIf { it.isFinite() } else null
 
     /**
+     * Whether a text is a number whose decimal mark reads as a thousands separator in its field.
+     *
+     * @param text what the field holds
+     * @param decimals how many decimals the field shows
+     * @return true for exactly three digits after the mark where the field shows fewer, such as "1.000" or "1,000"
+     */
+    fun hasThousandsSeparator(text: String, decimals: Int): Boolean =
+        decimals < THOUSANDS_DIGITS && THOUSANDS.matches(text)
+
+    /**
      * The whole number a text stands for.
      *
      * @param text what the field holds
-     * @return the number, the problem with it: [FieldProblem.NotAWholeNumber] for a number with decimals, even ",0",
-     *     [FieldProblem.NotANumber] for no number, and the engine's range for one beyond what the field can hold
+     * @return the number, the problem with it: [FieldProblem.ThousandsSeparator] for three decimals,
+     *     [FieldProblem.NotAWholeNumber] for other decimals, even ",0", [FieldProblem.NotANumber] for no number, and
+     *     the engine's range for one beyond what the field can hold
      */
     fun readWhole(text: String): WholeNumber = when {
         WHOLE.matches(text) -> text.toIntOrNull()?.let { WholeNumber.Read(it) }
             ?: WholeNumber.Wrong(FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE))
+        hasThousandsSeparator(text, 0) -> WholeNumber.Wrong(FieldProblem.ThousandsSeparator)
         NUMBER.matches(text) -> WholeNumber.Wrong(FieldProblem.NotAWholeNumber)
         else -> WholeNumber.Wrong(FieldProblem.NotANumber)
     }

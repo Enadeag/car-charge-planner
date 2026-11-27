@@ -6,10 +6,22 @@ import nl.enadeag.carchargeplanner.engine.setting.InvalidSetting;
 /**
  * A place on earth in degrees.
  *
- * @param latitude the latitude in degrees, from -90 to 90, north positive
- * @param longitude the longitude in degrees, from -180 to 180, east positive
+ * @param latitude the latitude in degrees, from {@link #MIN_LATITUDE} to {@link #MAX_LATITUDE}, north positive
+ * @param longitude the longitude in degrees, from {@link #MIN_LONGITUDE} to {@link #MAX_LONGITUDE}, east positive
  */
 public record Coordinates(double latitude, double longitude) {
+
+    /** The lowest latitude, in degrees: the South Pole. */
+    public static final int MIN_LATITUDE = -90;
+
+    /** The highest latitude, in degrees: the North Pole. */
+    public static final int MAX_LATITUDE = 90;
+
+    /** The lowest longitude, in degrees, west of Greenwich. */
+    public static final int MIN_LONGITUDE = -180;
+
+    /** The highest longitude, in degrees, east of Greenwich. */
+    public static final int MAX_LONGITUDE = 180;
 
     /**
      * Where a first-run draft puts the home until the owner chose a place: 0, 0 lies in the ocean, so no home is
@@ -25,11 +37,11 @@ public record Coordinates(double latitude, double longitude) {
     public Coordinates {
         if (!isLatitude(latitude)) {
             throw new InvalidSetting(ConfigSetting.LATITUDE, InvalidSetting.Rule.OUT_OF_RANGE,
-                    "latitude must be between -90 and 90");
+                    "latitude must be between " + MIN_LATITUDE + " and " + MAX_LATITUDE);
         }
         if (!isLongitude(longitude)) {
             throw new InvalidSetting(ConfigSetting.LONGITUDE, InvalidSetting.Rule.OUT_OF_RANGE,
-                    "longitude must be between -180 and 180");
+                    "longitude must be between " + MIN_LONGITUDE + " and " + MAX_LONGITUDE);
         }
     }
 
@@ -54,10 +66,10 @@ public record Coordinates(double latitude, double longitude) {
     }
 
     private static boolean isLatitude(double degrees) {
-        return degrees >= -90 && degrees <= 90;
+        return degrees >= MIN_LATITUDE && degrees <= MAX_LATITUDE;
     }
 
     private static boolean isLongitude(double degrees) {
-        return degrees >= -180 && degrees <= 180;
+        return degrees >= MIN_LONGITUDE && degrees <= MAX_LONGITUDE;
     }
 }

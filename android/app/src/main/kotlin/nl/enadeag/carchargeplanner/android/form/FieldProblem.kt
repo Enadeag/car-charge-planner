@@ -15,11 +15,21 @@ sealed interface FieldProblem {
      */
     data class Refused(val rule: InvalidSetting.Rule) : FieldProblem
 
+    /**
+     * The engine refused a number as outside its setting's limit, which the field names.
+     *
+     * @property limit what the engine allows, in the field's unit
+     */
+    data class OutOfRange(val limit: Limit) : FieldProblem
+
     /** The text is not a number: empty, letters, a thousands separator, an exponent, a space or a plus sign. */
     data object NotANumber : FieldProblem
 
     /** A number with decimals where the field takes a whole number, such as amps or minutes; nothing is rounded. */
     data object NotAWholeNumber : FieldProblem
+
+    /** Exactly three decimals where the field shows fewer, such as "1.000", which reads as a thousands separator. */
+    data object ThousandsSeparator : FieldProblem
 
     /** A whole number below 0 or above 100 where the field takes a level in %, such as the battery level. */
     data object NotFrom0To100 : FieldProblem

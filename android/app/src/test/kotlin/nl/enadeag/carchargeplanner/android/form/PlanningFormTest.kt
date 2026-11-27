@@ -97,12 +97,12 @@ class PlanningFormTest {
 
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            PlanningForm.Field.TARGET_CHARGE to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            PlanningForm.Field.TARGET_CHARGE to FieldProblem.OutOfRange(Limit.fromTo(0.0, 100.0))))
 
         form.edit(PlanningForm.Field.TARGET_CHARGE, "100")
         assertThat(form.check(stored)).isNull()
         assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
-            PlanningForm.Field.MARGIN to FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
+            PlanningForm.Field.MARGIN to FieldProblem.OutOfRange(Limit(0.0, false, 100.0, true))))
     }
 
     @Test

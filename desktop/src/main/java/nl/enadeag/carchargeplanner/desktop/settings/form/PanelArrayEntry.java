@@ -10,6 +10,7 @@ import java.time.Year;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 /**
@@ -93,9 +94,10 @@ public record PanelArrayEntry(String name, String count, String yearPlaced, Stri
      *
      * @param thisYear the current year, which a typed year placed may not be after
      * @param messages the texts, in the owner's language
+     * @param say what a field says about a value the records refuse, in the owner's language
      * @return the array, or the first problem and the field that shows it
      */
-    public Checked check(Year thisYear, Messages messages) {
+    public Checked check(Year thisYear, Messages messages, Function<InvalidSetting, String> say) {
         try {
             if (!keepsThePeakPower()) {
                 panelCount();
@@ -110,7 +112,7 @@ public record PanelArrayEntry(String name, String count, String yearPlaced, Stri
             return new Checked.Accepted(new PanelArray(name, size, tiltDeg.getAsDouble(), azimuthDeg.getAsDouble(),
                     lossesPct / 100));
         } catch (InvalidSetting e) {
-            return new Checked.Refused(e.setting(), ProblemTexts.of(e.rule(), messages));
+            return new Checked.Refused(e.setting(), say.apply(e));
         }
     }
 

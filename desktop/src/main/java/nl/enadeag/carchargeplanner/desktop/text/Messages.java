@@ -220,6 +220,23 @@ public final class Messages {
     }
 
     /**
+     * A number as a settings field shows it, so that it reads back as the same number.
+     *
+     * @param value the number, in any unit
+     * @param decimals how many decimals to show, 0 or more
+     * @return such as "0.25" in English and "0,25" in Dutch for two decimals, and "1000" without a thousands
+     *     separator; a half is rounded away from zero
+     */
+    public String plainNumber(double value, int decimals) {
+        var format = NumberFormat.getNumberInstance(locale());
+        format.setGroupingUsed(false);
+        format.setMinimumFractionDigits(decimals);
+        format.setMaximumFractionDigits(decimals);
+        format.setRoundingMode(RoundingMode.HALF_UP);
+        return format.format(value);
+    }
+
+    /**
      * A number the owner typed, written the way the language writes numbers. Grouping separators are not accepted,
      * so that "0.5" typed in Dutch is not read as 5.
      *

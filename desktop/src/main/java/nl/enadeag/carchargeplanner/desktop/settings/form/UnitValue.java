@@ -92,10 +92,14 @@ public final class UnitValue {
     /**
      * What a value in the field stands for; holds nothing.
      *
-     * @param shown the value in the field, in the units it shows
-     * @return the metric value; exactly the held one while the field shows it as it was shown, at its decimals
+     * @param shown the value in the field, in the units it shows; NaN for a text that is not a number
+     * @return the metric value; exactly the held one while the field shows it as it was shown, at its decimals; NaN
+     *     for NaN
      */
     public double kept(double shown) {
+        if (Double.isNaN(shown)) {
+            return shown;
+        }
         var decimals = Math.pow(10, quantity.range(units).decimals());
         if (Math.round(shown * decimals) == Math.round(quantity.shown(held, units) * decimals)) {
             return held;

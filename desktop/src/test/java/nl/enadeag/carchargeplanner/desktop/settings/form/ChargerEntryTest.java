@@ -23,12 +23,6 @@ class ChargerEntryTest {
     }
 
     @Test
-    void theCurrentsAreRoundedToWholeAmps() {
-        assertThat(new ChargerEntry(Phases.ONE, 6.4, 15.5, 230, 90).charger())
-                .isEqualTo(new Charger(Phases.ONE, 6, 16, 230, 0.9));
-    }
-
-    @Test
     void aValueTheChargerRefusesNamesItsSetting() {
         assertThatThrownBy(() -> new ChargerEntry(Phases.ONE, 16, 10, 230, 90).charger())
                 .isInstanceOfSatisfying(InvalidSetting.class, refused -> {

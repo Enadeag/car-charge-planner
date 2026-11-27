@@ -1,20 +1,54 @@
 package nl.enadeag.carchargeplanner.desktop.settings.form;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import nl.enadeag.carchargeplanner.desktop.text.TextKey;
+import java.util.regex.Pattern;
 
 /**
- * How a number field writes its value and reads what the owner typed, the way the owner's language writes numbers. A
- * text that is not a number keeps the value held before; a text the owner did not edit gives that value back exactly,
- * not as rounded for showing.
+ * How a number field writes its value and reads what the owner typed. It writes the language's decimal mark, a comma
+ * or a point, without a thousands separator; it reads either mark, a leading minus and the digits 0 to 9, and nothing
+ * else: no thousands separator, exponent or plus sign, and an empty field is no number. Exactly three digits after
+ * the mark, in a field with fewer decimals, are taken for a thousands separator and refused, so "1.000" never becomes
+ * 1. Spaces around the text are left out. A text the owner did not edit gives the value held back exactly, not as
+ * rounded for showing. Whether the number fits is left to the engine's rules.
  */
 public final class NumberText {
 
+    private static final Pattern NUMBER = Pattern.compile("-?[0-9]+([.,][0-9]+)?");
+    private static final Pattern WHOLE = Pattern.compile("-?[0-9]+");
+    private static final Pattern THOUSANDS = Pattern.compile("-?[0-9]+[.,][0-9]{3}");
+    private static final int THOUSANDS_DIGITS = 3;
+
     private final Messages messages;
+
+    /** A number read from a field, or what is wrong with the text. */
+    public sealed interface Read {
+
+        /**
+         * The text is a number the field takes.
+         *
+         * @param value the number, finite, not brought into any range
+         */
+        record Number(double value) implements Read {
+        }
+
+        /**
+         * The text is no number the field takes.
+         *
+         * @param problem what the field says
+         */
+        record Wrong(TextKey problem) implements Read {
+        }
+
+        /** The text is a whole number too long for the field, which is outside the field's limit. */
+        record OutOfRange() implements Read {
+        }
+    }
 
     /**
      * Makes the texts.
      *
-     * @param messages writes and reads the numbers in the owner's language
+     * @param messages writes the numbers in the owner's language
      */
     public NumberText(Messages messages) {
         this.messages = messages;
@@ -25,10 +59,10 @@ public final class NumberText {
      *
      * @param value the value, in the field's unit
      * @param decimals the decimals the field shows, 0 or more
-     * @return such as "0.25" in English and "0,25" in Dutch for two decimals
+     * @return such as "0.25" in English and "0,25" in Dutch for two decimals, and "1000" without a separator
      */
     public String write(double value, int decimals) {
-        return messages.number(value, decimals);
+        return messages.plainNumber(value, decimals);
     }
 
     /**
@@ -37,13 +71,34 @@ public final class NumberText {
      * @param text what the field shows now, typed by the owner or not
      * @param held the value the field held before, in the field's unit
      * @param decimals the decimals the field shows, 0 or more
-     * @return {@code held} exactly when the text is how it is written, the typed number when the text is one, and
-     *     {@code held} otherwise; not brought into the field's range
+     * @param whole whether the field takes only whole numbers
+     * @return {@code held} exactly when the text is how it is written; else the typed number, or the problem: "Type a
+     *     number." for no number, the thousands separator's text for three decimals in a field with fewer, "Type a
+     *     whole number" for decimals in a whole-number field, and {@link Read.OutOfRange} for a whole number too long
+     *     for one
      */
-    public double read(String text, double held, int decimals) {
+    public Read read(String text, double held, int decimals, boolean whole) {
         if (text.equals(write(held, decimals))) {
-            return held; // untouched: keep the exact value, not the rounded one shown
+            return new Read.Number(held); // untouched: keep the exact value, not the rounded one shown
         }
-        return messages.parseNumber(text).orElse(held);
+        var typed = text.strip();
+        if (whole && WHOLE.matcher(typed).matches()) {
+            try {
+                return new Read.Number(Integer.parseInt(typed));
+            } catch (NumberFormatException tooLong) {
+                return new Read.OutOfRange();
+            }
+        }
+        if (!NUMBER.matcher(typed).matches()) {
+            return new Read.Wrong(TextKey.PROBLEM_NOT_A_NUMBER);
+        }
+        if (decimals < THOUSANDS_DIGITS && THOUSANDS.matcher(typed).matches()) {
+            return new Read.Wrong(TextKey.PROBLEM_THOUSANDS_SEPARATOR);
+        }
+        if (whole) {
+            return new Read.Wrong(TextKey.PROBLEM_NOT_A_WHOLE_NUMBER);
+        }
+        var number = Double.parseDouble(typed.replace(',', '.'));
+        return Double.isFinite(number) ? new Read.Number(number) : new Read.Wrong(TextKey.PROBLEM_NOT_A_NUMBER);
     }
 }

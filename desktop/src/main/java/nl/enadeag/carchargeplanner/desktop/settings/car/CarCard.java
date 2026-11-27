@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.FieldRow;
 import nl.enadeag.carchargeplanner.desktop.settings.field.Input;
 import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.UnitInput;
+import nl.enadeag.carchargeplanner.desktop.settings.form.Limit;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.Quantity;
 import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
@@ -53,15 +54,18 @@ public final class CarCard implements ConfigPart {
     public CarCard(Messages messages, boolean showsSurcharge) {
         this.messages = messages;
         this.showsSurcharge = showsSurcharge;
-        battery = new NumberInput(new NumberRange(1, 200, 1, 1), "kWh", messages);
+        battery = new NumberInput(NumberRange.of(Limit.of(ConfigSetting.CAR_BATTERY), 1, 1), "kWh", messages);
         consumption = new UnitInput(Quantity.CONSUMPTION, messages);
         distance = new UnitInput(Quantity.DISTANCE, messages);
-        surcharge = new NumberInput(new NumberRange(0, 100, 1, 0), "%", messages);
+        surcharge = new NumberInput(NumberRange.of(Limit.of(ConfigSetting.CAR_TRIP_SURCHARGE), 1, 0), "%", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalMarks();
-        // no typical value and no problem row: the range keeps the value valid
+        // no typical value
         surchargeRow = FieldRow.of(messages, TextKey.FIELD_CAR_TRIP_SURCHARGE, TextKey.FIELD_CAR_TRIP_SURCHARGE_HINT,
                 surcharge);
+        if (showsSurcharge) {
+            problems.add(ConfigSetting.CAR_TRIP_SURCHARGE, surchargeRow);
+        }
         card = new CardView(messages.text(TextKey.CARD_CAR), messages.text(TextKey.CARD_CAR_HINT),
                 row(ConfigSetting.CAR_BATTERY, TextKey.FIELD_CAR_BATTERY, TextKey.FIELD_CAR_BATTERY_HINT, battery),
                 row(ConfigSetting.CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION, TextKey.FIELD_CAR_CONSUMPTION_HINT,
@@ -119,6 +123,9 @@ public final class CarCard implements ConfigPart {
         if (!isChanged()) {
             return Optional.of(config);
         }
+        if (problems.typingIsWrong()) {
+            return Optional.empty();
+        }
         var system = config.system();
         return car(system.car().tripSurcharge(), _ -> { }).map(car -> {
             return config.withSystem(system.withHouseAndCar(system.house(), car),
@@ -133,7 +140,16 @@ public final class CarCard implements ConfigPart {
             return false;
         }
         inputs().forEach(Input::commitTyped);
-        return car(Car.STANDARD_TRIP_SURCHARGE, problems::show).isEmpty();
+        return problems.showTyping() || car(Car.STANDARD_TRIP_SURCHARGE, problems::show).isEmpty();
+    }
+
+    /**
+     * Whether a field the page folds away shows a problem, so the page can open its fold.
+     *
+     * @return true when the trip surcharge's field shows one
+     */
+    public boolean foldedShowsProblem() {
+        return problems.shows(ConfigSetting.CAR_TRIP_SURCHARGE);
     }
 
     @Override
@@ -153,7 +169,8 @@ public final class CarCard implements ConfigPart {
      */
     private Optional<Car> car(Percent stored, Consumer<InvalidSetting> refused) {
         try {
-            var tripSurcharge = showsSurcharge ? new Percent(surcharge.value()) : stored;
+            var tripSurcharge = showsSurcharge
+                    ? Percent.of(ConfigSetting.CAR_TRIP_SURCHARGE, surcharge.value()) : stored;
             return Optional.of(new Car(battery.value(), consumption.value(), distance.value(), tripSurcharge));
         } catch (InvalidSetting e) {
             refused.accept(e);

@@ -18,10 +18,10 @@ class CarForm(handle: SavedStateHandle, numbers: NumberText) :
     /**
      * A field of the form.
      *
-     * @property setting the engine's name for it; null for one that is never typical
+     * @property setting the engine's name for it
      * @property decimals the decimals it shows
      */
-    enum class Field(val setting: ConfigSetting?, val decimals: Int) {
+    enum class Field(val setting: ConfigSetting, val decimals: Int) {
         /** The usable capacity of the battery, in kWh. */
         BATTERY(ConfigSetting.CAR_BATTERY, 1),
         /** The energy used per 100 km, in kWh. */
@@ -29,17 +29,18 @@ class CarForm(handle: SavedStateHandle, numbers: NumberText) :
         /** How far the car is driven on a normal day, trips apart, in km. */
         DAILY_DISTANCE(ConfigSetting.CAR_DAILY_DISTANCE, 0),
         /** The share added for a trip's energy, in %. */
-        TRIP_SURCHARGE(null, 0),
+        TRIP_SURCHARGE(ConfigSetting.CAR_TRIP_SURCHARGE, 0),
     }
 
     private companion object {
-        val OWN = Field.entries.mapNotNull { it.setting }.toSet()
+        /** The settings that may be typical; the trip surcharge never is. */
+        val OWN = setOf(ConfigSetting.CAR_BATTERY, ConfigSetting.CAR_CONSUMPTION, ConfigSetting.CAR_DAILY_DISTANCE)
     }
 
     override fun load(config: EngineConfig) {
         show(config.system().car())
         val typical = config.typical().system()
-        state.markTypical(Field.entries.filter { field -> field.setting?.let { it in typical } == true }.toSet())
+        state.markTypical(Field.entries.filter { it.setting in typical && it.setting in OWN }.toSet())
         state.fill(Field.TRIP_SURCHARGE, numbers.write(config.system().car().tripSurcharge().value(), 0))
     }
 
@@ -57,11 +58,12 @@ class CarForm(handle: SavedStateHandle, numbers: NumberText) :
         val battery = reader.number(Field.BATTERY, stored.usableBatteryKwh(), Field.BATTERY.decimals)
         val consumption = reader.number(Field.CONSUMPTION, stored.consumptionKwhPer100km(), Field.CONSUMPTION.decimals)
         val distance = reader.number(Field.DAILY_DISTANCE, stored.kmPerDay(), Field.DAILY_DISTANCE.decimals)
-        val surcharge = reader.percent(Field.TRIP_SURCHARGE, stored.tripSurcharge(), Field.TRIP_SURCHARGE.decimals)
+        val surcharge = reader.percent(Field.TRIP_SURCHARGE, Field.TRIP_SURCHARGE.setting, stored.tripSurcharge(),
+            Field.TRIP_SURCHARGE.decimals)
         val car = reader.records({ setting -> Field.entries.first { it.setting == setting } }) {
             Car(battery, consumption, distance, surcharge)
         } ?: return null
-        val marked = state.typical().mapNotNull { it.setting }.toSet()
+        val marked = state.typical().map { it.setting }.toSet()
         return config.withSystem(config.system().withHouseAndCar(config.system().house(), car),
             config.typical().withSystem(OWN, marked))
     }

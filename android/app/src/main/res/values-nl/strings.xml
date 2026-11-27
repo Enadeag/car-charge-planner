@@ -140,6 +140,11 @@
   <string name="finish_failed">Niet opgeslagen: de instellingen konden niet worden geschreven.</string>
 
   <string name="problem_out_of_range">Deze waarde valt buiten wat hier mag.</string>
+  <string name="problem_from_to">Typ een getal van %1$s tot en met %2$s.</string>
+  <string name="problem_at_least">Typ een getal van %1$s of meer.</string>
+  <string name="problem_more_than">Typ een getal groter dan %1$s.</string>
+  <string name="problem_more_than_at_most">Typ een getal groter dan %1$s en hoogstens %2$s.</string>
+  <string name="problem_at_least_below">Typ een getal van %1$s of meer en kleiner dan %2$s.</string>
   <string name="problem_not_below_target">Moet lager zijn dan het doelniveau.</string>
   <string name="problem_below_minimum_current">Mag niet lager zijn dan de minimale laadstroom.</string>
   <string name="problem_same_as_primary">Kies een andere dienst dan de eerste.</string>
@@ -147,6 +152,7 @@
   <string name="problem_same_as_start">Kies twee verschillende tijden.</string>
   <string name="problem_not_a_number">Typ een getal.</string>
   <string name="problem_not_a_whole_number">Typ een heel getal, zonder decimalen.</string>
+  <string name="problem_thousands_separator">Typ het getal zonder scheidingsteken voor duizendtallen.</string>
   <string name="problem_required">Verplicht: zonder dit kan de dienst niet geraadpleegd worden.</string>
   <string name="problem_server_address">Gebruik een adres dat begint met https://, zonder gebruikersnaam, ? of #.</string>
   <string name="problem_letters_and_digits">Gebruik alleen letters en cijfers, hoogstens 64: zo zien de API-sleutels van de dienst eruit.</string>

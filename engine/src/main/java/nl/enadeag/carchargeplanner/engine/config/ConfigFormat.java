@@ -170,7 +170,8 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         double battery = car.number("usableBatteryKwh");
         double consumption = car.number("consumptionKwhPer100km");
         double distance = car.number("kmPerDay");
-        var surcharge = car.has("tripSurchargePct") ? percent(car, "tripSurchargePct") : Car.STANDARD_TRIP_SURCHARGE;
+        var surcharge = car.has("tripSurchargePct")
+                ? percent(car, "tripSurchargePct", ConfigSetting.CAR_TRIP_SURCHARGE) : Car.STANDARD_TRIP_SURCHARGE;
         return car.make(() -> new Car(battery, consumption, distance, surcharge));
     }
 
@@ -235,8 +236,8 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
     private static PlanningPreferences planning(ConfigFields planning) throws FormatProblem {
         planning.only("minimumPct", "targetPct", "margin", "importToleranceKwh", "minWindowMinutes",
                 "notifyLeadMinutes", "chargingHours");
-        var minimum = percent(planning, "minimumPct");
-        var target = percent(planning, "targetPct");
+        var minimum = percent(planning, "minimumPct", ConfigSetting.MINIMUM_CHARGE);
+        var target = percent(planning, "targetPct", ConfigSetting.TARGET_CHARGE);
         double margin = planning.number("margin");
         double importTolerance = planning.number("importToleranceKwh");
         var minWindow = Duration.ofMinutes(planning.wholeNumber("minWindowMinutes"));
@@ -254,9 +255,9 @@ final class ConfigFormat implements FileFormat<EngineConfig> {
         return hours.make(() -> new ChargingHours(start, end));
     }
 
-    private static Percent percent(ConfigFields fields, String name) throws FormatProblem {
+    private static Percent percent(ConfigFields fields, String name, ConfigSetting setting) throws FormatProblem {
         double value = fields.number(name);
-        return fields.make(name, () -> new Percent(value));
+        return fields.make(name, () -> Percent.of(setting, value));
     }
 
     private static ForecastSelection forecast(ConfigFields forecast) throws FormatProblem {

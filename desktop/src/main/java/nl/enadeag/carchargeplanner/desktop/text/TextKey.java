@@ -502,6 +502,22 @@ public enum TextKey {
     SETTINGS_NO_CONFIG_HINT,
     /** A value outside the range its setting allows. */
     PROBLEM_OUT_OF_RANGE,
+    /** A typed text that is not a number. */
+    PROBLEM_NOT_A_NUMBER,
+    /** A number with decimals where the field takes a whole number, such as a current. */
+    PROBLEM_NOT_A_WHOLE_NUMBER,
+    /** Exactly three decimals where the field shows fewer, which reads as a thousands separator, such as "1.000". */
+    PROBLEM_THOUSANDS_SEPARATOR,
+    /** A number outside its setting's limit; {0} the lowest allowed, {1} the highest allowed, written as numbers. */
+    PROBLEM_FROM_TO,
+    /** A number below its setting's limit, which has no highest end; {0} the lowest allowed, written as a number. */
+    PROBLEM_AT_LEAST,
+    /** A number not above its setting's limit, which has no highest end; {0} the end, itself not allowed. */
+    PROBLEM_MORE_THAN,
+    /** A number outside its setting's limit; {0} the lowest end, itself not allowed, {1} the highest allowed. */
+    PROBLEM_MORE_THAN_AT_MOST,
+    /** A number outside its setting's limit; {0} the lowest allowed, {1} the highest end, itself not allowed. */
+    PROBLEM_AT_LEAST_BELOW,
     /** A minimum charge level that is not below the target. */
     PROBLEM_NOT_BELOW_TARGET,
     /** The unit after a number of minutes. */

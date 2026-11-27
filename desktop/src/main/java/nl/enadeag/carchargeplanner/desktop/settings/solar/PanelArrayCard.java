@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.field.NumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.TextInput;
 import nl.enadeag.carchargeplanner.desktop.settings.field.WholeNumberInput;
 import nl.enadeag.carchargeplanner.desktop.settings.form.ChoiceNames;
+import nl.enadeag.carchargeplanner.desktop.settings.form.Limit;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
 import nl.enadeag.carchargeplanner.desktop.settings.form.PanelArrayEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.TypicalMarks;
@@ -78,7 +79,7 @@ final class PanelArrayCard {
         var names = new ChoiceNames(messages);
         direction = new ChoiceInput<>(List.of(CompassPoint.values()), names::direction);
         tilt = new ChoiceInput<>(List.of(TiltChoice.values()), names::tilt);
-        losses = new NumberInput(new NumberRange(0, 99, 1, 0), "%", messages);
+        losses = new NumberInput(NumberRange.of(Limit.of(ConfigSetting.PANEL_LOSSES), 1, 0), "%", messages);
         problems = new ProblemRows(messages);
         typical = new TypicalMarks();
         this.remove = new Button(messages.text(TextKey.PANELS_REMOVE));
@@ -118,6 +119,7 @@ final class PanelArrayCard {
             losses.load(shown.lossesPct());
         });
         problems.clear();
+        more.holdOpen(false);
         showFigures();
     }
 
@@ -136,6 +138,7 @@ final class PanelArrayCard {
             losses.load(shown.lossesPct());
         });
         problems.clear();
+        more.holdOpen(false);
         showFigures();
     }
 
@@ -165,25 +168,31 @@ final class PanelArrayCard {
      * @return the array, or empty when a value is refused or missing
      */
     Optional<PanelArray> read() {
-        return entry().check(thisYear.get(), messages) instanceof PanelArrayEntry.Checked.Accepted(var array)
-                ? Optional.of(array) : Optional.empty();
+        if (problems.typingIsWrong()) {
+            return Optional.empty();
+        }
+        return entry().check(thisYear.get(), messages, problems::text) instanceof PanelArrayEntry.Checked.Accepted(
+                var array) ? Optional.of(array) : Optional.empty();
     }
 
     /**
-     * Shows the problem of a refused or missing value at its field; a problem shown before is taken away first. The
-     * fields under "More settings" never have one: the losses field keeps its value in range and the name takes any.
+     * Shows the problem of a refused or missing value at its field; a problem shown before is taken away first. When
+     * the losses under "More settings" show one, the fold opens; the name there takes any text.
      *
      * @return true when a value is refused or missing
      */
     boolean showProblems() {
         problems.clear();
+        more.holdOpen(false);
         losses.commitTyped();
-        if (entry().check(thisYear.get(), messages) instanceof PanelArrayEntry.Checked.Refused(var setting,
-                var problem)) {
+        var refused = problems.showTyping();
+        if (!refused && entry().check(thisYear.get(), messages, problems::text)
+                instanceof PanelArrayEntry.Checked.Refused(var setting, var problem)) {
             problems.show(setting, problem);
-            return true;
+            refused = true;
         }
-        return false;
+        more.holdOpen(problems.shows(ConfigSetting.PANEL_LOSSES));
+        return refused;
     }
 
     Set<ConfigSetting> typical() {

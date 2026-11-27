@@ -87,6 +87,23 @@ class NumberTextTest {
             NumberText.WholeNumber.Wrong(FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE)))
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["1.000", "1,000", "-2.500"])
+    fun threeDecimalsInAFieldWithFewerReadAsAThousandsSeparator(text: String) {
+        for (numbers in listOf(english, dutch)) {
+            assertThat(numbers.hasThousandsSeparator(text, 0)).isTrue()
+            assertThat(numbers.hasThousandsSeparator(text, 2)).isTrue()
+            assertThat(numbers.hasThousandsSeparator(text, 3)).isFalse()
+            assertThat(numbers.readWhole(text)).isEqualTo(NumberText.WholeNumber.Wrong(FieldProblem.ThousandsSeparator))
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["1.5", "1,25", "1.0005", "1000", "abc"])
+    fun otherTextsHaveNoThousandsSeparator(text: String) {
+        assertThat(english.hasThousandsSeparator(text, 1)).isFalse()
+    }
+
     @Test
     fun theEngineSaysTheBatteryChargesBeforeTheTripExactlyWhenTheWrittenLevelsDiffer() {
         // every half from 0 to 100 and the closest numbers on either side of it, as the dashboard writes them
