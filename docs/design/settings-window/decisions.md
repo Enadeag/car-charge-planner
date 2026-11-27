@@ -1,6 +1,6 @@
 # The desktop's Settings window: decisions
 
-What the desktop's Settings and set-up do with a typed number, beside [ADR 0011](../../adr/0011-engine-says-what-a-setting-may-be.md). The Android app's forms are in [android/settings.md](../android/settings.md) and the engine's side in [engine/decisions.md](../engine/decisions.md).
+What the desktop's Settings and set-up do with a typed number and a typed time, beside [ADR 0011](../../adr/0011-engine-says-what-a-setting-may-be.md). The Android app's forms are in [android/settings.md](../android/settings.md) and the engine's side in [engine/decisions.md](../engine/decisions.md).
 
 ### Numbers and the engine's rules
 
@@ -12,3 +12,14 @@ What the desktop's Settings and set-up do with a typed number, beside [ADR 0011]
 - A value the engine refuses as out of range says the limit in the field's unit and the owner's number format, in one of five sentences: from … to …, … or more, more than …, more than … and at most …, and … or more and below …. An end that is allowed is named rounded inward, so a value the text names is accepted; an end that is not allowed is named as it is (#317).
 - A problem goes as soon as its field is edited, or another value is put in it; a text that is not a number stays as typed until then (#317).
 - A field under a fold that shows a problem opens the fold and holds it open until the next check finds none: the charger's values, the Car and house page's trip surcharge and household use, the Planning page's margin, import tolerance and shortest window, a panel array's losses, and the Location page's coordinates (#317).
+
+### Times and the system's clock
+
+- Every time the desktop app shows follows the system's 12- or 24-hour clock, through the one formatter in `Messages`: the dashboard, the chart's readout, the tray icon's tooltip, the notifications and the time fields of Settings, set-up, the trip entry and the one-off away entry (#319).
+- The clock comes from the platform's `ClockSetting`: on Windows `sShortTime` of `HKCU\Control Panel\International` (an `H` or an `h`), then its `iTime`, followed by the registry's change notification; on GNOME `clock-format` of `org.gnome.desktop.interface` through the settings portal, followed by its `SettingChanged`, also in the Flatpak without a new permission; on any other desktop the region of the first of `LC_ALL`, `LC_TIME` and `LANG`, read at start. Anything the app cannot read, the C locale, or a language the runtime has no locale data of, leaves the times to the language: a 24-hour clock in English and Dutch. A failed read is logged at debug (#319).
+- The portal is asked only when `XDG_CURRENT_DESKTOP` names GNOME: on another desktop a GTK portal installed beside it may answer for GNOME's setting with a default the owner never chose (#319).
+- A 12-hour time carries the language's own marker from Java's locale data, with no text of its own to translate: "7:30 pm" in English, with a narrow no-break space, and "7:30 p.m." in Dutch. A change of the clock remakes the messages, as a change of language does, so every window, the tray and the notifications follow (#319).
+- A time field reads either clock whatever the system's: hours and minutes from 0:00 to 23:59, a leading zero optional ("7:30" is 07:30); or hours from 1 to 12, minutes optional, with "am", "pm" or the language's own marker before or after them, in any case, with or without dots and a space, a narrow or a no-break one too ("12 am" is 00:00, "12 pm" noon). Anything else, such as "13:00 pm" or "7", is refused with "Type the times as hours and minutes, such as 07:30.", which holds on either clock (#319).
+- The time fields are wider on a 12-hour clock (7 em instead of 4.5), and a weekly away period's row wraps rather than cut off its words (#319).
+- The chart's time axis keeps the hours of a 24-hour clock, "00 03 … 24", on either clock: with a marker, "12 a.m." at midnight runs into "3 a.m." on a chart from midnight to midnight, as in the far north in summer, at every text size (#319).
+- The settings file keeps the charging hours and the weekly away periods as `HH:mm` on a 24-hour clock, and the log writes its times on a 24-hour clock, whatever the system's (#319).

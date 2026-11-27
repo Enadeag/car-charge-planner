@@ -113,6 +113,8 @@ A charge power fills in the phases and the maximum charge current at 230 V: 3.7 
 
 **Save** checks everything together. If something is wrong, it says what and writes nothing; otherwise the change applies at once. How the app shows itself (tray icon or window) applies the next time it starts.
 
+**Times** follow your system's 12- or 24-hour clock: on Windows the time format (Settings, Time and language, Language and region), on GNOME the clock format (Settings, System, Date and time), and on KDE Plasma and other desktops the time format of your region (`LC_TIME`) as it was when the app started. The dashboard, the tray icon's tooltip, the notifications and every time field show it, such as "7:30 pm" in English and "7:30 p.m." in Dutch; a change on Windows or GNOME applies at once, on other desktops from the app's next start. Without a setting the app can read, times are written the language's way, on a 24-hour clock in English and Dutch. A time field reads either clock whatever the setting: "19:30", "7:30 pm", "7:30PM" and "7:30 p.m." are the same time, "7:30" without am or pm is in the morning, "12 am" is midnight and "12 pm" noon. The chart's time axis keeps its hours 00 to 24, and the settings file and the log keep times on a 24-hour clock.
+
 ## How it plans, briefly
 
 1. Surplus per step = the forecast provider's expected solar power minus the house's own use, scaled by a planning margin (85% by default) so it errs towards too little power rather than grid draw.
