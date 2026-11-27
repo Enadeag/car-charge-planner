@@ -11,6 +11,7 @@ import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.connections.impl.DBusConnectionBuilder;
 import org.freedesktop.dbus.exceptions.DBusException;
 import org.freedesktop.dbus.exceptions.DBusExecutionException;
+import org.freedesktop.dbus.interfaces.DBus;
 import org.freedesktop.dbus.types.Variant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -102,6 +103,20 @@ class PortalClockTest {
                 new Variant<>(value)));
     }
 
+    /** Whether the first connection that joined the bus, of these changes of owner, left it again within a while. */
+    private static boolean joinedAndLeft(BlockingQueue<DBus.NameOwnerChanged> owners) throws InterruptedException {
+        String joined = null;
+        for (var change = owners.poll(10, TimeUnit.SECONDS); change != null;
+                change = owners.poll(10, TimeUnit.SECONDS)) {
+            if (joined == null && change.name.startsWith(":") && change.oldOwner.isEmpty()) {
+                joined = change.name;
+            } else if (change.name.equals(joined) && change.newOwner.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** The next clock given, or null when none came within a while. */
     private ClockFormat next() throws InterruptedException {
         return clocks.poll(10, TimeUnit.SECONDS);
@@ -144,6 +159,24 @@ class PortalClockTest {
     }
 
     @Test
+    void aChangeFromAnotherProgramThanThePortalIsNotHeard() throws Exception {
+        serve();
+        follow();
+        assertThat(next()).isEqualTo(ClockFormat.TWENTY_FOUR_HOUR);
+        var other = connect();
+        try {
+            other.sendMessage(new SettingsPortal.SettingChanged(SettingsPortal.OBJECT_PATH, PortalClock.NAMESPACE,
+                    PortalClock.KEY, new Variant<>("12h")));
+            change(PortalClock.NAMESPACE, PortalClock.KEY, "36h");
+
+            assertThat(next()).isEqualTo(ClockFormat.LANGUAGE);
+            assertThat(clocks).isEmpty();
+        } finally {
+            other.disconnect();
+        }
+    }
+
+    @Test
     void aValueTheAppDoesNotKnowLeavesTheClockToTheLanguage() throws Exception {
         serve().clockFormat = "36h";
 
@@ -155,10 +188,13 @@ class PortalClockTest {
     @Test
     void withoutTheSettingTheOtherSettingIsFollowed() throws Exception {
         serve().clockFormat = null;
+        var owners = new LinkedBlockingQueue<DBus.NameOwnerChanged>();
+        desktop.addSigHandler(DBus.NameOwnerChanged.class, owners::add);
 
         follow();
 
         assertThat(clocks).containsExactly(OTHERWISE);
+        assertThat(joinedAndLeft(owners)).as("the connection to the portal is closed").isTrue();
     }
 
     @Test

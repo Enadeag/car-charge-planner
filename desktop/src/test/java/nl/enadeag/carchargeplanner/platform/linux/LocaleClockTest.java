@@ -23,7 +23,7 @@ class LocaleClockTest {
     @ParameterizedTest
     @CsvSource({"en_US.UTF-8, TWELVE_HOUR", "en_US, TWELVE_HOUR", "en_IN.UTF-8, TWELVE_HOUR",
         "en_GB.UTF-8, TWENTY_FOUR_HOUR", "nl_NL.UTF-8, TWENTY_FOUR_HOUR", "nl_NL@euro, TWENTY_FOUR_HOUR",
-        "en_IE.UTF-8, TWENTY_FOUR_HOUR"})
+        "en_IE.UTF-8, TWENTY_FOUR_HOUR", "nl, TWENTY_FOUR_HOUR", "en, TWELVE_HOUR"})
     void theTimeLocalesRegionSaysTheClock(String timeLocale, ClockFormat clock) {
         assertThat(clockOf(Map.of("LC_TIME", timeLocale, "LANG", "nl_NL.UTF-8"))).isEqualTo(clock);
     }

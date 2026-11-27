@@ -7,6 +7,7 @@ import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripCheck.Checked;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripCheck.Entered;
 import nl.enadeag.carchargeplanner.desktop.dashboard.trip.TripCheck.Field;
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -51,6 +52,16 @@ class TripCheckTest {
 
         assertThat(morning().check(entered))
                 .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), 300, true, true)));
+    }
+
+    @Test
+    void onA12HourClockATimeWithAMarkerAndOneOnA24HourClockAreBothRead() {
+        var twelveHour = check(at(DAY, 6, 0), Units.METRIC, new Messages(Language.ENGLISH, ClockFormat.TWELVE_HOUR));
+
+        assertThat(twelveHour.check(entered("7:30 am", "7:30 pm", "300")))
+                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 19, 30), 300, false)));
+        assertThat(twelveHour.check(entered("7:30", "19:30", "300")))
+                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 19, 30), 300, false)));
     }
 
     @Test

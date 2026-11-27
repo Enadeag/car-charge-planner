@@ -17,6 +17,8 @@ final class TypedTime {
     /** The hours and minutes, with the text before and after them, which may hold a marker. */
     private static final Pattern TIME = Pattern.compile("(?<before>\\D*?)\\s*(?<hours>\\d{1,2})(?::(?<minutes>\\d{2}))?"
             + "\\s*(?<after>\\D*)");
+    /** Longer than any time, such as "12:30 P. M.", with room; a longer text is refused before it is matched. */
+    private static final int LONGEST = 20;
     /** What is left out of a marker before it is compared, so "p.m.", "P. M." and "pm" are one. */
     private static final Pattern IGNORED_IN_A_MARKER = Pattern.compile("[.\\s]");
 
@@ -47,7 +49,12 @@ final class TypedTime {
      */
     Optional<LocalTime> read(String text) {
         // a narrow or non-breaking space, as the app itself writes before a marker, is a space too
-        var matcher = TIME.matcher(text.replace(' ', ' ').replace(' ', ' ').strip());
+        var stripped = text.replace(' ', ' ').replace(' ', ' ').strip();
+        // the pattern takes ever longer on a long text, such as a pasted paragraph with spaces in it
+        if (stripped.length() > LONGEST) {
+            return Optional.empty();
+        }
+        var matcher = TIME.matcher(stripped);
         if (!matcher.matches()) {
             return Optional.empty();
         }

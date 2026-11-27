@@ -1,11 +1,14 @@
 package nl.enadeag.carchargeplanner.desktop.text;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 
 import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -106,5 +109,14 @@ class MessagesClockTest {
         var written = messages.time(LocalTime.of(21, 45));
 
         assertThat(messages.readTime(written.toUpperCase(messages.locale()))).contains(LocalTime.of(21, 45));
+    }
+
+    @Test
+    void aLongTextIsRefusedAtOnce() {
+        var pasted = "a" + " ".repeat(30_000) + "b";
+        var messages = new Messages(Language.ENGLISH, ClockFormat.TWELVE_HOUR);
+
+        assertThat(assertTimeout(Duration.ofSeconds(1), () -> messages.readTime(pasted))).isEmpty();
+        assertThat(messages.readTime("7:30" + " ".repeat(30) + "pm")).isEmpty();
     }
 }

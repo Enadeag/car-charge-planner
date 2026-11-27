@@ -6,12 +6,15 @@ import java.lang.System.Logger.Level;
 import java.util.function.Consumer;
 import org.freedesktop.dbus.connections.impl.DBusConnection;
 import org.freedesktop.dbus.exceptions.DBusException;
+import org.freedesktop.dbus.interfaces.DBus;
 import org.freedesktop.dbus.types.Variant;
 
 /**
  * GNOME's clock format, {@code clock-format} of {@code org.gnome.desktop.interface}, "12h" or "24h", read through the
  * desktop portal's Settings, which also reaches it from inside a Flatpak sandbox, and followed by its
- * {@code SettingChanged} signal. A desktop without the portal or the setting gives the clock another setting says.
+ * {@code SettingChanged} signal, heard only from the program that owns the portal's name as following starts, as any
+ * program on the session bus can send the signal. A desktop without the portal or the setting gives the clock another
+ * setting says.
  */
 public final class PortalClock implements ClockSetting {
 
@@ -45,9 +48,12 @@ public final class PortalClock implements ClockSetting {
         DBusConnection bus = null;
         try {
             bus = connector.connect();
+            var portalOwner = bus.getRemoteObject("org.freedesktop.DBus", "/org/freedesktop/DBus", DBus.class)
+                    .GetNameOwner(SettingsPortal.BUS_NAME);
             // listen before reading, so a change right after the read is not missed
             bus.addSigHandler(SettingsPortal.SettingChanged.class, signal -> {
-                if (NAMESPACE.equals(signal.namespace) && KEY.equals(signal.key)) {
+                if (portalOwner.equals(signal.getSource()) && NAMESPACE.equals(signal.namespace)
+                        && KEY.equals(signal.key)) {
                     give(of(signal.value), changed);
                 }
             });

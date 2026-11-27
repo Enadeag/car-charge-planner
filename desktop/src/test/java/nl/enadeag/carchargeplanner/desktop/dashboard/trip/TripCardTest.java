@@ -10,6 +10,7 @@ import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.Models;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -51,8 +52,12 @@ class TripCardTest {
     }
 
     private void show(DayModel day, TripsModel trips) throws Exception {
+        show(day, trips, ENGLISH);
+    }
+
+    private void show(DayModel day, TripsModel trips, Messages messages) throws Exception {
         Fx.run(() -> {
-            card = new TripCard(() -> { }, ENGLISH);
+            card = new TripCard(() -> { }, messages);
             card.onChange(added::add, (trip, changedTrip) -> changed.add(List.of(trip, changedTrip)), removed::add,
                     Models.CLOCK);
             card.show(day.date(), day.title(), day.trips(), trips);
@@ -179,6 +184,31 @@ class TripCardTest {
 
         assertThat(changed).containsExactly(List.of(trip, new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 19, 0), 300.4,
                 true, true)));
+    }
+
+    /** The departure's and the return's time as the entry shows them. */
+    private List<String> timesShown() throws Exception {
+        return Fx.call(() -> Scenes.all(card.editor()).stream()
+                .filter(node -> node.getStyleClass().contains("trip-time"))
+                .map(node -> ((javafx.scene.control.TextField) node).getText()).toList());
+    }
+
+    @Test
+    void onA12HourClockTheEntryShowsItsTimesWithTheirMarker() throws Exception {
+        var trip = new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 19, 15), 300, false);
+        var listed = Models.LISTED_SATURDAY;
+        show(Models.CLOUDY_TOMORROW.withTrips(List.of(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
+                listed.text(), listed.originText()))), Models.TRIPS,
+                new Messages(Language.ENGLISH, ClockFormat.TWELVE_HOUR));
+
+        openEntry();
+        assertThat(timesShown()).containsExactly("8:00\u202fam", "6:00\u202fpm");
+        Fx.run(control(Button.class, ENGLISH.text(TextKey.TRIP_CANCEL))::fire);
+
+        Fx.run(control(Button.class, ENGLISH.text(TextKey.TRIP_CHANGE))::fire);
+        assertThat(timesShown()).containsExactly("7:30\u202fam", "7:15\u202fpm");
+        Fx.run(card.editor()::save);
+        assertThat(changed).containsExactly(List.of(trip, trip));
     }
 
     @Test

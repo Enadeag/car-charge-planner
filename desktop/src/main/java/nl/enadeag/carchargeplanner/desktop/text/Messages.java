@@ -167,7 +167,7 @@ public final class Messages {
      *     for 07:30; or hours from 1 to 12 with or without minutes and a marker, "am" or "pm", or the language's own
      *     such as Dutch "a.m.", in any case, with or without dots and a space, so "12 am" is 00:00 and "12 pm" noon;
      *     spaces around it are ignored
-     * @return the time; empty when the text is none of these
+     * @return the time; empty when the text is none of these, or far longer than any of them
      */
     public Optional<LocalTime> readTime(String text) {
         return typed.read(text);
