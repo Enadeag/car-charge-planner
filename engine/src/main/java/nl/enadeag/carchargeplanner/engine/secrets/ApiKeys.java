@@ -465,13 +465,12 @@ public final class ApiKeys implements SecretsSource {
             try {
                 return intoKeychain(edit, stored);
             } catch (KeychainException e) {
-                // a keychain with entries it cannot read was readable otherwise, and the file would hide those
-                // entries: the save fails rather than fall back, also when deleting a removed one is refused
-                if (e.kind() != KeychainException.Kind.LOCKED && !stored.inKeychain().unreadable().isEmpty()) {
+                // a keychain that was read and holds keys, readable or not, would be hidden by the file, which a load
+                // reads first: the save fails rather than fall back, also when deleting a removed one is refused
+                if (e.kind() != KeychainException.Kind.LOCKED && stored.inKeychain().holdsKeys()) {
                     throw new SecretsProblem("The API keys could not be stored in the system keychain ("
                             + e.getMessage() + ")." + (fallback == KeyFallback.PRIVATE_FILE
-                                    ? " As it holds keys that could not be read, they were not stored in the file "
-                                            + "either."
+                                    ? " As it holds keys the file would hide, they were not stored in the file either."
                                     : ""));
                 }
                 return notInKeychain(e, edit);

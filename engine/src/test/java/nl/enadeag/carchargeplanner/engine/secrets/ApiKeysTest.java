@@ -1000,58 +1000,83 @@ class ApiKeysTest {
         assertThat(lockable.stops).hasValue(1);
     }
 
-    @Test
-    void removingFromAKeychainThatRefusesWritesSaysItWasHeldAndTheKeyIsNotLoadedAgain() throws SecretsProblem {
-        var refusing = holdingTheKeys(new RefusingWrites());
-        var before = Map.copyOf(refusing.entries);
-
-        assertThat(keys(refusing).remove(Map.of(OPEN_METEO, Set.of("api_key")))).isTrue();
-
-        assertThat(keys(refusing).load().byProvider()).doesNotContainKey(OPEN_METEO);
-        assertThat(refusing.entries).isEqualTo(before);
-    }
-
     static Stream<MemoryKeychain> readableKeychainsHoldingTheKeysThatRefuseWrites() {
         return Stream.of(holdingTheKeys(new FailingWrites()), holdingTheKeys(new RefusingWrites()));
     }
 
-    /** Pins #394's bug: the file holds only what the change names, so the keychain's other keys no longer load. */
+    static Stream<Arguments> changesToAReadableKeychainHoldingTheKeysThatRefusesWrites() {
+        var entering = NEW_SOLCAST_KEY;
+        var removing = new KeyChanges(Secrets.NONE, Map.of(OPEN_METEO, Set.of("api_key")));
+        return Stream.of(Arguments.of(holdingTheKeys(new FailingWrites()), entering),
+                Arguments.of(holdingTheKeys(new RefusingWrites()), entering),
+                Arguments.of(holdingTheKeys(new FailingWrites()), removing),
+                Arguments.of(holdingTheKeys(new RefusingWrites()), removing));
+    }
+
     @ParameterizedTest
-    @MethodSource("readableKeychainsHoldingTheKeysThatRefuseWrites")
-    void aChangeIntoAReadableKeychainWithKeysThatRefusesWritesWritesAFileThatHidesTheOtherKeys(
-            MemoryKeychain refusing) throws SecretsProblem {
+    @MethodSource("changesToAReadableKeychainHoldingTheKeysThatRefusesWrites")
+    void aChangeIntoAReadableKeychainWithKeysThatRefusesWritesFailsAndWritesNoFileThatWouldHideThem(
+            MemoryKeychain refusing, KeyChanges changes) throws SecretsProblem {
         var before = Map.copyOf(refusing.entries);
+        var keys = keys(refusing);
+
+        assertThatThrownBy(() -> keys.applyChanges(changes, () -> { }))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED))
+                .hasMessageContaining("not stored in the file either")
+                .hasMessageNotContaining("SC-NEW").hasMessageNotContaining("SECRET");
+
+        assertThat(file().path()).doesNotExist();
+        assertThat(refusing.entries).isEqualTo(before);
+        assertThat(keys.load()).isEqualTo(KEYS);
+        assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
+    }
+
+    @Test
+    void aChangeIntoAReadableKeychainWithKeysThatRefusesWritesLeavesAFileFromBeforeAsItIs()
+            throws IOException, SecretsProblem {
+        var refusing = holdingTheKeys(new RefusingWrites());
+        file().write(new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-IN-FILE"))));
+        var before = Files.readString(file().path());
+
+        assertThatThrownBy(() -> keys(refusing).applyChanges(NEW_OPEN_METEO_KEY, () -> { }))
+                .isInstanceOf(SecretsProblem.class);
+
+        assertThat(Files.readString(file().path())).isEqualTo(before);
+    }
+
+    @Test
+    void aChangeIntoAReadableKeychainThatRefusesWritesAndHoldsNoKeyGoesToTheFile() throws SecretsProblem {
+        var refusing = new RefusingWrites();
+        refusing.entries.put(KeychainEntries.INDEX, "[\"" + OPEN_METEO_ENTRY + "\"]"); // listed, but holds no value
 
         keys(refusing).applyChanges(NEW_SOLCAST_KEY, () -> { });
 
-        var onlyTheChange = new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW")));
-        assertThat(file().read()).isEqualTo(onlyTheChange);
-        assertThat(keys(refusing).load()).isEqualTo(onlyTheChange);
-        assertThat(refusing.entries).isEqualTo(before);
+        assertThat(file().read()).isEqualTo(new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW"))));
     }
 
-    /** Pins #394's bug for a removal: the file holds no key at all, so none of the keychain's keys loads. */
     @ParameterizedTest
     @MethodSource("readableKeychainsHoldingTheKeysThatRefuseWrites")
-    void aRemovalFromAReadableKeychainThatRefusesWritesWritesAFileThatHidesEveryKey(MemoryKeychain refusing)
+    void aSaveThatReplacesEveryKeyStillGoesToTheFileWhenAKeychainWithKeysRefusesWrites(MemoryKeychain refusing)
             throws SecretsProblem {
-        var removed = new KeyChanges(Secrets.NONE, Map.of(OPEN_METEO, Set.of("api_key")));
+        var replacing = new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW")));
 
-        keys(refusing).applyChanges(removed, () -> { });
+        keys(refusing).save(replacing);
 
-        assertThat(file().read()).isEqualTo(Secrets.NONE);
-        assertThat(keys(refusing).load()).isEqualTo(Secrets.NONE);
+        assertThat(file().read()).isEqualTo(replacing);
+        assertThat(keys(refusing).load()).isEqualTo(replacing);
     }
 
-    /** Pins #394's bug for {@code remove}, which saves as a change does. */
     @Test
-    void removingFromAReadableKeychainThatRefusesWritesWritesAFileThatHidesEveryKey() throws SecretsProblem {
+    void removingFromAReadableKeychainThatRefusesWritesFailsAndWritesNoFile() throws SecretsProblem {
         var refusing = holdingTheKeys(new RefusingWrites());
 
-        assertThat(keys(refusing).remove(Map.of(OPEN_METEO, Set.of("api_key")))).isTrue();
+        assertThatThrownBy(() -> keys(refusing).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
+                .isInstanceOfSatisfying(SecretsProblem.class,
+                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED));
 
-        assertThat(file().read()).isEqualTo(Secrets.NONE);
-        assertThat(keys(refusing).load()).isEqualTo(Secrets.NONE);
+        assertThat(file().path()).doesNotExist();
+        assertThat(keys(refusing).load()).isEqualTo(KEYS);
     }
 
     @Test

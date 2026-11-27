@@ -80,6 +80,15 @@ final class KeychainEntries {
         }
 
         /**
+         * Whether a key was found, readable or not; the names the index lists without a value do not count.
+         *
+         * @return true when an entry holds a value or could not be read
+         */
+        boolean holdsKeys() {
+            return !readable.byProvider().isEmpty() || !unreadable.isEmpty();
+        }
+
+        /**
          * Whether one of these settings is stored, readable or not.
          *
          * @return true when the index lists an entry for one of them that holds a value or could not be read
