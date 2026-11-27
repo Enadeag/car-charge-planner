@@ -98,7 +98,7 @@ internal fun phasesName(phases: Phases): Int = if (phases == Phases.ONE) R.strin
 
 /**
  * Every panel array, each named by its place and its name ("Array 2, east roof"), with its own Remove, which acts at
- * once; the last array's Remove is off, with the reason, which a screen reader reads with it. There is no reordering.
+ * once; the last array's Remove is off, with the reason under it. There is no reordering.
  * After Add the focus goes to the new array's heading, after Remove to the one before.
  *
  * @param problems the page's fields in order, for the focus after Save

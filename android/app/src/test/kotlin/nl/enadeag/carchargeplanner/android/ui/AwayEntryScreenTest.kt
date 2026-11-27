@@ -149,9 +149,9 @@ class AwayEntryScreenTest {
         }
     }
 
-    // the Trips card has an Add of its own, spoken "Add trip"
-    private val add get() = compose.onNode(hasText(text(R.string.one_off_add)) and !hasAnyAncestor(isDialog())
-        and hasContentDescription(text(R.string.one_off_add_spoken)))
+    // the Trips card, above the list, has an Add of its own
+    private val add get() = compose.onAllNodes(hasText(text(R.string.one_off_add)) and hasClickAction()
+        and !hasAnyAncestor(isDialog()))[1]
 
     private val save get() = compose.onNodeWithText(text(R.string.action_save))
 
@@ -160,8 +160,9 @@ class AwayEntryScreenTest {
 
     private fun line(text: String) = compose.onNode(hasText(text) and !hasAnyAncestor(isDialog()))
 
+    /** A period's Remove, by the period as the list shows it. */
     private fun remove(period: String) =
-        compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken, period)))
+        compose.controlFor(period, hasText(text(R.string.one_off_remove)) and hasClickAction())
 
     private fun openTheEntry() {
         add.performScrollTo().performClick()
@@ -203,7 +204,7 @@ class AwayEntryScreenTest {
         add.performScrollTo().assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
         val period = text(R.string.one_off_all_day, "Tomorrow")
-        compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken, period))).performScrollTo()
+        remove(period).performScrollTo()
             .assertIsDisplayed().assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .assert(hasText(text(R.string.one_off_remove)))
     }
@@ -424,7 +425,7 @@ class AwayEntryScreenTest {
         show()
         val period = text(R.string.one_off_all_day, "Tomorrow")
 
-        compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken, period))).performScrollTo()
+        remove(period).performScrollTo()
             .performClick()
         compose.waitForIdle()
 
@@ -450,13 +451,13 @@ class AwayEntryScreenTest {
         val first = text(R.string.one_off_all_day, "Tomorrow")
         val second = text(R.string.one_off_part, "Wed, Jun 3", text(R.string.time_span, "10:00", "12:00"))
 
-        compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken, second))).performScrollTo()
+        remove(second).performScrollTo()
             .performClick()
         compose.waitForIdle()
         line(first).assertIsFocused()
 
-        // the first Remove's snackbar covers the bottom of the page, so the second is pressed as TalkBack does
-        compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken, first)))
+        // the first Remove's snackbar covers the bottom of the page, so the second is pressed by its action
+        remove(first)
             .performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
         line(text(R.string.one_off_none)).assertIsFocused()
@@ -469,7 +470,7 @@ class AwayEntryScreenTest {
         show()
         val period = text(R.string.one_off_all_day, "Tomorrow")
 
-        compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken, period))).performScrollTo()
+        remove(period).performScrollTo()
             .performClick()
         compose.waitForIdle()
 
@@ -488,7 +489,7 @@ class AwayEntryScreenTest {
         show()
         val period = text(R.string.one_off_all_day, "Tomorrow")
 
-        compose.onNode(hasContentDescription(text(R.string.one_off_remove_spoken, period))).performScrollTo()
+        remove(period).performScrollTo()
             .performClick()
         compose.waitForIdle()
 
@@ -595,10 +596,10 @@ class AwayEntryScreenTest {
     fun theListAndTheEntryAreInDutch() {
         access.away = listOf(tomorrow)
         show()
-        add.assertExists().assert(hasContentDescription("Toevoegen: afwezigheid"))
+        add.assertExists().assert(hasText("Toevoegen"))
         compose.assertShowsNoneOf(englishOnlyTexts())
-        compose.onNode(hasContentDescription("Verwijderen: Morgen, hele dag")).performScrollTo()
-            .assert(hasText("Verwijderen"))
+        compose.controlFor("Morgen, hele dag", hasText("Verwijderen") and hasClickAction()).performScrollTo()
+            .assertExists()
         openTheEntry()
         compose.onNode(hasText("Afwezig op ", substring = true) and hasAnyAncestor(isDialog()))
             .assertIsDisplayed()
@@ -805,14 +806,6 @@ class AwayEntryScreenTest {
     }
 
     @Test
-    fun addIsSpokenAsAddAwayPeriodWhichStartsWithTheWordOnTheButton() {
-        show()
-
-        add.performScrollTo().assert(hasContentDescription(text(R.string.one_off_add_spoken)))
-        assertThat(text(R.string.one_off_add_spoken)).startsWith(text(R.string.one_off_add))
-    }
-
-    @Test
     fun theTimePickersToggleSwitchesBetweenTheDialAndTypingTheTime() {
         show()
         openTheEntry()
@@ -920,7 +913,7 @@ class AwayEntryScreenTest {
         compose.waitForIdle()
         val gate = CompletableDeferred<Unit>()
         access.awayGate = gate
-        // the snackbar covers the bottom of the page, so this Remove is pressed as TalkBack does
+        // the snackbar covers the bottom of the page, so this Remove is pressed by its action
         remove(second).performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
 

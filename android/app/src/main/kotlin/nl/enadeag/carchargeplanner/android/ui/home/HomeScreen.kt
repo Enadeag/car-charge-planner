@@ -40,11 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -199,9 +196,8 @@ internal fun HomeScreen(outlook: HomeOutlook, notice: HomeNotice, battery: Batte
 internal class Shown(var dashboard: Dashboard? = null)
 
 /**
- * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, which a screen
- * reader reads when it comes, once, also after turning the phone; and when the entry closes, however it does, the
- * focus moves on.
+ * What the battery entry's save came to, beside the entry itself: a level saved says so in a snackbar, once, also
+ * after turning the phone; and when the entry closes, however it does, the focus moves on.
  *
  * @param closed moves the focus once the entry closed
  */
@@ -364,9 +360,7 @@ private fun DayCard(day: DashboardDay, words: DashboardWords) {
             Text(words.title(day.name()), style = MaterialTheme.typography.titleLarge)
             Text(words.heading(day), style = MaterialTheme.typography.titleMedium)
             day.main().orElse(null)?.window()?.let { window ->
-                val spoken = words.spokenSpan(window)
-                Text(words.span(window), style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.semantics { contentDescription = spoken })
+                Text(words.span(window), style = MaterialTheme.typography.headlineMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(stringResource(R.string.day_set, window.amps(), words.decimal(window.powerKw())))
                     Text(stringResource(R.string.day_energy, words.decimal(window.energyKwh())))
@@ -377,7 +371,7 @@ private fun DayCard(day: DashboardDay, words: DashboardWords) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     figures.forEach {
-                        SourceChip(words.figure(it), sources.of(it), spoken = words.spokenFigure(it))
+                        SourceChip(words.figure(it), sources.of(it))
                     }
                 }
             }
@@ -403,9 +397,7 @@ private fun GridAdviceCard(advice: GridAdviceView, levels: ChargeLevels, words: 
 
 /**
  * A trip's advice, below the day card, as the desktop's: its heading in the colours of where the charge comes from,
- * the trip, what to charge and when, and the battery level it starts from, with Adjust under it. A screen reader reads
- * the advice as one heading, one sentence, and Adjust apart as a button whose name starts with its visible word, and
- * which says what a double tap does.
+ * the trip, what to charge and when, and the battery level it starts from, with Adjust under it.
  *
  * @param adjust moves to today's tab and opens the entry of the battery level
  */
@@ -413,26 +405,11 @@ private fun GridAdviceCard(advice: GridAdviceView, levels: ChargeLevels, words: 
 private fun TripAdviceCard(advice: TripAdviceText, source: EnergySource, adjust: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // one part for a screen reader, the sentence; its words are not read apart
-            val apart = Modifier.semantics { hideFromAccessibility() }
-            Column(Modifier.fillMaxWidth().semantics {
-                contentDescription = advice.spoken
-                heading()
-            }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SourceChip(advice.label, LocalSourceColours.current.of(source), modifier = apart)
-                Text(advice.title, style = MaterialTheme.typography.titleMedium, modifier = apart)
-                Text(advice.plan, style = MaterialTheme.typography.bodyMedium, modifier = apart)
-                Text(advice.level, style = MaterialTheme.typography.bodyMedium, modifier = apart)
-            }
-            val spoken = stringResource(R.string.trip_advice_adjust_spoken)
-            val hint = stringResource(R.string.trip_advice_adjust_hint)
-            AppTextButton(onClick = adjust, modifier = Modifier.align(Alignment.End).semantics {
-                contentDescription = spoken
-                onClick(label = hint) {
-                    adjust()
-                    true
-                }
-            }) {
+            SourceChip(advice.label, LocalSourceColours.current.of(source))
+            Text(advice.title, style = MaterialTheme.typography.titleMedium)
+            Text(advice.plan, style = MaterialTheme.typography.bodyMedium)
+            Text(advice.level, style = MaterialTheme.typography.bodyMedium)
+            AppTextButton(onClick = adjust, modifier = Modifier.align(Alignment.End)) {
                 Text(stringResource(R.string.trip_advice_adjust))
             }
         }
@@ -446,17 +423,11 @@ private fun FooterLine(footer: Footer, words: DashboardWords) {
         color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
-/**
- * A figure about an energy source in its fixed colours, which are never its only sign: the text names the source.
- *
- * @param spoken what a screen reader says instead, when the text reads badly aloud; null for the text
- */
+/** A figure about an energy source in its fixed colours, which are never its only sign: the text names the source. */
 @Composable
-private fun SourceChip(text: String, colours: SourceColours.Pair, modifier: Modifier = Modifier,
-    spoken: String? = null) {
-    val said = if (spoken == null) modifier else modifier.semantics { contentDescription = spoken }
+private fun SourceChip(text: String, colours: SourceColours.Pair, modifier: Modifier = Modifier) {
     Text(text, color = colours.text, style = MaterialTheme.typography.labelLarge,
-        modifier = said.background(colours.container, MaterialTheme.shapes.small)
+        modifier = modifier.background(colours.container, MaterialTheme.shapes.small)
             .padding(horizontal = 8.dp, vertical = 4.dp))
 }
 

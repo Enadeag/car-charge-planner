@@ -19,9 +19,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.AwayEntry
@@ -63,10 +61,10 @@ internal class AwayAction(val entry: AwayEntry, val focus: FocusRequester, val b
     val going: Going<OneOffAwayPeriod>, val restoring: Restoring<OneOffAwayPeriod>)
 
 /**
- * The one-off away periods still to come, under the heading "Car away" with Add at the end of its row, which opens
- * the entry on this page's day; each period with its Remove, which a screen reader says with the period. After a
- * Remove the focus goes, once the period is gone, to the period before it, or the one after, or the line that says
- * there is none, so it does not fall off the page with the button that went.
+ * The one-off away periods still to come, under the heading "Car away" with Add at the end of its row, which opens the
+ * entry on this page's day; each period with its Remove. After a Remove the focus goes, once the period is gone, to the
+ * period before it, or the one after, or the line that says there is none, so it does not fall off the page with the
+ * button that went.
  *
  * @param inView true on the page in view, whose Add the focus comes back to when the entry closes
  */
@@ -95,13 +93,12 @@ internal fun AwayList(dashboard: Dashboard, day: DashboardDay, words: DashboardW
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.one_off_heading), style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f))
-            // it may take the focus also in touch mode, where a button takes none, so the focus comes back to it,
-            // and a screen reader with it, when the entry closes
+            // it may take the focus also in touch mode, where a button takes none, so the focus comes back to it when
+            // the entry closes
             val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(away.focus)
                 else Modifier
-            val spoken = stringResource(R.string.one_off_add_spoken)
             HeldButton(busy = away.busy, onClick = { away.entry.open(day.name().date(), dashboard.zone) },
-                modifier = opener.semantics { contentDescription = spoken }) {
+                modifier = opener) {
                 Text(stringResource(R.string.one_off_add))
             }
         }
@@ -111,7 +108,6 @@ internal fun AwayList(dashboard: Dashboard, day: DashboardDay, words: DashboardW
         dashboard.away.forEach { coming ->
             key(coming.period()) {
                 val text = words.away(coming)
-                val spoken = stringResource(R.string.one_off_remove_spoken, text)
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RowLine(text, focus, coming.period(), Modifier.weight(1f))
@@ -119,7 +115,7 @@ internal fun AwayList(dashboard: Dashboard, day: DashboardDay, words: DashboardW
                         away.going.row = coming.period()
                         away.going.rows = periods
                         away.entry.remove(coming.period())
-                    }, modifier = Modifier.semantics { contentDescription = spoken }) {
+                    }) {
                         Text(stringResource(R.string.one_off_remove))
                     }
                 }

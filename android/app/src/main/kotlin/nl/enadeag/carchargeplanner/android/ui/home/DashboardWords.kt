@@ -60,7 +60,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
         else capitalised(weekday(day.name().date(), TextStyle.SHORT))
 
     /**
-     * A day's name as a title, which is also what a screen reader says for its tab.
+     * A day's name as a title.
      *
      * @return "Today", "Tomorrow", or the weekday, such as "Sunday"
      */
@@ -114,12 +114,12 @@ internal class DashboardWords(private val resources: Resources, private val loca
     fun span(window: Window): String = text(R.string.time_span, time(window.start()), time(window.end()))
 
     /**
-     * A charge window's times as a screen reader reads them.
+     * A charge window's times in words, for a sentence.
      *
      * @return such as "11:15 to 14:30"
      */
-    fun spokenSpan(window: Window): String =
-        text(R.string.time_span_spoken, time(window.start()), time(window.end()))
+    fun spanInWords(window: Window): String =
+        text(R.string.time_span_words, time(window.start()), time(window.end()))
 
     /**
      * A number with one decimal, such as a power or an energy.
@@ -144,18 +144,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
         is SourceFigure.Battery -> battery(figure.levels, R.string.day_battery, R.string.day_battery_trip,
             R.string.day_battery_charge_trip)
         is SourceFigure.FromGrid -> text(R.string.day_from_grid, decimal(figure.kwh))
-    }
-
-    /**
-     * A figure by source as a screen reader reads it, when its chip reads badly aloud.
-     *
-     * @return such as "Battery from 50% to 74%", or "Battery from 50% to 74%, 70% after the trip"; null when the
-     *     chip's text reads well
-     */
-    fun spokenFigure(figure: SourceFigure): String? = when (figure) {
-        is SourceFigure.Battery -> battery(figure.levels, R.string.day_battery_spoken,
-            R.string.day_battery_trip_spoken, R.string.day_battery_charge_trip_spoken)
-        is SourceFigure.SolarShare, is SourceFigure.FromGrid -> null
     }
 
     /**
@@ -254,16 +242,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
             time(trip.trip().returnTime()))
     }, tripDistance(trip))
 
-    /**
-     * @return such as "Away from 07:30 to 18:00, 300 km there and back"
-     */
-    fun spokenTrip(trip: ListedTrip): String = text(R.string.trip_line_spoken, if (trip.sameDay()) {
-        text(R.string.time_span_spoken, time(trip.trip().departure()), time(trip.trip().returnTime()))
-    } else {
-        text(R.string.trip_days_spoken, date(trip.departureDay()), time(trip.trip().departure()),
-            date(trip.returnDay()), time(trip.trip().returnTime()))
-    }, tripDistance(trip))
-
     private fun tripDistance(trip: ListedTrip) = text(R.string.trip_distance, whole(trip.trip().distanceKm()))
 
     /**
@@ -297,21 +275,21 @@ internal class DashboardWords(private val resources: Resources, private val loca
     fun scale(kw: Double): String = text(R.string.chart_scale, whole(kw))
 
     /**
-     * A day's chart in words, as the desktop's: its peak and the baseload, its charge windows and, today, now.
-     * A screen reader reads it for the chart, and it shows under the chart.
+     * A day's chart in words, as the desktop's: its peak and the baseload, its charge windows and, today, now. It
+     * shows under the chart, so the windows and now are told in words as well as in colour.
      *
      * @return such as "Today, expected solar power: peak 4.2 kW around 13:00; the house uses about 0.4 kW. Charging:
      *     13:00 to 15:00. Now 09:00."; for a day without sun only that it has none
      */
     fun chart(day: DashboardDay): String {
         val title = title(day.name())
-        val peak = day.chart().peak().orElse(null) ?: return text(R.string.chart_spoken_no_solar, title)
-        val solar = text(R.string.chart_spoken, title, decimal(peak.kw()), time(peak.at()),
+        val peak = day.chart().peak().orElse(null) ?: return text(R.string.chart_sentence_no_solar, title)
+        val solar = text(R.string.chart_sentence, title, decimal(peak.kw()), time(peak.at()),
             decimal(day.chart().baseloadKw()))
         val windows = listOfNotNull(day.main().orElse(null)?.window()) + day.later()
-        val charging = if (windows.isEmpty()) "" else text(R.string.chart_spoken_windows,
-            windows.joinToString(", ") { spokenSpan(it) })
-        val now = day.chart().now().orElse(null)?.let { text(R.string.chart_spoken_now, time(it.at())) }.orEmpty()
+        val charging = if (windows.isEmpty()) "" else text(R.string.chart_sentence_windows,
+            windows.joinToString(", ") { spanInWords(it) })
+        val now = day.chart().now().orElse(null)?.let { text(R.string.chart_sentence_now, time(it.at())) }.orEmpty()
         return listOf(solar, charging, now).filter { it.isNotEmpty() }.joinToString(" ")
     }
 
@@ -332,28 +310,6 @@ internal class DashboardWords(private val resources: Resources, private val loca
     fun target(levels: ChargeLevels): String = text(R.string.battery_target, whole(levels.targetPct().value()))
 
     /**
-     * @return such as "Car battery 50% now, 74% after charging; minimum 30%, target 80%." today, followed by that the
-     *     level is assumed and how to enter it while it is, and "… at the start of Sunday, …" on another day; on the
-     *     day a trip leaves, followed by the level after the trip
-     */
-    fun battery(day: DashboardDay, levels: ChargeLevels): String {
-        val start = whole(day.battery().startPct().value())
-        val after = whole(day.battery().afterPct().value())
-        val minimum = whole(levels.minimumPct().value())
-        val target = whole(levels.targetPct().value())
-        val said = if (day.name() !is DayName.Today) {
-            text(R.string.battery_spoken_day, start, inSentence(day.name()), after, minimum, target)
-        } else {
-            text(R.string.battery_spoken_today, start, after, minimum, target)
-        }
-        val assumed = if (day.assumedLevel().isPresent) text(R.string.battery_assumed) else ""
-        val afterTrip = day.battery().afterTripPct().orElse(null)
-            ?.let { text(R.string.battery_spoken_after_trip, whole(it.value())) }
-            .orEmpty()
-        return listOf(said, assumed, afterTrip).filter { it.isNotEmpty() }.joinToString(" ")
-    }
-
-    /**
      * A day in the middle of a trip advice's sentence, as the desktop names it: on today's tab "today", "tomorrow" or
      * the weekday, as they mean what they say there; on any other tab always the weekday, where "tomorrow" would read
      * as the day after that tab.
@@ -369,8 +325,7 @@ internal class DashboardWords(private val resources: Resources, private val loca
     fun weekday(date: LocalDate): String = weekday(date, TextStyle.FULL)
 
     /**
-     * A trip's advice in words, as the desktop's: its title, its plan, the battery level it starts from, and all of
-     * it in one sentence for a screen reader.
+     * A trip's advice in words, as the desktop's: its title, its plan and the battery level it starts from.
      *
      * @param tab the name of the day whose tab it shows on, which names its days as [adviceDay] does
      */
@@ -380,25 +335,21 @@ internal class DashboardWords(private val resources: Resources, private val loca
         val trip = advice.trip()
         val title = text(R.string.trip_advice_title, day(advice.departureDay()), time(trip.departure()),
             whole(trip.distanceKm()))
-        val plan = planText(advice, day, onToday, ::unbrokenSpan)
-        val spokenPlan = planText(advice, day, onToday, ::spokenSpan)
+        val plan = planText(advice, day, onToday)
         val from = text(if (level.assumed()) R.string.trip_advice_assumed else R.string.trip_advice_entered,
             whole(level.levelPct().value()))
-        val label = text(R.string.trip_advice_label)
-        return TripAdviceText(label, title, plan, from,
-            text(R.string.trip_advice_spoken, label, title, spokenPlan, from))
+        return TripAdviceText(text(R.string.trip_advice_label), title, plan, from)
     }
 
-    /** What to charge and when, each solar window's times told by [span]: as shown, or as a screen reader says them. */
-    private fun planText(advice: TripAdviceView, day: (DayName) -> String, onToday: Boolean,
-        span: (Window) -> String): String {
+    /** What to charge and when. */
+    private fun planText(advice: TripAdviceView, day: (DayName) -> String, onToday: Boolean): String {
         val sentences = when (val plan = advice.plan()) {
             is TripPlan.Enough ->
                 listOf(text(R.string.trip_advice_enough, whole(plan.departureLevelPct().value())))
             is TripPlan.Solar -> listOf(text(R.string.trip_advice_solar, whole(plan.chargeLimitPct().value()),
-                windows(plan.days(), day, span)))
+                windows(plan.days(), day)))
             is TripPlan.SolarThenGrid -> listOf(text(R.string.trip_advice_solar_grid,
-                whole(plan.chargeLimitPct().value()), windows(plan.days(), day, span))) +
+                whole(plan.chargeLimitPct().value()), windows(plan.days(), day))) +
                 grid(plan.grid(), plan.chargeLimitPct(), day, onToday)
             is TripPlan.Grid -> listOf(text(R.string.trip_advice_grid, whole(plan.chargeLimitPct().value()))) +
                 grid(plan.grid(), plan.chargeLimitPct(), day, onToday)
@@ -434,11 +385,11 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * The solar windows grouped by their day, each day named once: "today 12:00 – 13:30, 14:00 – 15:00, tomorrow …",
-     * each window's times told by [span].
+     * The solar windows grouped by their day, each day named once: "today 12:00 – 13:30, 14:00 – 15:00, tomorrow …".
      */
-    private fun windows(days: List<SolarDay>, day: (DayName) -> String, span: (Window) -> String): String =
-        days.joinToString(", ") { inDay -> day(inDay.day()) + " " + inDay.windows().joinToString(", ") { span(it) } }
+    private fun windows(days: List<SolarDay>, day: (DayName) -> String): String = days.joinToString(", ") { inDay ->
+        day(inDay.day()) + " " + inDay.windows().joinToString(", ") { unbrokenSpan(it) }
+    }
 
     /**
      * A window's span with no break around its dash: the span's own spaces become no-break ones, not those a 12-hour
@@ -465,10 +416,8 @@ internal class DashboardWords(private val resources: Resources, private val loca
  * @property title the trip: "Trip tomorrow at 08:15, 150 km there and back."
  * @property plan what to charge and when: "Charge to 85%: on solar power today 12:00 – 15:00, then from the grid. …"
  * @property level the battery level it starts from: "Assuming a battery level of 45%."
- * @property spoken all of it in one sentence, as a screen reader reads it
  */
-internal data class TripAdviceText(val label: String, val title: String, val plan: String, val level: String,
-    val spoken: String)
+internal data class TripAdviceText(val label: String, val title: String, val plan: String, val level: String)
 
 /** The dashboard's words in the app's language and the phone's clock, with the times in this zone. */
 @Composable

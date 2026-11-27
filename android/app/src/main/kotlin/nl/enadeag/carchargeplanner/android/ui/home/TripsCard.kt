@@ -30,10 +30,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.android.R
@@ -132,8 +130,8 @@ internal class TripKeys {
 
 /**
  * The trips the car is away for on this page's day, under the heading "Trips", as the desktop's card: each with its
- * times and distance, its two choices as checkbox rows that save at once, and its Remove, which a screen reader says
- * with the trip; "No trip entered for this day." when there is none. After a Remove the focus goes, once the trip is
+ * times and distance, its two choices as checkbox rows that save at once, and its Change and Remove; "No trip entered
+ * for this day." when there is none. After a Remove the focus goes, once the trip is
  * gone, to the trip before it, or the one after, or the line that says there is none, as in the away list.
  *
  * @param inView true on the page in view, where a change was made and the focus follows it
@@ -168,9 +166,8 @@ internal fun TripsCard(dashboard: Dashboard, day: DashboardDay, words: Dashboard
                 // as the away list's Add: it may take the focus also in touch mode, so the focus comes back to it
                 val opener = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(trips.add)
                     else Modifier
-                val spoken = stringResource(R.string.trip_add_spoken)
                 HeldButton(busy = trips.busy, onClick = { trips.entry.add(day.name().date(), dashboard.zone) },
-                    modifier = opener.semantics { contentDescription = spoken }) {
+                    modifier = opener) {
                     Text(stringResource(R.string.trip_add))
                 }
             }
@@ -195,24 +192,21 @@ internal fun TripsCard(dashboard: Dashboard, day: DashboardDay, words: Dashboard
 private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips: TripAction,
     focus: RowFocus<Trip>, rows: List<Trip>, zone: ZoneId, inView: Boolean) {
     val trip = listed.trip()
-    val spoken = words.spokenTrip(listed)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        RowLine(words.trip(listed), focus, trip, Modifier.semantics { contentDescription = spoken })
+        RowLine(words.trip(listed), focus, trip)
         TripChoice.entries.forEach { choice ->
             val pending = trips.pending?.takeIf { it.trip == trip && it.choice == choice }
             ChoiceRow(stringResource(when (choice) {
                 TripChoice.NOT_WITH_THIS_CAR -> R.string.trip_not_with_this_car
                 TripChoice.CAN_CHARGE -> R.string.trip_can_charge
-            }), spoken, pending?.on ?: choice.of(trip), trips.busy) {
+            }), pending?.on ?: choice.of(trip), trips.busy) {
                 trips.keys.changing(key, choice.put(trip, it), rows)
                 trips.entry.choose(trip, choice, it)
             }
         }
-        val change = stringResource(R.string.trip_change_spoken, spoken)
-        val remove = stringResource(R.string.trip_remove_spoken, spoken)
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-            // on the page in view it may take the focus also in touch mode, so the focus comes back to it, and a
-            // screen reader with it, when the entry closes
+            // on the page in view it may take the focus also in touch mode, so the focus comes back to it when the
+            // entry closes
             val opener = remember { FocusRequester() }
             if (inView) {
                 DisposableEffect(trip, opener) {
@@ -222,15 +216,14 @@ private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips:
             }
             val reachable = if (inView) Modifier.focusProperties { canFocus = true }.focusRequester(opener)
                 else Modifier
-            HeldButton(busy = trips.busy, onClick = { trips.entry.change(trip, zone) },
-                modifier = reachable.semantics { contentDescription = change }) {
+            HeldButton(busy = trips.busy, onClick = { trips.entry.change(trip, zone) }, modifier = reachable) {
                 Text(stringResource(R.string.trip_change))
             }
             HeldButton(busy = trips.busy, onClick = {
                 trips.going.row = trip
                 trips.going.rows = rows
                 trips.entry.remove(trip)
-            }, modifier = Modifier.semantics { contentDescription = remove }) {
+            }) {
                 Text(stringResource(R.string.trip_remove))
             }
         }
@@ -238,20 +231,14 @@ private fun TripRow(listed: ListedTrip, key: Trip, words: DashboardWords, trips:
 }
 
 /**
- * A choice as Material's checkbox in a row that toggles as a whole, at least 48 dp high, its words wrapping; a screen
- * reader says it with the trip, then whether it is checked. While a change runs it looks off and ignores a press, as
- * [HeldButton] does, so it keeps the focus.
- *
- * @param trip the trip as a screen reader reads it
+ * A choice as Material's checkbox in a row that toggles as a whole, at least 48 dp high, its words wrapping. While a
+ * change runs it looks off and ignores a press, as [HeldButton] does, so it keeps the focus.
  */
 @Composable
-private fun ChoiceRow(label: String, trip: String, checked: Boolean, busy: Boolean, onChange: (Boolean) -> Unit) {
-    val spoken = stringResource(R.string.trip_choice_spoken, label, trip)
+private fun ChoiceRow(label: String, checked: Boolean, busy: Boolean, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
-        .toggleable(value = checked, role = Role.Checkbox, onValueChange = { if (!busy) onChange(it) })
-        .semantics {
-            contentDescription = spoken
-        }, verticalAlignment = Alignment.CenterVertically) {
+        .toggleable(value = checked, role = Role.Checkbox, onValueChange = { if (!busy) onChange(it) }),
+        verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked = checked, onCheckedChange = null, enabled = !busy)
         val colour = LocalContentColor.current
         Text(label, modifier = Modifier.padding(start = 16.dp),

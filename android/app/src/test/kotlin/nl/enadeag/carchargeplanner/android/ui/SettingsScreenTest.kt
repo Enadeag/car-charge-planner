@@ -959,7 +959,7 @@ class SettingsScreenTest {
             .performClick()
 
         assertThat(drawn(key)).isEqualTo("STORED1")
-        // a screen reader still treats it as a password, and the keyboard neither suggests nor learns it
+        // it stays a password field, so the keyboard neither suggests nor learns it
         key.assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Password))
         compose.onNodeWithContentDescription(text(R.string.key_hide_of, "Open-Meteo")).assertExists()
     }

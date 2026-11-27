@@ -138,7 +138,7 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
     }
 }
 
-/** The choice of all day or part of it, as radio buttons a screen reader reads as a group; the chosen takes focus. */
+/** The choice of all day or part of it, as a group of radio buttons; the chosen takes focus. */
 @Composable
 private fun Kinds(chosen: AwayEntry.Kind, focus: FocusRequester, enabled: Boolean, onChoose: (AwayEntry.Kind) -> Unit) {
     Column(Modifier.selectableGroup()) {

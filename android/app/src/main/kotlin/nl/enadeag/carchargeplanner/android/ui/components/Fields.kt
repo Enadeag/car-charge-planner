@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
 
-/** What a field takes, so the keyboard offers the keys it needs and a screen reader names the same kind. */
+/** What a field takes, so the keyboard offers the keys it needs. */
 internal enum class FieldKind(val keyboard: KeyboardType) {
     /** A whole number that is never below 0, such as amps. */
     WHOLE(KeyboardType.Number),
@@ -102,7 +102,7 @@ internal const val DISTANCE_UNIT = "km"
  * @param kind what it takes; [FieldKind.SIGNED] adds a key for the minus
  * @param imeAction the keyboard's action key: Next moves on to the next field; Done, on a page's last, closes the
  *     keyboard
- * @param suffix the unit after what is typed, which a screen reader reads with it, such as "km"; null for none
+ * @param suffix the unit after what is typed, such as "km"; null for none
  */
 @Composable
 internal fun NumberField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,

@@ -63,8 +63,8 @@ internal sealed interface Said<out K> {
 
 /**
  * What the changes to a list of the dashboard came to, the one-off away periods' or the trips', each said once in a
- * snackbar, which a screen reader reads when it comes: an added or changed row; a removed one, with Undo, which adds it
- * back; a Remove or another change that failed, with the English details and a button to close it.
+ * snackbar: an added or changed row; a removed one, with Undo, which adds it back; a Remove or another change that
+ * failed, with the English details and a button to close it.
  *
  * @param going the Remove that was pressed, forgotten when it failed
  * @param restoring gets the row an Undo adds back, so the list puts the focus on it, forgotten when it failed

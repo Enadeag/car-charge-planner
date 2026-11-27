@@ -149,7 +149,7 @@ private fun foldName(info: ProviderInfo): String? {
 }
 
 /**
- * The "Wi-Fi only" switch with what it does, as one row a screen reader reads as a switch with its label and hint;
+ * The "Wi-Fi only" switch with what it does, as one row that toggles as a whole, a switch with its label and hint;
  * off until its value is read.
  */
 @Composable

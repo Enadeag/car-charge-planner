@@ -65,7 +65,7 @@ class NoticeWordsTest {
     private fun plain(text: String) = text.replace(' ', ' ').replace(' ', ' ')
 
     @Test
-    fun aSolarWindowSaysItsTimesAsSpokenWhatToSetTheEnergyAndTheSolarShare() {
+    fun aSolarWindowSaysItsTimesInWordsWhatToSetTheEnergyAndTheSolarShare() {
         assertThat(words("en").of(solar())).isEqualTo(NoticeText("Charge window 11:15 to 14:30",
             "Set the charge current to 10 A (2.3 kW) in your charger's app. About 7.9 kWh, 92% solar.",
             "Charge window soon"))

@@ -8,6 +8,8 @@ import android.net.Uri
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
@@ -23,7 +25,6 @@ import nl.enadeag.carchargeplanner.android.home.Plans
 import nl.enadeag.carchargeplanner.android.store.FakeEngineAccess
 import nl.enadeag.carchargeplanner.android.store.Saves
 import nl.enadeag.carchargeplanner.android.store.StartState
-import nl.enadeag.carchargeplanner.android.ui.NOT_READ_APART
 import nl.enadeag.carchargeplanner.android.ui.notify.Notifications
 import nl.enadeag.carchargeplanner.android.ui.notify.createNoticeChannels
 import nl.enadeag.carchargeplanner.android.ui.text
@@ -87,7 +88,8 @@ class MainActivityTapsTest {
         access.outlooks.last().complete(Plans.planned(LocalDate.of(2026, 6, 1).atTime(9, 0).atZone(zone),
             listOf(listOf(Plans.window(zone, LocalDate.of(2026, 6, 1), 13, 15)))))
         compose.waitForIdle()
-        compose.onNode(hasText(text(R.string.day_window)) and !NOT_READ_APART).assertExists()
+        // the chart's legend says it too
+        compose.onAllNodesWithText(text(R.string.day_window)).onFirst().assertExists()
     }
 
     private fun entry() = compose.onNode(isDialog())

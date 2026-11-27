@@ -30,7 +30,7 @@ internal data class NoticeText(val title: String, val body: String, val publicTi
  * The notifications' words in the app's language, with the desktop's facts: which window, and what to set in the
  * charger's app; what a trip asks of the owner, the trip named by the weekday and time of its departure, as a
  * notification may be read later than it came. Times are in the home's time zone on the phone's 12- or 24-hour clock,
- * a window's times as a screen reader reads them ("11:15 to 14:30"), as the dashboard says them; numbers with the
+ * a window's times in words ("11:15 to 14:30"), as the dashboard's chart says them; numbers with the
  * language's decimal mark; a distance in whole km, rounded up.
  */
 internal class NoticeWords(private val resources: Resources, private val locale: Locale,
@@ -74,7 +74,7 @@ internal class NoticeWords(private val resources: Resources, private val locale:
 
     private fun announcement(announcement: Announcement, words: DashboardWords): Pair<String, String> {
         val window = announcement.window()
-        val span = words.spokenSpan(window)
+        val span = words.spanInWords(window)
         val setting = setting(window, announcement.phases(), words)
         val energy = words.decimal(window.energyKwh())
         return when (announcement.kind()) {
@@ -93,7 +93,7 @@ internal class NoticeWords(private val resources: Resources, private val locale:
         val limit = words.whole(start.chargeLimitPct().value())
         val setting = setting(window, start.phases(), words)
         return when (start.start()) {
-            TripGridCharge.Start.PLANNED -> text(R.string.notice_grid_title, words.spokenSpan(window)) to
+            TripGridCharge.Start.PLANNED -> text(R.string.notice_grid_title, words.spanInWords(window)) to
                 "${text(R.string.notice_trip_start_body, words.time(window.start()), day, departure, limit)} $setting"
             TripGridCharge.Start.NOW -> text(R.string.notice_trip_now_title) to
                 "${text(R.string.notice_trip_now_body, day, departure, limit)} $setting"

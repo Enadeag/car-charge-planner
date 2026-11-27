@@ -19,7 +19,6 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -183,8 +182,7 @@ class BatteryEntryScreenTest {
         compose.dayTab("Wednesday").performClick()
         compose.waitForIdle()
 
-        compose.onNode(hasContentDescription(text(R.string.battery_spoken_day, "40", "Wednesday", "40", "20", "80")))
-            .performScrollTo().assertIsDisplayed()
+        compose.onNode(dayTitle("Wednesday")).performScrollTo().assertIsDisplayed()
         update.assertDoesNotExist()
     }
 
@@ -512,11 +510,9 @@ class BatteryEntryScreenTest {
     }
 
     @Test
-    fun theAssumedLevelIsSaidWithTodaysBatteryBarAndItsNoteSaysHowToEnterIt() {
+    fun theNoteOfAnAssumedLevelSaysHowToEnterIt() {
         show()
 
-        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "50", "20", "80") + " " +
-            text(R.string.battery_assumed), Role.Image)
         compose.onNodeWithText(text(R.string.day_battery_assumed, "40")).performScrollTo().assertIsDisplayed()
     }
 
@@ -524,7 +520,6 @@ class BatteryEntryScreenTest {
     fun anEnteredLevelLeavesTheAssumedSentenceOut() {
         show(week(assumed = false))
 
-        compose.assertReadAsOne(text(R.string.battery_spoken_today, "40", "50", "20", "80"), Role.Image)
         compose.onNodeWithText(text(R.string.day_battery_assumed, "40"), substring = true).assertDoesNotExist()
     }
 

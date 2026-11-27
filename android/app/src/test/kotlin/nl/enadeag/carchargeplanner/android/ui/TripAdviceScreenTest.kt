@@ -6,13 +6,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -185,12 +188,26 @@ class TripAdviceScreenTest {
     private val thursdaysAdvice = "Trip advice: Trip Thursday at 09:00, 40 km there and back. The plan charges " +
         "enough for it: the battery is at 60% when you leave. Assuming a battery level of 40%."
 
-    private fun card(spoken: String) = compose.onNode(hasContentDescription(spoken), useUnmergedTree = true)
+    /**
+     * The advice a card shows, its four lines joined as "label: title plan level"; null for a part that is no advice
+     * card.
+     */
+    private fun adviceOf(card: SemanticsNode): String? {
+        val lines = card.children.filter { !it.config.contains(SemanticsActions.OnClick) }
+            .mapNotNull { node -> node.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text } }
+        if (lines.size != 4 || lines[0] != text(R.string.trip_advice_label)) {
+            return null
+        }
+        return "${lines[0]}: ${lines[1]} ${lines[2]} ${lines[3]}"
+    }
 
-    private fun cards() = compose.onAllNodes(hasContentDescription(text(R.string.trip_advice_label), substring = true),
-        useUnmergedTree = true).fetchSemanticsNodes().map { it.config[SemanticsProperties.ContentDescription].single() }
+    private fun card(advice: String) =
+        compose.onNode(SemanticsMatcher("the card of $advice") { adviceOf(it) == advice }, useUnmergedTree = true)
 
-    private val adjust get() = compose.onNode(hasContentDescription(text(R.string.trip_advice_adjust_spoken)))
+    private fun cards() = compose.onAllNodes(SemanticsMatcher("any part") { true }, useUnmergedTree = true)
+        .fetchSemanticsNodes().mapNotNull(::adviceOf)
+
+    private val adjust get() = compose.onNode(hasText(text(R.string.trip_advice_adjust)) and hasClickAction())
 
     private fun top(node: SemanticsNodeInteraction) = node.fetchSemanticsNode().positionInRoot.y
 
@@ -243,19 +260,16 @@ class TripAdviceScreenTest {
     }
 
     @Test
-    fun theCardIsOneHeadingThatSaysTheWholeAdviceWithAdjustApartAsAButton() {
+    fun theCardShowsTheAdviceWithAdjustUnderItAsAButton() {
         show()
 
-        val node = card(todaysAdvice).fetchSemanticsNode()
-        assertThat(node.config.contains(SemanticsProperties.Heading)).isTrue()
-        assertThat(node.children).hasSize(4)
-        assertThat(node.children.filter { !NOT_READ_APART.matches(it) }).`as`("the card's words read apart").isEmpty()
-        compose.assertShownButNotReadApart(todaysPlan)
-        compose.assertShownButNotReadApart("Assuming a battery level of 40%.")
+        compose.onNodeWithText(todaysPlan, useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Assuming a battery level of 40%.", useUnmergedTree = true).performScrollTo()
+            .assertIsDisplayed()
         val button = adjust.performScrollTo().assertIsDisplayed().fetchSemanticsNode()
         assertThat(button.config[SemanticsProperties.Role]).isEqualTo(Role.Button)
-        assertThat(button.config[SemanticsActions.OnClick].label).isEqualTo(text(R.string.trip_advice_adjust_hint))
-        compose.onNodeWithText(text(R.string.trip_advice_adjust), useUnmergedTree = true).assertIsDisplayed()
+        assertThat(button.boundsInRoot.top).isGreaterThan(card(todaysAdvice).fetchSemanticsNode().children
+            .first { !it.config.contains(SemanticsActions.OnClick) }.boundsInRoot.top)
         compose.assertEveryControlIsNamedAndLargeEnough()
     }
 
@@ -328,7 +342,7 @@ class TripAdviceScreenTest {
         assertThat(cards()).containsExactly("Advies voor de rit: Rit morgen om 08:00, 300 km heen en terug. Laad tot " +
             "85% uit het net. Start het laden vanavond om 21:00. Stel 16 A in (3,7 kW), en een laadlimiet van 85% in " +
             "de auto of de laadpaal. Uitgaande van een accuniveau van 40%.")
-        compose.onNode(hasContentDescription("Aanpassen: accuniveau")).performScrollTo().assertIsDisplayed()
+        compose.onNode(hasText("Aanpassen") and hasClickAction()).performScrollTo().assertIsDisplayed()
         compose.assertShowsNoneOf(englishOnlyTexts())
     }
 
@@ -357,11 +371,8 @@ class TripAdviceScreenTest {
 
         compose.onNodeWithText(text(R.string.day_too_little_solar)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.day_none_trip)).assertDoesNotExist()
-        compose.onNode(hasContentDescription("Battery 40%, 25% after the trip")).assertExists()
         compose.onNodeWithText("Battery 40 → 25% after the trip", useUnmergedTree = true).assertExists()
-        compose.assertShownButNotReadApart("40 → 25% after the trip")
-        compose.assertReadAsOne("Car battery 40% at the start of tomorrow, 40% after charging; minimum 20%, target " +
-            "80%. After the trip the battery is at 25% at the end of the day.", Role.Image)
+        compose.onNodeWithText("40 → 25% after the trip", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -371,10 +382,8 @@ class TripAdviceScreenTest {
         try {
             show()
             tab("Wednesday")
-            val choice = text(R.string.trip_choice_spoken, text(R.string.trip_not_with_this_car),
-                text(R.string.trip_line_spoken, text(R.string.trip_days_spoken, "Tomorrow", "08:00", "Wed, Jun 3",
-                    "18:00"), text(R.string.trip_distance, "300")))
-            compose.onNode(hasContentDescription(choice)).performScrollTo().performClick()
+            compose.onNode(hasText(text(R.string.trip_not_with_this_car)) and hasClickAction()).performScrollTo()
+                .performClick()
             compose.waitForIdle()
             assertThat(access.tripChanges).hasSize(1)
             tab("Tomorrow")
@@ -390,23 +399,28 @@ class TripAdviceScreenTest {
         }
     }
 
-    /** The colour the chip of the trip advice card on the page in view is drawn on, a little inside its start. */
+    /** The chip of the one trip advice card on the page in view. */
+    private fun chip() = compose.onNode(hasText(text(R.string.trip_advice_label)), useUnmergedTree = true)
+
+    /** The colour the chip of the trip advice card on the page in view is drawn on, in its padding before its words. */
     private fun chipGround(): Int {
         val width = compose.onRoot().fetchSemanticsNode().size.width
         val chip = compose.onAllNodes(hasText(text(R.string.trip_advice_label)), useUnmergedTree = true)
             .fetchSemanticsNodes().single { it.boundsInRoot.left >= 0 && it.boundsInRoot.left < width }.boundsInRoot
-        return compose.screenshot().getPixel(chip.left.roundToInt() + 3, chip.center.y.roundToInt())
+        return compose.screenshot().getPixel(chip.left.roundToInt() - 3, chip.center.y.roundToInt())
     }
 
     @Test
     fun theChipIsDrawnInTheColoursOfTheAdvicesSource() {
         show()
-        card(todaysAdvice).performScrollTo()
+        assertThat(cards()).containsExactly(todaysAdvice)
+        chip().performScrollTo()
 
         val grid = chipGround()
         tab("Wednesday")
         tab("Thursday")
-        card(thursdaysAdvice).performScrollTo()
+        assertThat(cards()).containsExactly(thursdaysAdvice)
+        chip().performScrollTo()
         val car = chipGround()
 
         assertThat(grid).`as`("a grid charge").isEqualTo(SourceColours.LIGHT.grid.container.toArgb())
@@ -429,9 +443,8 @@ class TripAdviceScreenTest {
         show()
         tab("Wednesday")
 
-        compose.onNode(hasContentDescription(text(R.string.trip_choice_spoken, text(R.string.trip_not_with_this_car),
-            text(R.string.trip_line_spoken, text(R.string.trip_days_spoken, "Tomorrow", "08:00", "Wed, Jun 3",
-                "18:00"), text(R.string.trip_distance, "300"))))).performScrollTo().performClick()
+        compose.onNode(hasText(text(R.string.trip_not_with_this_car)) and hasClickAction()).performScrollTo()
+            .performClick()
         compose.waitForIdle()
 
         compose.onNodeWithText(text(R.string.day_too_little_solar)).performScrollTo().assertIsDisplayed()
