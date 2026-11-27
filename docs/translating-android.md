@@ -24,7 +24,7 @@ The Android app's texts are Android string resources, in `android/app/src/main/r
 
   The desktop writes the same as one text, `{0,choice,1#{0} day|1<{0} days}`.
 - **What the engine says about a settings file or a provider** (the "details") stays English: one text around it, such as `Details (in het Engels): %1$s`.
-- **Texts must work with a screen reader (TalkBack)**: write them so they make sense when read aloud, with no meaning only in colour, symbols or position, and do not rely on a text's length for the layout: a translation can be twice as long.
+- **Texts must not rely on colour, symbols or position alone**, nor on a text's length for the layout: a translation can be twice as long.
 
 **A new text goes into every language's file in the same pull request.** Lint fails the build on a text that is missing in a language or has no English one (`MissingTranslation`, `ExtraTranslation`), on a placeholder that does not match (`StringFormatMatches`, `StringFormatInvalid`, `StringFormatCount`) and on a plural without a form its language needs or with one it does not (`MissingQuantity`, `UnusedQuantity`, `ImpliedQuantity`). A text you cannot translate yourself must still be in the file: put the English text there for a translator to pick up. `StringsResourcesTest` checks the same on the files themselves, and also that every placeholder is positional, that nothing is wrongly escaped, and that the languages the app offers are English and the `values-*` folders.
 
@@ -39,7 +39,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Next | Volgende | set-up's button to the next step |
 | Back | Vorige | set-up's button to the step before |
 | Finish | Voltooien | set-up's last button, which saves |
-| Step 3 of 7 | Stap 3 van 7 | read with each step's heading |
+| Step 3 of 7 | Stap 3 van 7 | shown above each step's heading |
 | I don't know: use typical values | Weet ik niet: gangbare waarden gebruiken | fills in typical values, which no field then marks; not on the panels' step or page |
 | Chosen place: Utrecht, Netherlands | Gekozen plaats: Utrecht, Nederland | the Location page's top line, as on the desktop |
 | No place chosen yet | Nog geen plaats gekozen | the same line while the settings hold no place name |
@@ -61,8 +61,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Set 10 A (2.3 kW) | Stel 10 A in (2,3 kW) | what to set for a day's charge window |
 | about 7.9 kWh | ongeveer 7,9 kWh | what the window charges |
 | 92% solar, 0.4 kWh from the grid | 92% zonnestroom, 0,4 kWh uit het net | a day's figures by source, each in its colour |
-| Battery 50 → 74% | Accu 50 → 74% | the battery level at the start of the day and after charging; TalkBack reads "Battery from 50% to 74%" |
-| 11:15 to 14:30 | 11:15 tot 14:30 | what TalkBack reads for a charge window's 11:15 – 14:30 |
+| Battery 50 → 74% | Accu 50 → 74% | the battery level at the start of the day and after charging |
 | Solar power is not enough to stay above the minimum: see the grid advice on Today. | Zonnestroom is niet genoeg om boven het minimum te blijven: zie het advies over laden uit het net bij Vandaag. | why a day the grid advice is about has no charge window; "Today" is today's tab |
 | There is too little solar power while the car is home. | Er is te weinig zonnestroom terwijl de auto thuis is. | why a day has no charge window when the car could use a charge |
 | Also 16:00 – 17:00 at 6 A, 18:00 – 19:00 at 8 A. | Ook 16:00 – 17:00 met 6 A, 18:00 – 19:00 met 8 A. | a day's later charge windows, in its note |
@@ -72,11 +71,9 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Set 16 A (3.7 kW), and a charge limit of 80% in the car or the charger. | Stel 16 A in (3,7 kW), en een laadlimiet van 80% in de auto of de laadpaal. | what to set for the grid charge; otherwise "No day before it has room for a grid charge." |
 | Solar, House, Charge window | Zonnestroom, Huis, Laadvenster | the solar chart's legend; "House" is the legend's short word for the baseload, as on the desktop, not "House use" |
 | now | nu | on the chart's line at the moment the plan was made, today only |
-| Today, expected solar power: peak 4.2 kW around 13:00; the house uses about 0.4 kW. Charging: 13:00 to 15:00. Now 09:00. | Vandaag, verwachte zonnestroom: piek 4,2 kW rond 13:00; het huis gebruikt ongeveer 0,4 kW. Laden: 13:00 tot 15:00. Nu 09:00. | the solar chart in words: what TalkBack reads for it, and the line under it; "expected solar power: none." on a day without sun |
+| Today, expected solar power: peak 4.2 kW around 13:00; the house uses about 0.4 kW. Charging: 13:00 to 15:00. Now 09:00. | Vandaag, verwachte zonnestroom: piek 4,2 kW rond 13:00; het huis gebruikt ongeveer 0,4 kW. Laden: 13:00 tot 15:00. Nu 09:00. | the solar chart in words, the line under it, with each charge window's times in words ("13:00 to 15:00", "13:00 tot 15:00"); "expected solar power: none." on a day without sun |
 | Car battery | Accu van de auto | the heading of the battery bar |
 | min 30%, target 80% | min. 30%, doel 80% | the marks on the battery bar |
-| Car battery 50% now, 74% after charging; minimum 30%, target 80%. | Accu van de auto nu 50%, na het laden 74%; minimum 30%, doel 80%. | what TalkBack reads for the battery bar; on another day "50% at the start of Sunday" ("50% aan het begin van zondag") |
-| The battery level is assumed. Use Update battery level under it to enter the level the car shows. | Het accuniveau is aangenomen. Gebruik Accuniveau bijwerken eronder om in te vullen wat de auto aangeeft. | added to what TalkBack reads for today's battery bar while the plan starts from the assumed battery level; "Update battery level" is the button under the bar |
 | The plan assumes the battery is at 40%. Use Update battery level under Car battery. | De planning gaat ervan uit dat de accu op 40% staat. Gebruik Accuniveau bijwerken onder Accu van de auto. | today's note while the level is assumed; "Update battery level" is the button on the card headed "Car battery" |
 | Update battery level | Accuniveau bijwerken | today's battery card's button, which opens the entry of the level |
 | Battery level, Battery level in percent | Accuniveau, Accuniveau in procent | the entry's title and its field's label |
@@ -88,8 +85,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Car away | Afwezig | the heading of the one-off away periods |
 | None entered for the coming days. | Niets ingevuld voor de komende dagen. | no one-off away period to come |
 | Add | Toevoegen | the button in the "Car away" heading row, which opens the entry of a one-off away period on the page's day |
-| Add away period | Toevoegen: afwezigheid | what TalkBack and Voice Access call that button; it starts with the word on the button in both languages |
-| Remove, Remove Tomorrow, all day | Verwijderen, Verwijderen: Morgen, hele dag | a one-off away period's button, and what TalkBack reads for it: the period as the list shows it; it starts with the word on the button in both languages, so Voice Access finds it |
+| Remove | Verwijderen | a one-off away period's button |
 | Car away on Thursday, November 5 | Afwezig op donderdag 5 november | the entry's title, with the day's weekday and date as the phone writes them in a sentence |
 | All day, Part of the day | Hele dag, Deel van de dag | the entry's choice |
 | Away from, Away until | Afwezig vanaf, Afwezig tot | part of the day's two times, each a button that opens the time picker, and the picker's title |
@@ -106,18 +102,17 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Trips | Ritten | the heading of each day's Trips card, the desktop's |
 | No trip entered for this day. | Geen rit ingevuld voor deze dag. | a day without a trip, the desktop's |
 | Away 07:30 – 18:00 · 300 km there and back | Afwezig 07:30 – 18:00 · 300 km heen en terug | a trip in the list, the desktop's; over more days "Away Tomorrow 20:00 – Wed, Jun 3 09:00 · …" ("Afwezig Morgen 20:00 – Wo 3 jun 09:00 · …"), the day as in the "Car away" list |
-| Away from 07:30 to 18:00, 300 km there and back | Afwezig van 07:30 tot 18:00, 300 km heen en terug | what TalkBack reads for a trip; over more days "Away from Tomorrow 20:00 to Wed, Jun 3 09:00, …" |
-| Not with this car, I can charge at the destination | Niet met deze auto, Ik kan laden op de bestemming | a trip's two checkboxes, the desktop's; TalkBack reads each with the trip ("Not with this car, Away from …") |
-| Remove, Remove the trip Away from … | Verwijderen, Verwijderen: rit Afwezig van … | a trip's button, and what TalkBack reads for it; it starts with the word on the button in both languages, as the away period's, so Voice Access finds it (the desktop's Dutch puts it last) |
+| Not with this car, I can charge at the destination | Niet met deze auto, Ik kan laden op de bestemming | a trip's two checkboxes, the desktop's |
+| Remove | Verwijderen | a trip's button |
 | Saved: Away 07:30 – 18:00 · 300 km there and back. | Opgeslagen: Afwezig 07:30 – 18:00 · 300 km heen en terug. | in a snackbar after the trip entry's Save, or Undo of a removed trip |
 | Removed: Away 07:30 – 18:00 · 300 km there and back. | Verwijderd: Afwezig 07:30 – 18:00 · 300 km heen en terug. | in a snackbar after Remove, with Undo |
 | Not saved: the trip could not be written. | Niet opgeslagen: de rit kon niet worden geschreven. | in a snackbar after a choice or an Undo failed, and at the top of the trip entry after its Save failed, with the English details; a trip is a "rit" |
 | Not removed: the trip could not be written. | Niet verwijderd: de rit kon niet worden geschreven. | in a snackbar after Remove failed, with the English details |
-| Add, Add trip | Toevoegen, Toevoegen: rit | the button in the Trips card's heading row, which opens the entry of a new trip on the page's day, and what TalkBack and Voice Access call it; it starts with the word on the button |
-| Change, Change the trip Away from … | Wijzigen, Wijzigen: rit Afwezig van … | a trip's button beside Remove, which opens the entry on that trip, and what TalkBack reads for it; it starts with the word on the button in both languages (the desktop's Dutch puts it last) |
+| Add | Toevoegen | the button in the Trips card's heading row, which opens the entry of a new trip on the page's day |
+| Change | Wijzigen | a trip's button beside Remove, which opens the entry on that trip |
 | Add trip, Change trip | Rit toevoegen, Rit wijzigen | the trip entry's title in its top app bar, the desktop's "Add trip" for a new trip |
 | Departure day, Departure time, Return day, Return time | Vertrekdag, Vertrektijd, Terugkomstdag, Terugkomsttijd | the trip entry's four buttons, each with its day ("Today", "Tomorrow", "Wed, Jun 3") or time under it, and the title of the picker each opens; shorter than the desktop's "Day of departure" ("Dag van vertrek") |
-| Distance there and back | Afstand heen en terug | the trip entry's distance field's label, with "km" after what is typed, the desktop's; TalkBack reads the label, the value and "km" |
+| Distance there and back | Afstand heen en terug | the trip entry's distance field's label, with "km" after what is typed, the desktop's |
 | The return must be after the departure. | De terugkomst moet na het vertrek liggen. | under the return's buttons after Save, the desktop's; also "That trip is over already." ("Die rit is al voorbij."), which also shows for a departure before 1970, and "A trip can last at most 366 days." ("Een rit kan hoogstens 366 dagen duren."), a `<plurals>` for the limit in days |
 | Type the distance as a number, such as 120. | Typ de afstand als een getal, zoals 120. | under the distance after Save, the desktop's; also "The distance must be more than 0." ("De afstand moet meer dan 0 zijn.") and "The distance must be at most 20000 km." ("De afstand mag hoogstens 20000 km zijn."), the limit written as the app writes numbers |
 | The trip you entered is not saved yet. | De rit die je invulde is nog niet opgeslagen. | under "Discard changes?", asked by Back or Close in the trip entry with something changed |
@@ -128,11 +123,9 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Start tonight at 21:00. | Start het laden vanavond om 21:00. | when to start a trip's grid charge, the desktop's; also "Start now: little time is left before the departure." ("Start het laden nu: er is weinig tijd tot het vertrek.") and "…, although that is outside your charging hours: waiting for them would leave too little time." ("…, ook al is dat buiten je laaduren: wachten laat te weinig tijd over."); then the grid advice's "Set 16 A (3.7 kW), and a charge limit of …" |
 | The battery is 41 km short for the trip: plan a charging stop. | De accu komt 41 km tekort voor de rit: plan een laadstop. | after the plan when even a full battery is not enough, the desktop's |
 | Assuming a battery level of 45%., Based on the battery level of 45% you entered. | Uitgaande van een accuniveau van 45%., Uitgaande van het accuniveau van 45% dat je invulde. | the battery level the advice starts from, the desktop's |
-| Adjust, Adjust the battery level | Aanpassen, Aanpassen: accuniveau | the button under the advice, and what TalkBack and Voice Access call it, which starts with the word on the button; not the desktop's, which has no spoken name |
-| Enter the battery level the car shows, on today's battery card | Vul het accuniveau in dat de auto aangeeft, op de accukaart van vandaag | what TalkBack says a double tap on Adjust does, the desktop's hint |
+| Adjust | Aanpassen | the button under the advice, which opens the entry of today's battery level |
 | The car is away on a trip, or there is too little solar power while it is home. | De auto is weg voor een rit, of er is te weinig zonnestroom terwijl hij thuis is. | why a day without a charge window has none, on a day the car is away on a trip, the desktop's |
-| 50 → 74%, 70% after the trip | 50 → 74%, 70% na de rit | the battery's levels on the day a trip leaves, and the day card's chip "Battery 50 → 74%, 70% after the trip" ("Accu …"), the desktop's; without a charge before the trip "50 → 30% after the trip", read as "Battery 50%, 30% after the trip" ("Accu 50%, 30% na de rit"); TalkBack reads the chip as "Battery from 50% to 74%, 70% after the trip" ("Accu van 50% naar 74%, 70% na de rit"), not the desktop's |
-| After the trip the battery is at 70% at the end of the day. | Na de rit staat de accu aan het eind van de dag op 70%. | added to what TalkBack reads for the battery bar on the day a trip leaves, the desktop's |
+| 50 → 74%, 70% after the trip | 50 → 74%, 70% na de rit | the battery's levels on the day a trip leaves, and the day card's chip "Battery 50 → 74%, 70% after the trip" ("Accu …"), the desktop's; without a charge before the trip "50 → 30% after the trip" |
 | Keyboard, Calendar | Toetsenbord, Kalender | the date picker's button under the calendar or the typed date, named for what it switches to, as the time picker's "Keyboard, Clock" |
 | updated 10:51, not refreshed since 10:51 | bijgewerkt om 10:51, niet vernieuwd sinds 10:51 | the footer, after the provider's credit, which stays as it is |
 | provider busy until 11:30 | dienst weer beschikbaar om 11:30 | the footer, during a cool-down |
@@ -153,7 +146,7 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Save | Opslaan | a page's Save, in its top app bar |
 | Saved. | Opgeslagen. | after a page's Save, in a snackbar |
 | Not saved. | Niet opgeslagen. | under the top app bar after a page's Save failed; why is at the top of the page |
-| Back | Terug | what TalkBack says for the top app bar's Up arrow (set-up's own button stays Vorige) |
+| Back | Terug | the name of the top app bar's Up arrow (set-up's own button stays Vorige) |
 | Saving… | Opslaan… | Save while it saves, on a Settings page and in the battery level's and the one-off away period's entries |
 | Discard changes? | Wijzigingen weggooien? | asked by Back or Up on a Settings page with edits, and by Back, or a tap beside it, in the battery level's entry with a level typed and in the one-off away period's entry with something changed |
 | Keep editing | Verder bewerken | stays on the page, or in the entry |
@@ -171,25 +164,23 @@ The set-up screens, the screen of a settings file the app cannot use, the dashbo
 | Notification lead time | Melding vooraf | the Planning page's drop-down: At the start, 5 minutes ahead, … 60 minutes ahead (Bij het begin, 5 minuten ervoor, … 60 minuten ervoor), a plural per number of minutes, also for a stored lead that is none of them, such as "20 minutes ahead" |
 | Household use | Verbruik van het huis | the baseload's field, under More settings on the Car and house page; its hint "kWh per day, without charging the car. Your energy supplier shows your use per day." ("kWh per dag, zonder het laden van de auto. Je energieleverancier laat je verbruik per dag zien."); never "basisverbruik" |
 | Battery 60.0 kWh | Accu 60,0 kWh | the line under Car and house in Settings: the battery only |
-| Expanded, Collapsed | Uitgevouwen, Ingevouwen | what TalkBack says of a fold's row, such as More settings and Coordinates and time zone |
 | Add an array | Panelengroep toevoegen | |
 | A system needs at least one panel array | Een systeem heeft minstens één panelengroep nodig | why the last array's Remove is off |
 | Check connection to Open-Meteo | Verbinding met Open-Meteo testen | asks the provider once, with what was typed |
 | Show, Hide | Tonen, Verbergen | an API key's mask |
-| API key and server, API key | API-sleutel en server, API-sleutel | on the Forecast page, the fold under a provider with its optional server address and API key, or with its optional API key alone (the same text as the field); "More settings" for other optional settings. Where two folds have the same name, TalkBack reads it with the provider, as a field: "API key, Forecast.Solar" ("API-sleutel, Forecast.Solar") |
+| API key and server, API key | API-sleutel en server, API-sleutel | on the Forecast page, the fold under a provider with its optional server address and API key, or with its optional API key alone (the same text as the field); "More settings" for other optional settings. |
 | None | Geen | no fallback provider; no weekly away period |
 | Notifications | Meldingen | Settings' row before the licences', "Opens Android's settings for this app" ("Opent de instellingen van Android voor deze app"); a notification is a "melding" everywhere, as the announcement is |
 | Wi-Fi only | Alleen wifi | the Forecast page's switch for the hourly update while the app is closed; Dutch writes "wifi" in lower case, as the Groene Boekje does, and the hint says "or another network without a data limit" ("of een ander netwerk zonder datalimiet") |
 | Open source licences | Opensourcelicenties | Settings' last row, and the title of the read-only screen it opens; the licence texts and their titles stay English |
 | Source code: … | Broncode: … | the repository's address on that screen, as plain text |
-| Expanded, Collapsed | Uitgevouwen, Ingevouwen | what TalkBack says of a licence's row: whether its text shows under it |
 | Reading the licences… | De licenties worden gelezen… | while a licence text, or the list of them, is read |
 | This text could not be read. | Deze tekst kon niet worden gelezen. | a licence text that is missing |
 | The licences could not be read. | De licenties konden niet worden gelezen. | the list of the licences that is missing |
 
 ## The words of the notifications
 
-The notifications say the desktop's facts in the dashboard's words, with "Tap" ("Tik") where the desktop says "Click", a window's times as TalkBack reads them ("11:15 to 14:30", "11:15 tot 14:30"), and a trip by the weekday and time of its departure.
+The notifications say the desktop's facts in the dashboard's words, with "Tap" ("Tik") where the desktop says "Click", a window's times in words, as the chart's sentence has them ("11:15 to 14:30", "11:15 tot 14:30"), and a trip by the weekday and time of its departure.
 
 | English | Dutch | Note |
 | --- | --- | --- |

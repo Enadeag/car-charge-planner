@@ -2,7 +2,7 @@
 
 Decisions about the Settings screens: the list, the pages, saving, and the open source licences screen.
 
-What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken names, saved state) is in [screens.md](screens.md); read it too.
+What holds on every screen (top app bar, buttons, snackbars, dialogs, names, saved state) is in [screens.md](screens.md); read it too.
 
 ### The list
 
@@ -38,7 +38,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 
 - The page starts with what everyone needs: the minimum and the target charge level, then under the heading "Charging hours" the two times, each a `TimeButton` with the time on the phone's 12- or 24-hour clock that opens Material's time picker with its Keyboard and Clock button (#338), then the notification lead time. The planning margin, the import tolerance and the minimum charge window are under the shared fold row "More settings", closed each time the page opens; a problem in one of them opens it and keeps it open as on the Car and house page. The target has the keyboard's Done while the fold is closed, the minimum charge window while it is open (#452).
 - The lead is a `ChoiceMenu` of the engine's `NotifyLeadChoices`: "At the start", or 5, 10, 15, 30 or 60 minutes ahead. A stored lead that is none of them, such as 20 minutes, is a choice of its own and the chosen one, saved as it is, until another is chosen; then it is no longer offered. Nothing is rounded (#452).
-- The times are checked on Save by the engine's rules, as before: charge hours may pass midnight but not start and end at the same time. The problem shows under the "Start charging no later than" button, which carries it for TalkBack and takes the focus. No time is typed, so there is no "type the time" problem or hint; a text an older version of the app kept that is no time shows and saves the standard hours (#452).
+- The times are checked on Save by the engine's rules, as before: charge hours may pass midnight but not start and end at the same time. The problem shows under the "Start charging no later than" button, which takes the focus. No time is typed, so there is no "type the time" problem or hint; a text an older version of the app kept that is no time shows and saves the standard hours (#452).
 - The list's line under Planning does not change (#452).
 
 ### Charger
@@ -65,7 +65,6 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - Under each provider's heading its required settings show, then one shared `Fold` with its optional ones, named by what is in it: "API key and server" ("API-sleutel en server") for a server address and an API key, "API key" ("API-sleutel") for an API key alone, "More settings" for any other optional settings; a provider without optional settings has no fold. Check connection with its result, "Reading the API keys…" and the note on keys that could not be read stay outside the folds (#459).
 - A fold is open when one of its settings holds a value (a stored key, or a server address of the owner's own), else closed, decided once the stored keys are read, so it moves at most once; until then it follows the server address. Once the owner closes it, it stays closed while the page is open, also after a Save. A failed check or keys that could not be read do not open it; a problem in one of its fields does, before the focus moves there, and holds it open as on the Car and house page (`rememberProblemFold`) (#459).
 - A closed fold never changes what is saved: a key or an address in it that the owner did not touch stays as stored (#459).
-- Where two folds on the page have the same name, TalkBack reads each with its provider, as the fields are: "API key, Forecast.Solar"; no other spoken text is added (#459).
 
 ### Open source licences
 

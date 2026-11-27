@@ -29,6 +29,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - A trip's distance is typed as a whole number, as on the desktop and in Settings: "12.5" and "1.000" are refused with Settings' texts, where "1.000" used to be read as 1 km, and a number too long to read is refused as too far. The distance field has the number keyboard (#543).
 - Trips and one-off away periods in the files beyond the bounds count as damaged entries, as on the desktop (#410).
 - A forecast, a stored forecast or the stored announced windows with a moment far in the past or the future, or a clock that was put back, no longer hangs a planning round or makes it fail, as on the desktop (#408).
+- Screen readers are no longer supported, and what was built only for TalkBack is gone, as on the desktop: the spoken sentences and names, headings, live regions and the focus on a new page's title; the sentence under the solar chart stays, and when the notification card swaps its button the focus goes to the new one (#435).
 
 ## [0.7.0] - 2026-11-13
 

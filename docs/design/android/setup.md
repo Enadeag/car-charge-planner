@@ -2,7 +2,7 @@
 
 Decisions about the first-run set-up: its steps, the check, Finish, the time zone and the place search, which Settings' Location page shares.
 
-What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken names, saved state) is in [screens.md](screens.md); read it too.
+What holds on every screen (top app bar, buttons, snackbars, dialogs, names, saved state) is in [screens.md](screens.md); read it too.
 
 ### Steps and Back
 
@@ -15,7 +15,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 ### Check and Finish
 
 - The check runs on entering the Check step, on coming back to it, and after the system ended the app; a failure shows **Check again** and the English details, and Finish stays on (#314).
-- While saving, Finish is off and shows progress. Saved opens the dashboard without a message; Failed keeps the English details and **Try again**, in a live region. A newer settings file opens the "update the app" screen; a value the engine refuses goes back to the first step with a refused value, with a line that says why (#314).
+- While saving, Finish is off and shows progress. Saved opens the dashboard without a message; Failed keeps the English details and **Try again**. A newer settings file opens the "update the app" screen; a value the engine refuses goes back to the first step with a refused value, with a line that says why (#314).
 
 ### Panels
 
@@ -49,7 +49,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, spoken nam
 - The name holds while the fields show the place's coordinates at their four decimals: typing a digit and putting it back keeps it, a real difference shows "No place chosen yet" at once and is saved without a name. The name and the place's coordinates are kept in the saved state as texts (#449).
 - The fold is closed with a place and open without one; a new choice closes it; a problem in a coordinate opens it and keeps it open, also after the problem is put right, and a press on its row does nothing meanwhile. Its state survives turning the phone (`rememberSaveable`) (#449).
 - Without a place search the page shows the line that the provider has none and only the coordinates and the time zone, unfolded, without the top line (#449).
-- TalkBack's focus moves to the top line once per choice, so turning the phone or coming back to the step does not move it again (#343, #449).
+- After a choice the focus moves to the top line, as the result it was on is gone, once per choice, so turning the phone or coming back to the step does not move it again (#343, #449).
 
 ### Language and words
 
