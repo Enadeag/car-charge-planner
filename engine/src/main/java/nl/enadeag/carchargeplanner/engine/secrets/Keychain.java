@@ -25,9 +25,10 @@ import java.util.Optional;
  *       answered and failed, such as a value it cannot decrypt or one it did not keep. Only {@code LOCKED}, or an
  *       {@link #unlock(Duration, Runnable) unlock} the store refuses (which the engine counts as not answered, so the
  *       save ends locked), makes the engine wait for the owner. Any other failure of a save sends the API keys to the
- *       private file ({@code secrets.json}) instead, with one exception: when a save finds entries the store refuses
- *       to read, it keeps them as they are and listed in the {@code index}, unless the owner entered or removed them,
- *       and stores the rest; a failure of that save then fails it, without the file, which would hide those entries.
+ *       private file ({@code secrets.json}) instead, unless the save changes only some keys and found keys in the
+ *       store, readable or not: the file would hide those keys, so that save fails, without the file. A save that
+ *       finds entries the store refuses to read keeps them as they are and listed in the {@code index}, unless the
+ *       owner entered or removed them, and stores the rest.
  *       A load whose first read of the {@code index} fails takes the file as their place; a failure later in a load,
  *       of an entry or from a damaged index, is reported as keys that could not be read, and the file is not used.
  *       That file is the engine's {@link KeyFallback}; without it ({@link KeyFallback#NONE}, as on Android) such a

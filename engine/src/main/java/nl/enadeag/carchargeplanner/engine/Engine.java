@@ -623,7 +623,8 @@ public final class Engine {
      *
      * @param changes what the owner entered and emptied
      * @param prompting runs, on the calling thread, once the system's prompt to unlock the keychain shows
-     * @throws SecretsProblem as {@link #saveApiKeys(Secrets)}
+     * @throws SecretsProblem as {@link #saveApiKeys(Secrets)}, and also when the keychain holds keys and refuses the
+     *     write: the private file, which would hide those keys, is then not used
      */
     public void applyKeyChanges(KeyChanges changes, Runnable prompting) throws SecretsProblem {
         thenReplan(() -> {

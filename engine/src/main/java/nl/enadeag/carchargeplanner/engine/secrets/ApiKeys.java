@@ -16,6 +16,10 @@ import java.time.Duration;
  * as a damaged one, so a save starts a new index and the owner can enter the keys again; the old entries stay until the
  * same names are written again.
  *
+ * <p>A change that the keychain refuses to write while it was read and holds keys, readable or not, never goes to the
+ * file: a load reads the file first, so the file would hide those keys. The save fails instead, and the owner is told
+ * the keys were not saved. A save that replaces every key, which leaves nothing to hide, still goes to the file.
+ *
  * <p>The keychain is slow to ask and may not answer at all, while the engine wants the keys for a plan every minute,
  * so what it gave is kept in memory: the keys until the next save, and a keychain that could not be used or read is
  * left alone for {@link #RETRY_AFTER}; the keys then come from the file, which is read again only when it changed. A
@@ -106,10 +110,12 @@ public final class ApiKeys implements SecretsSource {
      * Stores them all, replacing what is stored, in the keychain when it works and else in the file; as
      * {@link #applyChanges(KeyChanges, Runnable)}, which a client that may not have read every stored key uses instead.
      * It reads no entry, so it also replaces the ones the keychain refuses to read, and a keychain that then fails
-     * sends the keys to the file, or fails the save without one, as for any other save.
+     * sends the keys to the file, also while it holds keys, as the file replaces them all; without the file as
+     * fallback the save fails.
      *
      * @param secrets every provider's secret settings; what is left out is forgotten
-     * @throws SecretsProblem as {@link #applyChanges(KeyChanges, Runnable)}
+     * @throws SecretsProblem as {@link #applyChanges(KeyChanges, Runnable)}, but for a keychain that holds keys and
+     *     refuses a write: with the file as fallback that save goes to the file
      */
     public void save(Secrets secrets) throws SecretsProblem {
         secrets.checkNames();
@@ -119,8 +125,9 @@ public final class ApiKeys implements SecretsSource {
     /**
      * Applies the owner's changes to the stored keys, in the keychain when it works and else in the file, when that is
      * the fallback: every key they did not enter or empty stays as it is, also one that could not be read, such as
-     * from a locked keychain or an entry the keychain refuses to read. When the keychain holds such an entry, the keys
-     * never go to the file.
+     * from a locked keychain or an entry the keychain refuses to read. When the keychain was read and holds keys,
+     * readable or not, the changes never go to the file, which would hide those keys: a write it refuses then fails the
+     * save.
      * Tries the keychain also while it is left alone after a failure: the owner asked for this. When the keychain is
      * locked, the system asks the owner to unlock it and this waits up to {@link #UNLOCK_WAIT} for their answer, while
      * loads go on. Blocks: call it away from the user interface's thread.
@@ -132,8 +139,9 @@ public final class ApiKeys implements SecretsSource {
      *     app cannot have it unlocked, nobody answered in time, or {@link #stopUnlocking()} was called: nothing was
      *     saved; without the file as fallback, also when the owner dismissed the prompt. Of the kind
      *     {@link SecretsProblem.Kind#FAILED} when a name has characters that are not allowed, the file could not be
-     *     written, the keychain failed while it holds an entry it refuses to read, or, without the file as fallback,
-     *     the keychain cannot be used or failed: nothing was saved then
+     *     written, the keychain refused a write or a delete while it holds keys, readable or not, or, without the file
+     *     as fallback, the keychain cannot be used or failed: no file was written then, and what the keychain took
+     *     before it failed stays
      */
     public void applyChanges(KeyChanges changes, Runnable prompting) throws SecretsProblem {
         changes.entered().checkNames();
