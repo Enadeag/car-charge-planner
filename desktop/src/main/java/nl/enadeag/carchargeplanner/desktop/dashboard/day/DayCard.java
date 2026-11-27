@@ -19,7 +19,7 @@ public final class DayCard extends VBox {
     public DayCard(DayModel day) {
         getChildren().add(line(day.title() + " · " + day.heading(), "card-label"));
         if (!day.hero().isEmpty()) {
-            getChildren().add(line(day.hero(), "hero"));
+            getChildren().add(paragraph(day.hero(), "hero"));
         }
         if (!day.facts().isEmpty()) {
             var facts = new FlowPane();

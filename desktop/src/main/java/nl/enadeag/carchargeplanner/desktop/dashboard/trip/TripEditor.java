@@ -5,6 +5,7 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.NumberText;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
+import nl.enadeag.carchargeplanner.desktop.theme.TimeFields;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripEntryRules;
 import java.time.Instant;
@@ -96,10 +97,7 @@ final class TripEditor extends VBox {
         }
         for (var time : List.of(departureTime, returnTime)) {
             time.getStyleClass().add("trip-time");
-            if (messages.twelveHour()) {
-                time.getStyleClass().add("twelve-hour");
-            }
-            time.setPrefColumnCount(4);
+            TimeFields.fit(time, messages);
         }
         var when = new GridPane();
         when.addRow(0, label(TextKey.TRIP_DEPARTURE, departureTime), departureDay, departureTime);

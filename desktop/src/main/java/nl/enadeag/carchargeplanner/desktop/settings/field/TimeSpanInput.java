@@ -31,9 +31,6 @@ public final class TimeSpanInput implements Input {
         word.getStyleClass().add("time-span-word");
         view = new HBox(start.view(), word, end.view());
         view.getStyleClass().add("time-span-input");
-        if (messages.twelveHour()) {
-            view.getStyleClass().add("twelve-hour");
-        }
     }
 
     /**

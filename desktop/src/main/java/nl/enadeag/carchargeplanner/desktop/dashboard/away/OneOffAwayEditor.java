@@ -3,6 +3,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
+import nl.enadeag.carchargeplanner.desktop.theme.TimeFields;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayEntryRules;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.Instant;
@@ -67,10 +68,7 @@ final class OneOffAwayEditor extends VBox {
 
         for (var field : List.of(from, to)) {
             field.getStyleClass().add("away-time");
-            if (messages.twelveHour()) {
-                field.getStyleClass().add("twelve-hour");
-            }
-            field.setPrefColumnCount(4);
+            TimeFields.fit(field, messages);
         }
         var fromLabel = Labels.line(messages.text(TextKey.AWAY_FROM), "fact");
         fromLabel.setLabelFor(from);

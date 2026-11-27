@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.settings.field;
 
 import nl.enadeag.carchargeplanner.desktop.settings.form.TimeText;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import nl.enadeag.carchargeplanner.desktop.theme.TimeFields;
 import java.time.LocalTime;
 import java.util.Objects;
 import javafx.scene.Node;
@@ -25,10 +26,7 @@ public final class TimeInput implements Input {
     public TimeInput(Messages messages) {
         this.messages = messages;
         field.getStyleClass().add("time-input");
-        if (messages.twelveHour()) {
-            field.getStyleClass().add("twelve-hour");
-        }
-        field.setPrefColumnCount(5);
+        TimeFields.fit(field, messages);
         load(loaded);
     }
 
