@@ -7,14 +7,17 @@ import java.util.regex.Pattern;
 /**
  * How a number field writes its value and reads what the owner typed. It writes the language's decimal mark, a comma
  * or a point, without a thousands separator; it reads either mark, a leading minus and the digits 0 to 9, and nothing
- * else: no thousands separator, exponent or plus sign, and an empty field is no number. Spaces around the text are
- * left out. A text the owner did not edit gives the value held back exactly, not as rounded for showing. Whether the
+ * else: no thousands separator, exponent or plus sign, and an empty field is no number. Exactly three digits after
+ * the mark, in a field with fewer decimals, are taken for a thousands separator and refused, so "1.000" never becomes
+ * 1. Spaces around the text are left out. A text the owner did not edit gives the value held back exactly, not as rounded for showing. Whether the
  * number fits is left to the engine's rules.
  */
 public final class NumberText {
 
     private static final Pattern NUMBER = Pattern.compile("-?[0-9]+([.,][0-9]+)?");
     private static final Pattern WHOLE = Pattern.compile("-?[0-9]+");
+    private static final Pattern THOUSANDS = Pattern.compile("-?[0-9]+[.,][0-9]{3}");
+    private static final int THOUSANDS_DIGITS = 3;
 
     private final Messages messages;
 
@@ -35,6 +38,10 @@ public final class NumberText {
          * @param problem what the field says
          */
         record Wrong(TextKey problem) implements Read {
+        }
+
+        /** The text is a whole number too long for the field, which is outside the field's limit. */
+        record OutOfRange() implements Read {
         }
     }
 
@@ -66,8 +73,9 @@ public final class NumberText {
      * @param decimals the decimals the field shows, 0 or more
      * @param whole whether the field takes only whole numbers
      * @return {@code held} exactly when the text is how it is written; else the typed number, or the problem: "Type a
-     *     number." for no number, "Type a whole number" for decimals in a whole-number field, and the general text
-     *     for a whole number too long for one
+     *     number." for no number, the thousands separator's text for three decimals in a field with fewer, "Type a
+     *     whole number" for decimals in a whole-number field, and {@link Read.OutOfRange} for a whole number too long
+     *     for one
      */
     public Read read(String text, double held, int decimals, boolean whole) {
         if (text.equals(write(held, decimals))) {
@@ -78,11 +86,14 @@ public final class NumberText {
             try {
                 return new Read.Number(Integer.parseInt(typed));
             } catch (NumberFormatException tooLong) {
-                return new Read.Wrong(TextKey.PROBLEM_OUT_OF_RANGE);
+                return new Read.OutOfRange();
             }
         }
         if (!NUMBER.matcher(typed).matches()) {
             return new Read.Wrong(TextKey.PROBLEM_NOT_A_NUMBER);
+        }
+        if (decimals < THOUSANDS_DIGITS && THOUSANDS.matcher(typed).matches()) {
+            return new Read.Wrong(TextKey.PROBLEM_THOUSANDS_SEPARATOR);
         }
         if (whole) {
             return new Read.Wrong(TextKey.PROBLEM_NOT_A_WHOLE_NUMBER);

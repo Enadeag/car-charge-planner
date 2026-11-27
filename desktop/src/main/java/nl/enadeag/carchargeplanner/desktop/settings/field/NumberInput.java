@@ -107,8 +107,11 @@ public final class NumberInput implements NumberField {
 
     @Override
     public Optional<String> problem() {
-        return read(spinner.getEditor().getText()) instanceof NumberText.Read.Wrong(var problem)
-                ? Optional.of(messages.text(problem)) : Optional.empty();
+        return switch (read(spinner.getEditor().getText())) {
+            case NumberText.Read.Number _ -> Optional.empty();
+            case NumberText.Read.Wrong(var problem) -> Optional.of(messages.text(problem));
+            case NumberText.Read.OutOfRange _ -> Optional.of(outOfRange());
+        };
     }
 
     @Override

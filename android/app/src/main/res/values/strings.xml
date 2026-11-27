@@ -186,6 +186,7 @@
   <string name="problem_same_as_start">Choose two different times.</string>
   <string name="problem_not_a_number">Type a number.</string>
   <string name="problem_not_a_whole_number">Type a whole number, without decimals.</string>
+  <string name="problem_thousands_separator">Type the number without a thousands separator.</string>
   <string name="problem_required">Required: this provider cannot be asked without it.</string>
   <string name="problem_server_address">Use an address that starts with https://, without a user name, ? or #.</string>
   <string name="problem_letters_and_digits">Use only letters and digits, at most 64: that is what the provider\'s API keys look like.</string>

@@ -77,6 +77,28 @@ class ChargerFormTest {
     }
 
     @Test
+    fun aCurrentTooLongForAWholeNumberIsOutOfRangeWithItsLimit() {
+        form.load(stored)
+        form.edit(ChargerForm.Field.MAX_CURRENT, "123456789012")
+
+        assertThat(form.check(stored)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ChargerForm.Field.MAX_CURRENT to FieldProblem.OutOfRange(Limit.fromTo(1.0, 80.0))))
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = ["1.000|en", "1,000|en", "1.000|nl", "1,000|nl"])
+    fun aCurrentWithThreeDecimalsIsRefusedAsAThousandsSeparator(text: String, language: String) {
+        val form = ChargerForm(SavedStateHandle(), NumberText(Locale.forLanguageTag(language)))
+        form.load(stored)
+        form.edit(ChargerForm.Field.MAX_CURRENT, text)
+
+        assertThat(form.check(stored)).isNull()
+        assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+            ChargerForm.Field.MAX_CURRENT to FieldProblem.ThousandsSeparator))
+    }
+
+    @Test
     fun anEfficiencyAboveAHundredPercentIsOutOfRange() {
         form.load(stored)
         form.edit(ChargerForm.Field.EFFICIENCY, "101")

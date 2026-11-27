@@ -65,6 +65,48 @@ class NumberTextTest {
         assertThat(dutch.read("16,0", 6, 0, true)).isEqualTo(new Read.Wrong(TextKey.PROBLEM_NOT_A_WHOLE_NUMBER));
         assertThat(english.read("sixteen", 6, 0, true)).isEqualTo(new Read.Wrong(TextKey.PROBLEM_NOT_A_NUMBER));
         assertThat(english.read("99999999999", 6, 0, true)).as("beyond what a whole-number field holds")
-                .isEqualTo(new Read.Wrong(TextKey.PROBLEM_OUT_OF_RANGE));
+                .isEqualTo(new Read.OutOfRange());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "-"})
+    void aWholeNumberFieldSaysAnEmptyTextOrALoneMinusIsNoNumber(String text) {
+        assertThat(english.read(text, 6, 0, true)).isEqualTo(new Read.Wrong(TextKey.PROBLEM_NOT_A_NUMBER));
+    }
+
+    @Test
+    void aWholeNumberFieldReadsALeadingMinus() {
+        assertThat(english.read("-3", 6, 0, true)).isEqualTo(new Read.Number(-3));
+    }
+
+    @Test
+    void aNumberTooLargeForADoubleIsNoNumber() {
+        assertThat(english.read("9".repeat(400), 4.2, 1, false))
+                .isEqualTo(new Read.Wrong(TextKey.PROBLEM_NOT_A_NUMBER));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.000", "1,000", "-2.500"})
+    void threeDecimalsInAFieldWithFewerAreTakenForAThousandsSeparatorAndRefused(String text) {
+        var separator = new Read.Wrong(TextKey.PROBLEM_THOUSANDS_SEPARATOR);
+        for (var numbers : new NumberText[] {english, dutch}) {
+            assertThat(numbers.read(text, 6, 0, true)).as("a whole-number field").isEqualTo(separator);
+            assertThat(numbers.read(text, 4.2, 1, false)).as("a field with one decimal").isEqualTo(separator);
+            assertThat(numbers.read(text, 4.2, 2, false)).as("a field with two decimals").isEqualTo(separator);
+        }
+    }
+
+    @Test
+    void fewerOrMoreThanThreeDecimalsAreStillRead() {
+        assertThat(english.read("1.5", 4.2, 1, false)).isEqualTo(new Read.Number(1.5));
+        assertThat(dutch.read("1,25", 4.2, 1, false)).isEqualTo(new Read.Number(1.25));
+        assertThat(english.read("1.0005", 4.2, 1, false)).isEqualTo(new Read.Number(1.0005));
+    }
+
+    @Test
+    void aFieldWithThreeDecimalsOrMoreReadsThreeDecimals() {
+        assertThat(english.read("0.125", 52, 4, false)).isEqualTo(new Read.Number(0.125));
+        assertThat(dutch.read("0,125", 52, 4, false)).isEqualTo(new Read.Number(0.125));
+        assertThat(english.read("1.000", 52, 3, false)).isEqualTo(new Read.Number(1));
     }
 }

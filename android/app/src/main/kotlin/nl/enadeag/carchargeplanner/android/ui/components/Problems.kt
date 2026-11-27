@@ -30,6 +30,7 @@ internal fun problemText(problem: FieldProblem): String = when (problem) {
     })
     FieldProblem.NotANumber -> stringResource(R.string.problem_not_a_number)
     FieldProblem.NotAWholeNumber -> stringResource(R.string.problem_not_a_whole_number)
+    FieldProblem.ThousandsSeparator -> stringResource(R.string.problem_thousands_separator)
     FieldProblem.NotFrom0To100 -> stringResource(R.string.problem_level_out_of_range)
     FieldProblem.Required -> stringResource(R.string.problem_required)
     FieldProblem.ServerAddress -> stringResource(R.string.problem_server_address)

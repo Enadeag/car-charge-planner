@@ -99,8 +99,8 @@ class PlanningForm(handle: SavedStateHandle, numbers: NumberText) :
         val target = reader.percent(Field.TARGET_CHARGE, ConfigSetting.TARGET_CHARGE, stored.targetPct(), 0)
         val margin = reader.number(Field.MARGIN, stored.margin(), 0, scale = 100.0)
         val tolerance = reader.number(Field.IMPORT_TOLERANCE, stored.importToleranceKwh(), IMPORT_DECIMALS)
-        val window = reader.minutes(Field.MINIMUM_WINDOW, stored.minWindow())
-        val lead = reader.minutes(Field.NOTIFY_LEAD, stored.notifyLead())
+        val window = reader.minutes(Field.MINIMUM_WINDOW, stored.minWindow(), ConfigSetting.MINIMUM_WINDOW)
+        val lead = reader.minutes(Field.NOTIFY_LEAD, stored.notifyLead(), ConfigSetting.NOTIFY_LEAD)
         val start = time(Field.CHARGING_START)
         val end = time(Field.CHARGING_END)
         val planning = reader.records({ setting -> fieldOf(setting) }) {

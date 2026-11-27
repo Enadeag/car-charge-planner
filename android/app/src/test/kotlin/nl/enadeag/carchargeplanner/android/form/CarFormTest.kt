@@ -65,6 +65,32 @@ class CarFormTest {
     }
 
     @Test
+    fun threeDecimalsInAOneDecimalFieldAreRefusedAsAThousandsSeparatorInEitherLanguage() {
+        for (language in listOf("en", "nl")) {
+            for (text in listOf("1.000", "1,000")) {
+                val form = CarForm(SavedStateHandle(), NumberText(Locale.forLanguageTag(language)))
+                form.load(stored)
+                form.edit(CarForm.Field.BATTERY, text)
+
+                assertThat(form.check(stored)).`as`("$text in $language").isNull()
+                assertThat(form.problems.value).containsExactlyEntriesOf(mapOf(
+                    CarForm.Field.BATTERY to FieldProblem.ThousandsSeparator))
+            }
+        }
+    }
+
+    @Test
+    fun oneOrTwoDecimalsAreStillRead() {
+        form.load(stored)
+        form.edit(CarForm.Field.BATTERY, "1.5")
+        form.edit(CarForm.Field.CONSUMPTION, "1,25")
+
+        val car = form.read(stored)!!.system().car()
+        assertThat(car.usableBatteryKwh()).isEqualTo(1.5)
+        assertThat(car.consumptionKwhPer100km()).isEqualTo(1.25)
+    }
+
+    @Test
     fun eachFieldShowsItsOwnProblemAtCheckAndLosesItWhenEdited() {
         form.load(stored)
         form.edit(CarForm.Field.BATTERY, "lots")

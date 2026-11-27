@@ -137,8 +137,8 @@ class ChargerForm(private val handle: SavedStateHandle, numbers: NumberText,
             reader.problems[Field.POWER] = FieldProblem.NotChosen
         }
         val phases = if (state.isEdited(Field.PHASES)) phases() ?: stored.phases() else stored.phases()
-        val minAmps = reader.whole(Field.MIN_CURRENT, stored.minAmps())
-        val maxAmps = reader.whole(Field.MAX_CURRENT, stored.maxAmps())
+        val minAmps = reader.whole(Field.MIN_CURRENT, stored.minAmps(), ConfigSetting.CHARGER_MIN_CURRENT)
+        val maxAmps = reader.whole(Field.MAX_CURRENT, stored.maxAmps(), ConfigSetting.CHARGER_MAX_CURRENT)
         val volts = reader.number(Field.VOLTAGE, stored.volts(), 0,
             untouchedIsStored = handle.get<Boolean>(VOLTS_SET) != true)
         val efficiency = reader.number(Field.EFFICIENCY, stored.efficiency(), 0, scale = 100.0)

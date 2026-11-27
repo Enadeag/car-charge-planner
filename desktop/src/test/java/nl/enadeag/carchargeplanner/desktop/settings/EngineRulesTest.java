@@ -12,12 +12,15 @@ import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.Car;
+import nl.enadeag.carchargeplanner.engine.config.Charger;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
+import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.EngineConfig;
 import nl.enadeag.carchargeplanner.engine.config.House;
 import nl.enadeag.carchargeplanner.engine.config.PanelArray;
 import nl.enadeag.carchargeplanner.engine.config.PanelSize;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
+import nl.enadeag.carchargeplanner.engine.config.Phases;
 import nl.enadeag.carchargeplanner.engine.config.PlanningPreferences;
 import nl.enadeag.carchargeplanner.engine.config.TypicalValues;
 import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
@@ -25,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.function.UnaryOperator;
 import javafx.scene.control.Spinner;
@@ -147,6 +151,56 @@ class EngineRulesTest {
         assertThat(typeAndSave(view, TextKey.FIELD_CAR_BATTERY, "61")).isTrue();
 
         assertThat(stored().system().panels()).containsExactly(array);
+    }
+
+    @Test
+    void aChargersVoltageAndEfficiencyWithMoreDecimalsThanShownAreKeptAsTheyAre() throws Exception {
+        var charger = new Charger(Phases.THREE, 8, 32, 231.46, 0.9375);
+        var view = openWith(Language.ENGLISH,
+                config -> config.withSystem(config.system().withCharger(charger), config.typical()));
+        Fx.run(() -> view.show(Category.CHARGER));
+
+        assertThat(text(view, TextKey.FIELD_VOLTAGE)).isEqualTo("231");
+        assertThat(text(view, TextKey.FIELD_EFFICIENCY)).isEqualTo("94");
+        assertThat(typeAndSave(view, TextKey.FIELD_MIN_CURRENT, "10")).isTrue();
+
+        assertThat(stored().system().charger()).isEqualTo(new Charger(Phases.THREE, 10, 32, 231.46, 0.9375));
+    }
+
+    @Test
+    void aLocationAtTheEnginesEndsWithMoreDecimalsThanShownIsKeptAsItIs() throws Exception {
+        var location = new Coordinates(89.999_999, -179.999_999);
+        var view = openWith(Language.ENGLISH, config -> config.withSystem(
+                config.system().withUnnamedLocation(location, ZoneId.of("UTC")), config.typical()));
+        Fx.run(() -> view.show(Category.LOCATION));
+
+        assertThat(text(view, TextKey.FIELD_LATITUDE)).isEqualTo("90.0000");
+        assertThat(text(view, TextKey.FIELD_LONGITUDE)).isEqualTo("-180.0000");
+        assertThat(typeAndSave(view, TextKey.FIELD_LATITUDE, "52")).isTrue();
+
+        assertThat(stored().system().location()).isEqualTo(new Coordinates(52, -179.999_999));
+    }
+
+    @Test
+    void aWholeNumberTooLongForTheFieldIsRefusedWithItsLimit() throws Exception {
+        var view = open();
+        Fx.run(() -> view.show(Category.CHARGER));
+
+        assertThat(typeAndSave(view, TextKey.FIELD_MAX_CURRENT, "123456789012")).isFalse();
+
+        assertThat(help(view, TextKey.FIELD_MAX_CURRENT)).startsWith("Type a number from 1 to 80.");
+    }
+
+    @Test
+    void threeDecimalsAreRefusedAsAThousandsSeparatorRatherThanReadAsOne() throws Exception {
+        var view = openWith(Language.DUTCH, config -> config);
+        var before = Files.readString(settings.configPath);
+
+        assertThat(typeAndSave(view, TextKey.FIELD_CAR_BATTERY, "1.000")).isFalse();
+
+        assertThat(help(view, TextKey.FIELD_CAR_BATTERY))
+                .startsWith("Typ het getal zonder scheidingsteken voor duizendtallen.");
+        assertThat(settings.configPath).hasContent(before);
     }
 
     @Test

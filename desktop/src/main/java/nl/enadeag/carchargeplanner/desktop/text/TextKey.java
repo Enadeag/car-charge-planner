@@ -506,6 +506,8 @@ public enum TextKey {
     PROBLEM_NOT_A_NUMBER,
     /** A number with decimals where the field takes a whole number, such as a current. */
     PROBLEM_NOT_A_WHOLE_NUMBER,
+    /** Exactly three decimals where the field shows fewer, which reads as a thousands separator, such as "1.000". */
+    PROBLEM_THOUSANDS_SEPARATOR,
     /** A number outside its setting's limit; {0} the lowest allowed, {1} the highest allowed, written as numbers. */
     PROBLEM_FROM_TO,
     /** A number below its setting's limit, which has no highest end; {0} the lowest allowed, written as a number. */

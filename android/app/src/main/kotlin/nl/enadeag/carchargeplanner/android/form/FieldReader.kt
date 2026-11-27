@@ -36,6 +36,10 @@ class FieldReader<F : Enum<F>>(private val state: FormState<F>, private val numb
         if (untouchedIsStored && (!state.isEdited(field) || text == numbers.write(stored * scale, decimals))) {
             return stored
         }
+        if (numbers.hasThousandsSeparator(text, decimals)) {
+            problems[field] = FieldProblem.ThousandsSeparator
+            return stored
+        }
         val typed = numbers.read(text)
         if (typed == null) {
             problems[field] = FieldProblem.NotANumber
@@ -68,16 +72,17 @@ class FieldReader<F : Enum<F>>(private val state: FormState<F>, private val numb
      *
      * @param field the field
      * @param stored the stored value
+     * @param setting the setting the field is the value of, whose limit a number too long for the field names
      * @return the value; the stored one when the text is refused
      */
-    fun whole(field: F, stored: Int): Int {
+    fun whole(field: F, stored: Int, setting: ConfigSetting): Int {
         val text = state.text(field)
         if (!state.isEdited(field) || text == stored.toString()) {
             return stored
         }
         return when (val read = numbers.readWhole(text)) {
             is NumberText.WholeNumber.Read -> read.value
-            is NumberText.WholeNumber.Wrong -> stored.also { problems[field] = read.problem }
+            is NumberText.WholeNumber.Wrong -> stored.also { problems[field] = limited(read.problem, setting) }
         }
     }
 
@@ -86,10 +91,11 @@ class FieldReader<F : Enum<F>>(private val state: FormState<F>, private val numb
      *
      * @param field the field
      * @param stored the stored duration, in whole minutes
+     * @param setting the setting the field is the value of
      * @return the duration; the stored one when the text is refused
      */
-    fun minutes(field: F, stored: Duration): Duration {
-        val whole = whole(field, Math.toIntExact(stored.toMinutes()))
+    fun minutes(field: F, stored: Duration, setting: ConfigSetting): Duration {
+        val whole = whole(field, Math.toIntExact(stored.toMinutes()), setting)
         return if (whole.toLong() == stored.toMinutes()) stored else Duration.ofMinutes(whole.toLong())
     }
 
@@ -111,6 +117,13 @@ class FieldReader<F : Enum<F>>(private val state: FormState<F>, private val numb
             problems[fieldOf(refused.setting())] = problemOf(refused)
             null
         }
+    }
+
+    /** A whole number too long for its field is outside its setting's limit, which it names where there is one. */
+    private fun limited(problem: FieldProblem, setting: ConfigSetting): FieldProblem {
+        val limit = Limit.of(setting)
+        return if (problem == FieldProblem.Refused(InvalidSetting.Rule.OUT_OF_RANGE) && limit != null)
+            FieldProblem.OutOfRange(limit) else problem
     }
 
     /** A number outside its setting's limit names the limit; any other refusal its rule. */

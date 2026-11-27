@@ -99,6 +99,17 @@ class LocationFormTest {
     }
 
     @Test
+    fun aCoordinateWithThreeDecimalsIsReadAsTyped() {
+        val form = LocationForm(SavedStateHandle(), numbers, placeRequired = false, phoneZone = { PHONE })
+        form.load(DRAFT)
+
+        form.edit(LocationForm.Field.LATITUDE, "0.125")
+        form.edit(LocationForm.Field.LONGITUDE, "1.000")
+
+        assertThat(form.check(DRAFT)!!.system().location()).isEqualTo(Coordinates(0.125, 1.0))
+    }
+
+    @Test
     fun typedCoordinatesPutTheTimeZoneOfAPlaceBackToThePhones() {
         val form = LocationForm(SavedStateHandle(), numbers, placeRequired = true, phoneZone = { PHONE })
         form.load(DRAFT)
