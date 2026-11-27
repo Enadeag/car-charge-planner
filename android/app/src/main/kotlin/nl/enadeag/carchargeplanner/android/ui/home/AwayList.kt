@@ -19,7 +19,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.AwayEntry

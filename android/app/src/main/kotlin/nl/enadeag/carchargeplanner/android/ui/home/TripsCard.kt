@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.unit.dp
 import java.time.ZoneId
 import nl.enadeag.carchargeplanner.android.R

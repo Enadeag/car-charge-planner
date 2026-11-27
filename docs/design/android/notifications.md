@@ -36,7 +36,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, names, sav
 
 - The card shows on the page in view, after the save outcome and the warnings, on every home state, while notifications are not allowed and it was not closed, and is looked at again on every `ON_START` (#361).
 - "Turn on notifications" asks Android on Android 13 and later; after a refusal, or where they are blocked on an older phone, "Open notification settings" with "Android does not ask again. Turn notifications on there." The Dutch button is "Instellingen voor meldingen openen", as "Meldingsinstellingen" does not fit at 200% on a narrow phone (#361).
-- × ("Close") closes the card for good. The card is read title, text, button, Close. After Close the focus goes to the screen's title, as the card is gone; when a refusal swaps the button, to the card's title (#361).
+- × ("Close") closes the card for good. When a refusal swaps the button, the focus moves to the new "Open notification settings" button, as the one it was on is gone (#361).
 
 ### Preferences on the phone
 

@@ -41,7 +41,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 

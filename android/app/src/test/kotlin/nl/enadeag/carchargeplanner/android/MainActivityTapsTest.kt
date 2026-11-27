@@ -5,7 +5,6 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText

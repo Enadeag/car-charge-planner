@@ -28,7 +28,7 @@ What holds on every screen (top app bar, buttons, snackbars, dialogs, names, sav
 
 ### Away periods
 
-- Each weekly away period's from and until are `TimeButton`s with the time on the phone's 12- or 24-hour clock, each opening Material's time picker with its Keyboard and Clock button, as the one-off away period's (#338); a new period still starts at 08:00–17:00. Next checks them by the engine's rule, an end after the start, and shows the problem under the until button, which carries it and takes the focus. The step and Settings' Away page share this; set-up has no Planning page, so the charging hours are chosen in Settings only (#452).
+- Each weekly away period's from and until are `TimeButton`s with the time on the phone's 12- or 24-hour clock, each opening Material's time picker with its Keyboard and Clock button, as the one-off away period's (#338); a new period still starts at 08:00–17:00. Next checks them by the engine's rule, an end after the start, and shows the problem under the until button, which takes the focus. The step and Settings' Away page share this; set-up has no Planning page, so the charging hours are chosen in Settings only (#452).
 
 ### Charger
 

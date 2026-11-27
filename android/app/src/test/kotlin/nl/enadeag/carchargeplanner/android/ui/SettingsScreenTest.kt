@@ -205,7 +205,7 @@ class SettingsScreenTest {
 
     private fun field(label: String) = compose.onNode(hasSetTextAction() and hasText(label, substring = true))
 
-    private fun title(page: SettingsPage) = compose.onNode(hasText(text(page.title())))
+    private fun title(page: SettingsPage) = compose.onNode(hasText(text(page.title())) and !hasClickAction())
 
     private val apiKey get() = field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo"))
 
@@ -1817,7 +1817,7 @@ class SettingsScreenTest {
         click(R.string.settings_licences)
         compose.waitForIdle()
 
-        compose.onNode(hasText(text(R.string.settings_licences))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_licences)) and !hasClickAction()).assertExists()
         assertThat(session.page.value).isNull()
         // the app's own assets, as the build made them: the app's licence comes first
         compose.waitUntil(5_000) {
@@ -1855,7 +1855,8 @@ class SettingsScreenTest {
         restoration.emulateSavedInstanceStateRestore()
         compose.waitForIdle()
 
-        compose.onNode(hasText(text(R.string.settings_licences))).assertExists()
+        compose.onNode(hasText(text(R.string.settings_licences)) and !hasClickAction()).assertExists()
+        compose.onNode(hasText(text(R.string.settings_title))).assertDoesNotExist()
     }
 
     @Test

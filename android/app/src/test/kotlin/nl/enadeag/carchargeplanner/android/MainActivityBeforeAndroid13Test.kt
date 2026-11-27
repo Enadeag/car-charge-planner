@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.android
 
 import android.app.NotificationManager
 import android.os.Build
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst

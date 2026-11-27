@@ -29,10 +29,9 @@ import nl.enadeag.carchargeplanner.android.ui.components.SaveFailure
 /**
  * The entry of the battery level the car shows, while it is open: Material's dialog with a number field, whose
  * keyboard's Done saves as Save does, and Cancel. The field takes the focus when the entry opens, again when Save
- * finds a problem, which shows under it in a live region, and when the question over the entry closes. A save that
- * failed says so in the entry, with the English details, in a live region read at once; while it runs, Save is held,
- * keeping the focus, and shows its progress, and the field takes no typing. Back, or a tap beside the dialog, asks
- * "Discard changes?" when a level was typed.
+ * finds a problem, which shows under it, and when the question over the entry closes. A save that failed says so
+ * in the entry, with the English details; while it runs, Save is held, keeping the focus, and shows its progress,
+ * and the field takes no typing. Back, or a tap beside the dialog, asks "Discard changes?" when a level was typed.
  */
 @Composable
 internal fun BatteryEntryDialog(entry: BatteryEntry) {

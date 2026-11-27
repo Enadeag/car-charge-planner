@@ -8,7 +8,6 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
