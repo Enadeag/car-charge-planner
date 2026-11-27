@@ -1011,6 +1011,49 @@ class ApiKeysTest {
         assertThat(refusing.entries).isEqualTo(before);
     }
 
+    static Stream<MemoryKeychain> readableKeychainsHoldingTheKeysThatRefuseWrites() {
+        return Stream.of(holdingTheKeys(new FailingWrites()), holdingTheKeys(new RefusingWrites()));
+    }
+
+    /** Pins #394's bug: the file holds only what the change names, so the keychain's other keys no longer load. */
+    @ParameterizedTest
+    @MethodSource("readableKeychainsHoldingTheKeysThatRefuseWrites")
+    void aChangeIntoAReadableKeychainWithKeysThatRefusesWritesWritesAFileThatHidesTheOtherKeys(
+            MemoryKeychain refusing) throws SecretsProblem {
+        var before = Map.copyOf(refusing.entries);
+
+        keys(refusing).applyChanges(NEW_SOLCAST_KEY, () -> { });
+
+        var onlyTheChange = new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW")));
+        assertThat(file().read()).isEqualTo(onlyTheChange);
+        assertThat(keys(refusing).load()).isEqualTo(onlyTheChange);
+        assertThat(refusing.entries).isEqualTo(before);
+    }
+
+    /** Pins #394's bug for a removal: the file holds no key at all, so none of the keychain's keys loads. */
+    @ParameterizedTest
+    @MethodSource("readableKeychainsHoldingTheKeysThatRefuseWrites")
+    void aRemovalFromAReadableKeychainThatRefusesWritesWritesAFileThatHidesEveryKey(MemoryKeychain refusing)
+            throws SecretsProblem {
+        var removed = new KeyChanges(Secrets.NONE, Map.of(OPEN_METEO, Set.of("api_key")));
+
+        keys(refusing).applyChanges(removed, () -> { });
+
+        assertThat(file().read()).isEqualTo(Secrets.NONE);
+        assertThat(keys(refusing).load()).isEqualTo(Secrets.NONE);
+    }
+
+    /** Pins #394's bug for {@code remove}, which saves as a change does. */
+    @Test
+    void removingFromAReadableKeychainThatRefusesWritesWritesAFileThatHidesEveryKey() throws SecretsProblem {
+        var refusing = holdingTheKeys(new RefusingWrites());
+
+        assertThat(keys(refusing).remove(Map.of(OPEN_METEO, Set.of("api_key")))).isTrue();
+
+        assertThat(file().read()).isEqualTo(Secrets.NONE);
+        assertThat(keys(refusing).load()).isEqualTo(Secrets.NONE);
+    }
+
     @Test
     void removingAKeyKeptOnlyInTheFileMovesTheRestIntoAUsableKeychainAndDropsTheFile() throws SecretsProblem {
         file().write(KEYS);
