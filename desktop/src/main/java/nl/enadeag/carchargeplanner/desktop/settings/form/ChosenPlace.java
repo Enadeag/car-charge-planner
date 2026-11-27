@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.form;
 
+import nl.enadeag.carchargeplanner.desktop.text.NumberText;
 import nl.enadeag.carchargeplanner.engine.config.Coordinates;
 import nl.enadeag.carchargeplanner.engine.config.PlaceName;
 import java.util.Optional;

@@ -1,7 +1,5 @@
-package nl.enadeag.carchargeplanner.desktop.settings.form;
+package nl.enadeag.carchargeplanner.desktop.text;
 
-import nl.enadeag.carchargeplanner.desktop.text.Messages;
-import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import java.util.regex.Pattern;
 
 /**

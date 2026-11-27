@@ -9,7 +9,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.form.ChosenPlace;
 import nl.enadeag.carchargeplanner.desktop.settings.form.Limit;
 import nl.enadeag.carchargeplanner.desktop.settings.form.LocationEntry;
 import nl.enadeag.carchargeplanner.desktop.settings.form.NumberRange;
-import nl.enadeag.carchargeplanner.desktop.settings.form.NumberText;
+import nl.enadeag.carchargeplanner.desktop.text.NumberText;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.page.ConfigPage;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Fold;

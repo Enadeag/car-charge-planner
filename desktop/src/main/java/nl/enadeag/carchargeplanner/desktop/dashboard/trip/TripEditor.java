@@ -2,6 +2,7 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.trip;
 
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
+import nl.enadeag.carchargeplanner.desktop.text.NumberText;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
@@ -197,7 +198,7 @@ final class TripEditor extends VBox {
         departureTime.setText(SHOWN.format(leaves));
         returnDay.setValue(back.toLocalDate());
         returnTime.setText(SHOWN.format(back));
-        distanceShown = messages.number(units.distance(trip.distanceKm()), 0);
+        distanceShown = new NumberText(messages).write(units.distance(trip.distanceKm()), 0);
         distanceKm = trip.distanceKm();
         distance.setText(distanceShown);
         canCharge.setSelected(trip.canChargeAtDestination());

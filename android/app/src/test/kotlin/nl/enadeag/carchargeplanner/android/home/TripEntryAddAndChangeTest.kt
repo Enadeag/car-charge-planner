@@ -366,7 +366,7 @@ class TripEntryAddAndChangeTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["", "abc", ".5", "1e3", "12 km", "1,000,000", "+5"])
+    @ValueSource(strings = ["", "abc", ".5", "1e3", "1E3", "12 km", "1,000,000", "+5", "12.", "1 000"])
     fun aDistanceThatIsNoNumberIsRefusedAtTheDistance(typed: String) = runTest {
         val entry = added()
         entry.fill(typed)
@@ -378,12 +378,12 @@ class TripEntryAddAndChangeTest {
     }
 
     @Test
-    fun aDistanceTooLargeToBeANumberIsNoNumber() {
-        val fields = Fields(today, LocalTime.of(8, 0), today, LocalTime.of(18, 0), "1" + "0".repeat(400), false)
+    fun aDistanceTooLongToBeReadIsTooFar() {
+        val fields = Fields(today, LocalTime.of(8, 0), today, LocalTime.of(18, 0), "1".repeat(25), false)
         val draft = TripDraft(Mode.ADD, amsterdam, today, fields, null, fields)
 
         assertThat(draft.check(clock.now, NumberText(Locale.ENGLISH)))
-            .isEqualTo(TripDraft.Checked.Refused(Problem.DISTANCE_NOT_A_NUMBER))
+            .isEqualTo(TripDraft.Checked.Refused(Problem.DISTANCE_TOO_FAR))
     }
 
     /** A trip edited by hand to return at 9999-12-31T23:30Z shows its return at 00:30 on 1 January 10000. */
@@ -430,7 +430,7 @@ class TripEntryAddAndChangeTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["0", "-5", "0.0", "-0.1"])
+    @ValueSource(strings = ["0", "-5", "-0"])
     fun aDistanceOfZeroOrLessIsRefused(typed: String) = runTest {
         val entry = added()
         entry.fill(typed)
@@ -457,7 +457,7 @@ class TripEntryAddAndChangeTest {
     @Test
     fun aDistanceOfTwentyThousandKmIsSavedAndAnyMoreRefusedAtTheDistance() = runTest {
         val entry = added()
-        entry.fill("20000.001")
+        entry.fill("20001")
 
         entry.save()
 
@@ -467,22 +467,61 @@ class TripEntryAddAndChangeTest {
         assertThat(saved(entry)?.distanceKm()).isEqualTo(20_000.0)
     }
 
-    @Test
-    fun aTinyDistanceIsSaved() = runTest {
+    @ParameterizedTest
+    @ValueSource(strings = ["0.01", "12.5", "12,5", "12,0", "0.0"])
+    fun aDistanceWithDecimalsIsRefusedAsNotWhole(typed: String) = runTest {
         val entry = added()
-        entry.fill("0.001")
+        entry.fill(typed)
 
-        assertThat(saved(entry)?.distanceKm()).isEqualTo(0.001)
+        entry.save()
+
+        assertThat(entry.problem.value).isEqualTo(Problem.DISTANCE_NOT_A_WHOLE_NUMBER)
+        assertThat(entry.problem.value!!.field).isEqualTo(Field.DISTANCE)
     }
 
     @ParameterizedTest
-    @CsvSource("1.000, 1.0", "'12,5', 12.5", "' 80 ', 80.0")
-    fun theDistanceIsReadAsANumberFieldReadsItWithSpacesAroundItTrimmed(typed: String, km: Double) = runTest {
+    @ValueSource(strings = ["1.000", "1,000", "-1.000"])
+    fun aDistanceWithAThousandsSeparatorIsRefusedAsSuch(typed: String) = runTest {
         val entry = entry(numbers = NumberText(Locale.forLanguageTag("nl")))
         entry.add(today, amsterdam)
         entry.fill(typed)
 
+        entry.save()
+
+        assertThat(entry.problem.value).isEqualTo(Problem.DISTANCE_THOUSANDS_SEPARATOR)
+    }
+
+    @ParameterizedTest
+    @CsvSource("1000, 1000.0", "' 80 ', 80.0", "007, 7.0", "1, 1.0")
+    fun aWholeNumberIsTheDistanceWithSpacesAroundItLeftOut(typed: String, km: Double) = runTest {
+        val entry = added()
+        entry.fill(typed)
+
         assertThat(saved(entry)?.distanceKm()).isEqualTo(km)
+    }
+
+    @Test
+    fun theTimesAreCheckedBeforeADistanceWithDecimals() = runTest {
+        val entry = added()
+        entry.fill("12.5", departure = "18:00", back = "08:00")
+
+        entry.save()
+
+        assertThat(entry.problem.value).isEqualTo(Problem.RETURN_NOT_AFTER_DEPARTURE)
+    }
+
+    @Test
+    fun aStoredDistanceThatIsNotWholeIsKeptWhenLeftAsShownAndWholeWhenTyped() = runTest {
+        val stored = trip(today.plusDays(1), "07:30", today.plusDays(1), "18:00", 12.5)
+        access.trips = listOf(stored)
+        val entry = entry()
+        entry.change(stored, amsterdam)
+        assertThat(entry.draft.value!!.fields.distance).isEqualTo("13")
+
+        assertThat(saved(entry)?.distanceKm()).isEqualTo(12.5)
+        entry.change(stored, amsterdam)
+        entry.distance("12")
+        assertThat(saved(entry)?.distanceKm()).isEqualTo(12.0)
     }
 
     @Test

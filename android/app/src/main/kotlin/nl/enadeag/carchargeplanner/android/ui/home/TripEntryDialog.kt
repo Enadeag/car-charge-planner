@@ -239,7 +239,7 @@ private fun Moment(day: Named, time: Named, problem: String?, enabled: Boolean) 
 }
 
 /**
- * The distance there and back: Material's field with its label, "km" after it and a decimal keyboard, whose Done
+ * The distance there and back: Material's field with its label, "km" after it and a number keyboard, whose Done
  * saves; a screen reader reads its label, what is typed and the unit, as the field shows them. Why Save refused it
  * shows under it, in a polite live region of its own, and the field carries it. While the trip is saved, it keeps the
  * focus but takes no typing.
@@ -255,7 +255,7 @@ private fun DistanceField(text: String, problem: String?, saving: Boolean, focus
         singleLine = true,
         readOnly = saving,
         isError = problem != null,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onDone() }),
         supportingText = {
             // a node of its own, outside the field's, which stays while empty, so a problem that comes in is read
@@ -296,6 +296,8 @@ private fun problemText(problem: TripDraft.Problem, words: DashboardWords): Stri
     TripDraft.Problem.TOO_LONG ->
         Trip.MAX_LENGTH.toDays().toInt().let { days -> pluralStringResource(R.plurals.trip_too_long, days, days) }
     TripDraft.Problem.DISTANCE_NOT_A_NUMBER -> stringResource(R.string.trip_distance_not_a_number)
+    TripDraft.Problem.DISTANCE_NOT_A_WHOLE_NUMBER -> stringResource(R.string.problem_not_a_whole_number)
+    TripDraft.Problem.DISTANCE_THOUSANDS_SEPARATOR -> stringResource(R.string.problem_thousands_separator)
     TripDraft.Problem.DISTANCE_NOT_POSITIVE -> stringResource(R.string.trip_distance_not_positive)
     TripDraft.Problem.DISTANCE_TOO_FAR ->
         stringResource(R.string.trip_distance_too_far, words.whole(Trip.MAX_DISTANCE_KM.toDouble()))

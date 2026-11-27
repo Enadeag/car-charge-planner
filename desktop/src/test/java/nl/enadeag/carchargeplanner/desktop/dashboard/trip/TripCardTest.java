@@ -202,6 +202,40 @@ class TripCardTest {
     }
 
     @Test
+    void aStoredDistanceThatIsNotWholeIsKeptWhenLeftAsShownAndWholeWhenTyped() throws Exception {
+        var trip = new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 18, 0), 12.5, false, false);
+        var listed = Models.LISTED_SATURDAY;
+        show(Models.CLOUDY_TOMORROW.withTrips(List.of(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
+                listed.text(), listed.originText(), listed.changeSpoken(), listed.removeSpoken()))), Models.TRIPS);
+
+        Fx.run(control(Button.class, listed.changeSpoken())::fire);
+        var field = (javafx.scene.control.TextField) Fx.call(() -> card.editor().lookup(".trip-distance"));
+        assertThat(Fx.call(() -> field.getText())).isEqualTo("13");
+        Fx.run(() -> card.editor().save());
+        Fx.run(control(Button.class, listed.changeSpoken())::fire);
+        Fx.run(() -> {
+            field.setText("12");
+            card.editor().save();
+        });
+
+        assertThat(changed).containsExactly(List.of(trip, trip),
+                List.of(trip, new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 18, 0), 12, false, false)));
+    }
+
+    @Test
+    void aStoredDistanceOfThousandsIsShownWithoutGrouping() throws Exception {
+        var trip = new Trip(at(SATURDAY, 7, 30), at(SATURDAY, 18, 0), 1234, false, false);
+        var listed = Models.LISTED_SATURDAY;
+        show(Models.CLOUDY_TOMORROW.withTrips(List.of(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
+                listed.text(), listed.originText(), listed.changeSpoken(), listed.removeSpoken()))), Models.TRIPS);
+
+        Fx.run(control(Button.class, listed.changeSpoken())::fire);
+
+        var field = (javafx.scene.control.TextField) Fx.call(() -> card.editor().lookup(".trip-distance"));
+        assertThat(Fx.call(() -> field.getText())).isEqualTo("1234");
+    }
+
+    @Test
     void aTripInMilesIsShownAndSavedInMiles() throws Exception {
         var miles = new TripsModel(Models.BRUSSELS, Units.IMPERIAL);
         show(Models.CLOUDY_TOMORROW.withTrips(List.of()), miles);
@@ -220,6 +254,8 @@ class TripCardTest {
     @CsvSource({
         "8:00, 18:00, far, TRIP_DISTANCE_NOT_A_NUMBER, 'Distance there and back, in km'",
         "8:00, 18:00, 0, TRIP_DISTANCE_NOT_POSITIVE, 'Distance there and back, in km'",
+        "8:00, 18:00, 12.5, PROBLEM_NOT_A_WHOLE_NUMBER, 'Distance there and back, in km'",
+        "8:00, 18:00, 1.000, PROBLEM_THOUSANDS_SEPARATOR, 'Distance there and back, in km'",
         "eight, 18:00, 10, PROBLEM_NOT_A_TIME, Time of departure",
         "8:00, six, 10, PROBLEM_NOT_A_TIME, Time of return",
         "18:00, 8:00, 10, TRIP_RETURN_BEFORE_DEPARTURE, Day of return",

@@ -101,33 +101,69 @@ class TripCheckTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "far", "12 km", "1,200", "NaN"})
+    @ValueSource(strings = {"", "far", "12 km", "NaN", "1E3", "+5", "12.", ".5", "1 000"})
     void aDistanceThatIsNotANumberIsRefusedAtTheDistance(String typed) {
         assertThat(morning().check(entered("7:30", "18:00", typed)))
                 .isEqualTo(new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_A_NUMBER, Field.DISTANCE));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"0", "-5", "0.0"})
+    @ValueSource(strings = {"0", "-5", "-0"})
     void aDistanceOfNothingOrLessIsRefusedAtTheDistance(String typed) {
         assertThat(morning().check(entered("7:30", "18:00", typed)))
                 .isEqualTo(new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_POSITIVE, Field.DISTANCE));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"12.5", "12,5", "0.5", "12,0", "0.0"})
+    void aDistanceWithDecimalsIsRefusedAsNotWhole(String typed) {
+        assertThat(morning().check(entered("7:30", "18:00", typed)))
+                .isEqualTo(new Checked.Refused(TextKey.PROBLEM_NOT_A_WHOLE_NUMBER, Field.DISTANCE));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.000", "1,000", "-1.000"})
+    void aDistanceWithAThousandsSeparatorIsRefusedAsSuch(String typed) {
+        assertThat(morning().check(entered("7:30", "18:00", typed)))
+                .isEqualTo(new Checked.Refused(TextKey.PROBLEM_THOUSANDS_SEPARATOR, Field.DISTANCE));
+        assertThat(check(at(DAY, 6, 0), Units.METRIC, new Messages(Language.DUTCH))
+                .check(entered("7:30", "18:00", typed)))
+                .isEqualTo(new Checked.Refused(TextKey.PROBLEM_THOUSANDS_SEPARATOR, Field.DISTANCE));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1000, 1000", "' 120 ', 120", "007, 7", "1, 1", "20000, 20000"})
+    void aWholeNumberIsTheDistanceInKmWithSpacesAroundLeftOut(String typed, double km) {
+        assertThat(morning().check(entered("7:30", "18:00", typed)))
+                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), km, false)));
+    }
+
     @Test
-    void aDistanceOfLessThanOneKmIsSaved() {
-        assertThat(morning().check(entered("7:30", "18:00", "0.5")))
-                .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), 0.5, false)));
+    void aNumberTooLongToReadIsTooFarInKmAndInMiles() {
+        var digits = "1".repeat(25);
+
+        assertThat(morning().check(entered("7:30", "18:00", digits))).isEqualTo(
+                new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("20,000", "km")));
+        assertThat(check(at(DAY, 6, 0), Units.IMPERIAL, ENGLISH).check(entered("7:30", "18:00", digits)))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE,
+                        List.of("12,427", "mi")));
+    }
+
+    @Test
+    void aStoredDistanceThatIsNotWholeIsKeptExactlyWhenItIsGivenAlready() {
+        var kept = morning().check(entered("7:30", "18:00", "13"), 12.5);
+
+        assertThat(kept).isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), 12.5, false)));
     }
 
     @Test
     void aTripOfTwentyThousandKmIsSavedAndALongerOneRefusedWithThatLimit() {
         assertThat(morning().check(entered("7:30", "18:00", "20000")))
                 .isEqualTo(new Checked.Valid(new Trip(at(DAY, 7, 30), at(DAY, 18, 0), 20_000, false)));
-        assertThat(morning().check(entered("7:30", "18:00", "20000.01"))).isEqualTo(
+        assertThat(morning().check(entered("7:30", "18:00", "20001"))).isEqualTo(
                 new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("20,000", "km")));
         assertThat(check(at(DAY, 6, 0), Units.METRIC, new Messages(Language.DUTCH))
-                .check(entered("7:30", "18:00", "20000,01"))).isEqualTo(
+                .check(entered("7:30", "18:00", "20001"))).isEqualTo(
                         new Checked.Refused(TextKey.TRIP_DISTANCE_TOO_FAR, Field.DISTANCE, List.of("20.000", "km")));
     }
 
@@ -212,18 +248,23 @@ class TripCheckTest {
     }
 
     @Test
-    void aDistanceInMilesIsKeptInKmAndADutchOneIsReadWithItsComma() {
+    void wholeMilesAreKeptAsTheirExactKm() {
         var miles = check(at(DAY, 6, 0), Units.IMPERIAL, ENGLISH).check(entered("7:30", "18:00", "100"));
-        var dutch = check(at(DAY, 6, 0), Units.METRIC, new Messages(Language.DUTCH))
-                .check(entered("7:30", "18:00", "12,5"));
+        var ten = check(at(DAY, 6, 0), Units.IMPERIAL, ENGLISH).check(entered("7:30", "18:00", "10"));
 
-        assertThat(((Checked.Valid) miles).trip().distanceKm()).isCloseTo(160.9344, within(1e-9));
-        assertThat(((Checked.Valid) dutch).trip().distanceKm()).isEqualTo(12.5);
+        assertThat(((Checked.Valid) miles).trip().distanceKm()).isEqualTo(100 * 1.609344);
+        assertThat(((Checked.Valid) ten).trip().distanceKm()).isEqualTo(10 * 1.609344);
     }
 
     @Test
-    void aDistanceInMilesTooLargeForKmIsNotANumber() {
-        assertThat(check(at(DAY, 6, 0), Units.IMPERIAL, ENGLISH).check(entered("7:30", "18:00", "12" + "0".repeat(307))))
-                .isEqualTo(new Checked.Refused(TextKey.TRIP_DISTANCE_NOT_A_NUMBER, Field.DISTANCE));
+    void milesWithDecimalsAreNotWhole() {
+        assertThat(check(at(DAY, 6, 0), Units.IMPERIAL, ENGLISH).check(entered("7:30", "18:00", "6.2")))
+                .isEqualTo(new Checked.Refused(TextKey.PROBLEM_NOT_A_WHOLE_NUMBER, Field.DISTANCE));
+    }
+
+    @Test
+    void theTimesAreCheckedBeforeADistanceWithDecimals() {
+        assertThat(morning().check(entered("18:00", "7:30", "12.5")))
+                .isEqualTo(new Checked.Refused(TextKey.TRIP_RETURN_BEFORE_DEPARTURE, Field.RETURN_DAY));
     }
 }
