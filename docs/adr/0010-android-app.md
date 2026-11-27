@@ -82,3 +82,7 @@ ADR 0005's wiring rules hold for the Android app too, with its `Application`, `C
 ## Note, 2026-11-12 (#341, #405)
 
 The apps share the dashboard's model too, not only the planner: the rules of the day card, the solar chart, the battery bar, the grid and trip advice, the footer, the coming away periods and the trips list are the engine's, in `engine.dashboard`, and `Outlook.Planned.dashboard(away, trips)` makes the view from the plan. The words, the pixels and the colours stay each platform's own: the desktop's mappers and Android's `DashboardWords` write the texts, and each app draws and colours the chart its own way. `PlanParts` mirrors the parts of `Outlook.Planned` that the dashboard is made from; that copy is the price of `engine.dashboard` not reaching up into the engine's root package (`engineSubPackagesDoNotReachUpIntoTheEngine`). Android's rule that kept the dashboard's models in `home/` free of Android is gone with the last of those models: `home/Dashboard.kt` is only Android's adapter around the engine's view.
+
+## Note, 2026-11-27 (#280, #539)
+
+F-Droid is dropped. The build no longer enforces the rule against Google libraries (the `checkNoGoogleLibraries` check is gone), and the recipe and the listing for F-Droid are removed. Google Play comes beside GitHub Releases (#527). The bullets above stay as they were decided.

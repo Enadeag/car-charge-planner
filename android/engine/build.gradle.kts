@@ -2,7 +2,6 @@ plugins {
     `java-library`
     `java-test-fixtures`
     id("ccp.maven-drift")
-    id("ccp.no-google-libraries")
 }
 
 val engineSources = layout.projectDirectory.dir("../../engine/src/main/java")

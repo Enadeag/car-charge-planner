@@ -70,7 +70,7 @@ The first start opens set-up. The archive is not signed yet either.
 
 ## Android
 
-It needs Android 10 or newer. It is an APK on the release page, `car-charge-planner-android-<version>.apk` of the release tagged `android-v<version>`, which is not on Google Play; you can download it on the phone, or on a computer and copy it over. F-Droid is planned and not there yet. The APK is signed with the app's own release key, and does not update itself.
+It needs Android 10 or newer. It is an APK on the release page, `car-charge-planner-android-<version>.apk` of the release tagged `android-v<version>`; you can download it on the phone, or on a computer and copy it over. The APK is signed with the app's own release key, and does not update itself.
 
 **Install.**
 

@@ -6,7 +6,6 @@ import nl.enadeag.carchargeplanner.buildlogic.AndroidApiClassesCheck
 // checkAndroidApiClasses fails on a JDK class that no Android version has, which NewApi does not see.
 plugins {
     alias(libs.plugins.android.library)
-    id("ccp.no-google-libraries")
 }
 
 android {

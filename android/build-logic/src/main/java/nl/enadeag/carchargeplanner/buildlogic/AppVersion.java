@@ -5,8 +5,8 @@ import org.gradle.api.GradleException;
 
 /**
  * The rule between the Android app's version name and its version code: {@code major × 10000 + minor × 100 + patch},
- * such as 100 for 0.1.0. The build file writes the code as a number beside the name, so F-Droid's update check can
- * read it, and {@link #check} holds the number to the rule.
+ * such as 100 for 0.1.0. The build file writes the code as a number beside the name, so it can be read from
+ * the file, and {@link #check} holds the number to the rule.
  */
 public final class AppVersion {
 
