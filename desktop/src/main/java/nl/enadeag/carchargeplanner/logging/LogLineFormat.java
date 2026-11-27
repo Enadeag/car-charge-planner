@@ -10,7 +10,7 @@ import java.util.logging.LogRecord;
 
 /**
  * One line per log record: the time with its offset, the level, the logger and the message, such as
- * {@code 2026-10-17 14:30:00.123 +02:00 WARNING start.PlanSchedule: planning failed}. The app's own loggers are named
+ * {@code 2026-10-17 14:30:00.123 +02:00 SEVERE start.PlanSchedule: planning failed; trying again at the next round}. The app's own loggers are named
  * without the app's package. An exception follows on the lines after it, with its stack trace.
  */
 final class LogLineFormat extends Formatter {

@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.start;
 
+import nl.enadeag.carchargeplanner.engine.Engine;
 import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.util.concurrent.RejectedExecutionException;
@@ -31,6 +32,19 @@ final class PlanSchedule {
     private final ScheduledExecutorService executor;
     private final AtomicReference<Runnable> round = new AtomicReference<>();
     private final AtomicBoolean soonWaits = new AtomicBoolean();
+
+    /**
+     * Makes the schedule and adds it as a change listener of the engine, so each change leads to a round soon.
+     *
+     * @param engine the engine whose changes the schedule follows; never null
+     * @param executor the planning's own thread, which {@link #stop()} shuts down; never null
+     * @return the schedule, not yet started
+     */
+    static PlanSchedule following(Engine engine, ScheduledExecutorService executor) {
+        var schedule = new PlanSchedule(executor);
+        engine.addChangeListener(schedule::runSoon);
+        return schedule;
+    }
 
     /**
      * Makes the schedule; nothing runs until {@link #start(Runnable)}.

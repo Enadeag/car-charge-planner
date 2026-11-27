@@ -184,10 +184,9 @@ public final class DesktopApp {
         closing.add("the keychain", keychain::close);
         var apiKeys = new ApiKeys(keychain, secretsFile, KeyFallback.PRIVATE_FILE, Clock.systemUTC());
         var engine = engine(http, apiKeys, dataFolder, notice -> notifications.send(texts.notification(notice)));
-        var planning = new PlanSchedule(
+        var planning = PlanSchedule.following(engine,
                 Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("planner").daemon().factory()));
         closing.add("the planning", planning::stop);
-        engine.addChangeListener(planning::runSoon);
         var saving = Executors.newSingleThreadExecutor(Thread.ofVirtual().name("dashboard-changes").factory());
         closing.add("the dashboard's saving", saving::close);
         var changes = new DashboardChanges(engine, new Background(saving, Platform::runLater));

@@ -168,7 +168,8 @@ public final class Engine {
      * {@link #saveConfig(EngineConfig)}, {@link #setConfigAside()}, {@link #setBatteryLevel(Percent)}, the changes to
      * the away periods and the trips, {@link #saveApiKeys(Secrets)} and {@link #applyKeyChanges(KeyChanges,
      * Runnable)}. Each listener is told once per change, on the thread that made it, in the order they were added; one
-     * that throws is logged, and neither fails the change nor keeps the others from being told. A listener stays as
+     * that throws an exception (not an {@link Error}) is logged by its class, and neither fails the change nor keeps the
+     * others from being told. A listener stays as
      * long as the engine.
      *
      * @param listener told after each change; it must not block; never null
@@ -645,7 +646,7 @@ public final class Engine {
             try {
                 listener.changed();
             } catch (RuntimeException e) {
-                LOG.error("a listener to the engine's changes failed; the change stands", e);
+                LOG.error("a listener to the engine's changes failed with {}; the change stands", e.getClass().getName());
             }
         }
     }

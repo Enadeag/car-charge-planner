@@ -237,7 +237,9 @@ class EngineChangeListenerTest {
 
             assertThat(log.records()).singleElement().satisfies(record -> {
                 assertThat(record.getLevel()).isEqualTo(java.util.logging.Level.SEVERE);
-                assertThat(record.getThrown()).isInstanceOf(IllegalStateException.class);
+                assertThat(record.getThrown()).isNull();
+                assertThat(record.getMessage()).contains("java.lang.IllegalStateException")
+                        .doesNotContain("a listener that fails");
             });
         }
         assertThat(told).hasSize(1);

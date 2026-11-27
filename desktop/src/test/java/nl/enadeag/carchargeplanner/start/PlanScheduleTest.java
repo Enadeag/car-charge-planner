@@ -6,6 +6,30 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import nl.enadeag.carchargeplanner.LogCapture;
 import java.time.Duration;
+import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
+import nl.enadeag.carchargeplanner.engine.Engine;
+import nl.enadeag.carchargeplanner.engine.away.AwayFile;
+import nl.enadeag.carchargeplanner.engine.battery.BatteryFile;
+import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
+import nl.enadeag.carchargeplanner.engine.config.Percent;
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastCache;
+import nl.enadeag.carchargeplanner.engine.forecast.ForecastService;
+import nl.enadeag.carchargeplanner.engine.forecast.Providers;
+import nl.enadeag.carchargeplanner.engine.notify.AnnouncedWindows;
+import nl.enadeag.carchargeplanner.engine.notify.Announcer;
+import nl.enadeag.carchargeplanner.engine.notify.ToldTrips;
+import nl.enadeag.carchargeplanner.engine.secrets.ApiKeys;
+import nl.enadeag.carchargeplanner.engine.secrets.KeyFallback;
+import nl.enadeag.carchargeplanner.engine.secrets.NoKeychain;
+import nl.enadeag.carchargeplanner.engine.secrets.SecretsFile;
+import nl.enadeag.carchargeplanner.engine.store.PrivateFiles;
+import nl.enadeag.carchargeplanner.engine.trip.TripFile;
+import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
+import org.junit.jupiter.api.io.TempDir;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -195,5 +219,31 @@ class PlanScheduleTest {
             release.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void aSchedulePlanFollowingAnEngineRunsAnotherRoundAfterAChangeMadeThroughTheEngine(@TempDir Path folder)
+            throws Exception {
+        var files = new PrivateFiles(new PosixFilePrivacy());
+        var clock = Clock.fixed(Instant.parse("2026-07-03T06:00:00Z"), ZoneOffset.UTC);
+        var providers = new Providers(List.of());
+        var apiKeys = new ApiKeys(new NoKeychain(), new SecretsFile(folder.resolve("secrets.json"), files, clock),
+                KeyFallback.PRIVATE_FILE, clock);
+        var engine = new Engine(new ConfigFile(folder.resolve("engine.json"), files, clock),
+                new ForecastService(providers, new ForecastCache(folder.resolve("cache"), files, clock), apiKeys),
+                providers, apiKeys, new AwayFile(folder.resolve("away.json"), files, clock),
+                new TripFile(folder.resolve("trips.json"), files, clock),
+                new BatteryFile(folder.resolve("battery.json"), files, clock), clock,
+                new Announcer(new AnnouncedWindows(folder.resolve("announced.json"), files, clock),
+                        new ToldTrips(folder.resolve("trip-notices.json"), files, clock), _ -> { }));
+        var following = PlanSchedule.following(engine, planner);
+        following.start(rounds::incrementAndGet);
+        planner.runPending();
+        assertThat(rounds).hasValue(1);
+
+        engine.setBatteryLevel(new Percent(60));
+        planner.runPending();
+
+        assertThat(rounds).hasValue(2);
     }
 }
