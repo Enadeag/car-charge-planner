@@ -217,4 +217,32 @@ class ApiKeysLoadTest extends ApiKeysFixture {
         assertThatThrownBy(() -> new ApiKeys(keychain, file(), null, Clock.systemUTC()))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("fallback");
     }
+
+    @Test
+    void aKeychainThatCouldNotBeReadAndThenCannotBeUsedNoLongerSaysItCouldNotBeRead() throws SecretsProblem {
+        var intermittent = new Intermittent();
+        intermittent.entries.put("index", "not a list");
+        var keys = keys(intermittent);
+        assertThatThrownBy(keys::load).isInstanceOf(SecretsProblem.class).hasMessageContaining("could not be read");
+
+        intermittent.away = true;
+        later(ApiKeys.RETRY_AFTER);
+        assertThat(keys.load()).isEqualTo(Secrets.NONE);
+
+        assertThat(keys.load()).as("while it is left alone again").isEqualTo(Secrets.NONE);
+    }
+
+    @Test
+    void aSaveThatGoesToTheFileForgetsTheKeysTheKeychainGaveBefore() throws SecretsProblem {
+        var intermittent = holdingTheKeys(new Intermittent());
+        var keys = keys(intermittent);
+        assertThat(keys.load()).isEqualTo(KEYS);
+        var changed = new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-NEW")));
+
+        intermittent.away = true;
+        keys.save(changed);
+
+        assertThat(keys.load()).isEqualTo(changed);
+        assertThat(keys.storage()).isEqualTo(KeyStorage.FILE);
+    }
 }
