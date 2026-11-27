@@ -79,7 +79,6 @@ public final class OneOffAwayCard extends VBox {
         model = away;
         var hint = messages.text(TextKey.ONE_OFF_ADD_HINT, selected.title());
         add.setTooltip(new Tooltip(hint));
-        add.setAccessibleHelp(hint);
         list.getChildren().clear();
         if (away.coming().isEmpty()) {
             list.getChildren().add(paragraph(messages.text(TextKey.ONE_OFF_NONE), "note"));
@@ -130,7 +129,6 @@ public final class OneOffAwayCard extends VBox {
         var remove = new Button(messages.text(TextKey.ONE_OFF_REMOVE));
         remove.getStyleClass().addAll("flat", "small");
         remove.setMinWidth(USE_PREF_SIZE);
-        remove.setAccessibleText(entry.removeSpoken());
         remove.setOnAction(_ -> removed.accept(entry.period()));
         var row = new HBox(text, remove);
         row.getStyleClass().add("away-row");

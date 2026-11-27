@@ -14,13 +14,4 @@ import nl.enadeag.carchargeplanner.engine.dashboard.EnergySource;
  * @param level the battery level the advice starts from: "Assuming a battery level of 45%."
  */
 public record TripAdviceModel(EnergySource source, String label, String title, String plan, String level) {
-
-    /**
-     * The advice in one sentence, for a screen reader.
-     *
-     * @return the label, then the title, the plan and the battery level
-     */
-    String spoken() {
-        return label + ": " + title + " " + plan + " " + level;
-    }
 }

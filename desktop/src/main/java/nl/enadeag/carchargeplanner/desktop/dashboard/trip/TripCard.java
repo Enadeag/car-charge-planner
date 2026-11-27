@@ -98,7 +98,6 @@ public final class TripCard extends VBox {
         model = trips;
         var hint = messages.text(TextKey.TRIP_ADD_HINT, title);
         add.setTooltip(new Tooltip(hint));
-        add.setAccessibleHelp(hint);
         list.getChildren().clear();
         if (onTheDay.isEmpty()) {
             list.getChildren().add(paragraph(messages.text(TextKey.TRIP_NONE), "note"));
@@ -159,13 +158,11 @@ public final class TripCard extends VBox {
         choices.getStyleClass().add("trip-choices");
 
         var change = new Button(messages.text(TextKey.TRIP_CHANGE));
-        change.setAccessibleText(entry.changeSpoken());
         change.setOnAction(_ -> {
             openEditor(trip);
             resized.run();
         });
         var remove = new Button(messages.text(TextKey.TRIP_REMOVE));
-        remove.setAccessibleText(entry.removeSpoken());
         remove.setOnAction(_ -> {
             // the row goes once the trip is removed: the keyboard goes on from Add
             add.requestFocus();
@@ -193,7 +190,6 @@ public final class TripCard extends VBox {
         box.setSelected(selected);
         box.setWrapText(true);
         box.setMinHeight(USE_PREF_SIZE);
-        box.setAccessibleText(messages.text(TextKey.IN_GROUP, box.getText(), entry.text()));
         if (new Changed(entry.trip(), which).equals(refocus)) {
             refocus = null;
             // once the dashboard has put the day's cards in place

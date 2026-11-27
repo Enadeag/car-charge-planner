@@ -25,7 +25,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.AccessibleRole;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
@@ -66,7 +65,7 @@ final class DashboardView extends VBox {
     DashboardView(Runnable detachAction, Runnable contentChanged, ObservableValue<Boolean> reducedMotion,
             String appName, Messages messages) {
         this.messages = messages;
-        this.tabs = new DayTabs(this::showDay, messages);
+        this.tabs = new DayTabs(this::showDay);
         this.footer = new DashboardFooter(messages);
         this.contentChanged = contentChanged;
         this.solar = new SolarCard(reducedMotion, messages);
@@ -75,7 +74,6 @@ final class DashboardView extends VBox {
         this.trips = new TripCard(contentChanged, messages);
         var title = new Label(appName);
         title.getStyleClass().add("app-title");
-        title.setAccessibleRole(AccessibleRole.TEXT);
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 

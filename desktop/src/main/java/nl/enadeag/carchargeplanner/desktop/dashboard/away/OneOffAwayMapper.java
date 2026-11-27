@@ -32,11 +32,7 @@ public final class OneOffAwayMapper {
      */
     public OneOffAwayModel map(List<ComingAway> coming) {
         var listed = coming.stream()
-                .map(away -> {
-                    var text = describe(away);
-                    return new OneOffAwayModel.Listed(away.period(), text,
-                            messages.text(TextKey.ONE_OFF_REMOVE_SPOKEN, text));
-                })
+                .map(away -> new OneOffAwayModel.Listed(away.period(), describe(away)))
                 .toList();
         return new OneOffAwayModel(zone, listed);
     }

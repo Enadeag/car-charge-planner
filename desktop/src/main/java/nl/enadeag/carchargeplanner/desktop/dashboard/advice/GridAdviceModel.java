@@ -8,13 +8,4 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.advice;
  * @param detail why, and what to set: "Without it the battery ends Sunday at 17 %, ..."
  */
 public record GridAdviceModel(String label, String title, String detail) {
-
-    /**
-     * The advice in one sentence, for a screen reader.
-     *
-     * @return the label, then the title and the detail
-     */
-    String spoken() {
-        return label + ": " + title + " " + detail;
-    }
 }

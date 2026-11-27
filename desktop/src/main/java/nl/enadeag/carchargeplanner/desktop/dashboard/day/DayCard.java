@@ -5,11 +5,10 @@ import static nl.enadeag.carchargeplanner.desktop.theme.Labels.paragraph;
 
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Chip;
 import nl.enadeag.carchargeplanner.desktop.dashboard.parts.Glyphs;
-import javafx.scene.AccessibleRole;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 
-/** A day's card: its charge window and what to set, or why there is none. A screen reader reads it as one sentence. */
+/** A day's card: its charge window and what to set, or why there is none. */
 public final class DayCard extends VBox {
 
     /**
@@ -38,8 +37,5 @@ public final class DayCard extends VBox {
             getChildren().add(paragraph(day.note(), "note"));
         }
         getStyleClass().addAll("card", "main-card", Glyphs.styleClass(day.kind()));
-        setAccessibleRole(AccessibleRole.TEXT);
-        setAccessibleText(day.spoken());
-        setFocusTraversable(true);
     }
 }

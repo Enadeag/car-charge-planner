@@ -34,9 +34,7 @@ class TripMapperTest {
         var listed = map(Units.METRIC, Language.ENGLISH, trip);
 
         assertThat(listed).isEqualTo(new TripsModel.Listed(trip, TripOrigin.BY_HAND,
-                "Away 07:30 – 18:00 · 312 km there and back", "Entered by hand",
-                "Change the trip Away 07:30 – 18:00 · 312 km there and back",
-                "Remove the trip Away 07:30 – 18:00 · 312 km there and back"));
+                "Away 07:30 – 18:00 · 312 km there and back", "Entered by hand"));
     }
 
     @Test

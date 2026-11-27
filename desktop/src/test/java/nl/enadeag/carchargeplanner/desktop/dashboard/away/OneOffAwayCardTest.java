@@ -2,11 +2,11 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import nl.enadeag.carchargeplanner.desktop.AccessibleNames;
 import nl.enadeag.carchargeplanner.desktop.Fx;
 import nl.enadeag.carchargeplanner.desktop.FxTest;
 import nl.enadeag.carchargeplanner.desktop.Keyboard;
 import nl.enadeag.carchargeplanner.desktop.Scenes;
+import nl.enadeag.carchargeplanner.desktop.VisibleNames;
 import nl.enadeag.carchargeplanner.desktop.dashboard.Models;
 import nl.enadeag.carchargeplanner.desktop.dashboard.day.DayModel;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
@@ -58,7 +58,15 @@ class OneOffAwayCardTest {
 
     private Button button(String text) throws Exception {
         return Fx.call(() -> card.lookupAll(".button").stream().map(Button.class::cast)
-                .filter(button -> text.equals(button.getText()) || text.equals(button.getAccessibleText()))
+                .filter(button -> text.equals(button.getText()))
+                .findFirst().orElseThrow());
+    }
+
+    /** The Remove button on the row of this period. */
+    private Button removeOf(String period) throws Exception {
+        return Fx.call(() -> card.lookupAll(".away-row").stream()
+                .filter(row -> Scenes.visibleTexts(row).contains(period))
+                .flatMap(row -> Scenes.all(row).stream()).filter(Button.class::isInstance).map(Button.class::cast)
                 .findFirst().orElseThrow());
     }
 
@@ -146,7 +154,7 @@ class OneOffAwayCardTest {
     }
 
     @Test
-    void aRefusedPeriodTakesTheFocusToItsTimeWhereAScreenReaderReadsWhy() throws Exception {
+    void aRefusedPeriodTakesTheFocusToItsTimeAndSaysWhy() throws Exception {
         show(Models.CLOUDY_TOMORROW, Models.AWAY);
         openEntry();
         Fx.run(() -> card.editor().enterTimes("16:00", "10:00"));
@@ -155,8 +163,8 @@ class OneOffAwayCardTest {
 
         assertThat(added).isEmpty();
         var focused = Fx.call(() -> stage.getScene().getFocusOwner());
-        assertThat(Fx.call(() -> AccessibleNames.of(focused))).isEqualTo(ENGLISH.text(TextKey.AWAY_FROM_FIELD));
-        assertThat(Fx.call(() -> AccessibleNames.help(focused))).isEqualTo(ENGLISH.text(TextKey.ONE_OFF_END_BEFORE_START));
+        assertThat(Fx.call(() -> VisibleNames.of(focused))).isEqualTo(ENGLISH.text(TextKey.AWAY_FROM));
+        assertThat(Fx.call(() -> card.editor().problem())).isEqualTo(ENGLISH.text(TextKey.ONE_OFF_END_BEFORE_START));
     }
 
     @Test
@@ -188,7 +196,7 @@ class OneOffAwayCardTest {
         show(Models.SUNNY_TODAY, Models.AWAY);
 
         assertThat(Fx.call(() -> Scenes.visibleTexts(card))).contains("Tomorrow, all day", "Sun 5 Jul, 10:00 – 16:30");
-        var remove = button("Remove Sun 5 Jul, 10:00 – 16:30");
+        var remove = removeOf("Sun 5 Jul, 10:00 – 16:30");
         Fx.run(remove::fire);
 
         assertThat(removed).containsExactly(Models.AWAY_SUNDAY);

@@ -5,7 +5,6 @@ import static nl.enadeag.carchargeplanner.desktop.theme.Labels.paragraph;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.DashboardModel;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import javafx.scene.AccessibleRole;
 import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -22,11 +21,6 @@ final class NoPlanCard extends VBox {
         if (!noPlan.detail().isEmpty()) {
             text.getChildren().add(paragraph(noPlan.detail(), "message-detail"));
         }
-        text.setAccessibleRole(AccessibleRole.TEXT);
-        text.setAccessibleText(noPlan.detail().isEmpty() ? noPlan.headline()
-                : noPlan.headline() + ". " + noPlan.detail());
-        text.setFocusTraversable(true);
-        text.getStyleClass().add("message-text");
         getChildren().add(text);
         if (noPlan.offersSetUp() && canOpenSetUp) {
             var button = new Button(messages.text(TextKey.START_SET_UP));

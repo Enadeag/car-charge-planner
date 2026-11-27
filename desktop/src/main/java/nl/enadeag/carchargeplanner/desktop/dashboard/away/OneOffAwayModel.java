@@ -25,8 +25,7 @@ public record OneOffAwayModel(ZoneId zone, List<Listed> coming) {
      *
      * @param period the period as the engine stores it
      * @param text the period, such as "Tomorrow, all day" or "Sat 17 Oct, 10:00 – 16:30"
-     * @param removeSpoken what a screen reader calls its remove button, such as "Remove Tomorrow, all day"
      */
-    public record Listed(OneOffAwayPeriod period, String text, String removeSpoken) {
+    public record Listed(OneOffAwayPeriod period, String text) {
     }
 }

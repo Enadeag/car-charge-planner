@@ -9,7 +9,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
-import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -44,18 +43,13 @@ public final class BatteryCard extends VBox {
         update.getStyleClass().addAll("flat", "small");
         var hint = messages.text(TextKey.BATTERY_UPDATE_HINT);
         update.setTooltip(new Tooltip(hint));
-        update.setAccessibleHelp(hint);
         update.setOnAction(_ -> openEditor());
         bar.setOnMouseClicked(_ -> openEditor());
-        bar.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
-                openEditor();
-                event.consume();
-            }
-        });
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        var header = new HBox(line(messages.text(TextKey.BATTERY_HEADING), "card-label"), spacer, levels, update);
+        var heading = line(messages.text(TextKey.BATTERY_HEADING), "card-label");
+        heading.setLabelFor(editor.field());
+        var header = new HBox(heading, spacer, levels, update);
         header.getStyleClass().add("chart-header");
         getChildren().setAll(header, bar, editor);
         getStyleClass().addAll("card", "battery-card");
@@ -133,7 +127,6 @@ public final class BatteryCard extends VBox {
         boolean can = canEnterLevel();
         update.setVisible(can && !editor.isVisible());
         update.setManaged(update.isVisible());
-        bar.setAccessibleHelp(can ? update.getAccessibleHelp() : null);
     }
 
     /** After a save or a cancel the focus goes back to Update, where the keyboard was before the entry opened. */

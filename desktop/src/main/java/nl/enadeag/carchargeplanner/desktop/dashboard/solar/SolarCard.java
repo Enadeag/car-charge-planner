@@ -27,10 +27,12 @@ public final class SolarCard extends VBox {
      * @param messages the texts, in the owner's language
      */
     public SolarCard(ObservableValue<Boolean> reducedMotion, Messages messages) {
-        chart = new SolarChart(reducedMotion, messages.text(TextKey.CHART_NOW), messages.text(TextKey.CHART_KEYS));
+        chart = new SolarChart(reducedMotion, messages.text(TextKey.CHART_NOW));
         var spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        var header = new HBox(line(messages.text(TextKey.CHART_SOLAR), "card-label"), spacer,
+        var heading = line(messages.text(TextKey.CHART_SOLAR), "card-label");
+        heading.setLabelFor(chart);
+        var header = new HBox(heading, spacer,
                 entry(area(), messages.text(TextKey.CHART_SOLAR_LEGEND)),
                 entry(baseloadLine(), messages.text(TextKey.CHART_HOUSE_LEGEND)),
                 entry(window(), messages.text(TextKey.CHART_WINDOW_LEGEND)));

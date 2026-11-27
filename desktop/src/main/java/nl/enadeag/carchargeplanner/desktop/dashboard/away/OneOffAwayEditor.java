@@ -2,7 +2,6 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
-import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayEntryRules;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
@@ -28,7 +27,7 @@ import javafx.scene.layout.VBox;
 /**
  * Where the owner enters an away period on one day: the whole day, or part of it from a time to a time, with Save and
  * Cancel; Enter saves and Escape cancels. A period that is not valid is not saved: the entry says why, stays open and
- * puts the focus where the owner can fix it, where a screen reader reads the reason.
+ * puts the focus where the owner can fix it.
  */
 final class OneOffAwayEditor extends VBox {
 
@@ -69,14 +68,15 @@ final class OneOffAwayEditor extends VBox {
         var kinds = new FlowPane(wholeDay, partOfDay);
         kinds.getStyleClass().add("away-kinds");
 
-        ScreenReader.name(from, messages.text(TextKey.AWAY_FROM_FIELD));
-        ScreenReader.name(to, messages.text(TextKey.AWAY_TO_FIELD));
         for (var field : List.of(from, to)) {
             field.getStyleClass().add("away-time");
             field.setPrefColumnCount(4);
         }
-        times = new HBox(Labels.line(messages.text(TextKey.AWAY_FROM), "fact"), from,
-                Labels.line(messages.text(TextKey.AWAY_TO), "fact"), to);
+        var fromLabel = Labels.line(messages.text(TextKey.AWAY_FROM), "fact");
+        fromLabel.setLabelFor(from);
+        var toLabel = Labels.line(messages.text(TextKey.AWAY_TO), "fact");
+        toLabel.setLabelFor(to);
+        times = new HBox(fromLabel, from, toLabel, to);
         times.getStyleClass().add("away-times");
 
         var save = new Button(messages.text(TextKey.ONE_OFF_SAVE));
@@ -85,10 +85,6 @@ final class OneOffAwayEditor extends VBox {
         var cancel = new Button(messages.text(TextKey.ONE_OFF_CANCEL));
         cancel.getStyleClass().add("flat");
         cancel.setOnAction(_ -> closed.run());
-        // the battery's entry above can be open as well, with its own Save and Cancel
-        var heading = messages.text(TextKey.ONE_OFF_HEADING);
-        save.setAccessibleText(messages.text(TextKey.IN_GROUP, save.getText(), heading));
-        cancel.setAccessibleText(messages.text(TextKey.IN_GROUP, cancel.getText(), heading));
         var buttons = new HBox(save, cancel);
         buttons.getStyleClass().add("away-buttons");
         var actions = new FlowPane(times, buttons);
@@ -141,7 +137,7 @@ final class OneOffAwayEditor extends VBox {
             }
             case OneOffAwayCheck.Checked.Refused(var why) -> {
                 showProblem(messages.text(why));
-                ScreenReader.focus(partOfDay.isSelected() ? from : wholeDay);
+                (partOfDay.isSelected() ? from : wholeDay).requestFocus();
             }
         }
     }
@@ -183,7 +179,6 @@ final class OneOffAwayEditor extends VBox {
         problem.setText(text);
         problem.setVisible(!text.isEmpty());
         problem.setManaged(!text.isEmpty());
-        List.of(from, to, wholeDay, partOfDay).forEach(node -> node.setAccessibleHelp(text));
         resized.run();
     }
 }

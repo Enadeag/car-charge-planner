@@ -5,7 +5,6 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.NumberText;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
-import nl.enadeag.carchargeplanner.desktop.theme.ScreenReader;
 import nl.enadeag.carchargeplanner.engine.trip.Trip;
 import nl.enadeag.carchargeplanner.engine.trip.TripEntryRules;
 import java.time.Instant;
@@ -35,7 +34,7 @@ import javafx.util.StringConverter;
  * Where the owner enters a trip or changes one: the day and time of departure and of return, the distance there and
  * back in the owner's units, and whether the car can charge at the destination, with Save and Cancel; Enter saves and
  * Escape cancels. A trip that is not valid is not saved: the entry says why, stays open and puts the focus where the
- * owner can fix it, where a screen reader reads the reason.
+ * owner can fix it.
  */
 final class TripEditor extends VBox {
 
@@ -83,10 +82,6 @@ final class TripEditor extends VBox {
         this.resized = resized;
         this.check = new TripCheck(ZoneId.of("UTC"), InstantSource.fixed(Instant.EPOCH), Units.METRIC, messages);
 
-        ScreenReader.name(departureDay, messages.text(TextKey.TRIP_DEPARTURE_DAY));
-        ScreenReader.name(departureTime, messages.text(TextKey.TRIP_DEPARTURE_TIME));
-        ScreenReader.name(returnDay, messages.text(TextKey.TRIP_RETURN_DAY));
-        ScreenReader.name(returnTime, messages.text(TextKey.TRIP_RETURN_TIME));
         var days = new StringConverter<LocalDate>() {
             @Override
             public String toString(LocalDate day) {
@@ -108,15 +103,15 @@ final class TripEditor extends VBox {
             time.setPrefColumnCount(4);
         }
         var when = new GridPane();
-        when.addRow(0, label(TextKey.TRIP_DEPARTURE), departureDay, departureTime);
-        when.addRow(1, label(TextKey.TRIP_RETURN), returnDay, returnTime);
+        when.addRow(0, label(TextKey.TRIP_DEPARTURE, departureTime), departureDay, departureTime);
+        when.addRow(1, label(TextKey.TRIP_RETURN, returnTime), returnDay, returnTime);
         when.getStyleClass().add("trip-when");
 
         showIn(units);
         distance.getStyleClass().add("trip-distance");
         distance.setPrefColumnCount(5);
         unit.setMinWidth(USE_PREF_SIZE);
-        var far = new HBox(label(TextKey.TRIP_DISTANCE_FIELD), distance, unit);
+        var far = new HBox(label(TextKey.TRIP_DISTANCE_FIELD, distance), distance, unit);
         far.getStyleClass().add("trip-far");
 
         canCharge = new CheckBox(messages.text(TextKey.TRIP_CAN_CHARGE));
@@ -129,10 +124,6 @@ final class TripEditor extends VBox {
         var cancel = new Button(messages.text(TextKey.TRIP_CANCEL));
         cancel.getStyleClass().add("flat");
         cancel.setOnAction(_ -> closed.run());
-        // the battery's and the away period's entries can be open as well, with their own Save and Cancel
-        var heading = messages.text(TextKey.TRIP_HEADING);
-        save.setAccessibleText(messages.text(TextKey.IN_GROUP, save.getText(), heading));
-        cancel.setAccessibleText(messages.text(TextKey.IN_GROUP, cancel.getText(), heading));
         var buttons = new HBox(save, cancel);
         buttons.getStyleClass().add("trip-entry-buttons");
 
@@ -220,7 +211,7 @@ final class TripEditor extends VBox {
             }
             case TripCheck.Checked.Refused(var why, var where, var values) -> {
                 showProblem(messages.text(why, values.toArray()));
-                ScreenReader.focus(field(where));
+                field(where).requestFocus();
             }
         }
     }
@@ -275,7 +266,6 @@ final class TripEditor extends VBox {
     private void showIn(Units distanceUnits) {
         units = distanceUnits;
         unit.setText(units.distanceUnit());
-        ScreenReader.name(distance, messages.text(TextKey.TRIP_DISTANCE_SPOKEN, units.distanceUnit()));
     }
 
     private Node field(TripCheck.Field where) {
@@ -287,8 +277,10 @@ final class TripEditor extends VBox {
         };
     }
 
-    private Label label(TextKey text) {
+    /** A label in front of its row, which names the field the owner types in; a day beside it shows its own. */
+    private Label label(TextKey text, Node typedIn) {
         var label = Labels.line(messages.text(text), "fact");
+        label.setLabelFor(typedIn);
         label.setMinWidth(USE_PREF_SIZE);
         return label;
     }
@@ -297,8 +289,6 @@ final class TripEditor extends VBox {
         problem.setText(text);
         problem.setVisible(!text.isEmpty());
         problem.setManaged(!text.isEmpty());
-        Stream.of(departureDay, departureTime, returnDay, returnTime, distance, canCharge)
-                .forEach(node -> node.setAccessibleHelp(text));
         resized.run();
     }
 }

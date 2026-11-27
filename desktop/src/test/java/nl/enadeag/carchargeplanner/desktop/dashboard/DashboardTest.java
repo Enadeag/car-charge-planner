@@ -543,7 +543,7 @@ class DashboardTest {
     }
 
     @Test
-    void anotherLanguageRendersTheOpenPopupAgainOnTheSameDayWithItsChartsAndAccessibleTexts() throws Exception {
+    void anotherLanguageRendersTheOpenPopupAgainOnTheSameDayWithItsChartsAndTexts() throws Exception {
         clickTheIcon();
         dashboard.show(planWithTwoDays(), List.of(), List.of());
         Fx.settle();
@@ -557,11 +557,9 @@ class DashboardTest {
         var tabs = Fx.call(() -> (TabPane) root.lookup(".day-tabs"));
         assertThat(Fx.call(() -> tabs.getSelectionModel().getSelectedIndex())).isEqualTo(1);
         assertThat(Fx.call(() -> tabs.getTabs().getFirst().getText())).isEqualTo("Vandaag");
-        assertThat(Fx.call(tabs::getAccessibleText)).isEqualTo("Dagen");
         assertThat(Fx.call(() -> Scenes.visibleTexts(root))).contains("Morgen · Geen laadvenster", "Voorspelling", "Accu van de auto",
                 "Afwezig", "Instellingen");
         assertThat(Fx.call(() -> root.lookup(".detach").getAccessibleText())).isEqualTo("In een venster openen");
-        assertThat(Fx.call(() -> root.lookup(".solar-chart").getAccessibleText())).startsWith("Morgen, verwachte zonnestroom");
         var settings = Fx.call(() -> Scenes.all(root).stream()
                 .filter(node -> node instanceof Button button && "Instellingen".equals(button.getText()))
                 .map(Button.class::cast).findFirst().orElseThrow());
@@ -588,15 +586,14 @@ class DashboardTest {
         var shown = popup().orElseThrow().getScene().getRoot();
         assertThat(Fx.call(() -> Scenes.visibleTexts(shown))).contains("Away 09:00 – 17:00 · 100 mi there and back");
         var notWithThisCar = Fx.call(() -> Scenes.all(shown).stream()
-                .filter(node -> node instanceof CheckBox box
-                        && box.getAccessibleText().startsWith("Not with this car"))
+                .filter(node -> node instanceof CheckBox box && Scenes.reallyVisible(box)
+                        && "Not with this car".equals(box.getText()))
                 .map(CheckBox.class::cast).findFirst().orElseThrow());
         Fx.run(notWithThisCar::fire);
         assertThat(tripsChanged).containsExactly(List.of(trip, new Trip(trip.departure(), trip.returnTime(),
                 trip.distanceKm(), false, true)));
-        var remove = Fx.call(() -> Scenes.all(shown).stream()
-                .filter(node -> node instanceof Button button && button.getAccessibleText() != null
-                        && button.getAccessibleText().startsWith("Remove the trip"))
+        var remove = Fx.call(() -> Scenes.all(shown.lookup(".trip-row")).stream()
+                .filter(node -> node instanceof Button button && "Remove".equals(button.getText()))
                 .map(Button.class::cast).findFirst().orElseThrow());
         Fx.run(remove::fire);
         assertThat(tripsRemoved).containsExactly(trip);
@@ -614,8 +611,10 @@ class DashboardTest {
 
         var root = popup().orElseThrow().getScene().getRoot();
         assertThat(Fx.call(() -> Scenes.visibleTexts(root))).contains("Afwezig", "Morgen, hele dag");
-        var remove = Fx.call(() -> Scenes.all(root).stream()
-                .filter(node -> node instanceof Button button && "Morgen, hele dag verwijderen".equals(button.getAccessibleText()))
+        var remove = Fx.call(() -> root.lookupAll(".away-row").stream()
+                .filter(row -> Scenes.visibleTexts(row).contains("Morgen, hele dag"))
+                .flatMap(row -> Scenes.all(row).stream())
+                .filter(node -> node instanceof Button button && "Verwijderen".equals(button.getText()))
                 .map(Button.class::cast).findFirst().orElseThrow());
         Fx.run(remove::fire);
         assertThat(removed).containsExactly(tomorrow);
