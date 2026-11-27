@@ -167,6 +167,8 @@ public final class DesktopApp {
         });
         // the size now reaches the JavaFX thread before the windows are made there
         parts.textSize().follow(size -> Platform.runLater(() -> textSize.set(size)));
+        // as the language: every part that shows a time hears of the new messages and moves it to its own thread
+        parts.clock().follow(language::useClock);
         var trayParts = parts.trayParts(preferences.system(), icon, language);
         var tray = trayParts.tray();
         var notifications = trayParts.notifications();
