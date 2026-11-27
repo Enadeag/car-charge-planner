@@ -89,23 +89,6 @@ final class KeychainEntries {
         }
 
         /**
-         * Whether one of these settings is stored, readable or not.
-         *
-         * @return true when the index lists an entry for one of them that holds a value or could not be read
-         */
-        boolean holdsAnyOf(Map<ProviderId, Set<String>> settings) {
-            for (var setting : settings.entrySet()) {
-                for (var name : setting.getValue()) {
-                    if (readable.of(setting.getKey()).containsKey(name)
-                            || unreadable.getOrDefault(setting.getKey(), Set.of()).contains(name)) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        /**
          * Says what was read by name only, never a value.
          *
          * @return the names of the entries that could be read, could not be read, and are listed

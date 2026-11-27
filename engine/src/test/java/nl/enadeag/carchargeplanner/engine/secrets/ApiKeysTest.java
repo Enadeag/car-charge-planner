@@ -970,25 +970,16 @@ class ApiKeysTest {
     }
 
     @Test
-    void removingTakesOnlyTheNamedSettingsOutOfTheKeychain() throws SecretsProblem {
+    void aRemovalTakesOnlyTheNamedSettingsOutOfTheKeychain() throws SecretsProblem {
         var keys = keys(keychain);
         keys.save(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1", "other", "OM-OTHER"),
                 FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"))));
 
-        assertThat(keys.remove(Map.of(OPEN_METEO, Set.of("other"), FORECAST_SOLAR, Set.of("api_key", "absent"))))
-                .isTrue();
+        keys.applyChanges(new KeyChanges(Secrets.NONE,
+                Map.of(OPEN_METEO, Set.of("other"), FORECAST_SOLAR, Set.of("api_key", "absent"))), () -> { });
 
         assertThat(keys(keychain).load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"))));
         assertThat(keychain.entries).containsOnlyKeys("index", "forecast/open-meteo/api_key");
-    }
-
-    @Test
-    void removingWhatIsNotStoredWritesNothing() throws SecretsProblem {
-        var failing = new FailingWrites();
-        failing.entries.put(KeychainEntries.INDEX, "[]");
-
-        assertThat(keys(failing).remove(Map.of(OPEN_METEO, Set.of("api_key")))).isFalse();
-        assertThat(file().path()).doesNotExist();
     }
 
     @Test
@@ -1068,22 +1059,10 @@ class ApiKeysTest {
     }
 
     @Test
-    void removingFromAReadableKeychainThatRefusesWritesFailsAndWritesNoFile() throws SecretsProblem {
-        var refusing = holdingTheKeys(new RefusingWrites());
-
-        assertThatThrownBy(() -> keys(refusing).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
-                .isInstanceOfSatisfying(SecretsProblem.class,
-                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED));
-
-        assertThat(file().path()).doesNotExist();
-        assertThat(keys(refusing).load()).isEqualTo(KEYS);
-    }
-
-    @Test
-    void removingAKeyKeptOnlyInTheFileMovesTheRestIntoAUsableKeychainAndDropsTheFile() throws SecretsProblem {
+    void aRemovalOfAKeyKeptOnlyInTheFileMovesTheRestIntoAUsableKeychainAndDropsTheFile() throws SecretsProblem {
         file().write(KEYS);
 
-        assertThat(keys(keychain).remove(Map.of(FORECAST_SOLAR, Set.of("api_key")))).isTrue();
+        keys(keychain).applyChanges(new KeyChanges(Secrets.NONE, Map.of(FORECAST_SOLAR, Set.of("api_key"))), () -> { });
 
         assertThat(file().path()).doesNotExist();
         assertThat(keychain.entries).containsOnlyKeys(KeychainEntries.INDEX, OPEN_METEO_ENTRY);
@@ -1091,54 +1070,13 @@ class ApiKeysTest {
     }
 
     @Test
-    void withoutAKeychainRemovingTakesTheSettingsOutOfTheFile() throws SecretsProblem {
+    void withoutAKeychainARemovalTakesTheSettingOutOfTheFile() throws SecretsProblem {
         file().write(KEYS);
 
-        assertThat(keys(new NoKeychain()).remove(Map.of(FORECAST_SOLAR, Set.of("api_key")))).isTrue();
+        keys(new NoKeychain()).applyChanges(new KeyChanges(Secrets.NONE, Map.of(FORECAST_SOLAR, Set.of("api_key"))),
+                () -> { });
 
         assertThat(file().read()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"))));
-    }
-
-    @Test
-    void removingFromALockedKeychainNeverPromptsAndRemovesNothing() throws SecretsProblem {
-        var lockable = lockedWithTheKeys();
-
-        assertThatThrownBy(() -> keys(lockable).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
-                .isInstanceOfSatisfying(SecretsProblem.class,
-                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
-
-        assertThat(lockable.prompts).hasValue(0);
-        lockable.locked = false;
-        assertThat(keys(lockable).load()).isEqualTo(KEYS);
-    }
-
-    @Test
-    void removingFromALockedKeychainStillTakesTheSettingsOutOfTheFileAndNeverPrompts() throws SecretsProblem {
-        var lockable = new LockableKeychain();
-        lockable.locked = true;
-        file().write(KEYS);
-
-        assertThatThrownBy(() -> keys(lockable).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
-                .isInstanceOfSatisfying(SecretsProblem.class,
-                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
-
-        assertThat(lockable.prompts).hasValue(0);
-        assertThat(file().read()).isEqualTo(new Secrets(Map.of(FORECAST_SOLAR, Map.of("api_key", "FS-SECRET-2"))));
-    }
-
-    /** Locked after it said it holds the keys, so only the save finds it locked. */
-    @Test
-    void aKeychainThatLocksBeforeTheRemovalIsWrittenNeverPromptsEither() throws SecretsProblem {
-        var lockable = new LockableKeychain();
-        var keys = keys(lockable);
-        keys.save(KEYS);
-        keys.load();
-        lockable.locked = true;
-
-        assertThatThrownBy(() -> keys.remove(Map.of(OPEN_METEO, Set.of("api_key"))))
-                .isInstanceOfSatisfying(SecretsProblem.class,
-                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
-        assertThat(lockable.prompts).hasValue(0);
     }
 
     private static final Secrets WITH_UNKNOWN_PROVIDERS = new Secrets(Map.of(
@@ -1274,6 +1212,7 @@ class ApiKeysTest {
                 () -> { });
 
         assertThat(keychain.entries).containsOnlyKeys(KeychainEntries.INDEX, OPEN_METEO_ENTRY);
+        assertThat(index(keychain)).containsExactly(OPEN_METEO_ENTRY);
         assertThat(keys(keychain).load()).isEqualTo(new Secrets(Map.of(OPEN_METEO, Map.of("api_key", "OM-SECRET-1"))));
     }
 
@@ -1349,34 +1288,14 @@ class ApiKeysTest {
     }
 
     @Test
-    void removingAKeyWhoseEntryCannotBeReadDeletesItAndItsNameWithoutAsking() throws SecretsProblem {
-        var keychain = withForecastSolarUnreadable();
-
-        assertThat(keys(keychain).remove(Map.of(FORECAST_SOLAR, Set.of("api_key")))).isTrue();
-
-        assertThat(keychain.entries).containsOnlyKeys(KeychainEntries.INDEX, OPEN_METEO_ENTRY);
-        assertThat(index(keychain)).containsExactly(OPEN_METEO_ENTRY);
-    }
-
-    @Test
     void removingAnotherKeyKeepsTheEntryThatCannotBeRead() throws SecretsProblem {
         var keychain = withForecastSolarUnreadable();
 
-        assertThat(keys(keychain).remove(Map.of(OPEN_METEO, Set.of("api_key")))).isTrue();
+        keys(keychain).applyChanges(new KeyChanges(Secrets.NONE, Map.of(OPEN_METEO, Set.of("api_key"))), () -> { });
 
         assertThat(keychain.entries).containsOnlyKeys(KeychainEntries.INDEX, FORECAST_SOLAR_ENTRY)
                 .containsEntry(FORECAST_SOLAR_ENTRY, "FS-SECRET-2");
         assertThat(index(keychain)).containsExactly(FORECAST_SOLAR_ENTRY);
-    }
-
-    @Test
-    void removingAKeyThatIsNotStoredBesideAnEntryThatCannotBeReadWritesNothing() throws SecretsProblem {
-        var keychain = withForecastSolarUnreadable();
-        var before = Map.copyOf(keychain.entries);
-
-        assertThat(keys(keychain).remove(Map.of(SOLCAST, Set.of("api_key")))).isFalse();
-
-        assertThat(keychain.entries).isEqualTo(before);
     }
 
     /** Answers the index the first time, as a usable keychain, and refuses it from then on. */
@@ -1452,20 +1371,6 @@ class ApiKeysTest {
         assertThat(keychain.prompts).hasValue(1);
         assertThat(keychain.entries).isEqualTo(before);
         assertThat(file().path()).doesNotExist();
-    }
-
-    @Test
-    void removingFromAKeychainWithAnEntryItCannotReadAndOneThatIsLockedIsLockedAndNeverPrompts() {
-        var keychain = holdingTheKeys(new LockableWithAnUnreadableEntry());
-        keychain.lockedEntry = OPEN_METEO_ENTRY;
-        var before = Map.copyOf(keychain.entries);
-
-        assertThatThrownBy(() -> keys(keychain).remove(Map.of(FORECAST_SOLAR, Set.of("api_key"))))
-                .isInstanceOfSatisfying(SecretsProblem.class,
-                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
-
-        assertThat(keychain.prompts).hasValue(0);
-        assertThat(keychain.entries).isEqualTo(before);
     }
 
     @Test
@@ -1625,27 +1530,11 @@ class ApiKeysTest {
         keys.moveFileIntoKeychain();
         assertThat(keychain.entries).isEmpty();
         keys.applyChanges(NEW_SOLCAST_KEY, () -> { });
-        assertThat(keys.remove(Map.of(OPEN_METEO, Set.of("api_key")))).isFalse();
+        keys.applyChanges(new KeyChanges(Secrets.NONE, Map.of(OPEN_METEO, Set.of("api_key"))), () -> { });
 
         assertThat(keys.load()).isEqualTo(new Secrets(Map.of(SOLCAST, Map.of("api_key", "SC-NEW"))));
         assertThat(keys.storage()).isEqualTo(KeyStorage.KEYCHAIN);
         assertThat(Files.readString(file().path())).isEqualTo(before);
-    }
-
-    @Test
-    void withoutAFallbackRemovingWhileTheKeychainIsLockedLeavesAFileFromBeforeAlone()
-            throws IOException, SecretsProblem {
-        file().write(KEYS);
-        var before = Files.readString(file().path());
-        var lockable = holdingTheKeys(new LockableKeychain());
-        lockable.locked = true;
-
-        assertThatThrownBy(() -> keys(lockable, KeyFallback.NONE).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
-                .isInstanceOfSatisfying(SecretsProblem.class,
-                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.LOCKED));
-
-        assertThat(Files.readString(file().path())).isEqualTo(before);
-        assertThat(lockable.prompts).hasValue(0);
     }
 
     @Test
@@ -1720,15 +1609,6 @@ class ApiKeysTest {
 
         assertThat(file().path()).doesNotExist();
         assertThat(lockable.entries).isEqualTo(before);
-    }
-
-    @Test
-    void withoutAFallbackRemovingFromAKeychainThatCannotBeUsedFailsAndWritesNoFile() {
-        assertThatThrownBy(() -> keys(new NoKeychain(), KeyFallback.NONE).remove(Map.of(OPEN_METEO, Set.of("api_key"))))
-                .isInstanceOfSatisfying(SecretsProblem.class,
-                        problem -> assertThat(problem.kind()).isEqualTo(SecretsProblem.Kind.FAILED));
-
-        assertThat(file().path()).doesNotExist();
     }
 
     @Test

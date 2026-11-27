@@ -47,10 +47,10 @@ public final class ApiKeys implements SecretsSource {
             + "stored.";
 
     private enum SaveResult {
-        IN_KEYCHAIN,
+        /** In the keychain, or in the file. */
+        SAVED,
         /** The keychain is locked: nothing was written. */
-        LOCKED,
-        IN_FILE
+        LOCKED
     }
 
     private interface Edit {
@@ -287,68 +287,6 @@ public final class ApiKeys implements SecretsSource {
         store(changing(changes), prompting);
     }
 
-    /**
-     * Removes these settings from where the keys are kept, without asking the owner anything: unlike
-     * {@link #applyChanges(KeyChanges, Runnable)} it never has the system ask to unlock the keychain, so it can run
-     * unasked. Writes only when one of them is stored; it then saves as
-     * {@link #applyChanges(KeyChanges, Runnable)} does, so keys kept in the file move into a keychain that can be used.
-     * While the keychain is locked they are still removed from the file, which needs no keychain, so a secret kept
-     * there does not stay behind for as long as the owner leaves the keychain locked. Blocks while the keychain
-     * answers: call it away from the user interface's thread.
-     *
-     * @param names per provider, the setting names to remove, also one whose entry the keychain refuses to read; one
-     *     that is not stored is passed over
-     * @return true when one of them was stored and is removed now; false when none was stored
-     * @throws SecretsProblem of the kind {@link SecretsProblem.Kind#LOCKED} while the keychain is locked: the keychain
-     *     may still hold an older copy, so the caller should try again once it can be read, while the file, when there
-     *     is one and it is the fallback, no longer holds them. Of the kind {@link SecretsProblem.Kind#FAILED}, with the
-     *     file as fallback: when the file could not be read or was not written, the keychain refused its index, or it
-     *     failed while it holds an entry it refuses to read, such as when it refuses to delete one. Without it: when
-     *     the keychain cannot be used or failed. Either way a damaged index counts as holding none
-     */
-    public boolean remove(Map<ProviderId, Set<String>> names) throws SecretsProblem {
-        var changes = new KeyChanges(Secrets.NONE, names);
-        synchronized (saving) {
-            if (!holdsAnyOf(names)) {
-                return false;
-            }
-            if (intoKeychainElseFile(changing(changes)) == SaveResult.LOCKED) {
-                if (fileInUse()) {
-                    intoFile(changing(changes), "they have not been moved into the system keychain");
-                }
-                throw new SecretsProblem(SecretsProblem.Kind.LOCKED, "The system keychain is locked.");
-            }
-            return true;
-        }
-    }
-
-    /**
-     * Whether one of these settings is stored where a load finds the keys. When the keychain holds an entry it refuses
-     * to read, so a load fails, its entries are asked instead, so a setting whose entry cannot be read counts too.
-     */
-    private boolean holdsAnyOf(Map<ProviderId, Set<String>> names) throws SecretsProblem {
-        synchronized (turn) {
-            Secrets stored;
-            try {
-                stored = load();
-            } catch (SecretsProblem problem) {
-                if (problem.kind() == SecretsProblem.Kind.LOCKED || fileInUse()) {
-                    throw problem;
-                }
-                try {
-                    return entries.contents().holdsAnyOf(names);
-                } catch (KeychainException e) {
-                    if (e.kind() == KeychainException.Kind.LOCKED) {
-                        throw locked();
-                    }
-                    throw problem;
-                }
-            }
-            var changes = new KeyChanges(Secrets.NONE, names);
-            return !changes.applyTo(stored).equals(stored);
-        }
-    }
-
     private static Edit changing(KeyChanges changes) {
         return new Edit() {
             @Override
@@ -380,7 +318,7 @@ public final class ApiKeys implements SecretsSource {
                         yield SaveResult.LOCKED;
                     }
                     intoFile(edit, "the system keychain is locked, and was not unlocked when asked");
-                    yield SaveResult.IN_FILE;
+                    yield SaveResult.SAVED;
                 }
                 case NOT_ANSWERED -> SaveResult.LOCKED;
             };
@@ -447,7 +385,7 @@ public final class ApiKeys implements SecretsSource {
                         throw new SecretsProblem(CANNOT_BE_USED);
                     }
                     intoFile(edit, "the system keychain cannot be used");
-                    return SaveResult.IN_FILE;
+                    return SaveResult.SAVED;
                 }
                 case LOCKED -> {
                     return SaveResult.LOCKED;
@@ -488,13 +426,13 @@ public final class ApiKeys implements SecretsSource {
             keptIn(KeyStorage.FILE, "the file could not be read, or holds a name that is not allowed");
             LOG.warn("the API keys were saved in the system keychain, but " + file.path()
                     + " is kept: its keys could not be read, so they were not moved");
-            return SaveResult.IN_KEYCHAIN;
+            return SaveResult.SAVED;
         }
         if (fileInUse()) {
             file.delete();
         }
         savedInKeychain(secrets, keptUnread);
-        return SaveResult.IN_KEYCHAIN;
+        return SaveResult.SAVED;
     }
 
     /**
@@ -511,7 +449,7 @@ public final class ApiKeys implements SecretsSource {
         }
         // such as Windows error 1312 over ssh: no keychain after all, so the file it is
         intoFile(edit, "the system keychain cannot be used");
-        return SaveResult.IN_FILE;
+        return SaveResult.SAVED;
     }
 
     /**
