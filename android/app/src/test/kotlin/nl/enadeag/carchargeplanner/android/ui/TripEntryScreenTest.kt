@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -281,7 +280,6 @@ class TripEntryScreenTest {
         val line = text(R.string.trip_line, text(R.string.time_span, "08:00", "18:00"),
             text(R.string.trip_distance, "120"))
         compose.onNodeWithText(text(R.string.trip_saved, line)).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(text(R.string.trip_saved, line))).isEqualTo(LiveRegionMode.Polite)
         compose.onNodeWithText(line).assertExists()
         assertThat(access.outlooks).hasSize(2)
         add.assertIsFocused()
@@ -547,10 +545,7 @@ class TripEntryScreenTest {
 
         val problem = text(R.string.trip_return_before_departure)
         compose.onNodeWithText(problem).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(problem)).isEqualTo(LiveRegionMode.Polite)
         button(R.string.trip_return_day).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, problem))
-        button(R.string.trip_return_time).assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, problem))
         assertThat(access.tripChanges).isEmpty()
 
         compose.runOnIdle { trips.returnTime(LocalTime.of(9, 30)) }
@@ -567,8 +562,6 @@ class TripEntryScreenTest {
 
         val problem = text(R.string.trip_distance_not_a_number)
         compose.onNodeWithText(problem).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(problem)).isEqualTo(LiveRegionMode.Polite)
-        distance.assertIsFocused().assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, problem))
     }
 
     @Test
@@ -651,7 +644,6 @@ class TripEntryScreenTest {
         click(save)
 
         compose.onNodeWithText(text(R.string.trip_not_saved)).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(text(R.string.trip_not_saved))).isEqualTo(LiveRegionMode.Assertive)
         compose.onNodeWithText(text(R.string.details_in_english, "No space left on device")).assertIsDisplayed()
         compose.onNode(isHeading() and hasText(text(R.string.trip_add_title))).assertIsFocused()
         distance.assert(hasText("120"))

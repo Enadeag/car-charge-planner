@@ -10,7 +10,6 @@ import androidx.activity.ComponentDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -229,7 +228,6 @@ class BatteryEntryScreenTest {
         assertThat(access.batteryLevels).containsExactly(Percent(64.0))
         compose.onNode(isDialog()).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.battery_saved)).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(text(R.string.battery_saved))).isEqualTo(LiveRegionMode.Polite)
         assertThat(access.outlooks).hasSize(2)
     }
 
@@ -261,7 +259,7 @@ class BatteryEntryScreenTest {
         click(R.string.action_save)
 
         field.assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_not_a_whole_number)))
+            .assert(hasText(text(R.string.problem_not_a_whole_number)))
         compose.onNodeWithText(text(R.string.problem_not_a_whole_number)).assertIsDisplayed()
         assertThat(access.batteryLevels).isEmpty()
     }
@@ -275,10 +273,8 @@ class BatteryEntryScreenTest {
         click(R.string.action_save)
 
         field.assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_level_out_of_range)))
+            .assert(hasText(text(R.string.problem_level_out_of_range)))
         compose.onNodeWithText(text(R.string.problem_level_out_of_range)).assertIsDisplayed()
-        // the focus stays in the field, so the problem is read as it comes
-        assertThat(compose.liveRegionOf(text(R.string.problem_level_out_of_range))).isEqualTo(LiveRegionMode.Polite)
         compose.onNode(isDialog()).assertExists()
         assertThat(access.batteryLevels).isEmpty()
     }
@@ -328,7 +324,6 @@ class BatteryEntryScreenTest {
         click(R.string.action_save)
 
         compose.onNodeWithText(text(R.string.battery_not_saved)).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(text(R.string.battery_not_saved))).isEqualTo(LiveRegionMode.Assertive)
         compose.onNodeWithText(text(R.string.details_in_english, "No space left on device")).assertIsDisplayed()
         field.assert(hasText("64"))
         compose.onNodeWithText(text(R.string.battery_saved)).assertDoesNotExist()

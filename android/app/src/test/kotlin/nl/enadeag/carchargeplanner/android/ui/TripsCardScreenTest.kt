@@ -8,7 +8,6 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -426,7 +425,6 @@ class TripsCardScreenTest {
         choice(R.string.trip_not_with_this_car, dayTripSpoken()).assert(toggle(ToggleableState.Off))
         val failed = text(R.string.trip_not_saved) + " " + text(R.string.details_in_english, access.tripFails!!)
         compose.onNodeWithText(failed).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(failed)).isNotNull()
         assertThat(access.outlooks).hasSize(1)
     }
 
@@ -442,7 +440,6 @@ class TripsCardScreenTest {
         compose.onNodeWithText(dayTripLine()).assertDoesNotExist()
         val removed = text(R.string.trip_removed, dayTripLine())
         compose.onNodeWithText(removed).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(removed)).isEqualTo(LiveRegionMode.Polite)
         assertThat(access.outlooks).hasSize(2)
         compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction()).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.action_undo)).performClick()

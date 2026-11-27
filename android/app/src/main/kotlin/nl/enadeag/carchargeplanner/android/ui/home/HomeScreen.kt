@@ -40,11 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.hideFromAccessibility
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -86,7 +84,7 @@ import nl.enadeag.carchargeplanner.engine.trip.Trip
  * its battery bar, the coming one-off away periods and the forecast's footer. Refresh and Settings are the top app
  * bar's actions, and a pull asks for the plan too; coming back to the app asks again when the plan is old. The times
  * are in the home's time zone, named when it is not the phone's, on the phone's 12- or 24-hour clock. A Settings save
- * that no screen showed yet shows here until the owner closes it, in a live region. Today's battery card opens the
+ * that no screen showed yet shows here until the owner closes it. Today's battery card opens the
  * entry of the level the car shows; a level saved there says so in a snackbar, and when the entry closes the focus
  * goes back to the button that opened it. Each day's "Car away" list has Add, which opens the entry of a one-off away
  * period on that day, and a Remove per period, which acts at once; a change says so in a snackbar, Remove's with Undo,
@@ -283,8 +281,7 @@ private fun ColumnScope.Days(dashboard: Dashboard, refreshing: Boolean, phoneZon
         HorizontalPager(pager, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { index ->
             val day = days[index]
             Page {
-                // once, on the day in view: a pager may draw its neighbours too, and the notice is one live region
-                // with one Close
+                // once, on the day in view: a pager may draw its neighbours too, and the notice has one Close
                 if (index == selected) {
                     notice()
                 }
@@ -479,29 +476,23 @@ private fun SourceChip(text: String, colours: SourceColours.Pair, modifier: Modi
 }
 
 /**
- * What a Settings save came to, when no screen showed it, in a live region read at once for a failure, with Close
- * beside it as a button of its own; after Close the focus goes on, as the notice is gone.
+ * What a Settings save came to, when no screen showed it, with Close beside it as a button of its own; after Close
+ * the focus goes on, as the notice is gone.
  */
 @Composable
 private fun Notice(notice: HomeNotice, closed: () -> Unit) {
     val shown by notice.notice.collectAsStateWithLifecycle()
     val outcome = shown ?: return
-    val failed = outcome != SaveOutcome.Saved
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val live = Modifier.semantics(mergeDescendants = true) {
-            liveRegion = if (failed) LiveRegionMode.Assertive else LiveRegionMode.Polite
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = live) {
-            when (outcome) {
-                SaveOutcome.Saved -> Text(stringResource(R.string.settings_saved))
-                SaveOutcome.KeysNotSaved -> Text(stringResource(R.string.settings_keys_not_saved),
-                    color = MaterialTheme.colorScheme.error)
-                is SaveOutcome.Failed -> {
-                    Text(stringResource(R.string.settings_save_failed), color = MaterialTheme.colorScheme.error)
-                    EnglishDetails(outcome.detail)
-                }
-                is SaveOutcome.SettingsUnusable -> Unit
+        when (outcome) {
+            SaveOutcome.Saved -> Text(stringResource(R.string.settings_saved))
+            SaveOutcome.KeysNotSaved -> Text(stringResource(R.string.settings_keys_not_saved),
+                color = MaterialTheme.colorScheme.error)
+            is SaveOutcome.Failed -> {
+                Text(stringResource(R.string.settings_save_failed), color = MaterialTheme.colorScheme.error)
+                EnglishDetails(outcome.detail)
             }
+            is SaveOutcome.SettingsUnusable -> Unit
         }
         AppOutlinedButton(onClick = {
             notice.close()

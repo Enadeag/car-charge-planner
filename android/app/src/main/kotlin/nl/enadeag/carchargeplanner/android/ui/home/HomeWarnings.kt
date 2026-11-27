@@ -15,28 +15,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.home.HomeOutlook
 
 /**
- * A warning above the plan, with a warning sign and the words, in a container that stands out and a polite live
- * region, so a refresh that brings it is heard; the plan below stays in view. That the forecast could not be
+ * A warning above the plan, with a warning sign and the words, in a container that stands out; the plan below stays
+ * in view. That the forecast could not be
  * refreshed, or that a provider refused its API key.
  */
 @Composable
 internal fun Warning(lines: List<String>) {
     Surface(color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer, shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
-            liveRegion = LiveRegionMode.Polite
-        }) {
+        modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            // the words say it; the sign is for the eye, so a screen reader skips it
+            // the words say it; the sign is for the eye
             Icon(Icons.Filled.Warning, contentDescription = null)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 lines.forEach { Text(it) }

@@ -25,9 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -93,8 +91,7 @@ internal fun SetUpScreen(session: SetUpSession) {
     Page {
         StepHeading(step, heading)
         if (refused) {
-            Text(stringResource(R.string.setup_refused), color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            Text(stringResource(R.string.setup_refused), color = MaterialTheme.colorScheme.error)
         }
         when (step) {
             SetUpStep.WELCOME -> WelcomeStep(session.providerName())

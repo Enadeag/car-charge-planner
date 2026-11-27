@@ -28,12 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.error
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -117,16 +114,14 @@ internal fun NumberField(label: String, hint: String, text: String, onEdit: (Str
 
 /**
  * @param onAction what the action key does; null to move on to the next field
- * @param announceProblem whether a screen reader reads a problem as it comes, for a field that keeps the focus while
- *     its problem shows; otherwise the problem is read with the field once the focus moves to it
  * @param readOnly true while it keeps the focus but takes no typing, as while what it holds is saved
  * @param placeholder what the empty field shows in its place, such as an estimate the app uses; null for nothing
  */
 @Composable
 internal fun EntryField(label: String, hint: String, text: String, onEdit: (String) -> Unit, kind: FieldKind,
     problem: FieldProblem?, focus: FocusRequester, modifier: Modifier = Modifier,
-    imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null, announceProblem: Boolean = false,
-    readOnly: Boolean = false, placeholder: String? = null, suffix: String? = null) {
+    imeAction: ImeAction = ImeAction.Next, onAction: (() -> Unit)? = null, readOnly: Boolean = false,
+    placeholder: String? = null, suffix: String? = null) {
     val problemSentence = problem?.let { problemText(it) }
     OutlinedTextField(
         value = text,
@@ -145,25 +140,13 @@ internal fun EntryField(label: String, hint: String, text: String, onEdit: (Stri
         } else null,
         supportingText = {
             Column {
-                if (announceProblem) {
-                    // a node of its own, outside the field's, which stays while empty, so a problem that comes in
-                    // is read while the focus stays in the field
-                    Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
-                        problemSentence?.let { Text(it) }
-                    }
-                } else if (problemSentence != null) {
-                    Text(problemSentence)
-                }
+                problemSentence?.let { Text(it) }
                 if (hint.isNotEmpty()) {
                     Text(hint)
                 }
             }
         },
-        modifier = modifier.fillMaxWidth().focusRequester(focus).semantics {
-            if (problemSentence != null) {
-                error(problemSentence)
-            }
-        },
+        modifier = modifier.fillMaxWidth().focusRequester(focus),
     )
 }
 
@@ -184,7 +167,7 @@ private fun SignKey(text: String, onEdit: (String) -> Unit) {
  * A choice of one from a few, as radio buttons a screen reader reads as a group.
  *
  * @param options the options, in the order shown
- * @param problem the problem it shows, under it and to a screen reader with the group; null for none
+ * @param problem the problem it shows, under it; null for none
  * @param focus moves the focus to the group, as to the first problem after Save; null for a choice that never shows
  *     a problem, whose group then takes no focus of its own
  */
@@ -198,9 +181,6 @@ internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chose
         Text(label, style = MaterialTheme.typography.titleSmall)
         FlowRow(modifier = Modifier.selectableGroup().then(focused).semantics {
             contentDescription = label
-            if (problemSentence != null) {
-                error(problemSentence)
-            }
         },
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             options.forEach { option ->
@@ -217,8 +197,7 @@ internal fun <T> ChoiceRow(label: String, hint: String?, options: List<T>, chose
             }
         }
         if (problemSentence != null) {
-            Text(problemSentence, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.clearAndSetSemantics { })
+            Text(problemSentence, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
         if (hint != null) {
             Text(hint, style = MaterialTheme.typography.bodySmall)

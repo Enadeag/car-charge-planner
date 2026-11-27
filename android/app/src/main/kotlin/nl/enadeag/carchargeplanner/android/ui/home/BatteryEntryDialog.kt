@@ -62,7 +62,7 @@ internal fun BatteryEntryDialog(entry: BatteryEntry) {
                 Text(stringResource(R.string.battery_entry_text))
                 EntryField(stringResource(R.string.battery_entry_field), stringResource(R.string.battery_entry_hint),
                     text, { entry.edit(it) }, FieldKind.WHOLE, problems[BatteryEntry.Field.LEVEL],
-                    focus = field, imeAction = ImeAction.Done, onAction = { entry.save() }, announceProblem = true,
+                    focus = field, imeAction = ImeAction.Done, onAction = { entry.save() },
                     readOnly = savingNow)
                 SaveFailure(stringResource(R.string.battery_not_saved), (saving as? SaveState.Failed)?.detail)
             }

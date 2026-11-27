@@ -5,13 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
@@ -105,11 +103,6 @@ class LicencesScreenTest {
     /** Clicks a part's row, scrolled to first, as at a large font it may be below the screen. */
     private fun click(title: String) = row(title).performScrollTo().performClick()
 
-    /** How many nodes the screen reader reads as one live region that holds [shown], as the merged tree shows. */
-    private fun SemanticsNodeInteractionsProvider.mergedLiveRegions(shown: String) =
-        onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion) and hasText(shown))
-            .fetchSemanticsNodes().size
-
     /** The colour a text is drawn in, from its layout. */
     private fun colourOf(shown: String): Color {
         val layouts = mutableListOf<TextLayoutResult>()
@@ -163,7 +156,7 @@ class LicencesScreenTest {
     }
 
     @Test
-    fun whileTheListIsReadTheScreenSaysSoInAPoliteLiveRegion() {
+    fun whileTheListIsReadTheScreenSaysSo() {
         val gate = CountDownLatch(1)
         try {
             compose.setContent {
@@ -175,8 +168,6 @@ class LicencesScreenTest {
 
             compose.onNodeWithText(reading).assertExists()
             compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).assertExists()
-            assertThat(compose.liveRegionOf(reading)).isEqualTo(LiveRegionMode.Polite)
-            assertThat(compose.mergedLiveRegions(reading)).isEqualTo(1)
             gate.countDown()
             waitFor("Copyright (C) 2026 Someone")
             compose.onNodeWithText(reading).assertDoesNotExist()
@@ -186,15 +177,14 @@ class LicencesScreenTest {
     }
 
     @Test
-    fun whileATextIsReadItsPlaceSaysSoInAPoliteLiveRegion() {
+    fun whileATextIsReadItsPlaceSaysSo() {
         val gate = CountDownLatch(1)
         try {
             show(files = { name -> if (name != "index.txt") gate.holdRead(); files.read(name) })
             click("Apache License 2.0")
             val reading = text(R.string.licences_reading)
 
-            assertThat(compose.liveRegionOf(reading)).isEqualTo(LiveRegionMode.Polite)
-            assertThat(compose.mergedLiveRegions(reading)).isEqualTo(1)
+            compose.onNodeWithText(reading).assertExists()
             gate.countDown()
             waitFor("TERMS AND CONDITIONS")
             compose.onNodeWithText(reading).assertDoesNotExist()
@@ -235,15 +225,13 @@ class LicencesScreenTest {
     }
 
     @Test
-    fun aTextThatIsMissingSaysItCouldNotBeReadInTheErrorColourInAPoliteLiveRegion() {
+    fun aTextThatIsMissingSaysItCouldNotBeReadInTheErrorColour() {
         var error = Color.Unspecified
         compose.setContent { AppTheme { error = MaterialTheme.colorScheme.error; LicencesScreen(files) { closed++ } } }
         waitFor("Copyright (C) 2026 Someone")
         click("Gone")
         waitFor(text(R.string.licences_not_read))
 
-        assertThat(compose.liveRegionOf(text(R.string.licences_not_read))).isEqualTo(LiveRegionMode.Polite)
-        assertThat(compose.mergedLiveRegions(text(R.string.licences_not_read))).isEqualTo(1)
         assertThat(colourOf(text(R.string.licences_not_read))).isEqualTo(error)
         assertThat(error).isNotEqualTo(colourOf("Copyright (C) 2026 Someone"))
     }

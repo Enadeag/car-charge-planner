@@ -6,7 +6,6 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
@@ -189,21 +188,6 @@ internal fun SemanticsNodeInteractionsProvider.assertShowsNoneOf(texts: Set<Stri
     val shown = shownTexts()
     assertThat(shown).isNotEmpty()
     assertThat(shown.filter { it in texts }).isEmpty()
-}
-
-/**
- * The live region a text is read in, its own or that of the nearest part around it.
- *
- * @param shown the text, whole
- * @return how a screen reader reads it when it changes; null when it is in no live region
- */
-internal fun SemanticsNodeInteractionsProvider.liveRegionOf(shown: String): LiveRegionMode? {
-    var node: SemanticsNode? = onNode(hasText(shown), useUnmergedTree = true).fetchSemanticsNode()
-    while (node != null) {
-        node.config.getOrNull(SemanticsProperties.LiveRegion)?.let { return it }
-        node = node.parent
-    }
-    return null
 }
 
 /**

@@ -26,12 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.collapse
 import androidx.compose.ui.semantics.expand
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -134,17 +132,15 @@ private fun PartText(files: LicenceFiles, asset: String) {
 
 /**
  * That a text, or the list of texts, is still being read, or that it could not be read, in the error colour; nothing
- * once it is read. A polite live region, which stays while empty, so a screen reader reads what comes in.
+ * once it is read.
  */
 @Composable
 private fun Status(reading: Reading<*>, @StringRes notRead: Int) {
-    Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
-        when (reading) {
-            Reading.Busy -> Column(Modifier.padding(16.dp)) { Waiting(stringResource(R.string.licences_reading)) }
-            Reading.Failed -> Text(stringResource(notRead), color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(16.dp))
-            is Reading.Read -> Unit
-        }
+    when (reading) {
+        Reading.Busy -> Column(Modifier.padding(16.dp)) { Waiting(stringResource(R.string.licences_reading)) }
+        Reading.Failed -> Text(stringResource(notRead), color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(16.dp))
+        is Reading.Read -> Unit
     }
 }
 

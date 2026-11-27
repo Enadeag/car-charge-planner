@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathNode
 import androidx.compose.ui.graphics.vector.VectorPath
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -209,10 +208,6 @@ class SettingsScreenTest {
 
     private fun title(page: SettingsPage) = compose.onNode(isHeading() and hasText(text(page.title())))
 
-    private fun assertInLiveRegion(shown: String, mode: LiveRegionMode = LiveRegionMode.Polite) {
-        assertThat(compose.liveRegionOf(shown)).`as`("the live region of %s", shown).isEqualTo(mode)
-    }
-
     private val apiKey get() = field(text(R.string.provider_setting_of, text(R.string.provider_api_key), "Open-Meteo"))
 
     private val baseUrl get() = field(text(R.string.provider_setting_of, text(R.string.provider_base_url), "Open-Meteo"))
@@ -369,7 +364,7 @@ class SettingsScreenTest {
 
         foldIs(R.string.fold_expanded)
         field(text(R.string.household_use)).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_at_least, "0")))
+            .assert(hasText(text(R.string.problem_at_least, "0")))
         assertThat(access.written).isEmpty()
         click(R.string.more_settings)
         foldIs(R.string.fold_expanded)
@@ -527,7 +522,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         timeButton(text(R.string.planning_hours_until)).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_same_as_start)))
+        compose.onNodeWithText(text(R.string.problem_same_as_start)).assertExists()
         assertThat(access.written).isEmpty()
     }
 
@@ -545,7 +540,7 @@ class SettingsScreenTest {
 
         foldIs(R.string.fold_expanded)
         field(text(R.string.planning_min_window)).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_more_than, "0")))
+            .assert(hasText(text(R.string.problem_more_than, "0")))
         click(R.string.more_settings)
         foldIs(R.string.fold_expanded)
 
@@ -680,8 +675,6 @@ class SettingsScreenTest {
 
         foldIs(R.string.fold_expanded)
         field(text(R.string.charger_max_current)).assertIsFocused().assert(hasText("16"))
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error,
-                text(R.string.problem_below_minimum_current)))
         field(text(R.string.charger_min_current)).assert(hasText("20"))
         assertThat(access.written).isEmpty()
         click(R.string.more_settings)
@@ -753,8 +746,7 @@ class SettingsScreenTest {
 
         assertThat((access.settings as StartState.Ready).config.system().car().usableBatteryKwh()).isEqualTo(75.0)
         assertThat(session.page.value).isEqualTo(SettingsPage.CAR_AND_HOUSE)
-        // Material's snackbar, outside the page that scrolls, which a screen reader reads politely
-        assertInLiveRegion(text(R.string.settings_saved))
+        // Material's snackbar, outside the page that scrolls
         compose.onNodeWithText(text(R.string.settings_saved)).assert(!hasAnyAncestor(hasScrollAction()))
         assertThat(session.saving.value).isEqualTo(SettingsSession.SaveState.Idle)
         field(text(R.string.car_battery)).assert(hasText("75.0"))
@@ -848,9 +840,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         field(text(R.string.planning_minimum)).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_not_below_target)))
-        assertInLiveRegion(text(R.string.setup_refused))
-        assertThat(compose.liveRegionOf(text(R.string.problem_not_below_target))).isNull()
+            .assert(hasText(text(R.string.problem_not_below_target)))
         assertThat(access.written).isEmpty()
     }
 
@@ -967,7 +957,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun keysThatCouldNotBeStoredSaySoInALiveRegion() {
+    fun keysThatCouldNotBeStoredSaySo() {
         show()
         open(SettingsPage.FORECAST)
         pressProviderFold()
@@ -978,8 +968,8 @@ class SettingsScreenTest {
         click(R.string.action_save)
         compose.waitForIdle()
 
-        assertInLiveRegion(text(R.string.settings_not_saved), LiveRegionMode.Assertive)
-        assertInLiveRegion(text(R.string.settings_keys_not_saved))
+        compose.onNodeWithText(text(R.string.settings_not_saved)).assertExists()
+        compose.onNodeWithText(text(R.string.settings_keys_not_saved)).assertExists()
     }
 
     @Test
@@ -996,7 +986,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         assertThat(access.checked.single().second).containsEntry("base_url", "https://localhost:8443")
-        assertInLiveRegion(text(R.string.forecast_check_failed))
+        compose.onNodeWithText(text(R.string.forecast_check_failed)).assertExists()
         compose.onNodeWithText(text(R.string.details_in_english, "Open-Meteo did not answer.")).assertExists()
     }
 
@@ -1012,7 +1002,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         compose.onNode(group).assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_same_as_primary)))
+        compose.onNodeWithText(text(R.string.problem_same_as_primary)).assertExists()
     }
 
     @Test
@@ -1228,7 +1218,6 @@ class SettingsScreenTest {
         access.checks.single().complete(ConnectionResult(false, 0,
             "Open-Meteo refused the request (status 401): check the API key"))
         compose.waitForIdle()
-        assertInLiveRegion(text(R.string.forecast_check_failed))
         providerFoldIs(keyAndServer, R.string.fold_collapsed)
 
         pressProviderFold()
@@ -1291,7 +1280,7 @@ class SettingsScreenTest {
 
         providerFoldIs(keyAndServer, R.string.fold_expanded)
         baseUrl.assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_server_address)))
+            .assert(hasText(text(R.string.problem_server_address)))
         pressProviderFold()
         providerFoldIs(keyAndServer, R.string.fold_expanded)
         assertThat(access.written).isEmpty()
@@ -1308,7 +1297,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         val problem = text(R.string.problem_server_address)
-        baseUrl.assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, problem))
+        baseUrl.assert(hasText(problem))
         assertThat(problem).contains("https://").doesNotContain("http://")
         assertThat(access.written).isEmpty()
     }
@@ -1331,7 +1320,7 @@ class SettingsScreenTest {
 
         providerFoldIs(keyAndServer, R.string.fold_expanded)
         baseUrl.assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_server_address)))
+            .assert(hasText(text(R.string.problem_server_address)))
         assertThat(access.written).isEmpty()
     }
 
@@ -1349,7 +1338,7 @@ class SettingsScreenTest {
 
         providerFoldIs(keyAndServer, R.string.fold_expanded)
         baseUrl.assertIsFocused()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_server_address)))
+            .assert(hasText(text(R.string.problem_server_address)))
         assertThat(access.checked).isEmpty()
         assertThat(access.written).isEmpty()
     }
@@ -1372,7 +1361,7 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         baseUrl.assertIsFocused().assert(hasText("http://localhost:8080"))
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, text(R.string.problem_server_address)))
+            .assert(hasText(text(R.string.problem_server_address)))
         assertThat(access.written).isEmpty()
         assertThat((access.settings as StartState.Ready).config).isEqualTo(withHttp)
     }
@@ -2009,11 +1998,9 @@ class SettingsScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithText(text(R.string.settings_not_saved)).assert(!hasAnyAncestor(hasScrollAction()))
-        assertInLiveRegion(text(R.string.settings_not_saved), LiveRegionMode.Assertive)
         val details = text(R.string.details_in_english, "No space left on device")
         compose.onNodeWithText(details, useUnmergedTree = true).assert(hasAnyAncestor(hasScrollAction()))
-        assertInLiveRegion(text(R.string.settings_save_failed))
-        assertInLiveRegion(details)
+        compose.onNodeWithText(text(R.string.settings_save_failed)).assert(hasAnyAncestor(hasScrollAction()))
     }
 
     @Test

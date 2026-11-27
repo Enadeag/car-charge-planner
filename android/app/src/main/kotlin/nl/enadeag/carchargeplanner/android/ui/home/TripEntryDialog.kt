@@ -30,11 +30,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.error
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -100,18 +96,17 @@ private enum class Picking(val spot: Spot) {
 }
 
 /**
- * The entry of a trip, while it is open: Material's full-screen dialog, with the title ("Add trip" or "Change trip")
- * as the heading in the top app bar, Close in Up's place and Save at its end. Under the bar, when the home's time
- * zone is not the phone's, the line "Times in <zone>"; then the departure's day and time and the return's, each a
- * button that opens Material's date or time picker, two to a row that wraps to one per line at a large font; the
- * distance there and back, in km, whose keyboard's Done saves; and "I can charge at the destination". A day is named
- * as the Trips card names it, from the home's today when the entry opened; a time as the phone's 12- or 24-hour clock
- * writes it. Why Save refused the trip shows under the return's buttons, which carry it, or under the distance, in a
- * polite live region, and the focus goes there; a save that failed says so at the top, with the English details, in
- * a live region read at once, and the focus goes to the title. The focus starts on the departure day, and comes back
- * to the control that had it when a picker or "Discard changes?" closes. While a change of the trips runs, Save is
- * held, and while its own save runs it shows its progress and nothing can be changed or closed. Back and Close ask
- * "Discard changes?" when something changed; a tap beside the dialog does nothing, as there is no beside.
+ * The entry of a trip, while it is open: Material's full-screen dialog, with the title ("Add trip" or "Change trip") as
+ * the heading in the top app bar, Close in Up's place and Save at its end. Under the bar, when the home's time zone is
+ * not the phone's, the line "Times in <zone>"; then the departure's day and time and the return's, each a button that
+ * opens Material's date or time picker, two to a row that wraps to one per line at a large font; the distance there and
+ * back, in km, whose keyboard's Done saves; and "I can charge at the destination". A day is named as the Trips card
+ * names it, from the home's today when the entry opened; a time as the phone's 12- or 24-hour clock writes it. Why Save
+ * refused the trip shows under the return's buttons or under the distance, and the focus goes there; a save that failed
+ * says so at the top, with the English details, and the focus goes to the title. The focus starts on the departure day,
+ * and comes back to the control that had it when a picker or "Discard changes?" closes. While a change of the trips
+ * runs, Save is held, and while its own save runs it shows its progress and nothing can be changed or closed. Back and
+ * Close ask "Discard changes?" when something changed; a tap beside the dialog does nothing, as there is no beside.
  *
  * @param phoneZone the phone's time zone, against which the home's is named
  */
@@ -167,20 +162,17 @@ internal fun TripEntryDialog(entry: TripEntry, phoneZone: ZoneId) {
                 Named(stringResource(R.string.trip_departure_time), words.time(fields.departureTime),
                     focus.getValue(Spot.DEPARTURE_TIME), noted(Spot.DEPARTURE_TIME)) {
                     picking = Picking.DEPARTURE_TIME
-                }, null, !savingNow)
+                }, !savingNow)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Moment(Named(stringResource(R.string.trip_return_day), dayName(words, draft.today, fields.returnDay),
                     focus.getValue(Spot.RETURN_DAY), noted(Spot.RETURN_DAY)) { picking = Picking.RETURN_DAY },
                     Named(stringResource(R.string.trip_return_time), words.time(fields.returnTime),
                         focus.getValue(Spot.RETURN_TIME), noted(Spot.RETURN_TIME)) {
                         picking = Picking.RETURN_TIME
-                    }, returnProblem, !savingNow)
-                // under the return's buttons; the live region stays while empty, so a refusal that comes in is read
-                // while the focus moves to the return day
-                Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
-                    returnProblem?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
+                    }, !savingNow)
+                // under the return's buttons
+                returnProblem?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             }
             DistanceField(fields.distance, distanceProblem, savingNow, focus.getValue(Spot.DISTANCE),
@@ -229,10 +221,10 @@ private class Named(val name: String, val value: String, val focus: FocusRequest
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Moment(day: Named, time: Named, problem: String?, enabled: Boolean) {
+private fun Moment(day: Named, time: Named, enabled: Boolean) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(day, time).forEach { button ->
-            TimeButton(button.name, button.value, button.focus, problem, enabled,
+            TimeButton(button.name, button.value, button.focus, enabled,
                 Modifier.weight(1f).then(button.noted), button.onClick)
         }
     }
@@ -240,9 +232,7 @@ private fun Moment(day: Named, time: Named, problem: String?, enabled: Boolean) 
 
 /**
  * The distance there and back: Material's field with its label, "km" after it and a number keyboard, whose Done
- * saves; a screen reader reads its label, what is typed and the unit, as the field shows them. Why Save refused it
- * shows under it, in a polite live region of its own, and the field carries it. While the trip is saved, it keeps the
- * focus but takes no typing.
+ * saves. Why Save refused it shows under it. While the trip is saved, it keeps the focus but takes no typing.
  */
 @Composable
 private fun DistanceField(text: String, problem: String?, saving: Boolean, focus: FocusRequester, noted: Modifier,
@@ -257,17 +247,8 @@ private fun DistanceField(text: String, problem: String?, saving: Boolean, focus
         isError = problem != null,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onDone() }),
-        supportingText = {
-            // a node of its own, outside the field's, which stays while empty, so a problem that comes in is read
-            Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
-                problem?.let { Text(it) }
-            }
-        },
-        modifier = Modifier.fillMaxWidth().focusRequester(focus).then(noted).semantics {
-            if (problem != null) {
-                error(problem)
-            }
-        },
+        supportingText = problem?.let { shown -> { Text(shown) } },
+        modifier = Modifier.fillMaxWidth().focusRequester(focus).then(noted),
     )
 }
 

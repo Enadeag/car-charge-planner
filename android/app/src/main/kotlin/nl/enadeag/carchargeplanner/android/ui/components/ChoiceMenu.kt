@@ -18,21 +18,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.error
-import androidx.compose.ui.semantics.semantics
 import nl.enadeag.carchargeplanner.android.R
 import nl.enadeag.carchargeplanner.android.form.FieldProblem
 
 /**
  * A choice of one from a fixed list, as Material's exposed drop-down menu: a field that shows the choice, or "Choose…"
- * before one is made, and opens the list on a tap. A screen reader reads it as a drop-down list with its label, its
- * choice and its problem. Shared by every drop-down of the forms; a few choices that all fit on one line may still be
- * radio buttons ([ChoiceRow]).
+ * before one is made, and opens the list on a tap. Shared by every drop-down of the forms; a few choices that all fit
+ * on one line may still be radio buttons ([ChoiceRow]).
  *
  * @param options the options, in the order listed
  * @param chosen the option shown; null before a choice, which shows "Choose…"
  * @param name what the owner reads for an option, in the app's language
- * @param problem the problem it shows, under it and to a screen reader with the field; null for none
+ * @param problem the problem it shows, under it; null for none
  * @param focus moves the focus to the field, as to the first problem after Save
  * @param hint what the choice is for, under the field after its problem; null for none
  */
@@ -61,12 +58,7 @@ internal fun <T> ChoiceMenu(label: String, options: List<T>, chosen: T?, name: @
                 }
             },
             modifier = Modifier.fillMaxWidth().focusRequester(focus)
-                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                .semantics {
-                    if (problemSentence != null) {
-                        error(problemSentence)
-                    }
-                },
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
         ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             options.forEachIndexed { index, option ->

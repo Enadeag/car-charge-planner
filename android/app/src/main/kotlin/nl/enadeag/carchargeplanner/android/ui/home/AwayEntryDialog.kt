@@ -27,10 +27,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,8 +58,8 @@ private enum class Picked {
  * day or part of it, and for part of the day the two times, each a button that opens Material's time picker on the
  * phone's 12- or 24-hour clock, as a dial or typed; then Save and Cancel. The choice takes the focus when the entry
  * opens, a time's button when its picker closes, and what had it before when the question over the entry closes. Why
- * Save refused the period shows under the end time, or under the choice for all day, in a polite live region; a save
- * that failed says so in the entry, with the English details, in a live region read at once. While a change of the away
+ * Save refused the period shows under the end time, or under the choice for all day; a save that failed says so in
+ * the entry, with the English details. While a change of the away
  * periods runs, Save is held, keeping the focus, and while its own save runs it shows its progress. The content
  * scrolls, so it stays reachable at a large font size. Back, or a tap beside the dialog, asks "Discard changes?" when
  * the choice or a time changed.
@@ -105,22 +103,18 @@ internal fun AwayEntryDialog(entry: AwayEntry) {
                     entry.choose(it)
                 }
                 if (draft.kind == AwayEntry.Kind.PART_OF_DAY) {
-                    TimeButton(stringResource(R.string.one_off_from), words.time(draft.start), from, null, !savingNow) {
+                    TimeButton(stringResource(R.string.one_off_from), words.time(draft.start), from, !savingNow) {
                         returnTo = Picked.START
                         picking = Picked.START
                     }
-                    TimeButton(stringResource(R.string.one_off_until), words.time(draft.end), until, problemText,
-                        !savingNow) {
+                    TimeButton(stringResource(R.string.one_off_until), words.time(draft.end), until, !savingNow) {
                         returnTo = Picked.END
                         picking = Picked.END
                     }
                 }
-                // under the end time, or the choice for all day; the live region stays while empty, so a refusal
-                // that comes in is read while the focus stays on Save
-                Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
-                    problemText?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
+                // under the end time, or the choice for all day
+                problemText?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
                 SaveFailure(stringResource(R.string.one_off_not_saved), (saving as? SaveState.Failed)?.detail)
             }

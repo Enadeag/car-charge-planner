@@ -10,7 +10,6 @@ import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -236,7 +235,6 @@ class AwayEntryScreenTest {
         compose.onNode(isDialog()).assertDoesNotExist()
         val saved = text(R.string.one_off_saved, text(R.string.one_off_all_day, "Today"))
         compose.onNodeWithText(saved).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(saved)).isEqualTo(LiveRegionMode.Polite)
         // the new plan is still asked: the list shows what the engine stored
         assertThat(access.outlooks).hasSize(2)
         line(text(R.string.one_off_all_day, "Today")).assertExists()
@@ -324,7 +322,7 @@ class AwayEntryScreenTest {
     }
 
     @Test
-    fun anEndBeforeTheStartIsRefusedUnderTheEndTimeInAPoliteLiveRegionAndNothingIsSaved() {
+    fun anEndBeforeTheStartIsRefusedUnderTheEndTimeAndNothingIsSaved() {
         show()
         openTheEntry()
         partOfTheDay()
@@ -335,8 +333,6 @@ class AwayEntryScreenTest {
 
         val refusal = text(R.string.one_off_end_before_start)
         compose.onNodeWithText(refusal).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(refusal)).isEqualTo(LiveRegionMode.Polite)
-        timeButton(R.string.one_off_until).assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, refusal))
         assertThat(compose.onNodeWithText(refusal).fetchSemanticsNode().boundsInRoot.top)
             .isGreaterThanOrEqualTo(timeButton(R.string.one_off_until).fetchSemanticsNode().boundsInRoot.bottom)
         compose.onNode(isDialog()).assertExists()
@@ -390,8 +386,8 @@ class AwayEntryScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithText(text(R.string.one_off_not_saved)).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(text(R.string.one_off_not_saved))).isEqualTo(LiveRegionMode.Assertive)
-        compose.onNodeWithText(text(R.string.details_in_english, "No space left on device")).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.details_in_english, "No space left on device")).performScrollTo()
+            .assertIsDisplayed()
         timeButton(R.string.one_off_from).assertExists()
         assertThat(access.outlooks).hasSize(1)
     }
@@ -437,7 +433,6 @@ class AwayEntryScreenTest {
         line(period).assertDoesNotExist()
         val removed = text(R.string.one_off_removed, period)
         compose.onNodeWithText(removed).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(removed)).isEqualTo(LiveRegionMode.Polite)
         assertThat(access.outlooks).hasSize(2)
         compose.onNodeWithText(text(R.string.action_undo)).assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
@@ -482,7 +477,6 @@ class AwayEntryScreenTest {
         val failed = text(R.string.one_off_not_removed) + " " +
             text(R.string.details_in_english, "No space left on device")
         compose.onNodeWithText(failed).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(failed)).isNotNull()
         line(period).assertExists()
         assertThat(access.outlooks).hasSize(1)
     }
@@ -736,7 +730,6 @@ class AwayEntryScreenTest {
         val failed = text(R.string.one_off_not_saved) + " " +
             text(R.string.details_in_english, "No space left on device")
         compose.onNodeWithText(failed).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(failed)).isEqualTo(LiveRegionMode.Polite)
         compose.onNode(hasContentDescription(text(R.string.action_close)) and hasClickAction()).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.one_off_not_removed), substring = true).assertDoesNotExist()
         line(period).assertDoesNotExist()

@@ -17,7 +17,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
@@ -481,18 +480,16 @@ class HomeScreenTest {
     }
 
     @Test
-    fun aSaveNoScreenShowedShowsWithItsEnglishDetailsInALiveRegionUntilClosed() {
+    fun aSaveNoScreenShowedShowsWithItsEnglishDetailsUntilClosed() {
         access.writeFails = true
         saves.update(KeyChanges.NONE) { it.withSystem(it.system().withHouseAndCar(House(0.9), it.system().car()),
             it.typical()) }
         show(lisbonWeek())
         compose.waitForIdle()
 
-        assertThat(compose.liveRegionOf(text(R.string.settings_save_failed))).isEqualTo(LiveRegionMode.Assertive)
+        compose.onNodeWithText(text(R.string.settings_save_failed)).assertExists()
         compose.onNodeWithText(text(R.string.details_in_english, "No space left on device"), useUnmergedTree = true)
             .assertExists()
-        // Close is a button of its own, outside the live region
-        assertThat(compose.liveRegionOf(text(R.string.action_close))).isNull()
         // the title took the focus when the home opened; the focus is off it, so Close has to bring it back
         compose.runOnIdle { focus.clearFocus() }
         compose.onNode(title).assertIsNotFocused()
@@ -504,17 +501,17 @@ class HomeScreenTest {
     }
 
     @Test
-    fun aSavedNoticeIsReadPolitely() {
+    fun aSavedNoticeSaysSo() {
         saves.update(KeyChanges.NONE) { it.withSystem(it.system().withHouseAndCar(House(0.9), it.system().car()),
             it.typical()) }
         show(lisbonWeek())
         compose.waitForIdle()
 
-        assertThat(compose.liveRegionOf(text(R.string.settings_saved))).isEqualTo(LiveRegionMode.Polite)
+        compose.onNodeWithText(text(R.string.settings_saved)).assertIsDisplayed()
     }
 
     @Test
-    fun keysNotSavedOnTheHomeAreReadAtOnce() {
+    fun keysNotSavedOnTheHomeSaySo() {
         access.keysFail = true
         saves.update(KeyChanges.entering(Secrets(mapOf(ProviderId("open-meteo") to mapOf("api_key" to "K1"))))) {
             it
@@ -522,7 +519,7 @@ class HomeScreenTest {
         show(lisbonWeek())
         compose.waitForIdle()
 
-        assertThat(compose.liveRegionOf(text(R.string.settings_keys_not_saved))).isEqualTo(LiveRegionMode.Assertive)
+        compose.onNodeWithText(text(R.string.settings_keys_not_saved)).assertIsDisplayed()
     }
 
     @Test
@@ -632,15 +629,15 @@ class HomeScreenTest {
     }
 
     @Test
-    fun aStaleForecastsWarningIsReadPolitely() {
+    fun aStaleForecastSaysSo() {
         clock("24")
         show(lisbonWeek(freshness = Freshness.STALE))
 
-        assertThat(compose.liveRegionOf(text(R.string.stale_warning, "08:51"))).isEqualTo(LiveRegionMode.Polite)
+        compose.onNodeWithText(text(R.string.stale_warning, "08:51")).assertIsDisplayed()
     }
 
     @Test
-    fun aRefusedKeyIsSaidByItsProviderAboveThePlanInAPoliteLiveRegion() {
+    fun aRefusedKeyIsSaidByItsProviderAboveThePlan() {
         clock("24")
         val source = Plans.source(today.atTime(8, 51).atZone(lisbon).toInstant(),
             keyRefusedBy = listOf(ProviderId("open-meteo")))
@@ -649,7 +646,6 @@ class HomeScreenTest {
 
         val warning = text(R.string.key_refused_warning, "Open-Meteo")
         compose.onNodeWithText(warning).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(warning)).isEqualTo(LiveRegionMode.Polite)
         assertThat(top(warning)).isLessThan(todaysCardTop())
         compose.onNodeWithText("13:00 – 15:00").assertIsDisplayed()
     }
@@ -698,7 +694,6 @@ class HomeScreenTest {
 
         val warning = text(R.string.key_refused_warning, "Open-Meteo")
         compose.onNodeWithText(warning).assertIsDisplayed()
-        assertThat(compose.liveRegionOf(warning)).isEqualTo(LiveRegionMode.Polite)
         assertThat(top(warning)).isLessThan(top(text(R.string.no_forecast)))
         compose.onNodeWithText(text(R.string.details_in_english, "Open-Meteo: 401 Unauthorized")).assertExists()
     }
@@ -716,7 +711,6 @@ class HomeScreenTest {
         show(Outlook.NoForecast("Open-Meteo: no network"))
 
         compose.onNodeWithText(text(R.string.key_refused_warning, "Open-Meteo")).assertDoesNotExist()
-        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)).assertDoesNotExist()
     }
 
     @Test
@@ -779,8 +773,6 @@ class HomeScreenTest {
         compose.onNodeWithText(text(R.string.notification_card_no_ask)).assertDoesNotExist()
         assertThat(top(title)).isGreaterThan(top(text(R.string.stale_warning, "08:51")))
             .isLessThan(todaysCardTop())
-        assertThat(compose.liveRegionOf(title)).isNull()
-        assertThat(compose.liveRegionOf(text(R.string.notification_card_body))).isNull()
     }
 
     @Test
@@ -1046,18 +1038,6 @@ class HomeScreenTest {
     }
 
     private fun warningWords() = text(R.string.stale_warning, "08:51")
-
-    @Test
-    fun theStaleWarningIsOnePolitePieceOfTextWithoutTheSignInIt() {
-        clock("24")
-        show(lisbonWeek(freshness = Freshness.STALE))
-
-        val region = compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
-
-        val config = region.fetchSemanticsNode().config
-        assertThat(config[SemanticsProperties.Text].joinToString("") { it.text }).isEqualTo(warningWords())
-        assertThat(config.getOrNull(SemanticsProperties.ContentDescription)).isNull()
-    }
 
     @Test
     fun theNoticeAndTheStaleWarningFollowTheSelectedTabOnceEach() {
