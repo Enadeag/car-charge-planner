@@ -12,7 +12,7 @@ _Avoid_: User, customer, driver
 
 **Feed-in**:
 Solar energy that is produced but not used in the home or car, and flows back to the grid. The thing the owner wants to minimise.
-_Avoid_: Return, export
+_Avoid_: Return (the end of a trip), export
 
 **Self-consumption**:
 The share of produced solar energy that is used on-site (home or car) rather than fed in. The primary quantity the tool maximises.
@@ -57,6 +57,10 @@ _Avoid_: Journey, ride, away period (which has no distance)
 **Departure**:
 The moment the car leaves on a trip; the energy for the trip must be in the battery by then.
 _Avoid_: Deadline, start
+
+**Return**:
+The moment the car is back home from a trip; charging after it counts as after the return on the battery's levels of the day the trip leaves.
+_Avoid_: Arrival, back home
 
 **Trip surcharge**:
 The share added to the average consumption for the energy of a trip, as long drives use more (15% unless the owner changes it).
