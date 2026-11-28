@@ -1,12 +1,11 @@
 package nl.enadeag.carchargeplanner.engine.dashboard;
 
 import nl.enadeag.carchargeplanner.engine.config.Percent;
-import java.util.List;
 import java.util.Optional;
 
 /**
  * A day's battery levels: at the start of the day and the highest after its charging, and on the day a trip the plan
- * advises on leaves, at each departure and at the end of the day, after the trip.
+ * advises on leaves, at its first departure and at the end of the day, after the trip.
  *
  * <p>A level is shown as a whole percentage, rounded half up; within 0 to 100 a tie is an exact half, which
  * {@link Math#round(double)} rounds up too. Every comparison below is of such whole percentages, so two levels differ
@@ -15,35 +14,24 @@ import java.util.Optional;
  * @param startPct at the start of the day, never null; today's at the moment the plan was made
  * @param afterPct after the day's charging, never null: the highest level the day reaches; the start's when the day
  *     has no charging
- * @param departurePcts at each departure of the day a trip the plan advises on leaves, in time order, after the
- *     charging before it; empty on any other day, never null
+ * @param departurePct at the first departure of the day a trip the plan advises on leaves, after the charging before
+ *     it; empty on any other day, never null
  * @param afterTripPct at the end of the day a trip the plan advises on leaves, after the trip; empty on any other
  *     day, never null
  */
-public record BatteryLevels(Percent startPct, Percent afterPct, List<Percent> departurePcts,
+public record BatteryLevels(Percent startPct, Percent afterPct, Optional<Percent> departurePct,
         Optional<Percent> afterTripPct) {
 
     /**
-     * Checks that the departures and the level after the trip come together, and copies the departures.
+     * Checks that the departure and the level after the trip come together.
      *
-     * @throws IllegalArgumentException when there are departures without a level after the trip, or the reverse
-     * @throws NullPointerException when the departures are null or hold null
+     * @throws IllegalArgumentException when there is a departure without a level after the trip, or the reverse
      */
     public BatteryLevels {
-        departurePcts = List.copyOf(departurePcts);
-        if (departurePcts.isEmpty() != afterTripPct.isEmpty()) {
-            throw new IllegalArgumentException("the levels at the departures, " + departurePcts
+        if (departurePct.isEmpty() != afterTripPct.isEmpty()) {
+            throw new IllegalArgumentException("the level at the departure, " + departurePct
                     + ", and the level after the trip, " + afterTripPct + ", must both be there or both be empty");
         }
-    }
-
-    /**
-     * The level at the day's first departure, after the solar charging and any grid charge before it.
-     *
-     * @return the level; empty on a day no trip the plan advises on leaves
-     */
-    public Optional<Percent> departurePct() {
-        return departurePcts.stream().findFirst();
     }
 
     /**
@@ -53,20 +41,19 @@ public record BatteryLevels(Percent startPct, Percent afterPct, List<Percent> de
      * @return true when they differ; false when they read the same, and on a day no trip the plan advises on leaves
      */
     public boolean chargesBeforeTrip() {
-        return departurePct().filter(departure -> whole(departure) != whole(startPct)).isPresent();
+        return departurePct.filter(departure -> whole(departure) != whole(startPct)).isPresent();
     }
 
     /**
-     * Whether the day charges after the return: its highest level is above every departure level in whole percent.
-     * Charging between two trips counts as after the return, and so does a later trip's grid charge that evening, but
-     * only where it lifts the highest level above every departure level.
+     * Whether the day charges after the return: its highest level is above the level at the first departure in whole
+     * percent. Charging between two trips counts as after the return, and so does a later trip's grid charge that
+     * evening.
      *
-     * @return true when the highest level is above every departure level; false otherwise, and on a day no trip the
+     * @return true when the highest level is above the first departure; false otherwise, and on a day no trip the
      *     plan advises on leaves
      */
     public boolean chargesAfterReturn() {
-        return !departurePcts.isEmpty()
-                && departurePcts.stream().allMatch(departure -> whole(afterPct) > whole(departure));
+        return departurePct.filter(departure -> whole(afterPct) > whole(departure)).isPresent();
     }
 
     /**
@@ -75,7 +62,7 @@ public record BatteryLevels(Percent startPct, Percent afterPct, List<Percent> de
      * @return the day's charging, from {@link #chargesBeforeTrip()} and {@link #chargesAfterReturn()}
      */
     public Charging charging() {
-        if (departurePcts.isEmpty()) {
+        if (departurePct.isEmpty()) {
             return Charging.NO_DEPARTURE;
         }
         if (chargesBeforeTrip()) {

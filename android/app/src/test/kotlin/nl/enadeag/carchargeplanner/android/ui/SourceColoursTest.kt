@@ -46,7 +46,7 @@ class SourceColoursTest {
 
         assertThat(colours.of(SourceFigure.SolarShare(Percent(92.0)))).isEqualTo(colours.solar)
         assertThat(colours.of(SourceFigure.Battery(
-            BatteryLevels(Percent(50.0), Percent(74.0), listOf(), Optional.empty())))).isEqualTo(colours.car)
+            BatteryLevels(Percent(50.0), Percent(74.0), Optional.empty(), Optional.empty())))).isEqualTo(colours.car)
         assertThat(colours.of(SourceFigure.FromGrid(0.4))).isEqualTo(colours.grid)
     }
 

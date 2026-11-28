@@ -101,12 +101,12 @@ final class DayBuilder {
     }
 
     /**
-     * The levels at the departures and after the trip come from the plan's day, which has departures exactly on the
-     * days its trip advice leaves.
+     * The level at the first departure and after the trip come from the plan's day, which has departures exactly on
+     * the days its trip advice leaves.
      */
     private static BatteryLevels battery(DayPlan day) {
-        var departing = day.departureLevelPcts();
-        return new BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct(), departing,
-                departing.isEmpty() ? Optional.empty() : Optional.of(day.endLevelPct()));
+        var departure = day.departureLevelPcts().stream().findFirst();
+        return new BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct(), departure,
+                departure.map(ignored -> day.endLevelPct()));
     }
 }

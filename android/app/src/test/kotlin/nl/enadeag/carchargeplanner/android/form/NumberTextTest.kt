@@ -111,7 +111,7 @@ class NumberTextTest {
     }.filter { it in 0.0..100.0 }
 
     private fun departing(start: Double, departure: Double, after: Double) =
-        BatteryLevels(Percent(start), Percent(after), listOf(Percent(departure)), Optional.of(Percent(0.0)))
+        BatteryLevels(Percent(start), Percent(after), Optional.of(Percent(departure)), Optional.of(Percent(0.0)))
 
     @Test
     fun theEngineSaysTheBatteryChargesBeforeTheTripExactlyWhenTheWrittenStartAndDepartureDiffer() {

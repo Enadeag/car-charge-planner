@@ -306,8 +306,14 @@ class OutlookMapperTest {
     /** As above, with Saturday's levels at the start, the departure, the highest and the end. */
     private static DashboardModel.Plan withTrip(Messages messages, double startPct, double departurePct,
             double afterPct, double endPct) {
-        var saturday = DayPlans.departing(TODAY.plusDays(1), new Percent(startPct), List.of(new Percent(departurePct)),
-                List.of(), new Percent(afterPct), new Percent(94), new Percent(endPct), 70, List.of());
+        return withTrip(messages, startPct, List.of(new Percent(departurePct)), afterPct, endPct);
+    }
+
+    /** As above, with each of Saturday's departures. */
+    private static DashboardModel.Plan withTrip(Messages messages, double startPct, List<Percent> departures,
+            double afterPct, double endPct) {
+        var saturday = DayPlans.departing(TODAY.plusDays(1), new Percent(startPct), departures, List.of(),
+                new Percent(afterPct), new Percent(94), new Percent(endPct), 70, List.of());
         var days = List.of(day(TODAY, window(TODAY, 11, 14, 0)), saturday,
                 DayPlans.of(TODAY.plusDays(2), new Percent(32), List.of(), new Percent(32), new Percent(80),
                         new Percent(32), 0, List.of()),
@@ -348,6 +354,19 @@ class OutlookMapperTest {
 
         assertThat(inEnglish.chips()).extracting(ChipModel::text).containsExactly(english);
         assertThat(inDutch.chips()).extracting(ChipModel::text).containsExactly(dutch);
+    }
+
+    @Test
+    void aDayWithTwoTripsAndSunBetweenThemChargesAfterTheReturn() {
+        // the first leaves at the 50 % start, the sun charges to 80 % before the second leaves
+        var departures = List.of(new Percent(50), new Percent(80));
+        var english = withTrip(new Messages(Language.ENGLISH), 50, departures, 80, 59.3).days().get(1);
+        var dutch = withTrip(new Messages(Language.DUTCH), 50, departures, 80, 59.3).days().get(1);
+
+        assertThat(english.chips()).extracting(ChipModel::text).containsExactly("Battery 50%, 80% after the return");
+        assertThat(english.battery().levels()).isEqualTo("50%, 80% after the return");
+        assertThat(dutch.chips()).extracting(ChipModel::text).containsExactly("Accu 50%, 80% na terugkomst");
+        assertThat(dutch.battery().levels()).isEqualTo("50%, 80% na terugkomst");
     }
 
     @Test

@@ -5,7 +5,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Fixed
-- The battery card of the day a trip leaves says whether the car charges before the trip, after the return or both. A day that starts at 50%, leaves at 50%, is back at 31% and then charges on solar power to 80% read "Battery 50 → 80%, 80% after the trip", as if the car charged before it left; it now reads "Battery 50%, 80% after the return". With a charge before the trip as well it reads, for example, "Battery 50 → 60%, 80% after the return", and the middle figure of "Battery 50 → 80%, 61% after the trip" is now the level the car leaves with. A charge after the return is also a later trip's grid charge that evening (#512).
+- The battery card of the day a trip leaves says whether the car charges before the trip, after the return or both. A day that starts at 50%, leaves at 50%, is back at 31% and then charges on solar power to 80% read "Battery 50 → 80%, 80% after the trip", as if the car charged before it left; it now reads "Battery 50%, 80% after the return". With a charge before the trip as well it reads, for example, "Battery 50 → 60%, 80% after the return", and the middle figure of "Battery 50 → 80%, 61% after the trip" is now the level the car leaves with. A charge after the return is also a later trip's grid charge that evening, and with two trips on a day the charging between them (#512).
 
 ### Android
 

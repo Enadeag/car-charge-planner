@@ -73,7 +73,7 @@ class BatteryMapperTest {
     }
 
     private static BatteryLevels departing(double start, double departure, double after) {
-        return new BatteryLevels(new Percent(start), new Percent(after), List.of(new Percent(departure)),
+        return new BatteryLevels(new Percent(start), new Percent(after), Optional.of(new Percent(departure)),
                 Optional.of(new Percent(0)));
     }
 
@@ -119,16 +119,9 @@ class BatteryMapperTest {
 
     private static String levels(Messages messages, double start, double departure, double after, double end) {
         return levels(messages, new BatteryLevels(new Percent(start), new Percent(after),
-                List.of(new Percent(departure)), Optional.of(new Percent(end))));
+                Optional.of(new Percent(departure)), Optional.of(new Percent(end))));
     }
 
-    @Test
-    void withTwoTripsTheLevelsGiveTheFirstDeparture() {
-        var levels = new BatteryLevels(new Percent(50), new Percent(80), List.of(new Percent(60), new Percent(80)),
-                Optional.of(new Percent(59)));
-
-        assertThat(levels(ENGLISH, levels)).isEqualTo("50 → 60%, 59% after the trip");
-    }
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', textBlock = """

@@ -464,8 +464,8 @@ class DayCardTest {
         var shown = days(plan, Optional.empty(), List.of(advice(leaving)), List.of(leaving));
 
         assertThat(shown).extracting(DashboardDay::battery).containsExactly(
-                new BatteryLevels(new Percent(40), new Percent(60), List.of(), Optional.empty()),
-                new BatteryLevels(new Percent(60), new Percent(74), List.of(new Percent(74)),
+                new BatteryLevels(new Percent(40), new Percent(60), Optional.empty(), Optional.empty()),
+                new BatteryLevels(new Percent(60), new Percent(74), Optional.of(new Percent(74)),
                         Optional.of(new Percent(30))));
     }
 
@@ -483,7 +483,7 @@ class DayCardTest {
     }
 
     @Test
-    void theDayATripLeavesHasItsLevelsAtEachDepartureFromThePlan() {
+    void theDayTwoTripsLeaveOnHasTheFirstDepartureFromThePlan() {
         var first = trip(TODAY, 7, TODAY, 9);
         var second = trip(TODAY, 18, TODAY, 20);
         var plan = List.of(DayPlans.departing(TODAY, new Percent(50), List.of(new Percent(50), new Percent(80)),
@@ -492,7 +492,7 @@ class DayCardTest {
         var shown = days(plan, Optional.empty(), List.of(advice(first), advice(second)), List.of(first, second))
                 .get(0).battery();
 
-        assertThat(shown.departurePcts()).containsExactly(new Percent(50), new Percent(80));
+        assertThat(shown.departurePct()).contains(new Percent(50));
         assertThat(shown.afterTripPct()).contains(new Percent(59.3));
     }
 

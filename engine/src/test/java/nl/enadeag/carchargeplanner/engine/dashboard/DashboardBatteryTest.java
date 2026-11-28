@@ -110,7 +110,7 @@ class DashboardBatteryTest {
     }
 
     @Test
-    void aDayWithTwoTripsShowsTheLevelTheSunReachesBetweenThemAndTheLevelAfterTheLast() {
+    void aDayWithTwoTripsShowsTheLevelTheSunReachesBetweenThemAsChargingAfterTheReturn() {
         // a 100 kWh car without a daily distance: each 100 km trip takes 20.7 % and needs 50.7 %; the first leaves
         // with the 50 % the day starts with, is back with 29.3 %, and the sun charges it to the 80 % target before the
         // second leaves; the day ends at 59.3 %, after the second
@@ -122,11 +122,8 @@ class DashboardBatteryTest {
         assertThat(saturday.startPct().value()).isCloseTo(50, CLOSE);
         assertThat(saturday.afterPct().value()).isCloseTo(80, CLOSE);
         assertThat(saturday.afterTripPct().orElseThrow().value()).isCloseTo(59.3, CLOSE);
-        // the second departure is the day's highest level, so nothing is above every departure
-        assertThat(saturday.departurePcts()).hasSize(2);
-        assertThat(saturday.departurePcts().get(0).value()).isCloseTo(50, CLOSE);
-        assertThat(saturday.departurePcts().get(1).value()).isCloseTo(80, CLOSE);
-        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.NONE);
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(50, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.AFTER_RETURN);
     }
 
     @Test
@@ -220,7 +217,7 @@ class DashboardBatteryTest {
     }
 
     @Test
-    void aDayWithTwoTripsChargesAfterTheReturnWhenItEndsAboveBothDepartures() {
+    void aDayWithTwoTripsInTheMorningChargesAfterTheReturns() {
         // two 50 km trips in the morning, then the sun charges the car to the 80 % target
         var view = dashboard(home(100, 0), forecast(SAT, List.of(sunFrom(10, 18))), 60, at(SAT, 0, 0),
                 new Trip(at(SAT, 6, 0), at(SAT, 7, 0), 50, false),
@@ -228,10 +225,7 @@ class DashboardBatteryTest {
 
         var saturday = battery(view, SAT);
 
-        // each trip takes 50 * 0.207 = 10.35 %
-        assertThat(saturday.departurePcts()).hasSize(2);
-        assertThat(saturday.departurePcts().get(0).value()).isCloseTo(60, CLOSE);
-        assertThat(saturday.departurePcts().get(1).value()).isCloseTo(49.65, CLOSE);
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(60, CLOSE);
         assertThat(saturday.afterPct().value()).isCloseTo(80, CLOSE);
         assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.AFTER_RETURN);
     }
