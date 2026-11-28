@@ -16,20 +16,22 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 
 final class AwayRow extends VBox {
 
     private final Messages messages;
     private final ChoiceInput<DayOfWeek> weekday;
-    private final TimeInput start = new TimeInput();
-    private final TimeInput end = new TimeInput();
+    private final TimeInput start;
+    private final TimeInput end;
     private final Button removeButton;
     private final Label problem = Labels.paragraph("", "field-problem");
 
     AwayRow(WeeklyAwayPeriod period, Consumer<AwayRow> remove, Messages messages) {
         this.messages = messages;
+        start = new TimeInput(messages);
+        end = new TimeInput(messages);
         weekday = new ChoiceInput<>(List.of(DayOfWeek.values()), new ChoiceNames(messages)::weekday);
         weekday.load(period.weekday());
         start.load(period.start());
@@ -40,7 +42,8 @@ final class AwayRow extends VBox {
         from.setLabelFor(start.focusable());
         var to = new Label(messages.text(TextKey.AWAY_TO));
         to.setLabelFor(end.focusable());
-        var line = new HBox(weekday.view(), from, start.view(), to, end.view(), removeButton);
+        // a row that does not fit, such as with the longer times of a 12-hour clock, wraps rather than cuts its words
+        var line = new FlowPane(weekday.view(), from, start.view(), to, end.view(), removeButton);
         line.getStyleClass().add("away-line");
         problem.setVisible(false);
         problem.setManaged(false);

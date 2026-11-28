@@ -4,6 +4,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- The desktop app shows times on your system's 12- or 24-hour clock: Windows' time format, GNOME's clock format, and on KDE Plasma and other desktops the time format of your region (`LC_TIME`), such as "7:30 pm" in English and "7:30 p.m." in Dutch, on the dashboard, in the tray icon's tooltip, the notifications and every time field; a change on Windows or GNOME applies at once. Every time field reads either clock: "19:30", "7:30 pm" and "7:30 p.m." are the same time, "7:30" is in the morning and "12 am" is midnight. The chart's time axis keeps its hours 00 to 24, and the settings file keeps 24-hour times (#319).
+
 ### Changed
 - A settings file with a value the app cannot plan with no longer loads: the usable battery must be from 1 to 1000 kWh, the consumption from 1 to 200 kWh per 100 km, the daily distance at most 1000 km, the charging efficiency from 1 to 100%, the minimum and the maximum charge current from 1 to 80 A, and the voltage from 100 to 400 V. Settings keeps every value within these, so only a file edited by hand can hold another; the app then asks you to fix `engine.json` and names the setting and its limits (#410).
 - The trip entry refuses a trip of more than 20,000 km (12,427 mi) there and back, or one that lasts more than 366 days, and says so (#410).

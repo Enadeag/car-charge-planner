@@ -459,7 +459,7 @@ class ForecastAwayPagesTest {
         var view = open();
 
         boolean saved = Fx.call(() -> {
-            times(view, TextKey.AWAY_TO).getFirst().setText("7 pm");
+            times(view, TextKey.AWAY_TO).getFirst().setText("seven");
             return SettingsFixture.save(view);
         });
 

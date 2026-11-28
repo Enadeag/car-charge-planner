@@ -42,8 +42,8 @@ public record WeeklyAwayEntry(DayOfWeek weekday, String start, String end) {
      * @return the period, or the problem the row shows
      */
     public Checked check(Messages messages) {
-        var from = TimeText.read(start);
-        var to = TimeText.read(end);
+        var from = TimeText.read(start, messages);
+        var to = TimeText.read(end, messages);
         if (from.isEmpty() || to.isEmpty()) {
             return new Checked.Refused(messages.text(TextKey.PROBLEM_NOT_A_TIME));
         }

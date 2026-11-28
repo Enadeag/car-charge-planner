@@ -1,5 +1,6 @@
 package nl.enadeag.carchargeplanner.desktop.settings.field;
 
+import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import java.time.LocalTime;
 import java.util.List;
 import javafx.scene.Node;
@@ -12,16 +13,19 @@ import javafx.scene.layout.HBox;
  */
 public final class TimeSpanInput implements Input {
 
-    private final TimeInput start = new TimeInput();
-    private final TimeInput end = new TimeInput();
+    private final TimeInput start;
+    private final TimeInput end;
     private final HBox view;
 
     /**
      * Makes the field, at 00:00 and 00:00 until {@link #load(LocalTime, LocalTime)}.
      *
      * @param between the word between the times, such as "and", in the owner's language
+     * @param messages the owner's language and the system's clock, which the times are shown on
      */
-    public TimeSpanInput(String between) {
+    public TimeSpanInput(String between, Messages messages) {
+        start = new TimeInput(messages);
+        end = new TimeInput(messages);
         var word = new Label(between);
         word.setLabelFor(end.focusable());
         word.getStyleClass().add("time-span-word");

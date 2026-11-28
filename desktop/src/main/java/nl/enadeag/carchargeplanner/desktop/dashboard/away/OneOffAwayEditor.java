@@ -3,15 +3,14 @@ package nl.enadeag.carchargeplanner.desktop.dashboard.away;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.desktop.theme.Labels;
+import nl.enadeag.carchargeplanner.desktop.theme.TimeFields;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayEntryRules;
 import nl.enadeag.carchargeplanner.engine.away.OneOffAwayPeriod;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -31,8 +30,6 @@ import javafx.scene.layout.VBox;
  */
 final class OneOffAwayEditor extends VBox {
 
-    private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
-
     private final Messages messages;
     private final Consumer<OneOffAwayPeriod> saved;
     private final Runnable closed;
@@ -43,8 +40,7 @@ final class OneOffAwayEditor extends VBox {
     private final TextField to = new TextField();
     private final HBox times;
     private final Label problem = Labels.paragraph("", "field-problem");
-    private OneOffAwayCheck check = new OneOffAwayCheck(LocalDate.EPOCH, ZoneId.of("UTC"),
-            InstantSource.fixed(Instant.EPOCH));
+    private OneOffAwayCheck check;
 
     /**
      * Makes the entry, empty until {@link #prepare}.
@@ -56,6 +52,8 @@ final class OneOffAwayEditor extends VBox {
      */
     OneOffAwayEditor(Consumer<OneOffAwayPeriod> saved, Runnable closed, Runnable resized, Messages messages) {
         this.messages = messages;
+        this.check = new OneOffAwayCheck(LocalDate.EPOCH, ZoneId.of("UTC"), InstantSource.fixed(Instant.EPOCH),
+                messages);
         this.saved = saved;
         this.closed = closed;
         this.resized = resized;
@@ -70,7 +68,7 @@ final class OneOffAwayEditor extends VBox {
 
         for (var field : List.of(from, to)) {
             field.getStyleClass().add("away-time");
-            field.setPrefColumnCount(4);
+            TimeFields.fit(field, messages);
         }
         var fromLabel = Labels.line(messages.text(TextKey.AWAY_FROM), "fact");
         fromLabel.setLabelFor(from);
@@ -119,10 +117,10 @@ final class OneOffAwayEditor extends VBox {
      *     plan shown was made earlier
      */
     void prepare(LocalDate day, ZoneId zone, InstantSource clock) {
-        check = new OneOffAwayCheck(day, zone, clock);
+        check = new OneOffAwayCheck(day, zone, clock, messages);
         wholeDay.setSelected(true);
-        from.setText(SHOWN.format(OneOffAwayEntryRules.FIRST_START));
-        to.setText(SHOWN.format(OneOffAwayEntryRules.FIRST_END));
+        from.setText(messages.time(OneOffAwayEntryRules.FIRST_START));
+        to.setText(messages.time(OneOffAwayEntryRules.FIRST_END));
         showProblem("");
         wholeDay.requestFocus();
     }

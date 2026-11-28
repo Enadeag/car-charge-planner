@@ -7,6 +7,8 @@ import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.host.Os;
 import nl.enadeag.carchargeplanner.instance.Owner;
 import nl.enadeag.carchargeplanner.platform.linux.LinuxStartAtLogin;
+import nl.enadeag.carchargeplanner.platform.linux.LocaleClock;
+import nl.enadeag.carchargeplanner.platform.linux.PortalClock;
 import nl.enadeag.carchargeplanner.platform.linux.PortalStartAtLogin;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +17,10 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** Which menu entry the notifications are tied to, and how start at login works; nothing here connects to a bus. */
+/**
+ * Which menu entry the notifications are tied to, how start at login works and which desktop's clock is asked of the
+ * portal; nothing here connects to a bus.
+ */
 class FreedesktopPartsTest {
 
     @TempDir
@@ -59,5 +64,24 @@ class FreedesktopPartsTest {
         assertThat(parts(Optional.of(temp.resolve("car-charge-planner/bin/car-charge-planner"))).startAtLogin())
                 .containsInstanceOf(LinuxStartAtLogin.class);
         assertThat(parts(Optional.empty()).startAtLogin()).isEmpty();
+    }
+
+    private FreedesktopParts on(String desktops) {
+        return new FreedesktopParts(new Host(Os.LINUX, Map.of("XDG_CURRENT_DESKTOP", desktops), temp, temp,
+                new Owner.Unchecked(), Optional.empty(), false, false));
+    }
+
+    @Test
+    void onGnomeThePortalIsAskedForTheClock() {
+        assertThat(on("GNOME").clock()).isInstanceOf(PortalClock.class);
+        assertThat(on("ubuntu:GNOME").clock()).isInstanceOf(PortalClock.class);
+        assertThat(on("Pop:GNOME").clock()).isInstanceOf(PortalClock.class);
+    }
+
+    @Test
+    void onAnotherDesktopOrNoneTheTimeLocaleSaysTheClock() {
+        assertThat(on("KDE").clock()).isInstanceOf(LocaleClock.class);
+        assertThat(on("").clock()).isInstanceOf(LocaleClock.class);
+        assertThat(parts(Optional.empty()).clock()).isInstanceOf(LocaleClock.class);
     }
 }

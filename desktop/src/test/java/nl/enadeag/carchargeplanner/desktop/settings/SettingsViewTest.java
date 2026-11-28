@@ -11,8 +11,10 @@ import nl.enadeag.carchargeplanner.desktop.app.DisplayMode;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.settings.store.SaveOutcome;
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
+import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
 import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
 import nl.enadeag.carchargeplanner.engine.config.ConfigFile;
@@ -248,6 +250,38 @@ class SettingsViewTest {
     }
 
     @Test
+    void chargingHoursTypedOnA12HourClockAreKeptOnA24HourClock() throws Exception {
+        var view = settings.open();
+
+        boolean saved = Fx.call(() -> {
+            settings.type(view, TextKey.FIELD_CHARGING_HOURS, "8:30 pm");
+            settings.type(view, TextKey.CHARGING_HOURS_AND, "1 AM");
+            return SettingsFixture.save(view);
+        });
+
+        assertThat(saved).isTrue();
+        assertThat(storedPlanning().chargingHours()).isEqualTo(new ChargingHours(LocalTime.of(20, 30),
+                LocalTime.of(1, 0)));
+        assertThat(Files.readString(settings.configPath)).contains("\"20:30\"", "\"01:00\"").doesNotContain("pm", "AM");
+    }
+
+    @Test
+    void onA12HourClockTheChargingHoursShowWhatTheFileHoldsWithTheirMarker() throws Exception {
+        settings.close();
+        settings = new SettingsFixture(Files.createDirectory(folder.resolve("twelve")),
+                new Messages(Language.ENGLISH, ClockFormat.TWELVE_HOUR), List.of());
+        Files.writeString(settings.configPath, Files.readString(settings.configPath).replace(
+                "\"notifyLeadMinutes\": 15", "\"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": \"06:15\", \"end\": \"23:00\"}"));
+        var view = settings.open();
+
+        assertThat(Fx.call(() -> ((TextInputControl) settings.field(view, TextKey.FIELD_CHARGING_HOURS)).getText()))
+                .isEqualTo("6:15\u202fam");
+        assertThat(Fx.call(() -> ((TextInputControl) settings.field(view, TextKey.CHARGING_HOURS_AND))
+                .getText())).isEqualTo("11:00\u202fpm");
+        assertThat(Fx.call(view::isChanged)).isFalse();
+    }
+
+    @Test
     void theChargingHoursShowWhatTheFileHolds() throws Exception {
         Files.writeString(settings.configPath, Files.readString(settings.configPath).replace(
                 "\"notifyLeadMinutes\": 15", "\"notifyLeadMinutes\": 15, \"chargingHours\": {\"start\": \"06:15\", \"end\": \"23:00\"}"));
@@ -266,7 +300,7 @@ class SettingsViewTest {
         var view = settings.open();
 
         var outcome = Fx.call(() -> {
-            settings.type(view, TextKey.CHARGING_HOURS_AND, "10 pm");
+            settings.type(view, TextKey.CHARGING_HOURS_AND, "late");
             return SettingsFixture.save(view);
         });
 

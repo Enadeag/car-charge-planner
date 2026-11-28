@@ -1,13 +1,15 @@
 package nl.enadeag.carchargeplanner.desktop.text;
 
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
- * The language the app speaks now, and who to tell when the owner chooses another. The composition root owns the one
- * instance, hands it to every part that shows texts, and changes it once the owner saved another language in Settings
- * or set-up.
+ * The language the app speaks now, with the system's clock its times are written on, and who to tell when the owner
+ * chooses another language or the system's clock changes. The composition root owns the one instance, hands it to
+ * every part that shows texts, changes it once the owner saved another language in Settings or set-up, and follows
+ * the system's clock into it.
  *
  * <p>A plain listener rather than a JavaFX property: the tray and the notifications run on threads of their own, and
  * a JavaFX property would tie them to JavaFX's thread. Each part moves the change to its own thread itself.
@@ -19,7 +21,7 @@ public final class LanguageChoice {
     private volatile Messages messages;
 
     /**
-     * Starts with the system's language, until the owner's choice is known.
+     * Starts with the system's language on its own clock, until the owner's choice and the system's clock are known.
      *
      * @param system the system's language, as {@link Language#ofSystem} finds it as the app starts; spoken while the
      *     owner follows the system; never null
@@ -50,7 +52,7 @@ public final class LanguageChoice {
      */
     public Messages of(Language chosen) {
         var now = messages;
-        return chosen == now.language() ? now : new Messages(chosen);
+        return chosen == now.language() ? now : new Messages(chosen, now.clock());
     }
 
     /**
@@ -72,8 +74,25 @@ public final class LanguageChoice {
         if (chosen == messages.language()) {
             return;
         }
-        messages = new Messages(chosen);
-        var now = messages;
+        tell(new Messages(chosen, messages.clock()));
+    }
+
+    /**
+     * Writes the times on the system's clock from now on and tells every listener, as {@link #choose(Language)}. The
+     * clock written already does nothing.
+     *
+     * @param clock the system's 12- or 24-hour clock, or {@link ClockFormat#LANGUAGE} for the language's own; never
+     *     null
+     */
+    public synchronized void useClock(ClockFormat clock) {
+        if (clock == messages.clock()) {
+            return;
+        }
+        tell(new Messages(messages.language(), clock));
+    }
+
+    private void tell(Messages now) {
+        messages = now;
         listeners.forEach(listener -> listener.accept(now));
     }
 
@@ -85,9 +104,9 @@ public final class LanguageChoice {
     }
 
     /**
-     * Calls a listener at every switch to another language from now on; not for the language spoken now.
+     * Calls a listener at every switch to another language or clock from now on; not for the ones used now.
      *
-     * @param listener gets the new language's messages, on the thread that chose it; it should hand slow work on and
+     * @param listener gets the new messages, on the thread that chose it; it should hand slow work on and
      *     never block
      */
     public void onChange(Consumer<Messages> listener) {

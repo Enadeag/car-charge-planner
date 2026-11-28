@@ -68,7 +68,7 @@ public final class PlanningPage implements ConfigPage {
         problems = new ProblemRows(messages);
         notifyLead = new ChoiceInput<>(NotifyLeadChoices.STANDARD, new ChoiceNames(messages)::notifyLead);
         notifyLead.onChange(() -> notifyLead.offer(NotifyLeadChoices.offered(notifyLead.value())));
-        chargingHours = new TimeSpanInput(messages.text(TextKey.CHARGING_HOURS_AND));
+        chargingHours = new TimeSpanInput(messages.text(TextKey.CHARGING_HOURS_AND), messages);
         more = new Fold(messages.text(TextKey.MORE_SETTINGS),
                 row(ConfigSetting.PLANNING_MARGIN, TextKey.FIELD_MARGIN, TextKey.FIELD_MARGIN_HINT, margin),
                 row(ConfigSetting.IMPORT_TOLERANCE, TextKey.FIELD_IMPORT_TOLERANCE,
@@ -118,7 +118,7 @@ public final class PlanningPage implements ConfigPage {
 
     @Override
     public void load(EngineConfig config) {
-        var shown = PlanningEntry.of(config.planning());
+        var shown = PlanningEntry.of(config.planning(), messages);
         minimum.load(shown.minimumPct());
         target.load(shown.targetPct());
         margin.load(shown.marginPct());

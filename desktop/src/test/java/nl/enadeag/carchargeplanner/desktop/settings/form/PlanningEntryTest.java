@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import nl.enadeag.carchargeplanner.desktop.settings.form.PlanningEntry.Checked;
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.config.ChargingHours;
@@ -24,13 +25,24 @@ class PlanningEntryTest {
 
     @Test
     void thePageShowsTheMarginAsAPercentageTheDurationsInMinutesAndTheChargingHoursAsTimes() {
-        assertThat(PlanningEntry.of(PlanningPreferences.RECOMMENDED))
+        assertThat(PlanningEntry.of(PlanningPreferences.RECOMMENDED, ENGLISH))
                 .isEqualTo(new PlanningEntry(30, 80, 85, 0.2, 45, FIFTEEN, "07:00", "22:00"));
     }
 
     @Test
+    void onA12HourClockTheChargingHoursAreShownWithTheirMarkerAndReadBackAsTheSameHours() {
+        var twelveHour = new Messages(Language.ENGLISH, ClockFormat.TWELVE_HOUR);
+
+        var shown = PlanningEntry.of(PlanningPreferences.RECOMMENDED, twelveHour);
+
+        assertThat(shown.chargingStart()).isEqualTo("7:00\u202fam");
+        assertThat(shown.chargingEnd()).isEqualTo("10:00\u202fpm");
+        assertThat(shown.check(twelveHour, SAY)).isEqualTo(new Checked.Accepted(PlanningPreferences.RECOMMENDED));
+    }
+
+    @Test
     void whatThePageShowsMakesTheSamePreferencesAgain() {
-        assertThat(PlanningEntry.of(PlanningPreferences.RECOMMENDED).check(ENGLISH, SAY))
+        assertThat(PlanningEntry.of(PlanningPreferences.RECOMMENDED, ENGLISH).check(ENGLISH, SAY))
                 .isEqualTo(new Checked.Accepted(PlanningPreferences.RECOMMENDED));
     }
 

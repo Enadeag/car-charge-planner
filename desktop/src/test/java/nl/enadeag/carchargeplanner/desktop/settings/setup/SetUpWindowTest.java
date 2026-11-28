@@ -14,6 +14,7 @@ import nl.enadeag.carchargeplanner.desktop.settings.SettingsWindow;
 import nl.enadeag.carchargeplanner.desktop.settings.about.AboutFacts;
 import nl.enadeag.carchargeplanner.desktop.settings.page.Category;
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
 import nl.enadeag.carchargeplanner.desktop.system.PosixFilePrivacy;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.LanguageChoice;
@@ -172,6 +173,42 @@ class SetUpWindowTest {
         assertThat(Fx.call(() -> setUp.latitudeShown(after))).isTrue();
         Fx.run(() -> setUp.foldRow(after).fire());
         assertThat(Fx.call(() -> setUp.latitudeShown(after))).isFalse();
+    }
+
+    @Test
+    void aClockChangeKeepsTheChoicesOnTheAppStepThatAreNotSaved() throws Exception {
+        var view = open();
+        Fx.run(() -> {
+            view.next();
+            setUp.choose(view, TextKey.FIELD_UNITS, Units.IMPERIAL);
+            setUp.choose(view, TextKey.FIELD_APPEARANCE, Appearance.DARK);
+        });
+
+        language.useClock(ClockFormat.TWELVE_HOUR);
+        Fx.settle();
+        Fx.settle();
+
+        var after = view();
+        assertThat(Fx.call(after::step)).isEqualTo(SetUpStep.APP);
+        assertThat(Fx.call(() -> after.draft().app().appearance())).isEqualTo(Appearance.DARK);
+        assertThat(Fx.call(() -> after.draft().app().units())).isEqualTo(Units.IMPERIAL);
+        assertThat(Fx.call(() -> shownStage().getScene().getRoot().getStyleClass())).contains("dark");
+    }
+
+    @Test
+    void aClockChangeShowsTheAwayPeriodsOnTheNewClock() throws Exception {
+        var view = open();
+        Fx.run(() -> view.show(SetUpStep.AWAY));
+        Fx.run(() -> setUp.button(view, TextKey.AWAY_ADD).fire());
+
+        language.useClock(ClockFormat.TWELVE_HOUR);
+        Fx.settle();
+        Fx.settle();
+
+        var after = view();
+        assertThat(Fx.call(after::step)).isEqualTo(SetUpStep.AWAY);
+        assertThat(Fx.call(() -> ((TextField) setUp.field(after, TextKey.AWAY_FROM)).getText()))
+                .isEqualTo("8:00\u202fam");
     }
 
     @Test

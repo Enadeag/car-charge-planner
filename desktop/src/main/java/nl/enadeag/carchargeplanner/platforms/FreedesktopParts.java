@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.platforms;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.ClockSetting;
 import nl.enadeag.carchargeplanner.desktop.system.NotificationTarget;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.StatusIcon;
@@ -20,6 +21,8 @@ import nl.enadeag.carchargeplanner.platform.linux.ApplicationMenuEntry;
 import nl.enadeag.carchargeplanner.platform.linux.BusConnector;
 import nl.enadeag.carchargeplanner.platform.linux.FreedesktopNotifications;
 import nl.enadeag.carchargeplanner.platform.linux.LinuxStartAtLogin;
+import nl.enadeag.carchargeplanner.platform.linux.LocaleClock;
+import nl.enadeag.carchargeplanner.platform.linux.PortalClock;
 import nl.enadeag.carchargeplanner.platform.linux.PortalStartAtLogin;
 import nl.enadeag.carchargeplanner.platform.linux.SecretServiceKeychain;
 import nl.enadeag.carchargeplanner.platform.linux.StatusNotifierTray;
@@ -27,7 +30,9 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import javafx.application.ColorScheme;
 import javafx.beans.value.ObservableValue;
@@ -84,6 +89,19 @@ final class FreedesktopParts implements PlatformParts {
     @Override
     public TextSizeSetting textSize() {
         return changed -> changed.accept(TextSize.NORMAL);
+    }
+
+    /**
+     * GNOME's clock format through the desktop portal, which also reaches it from a Flatpak; on any other desktop, such
+     * as KDE Plasma, the time locale of the environment. Only on GNOME: on another desktop the portal may still answer
+     * for GNOME's setting, from a GTK portal installed beside it, with a default the owner never chose.
+     */
+    @Override
+    public ClockSetting clock() {
+        var locale = new LocaleClock(host.environment());
+        var desktops = host.environment().getOrDefault("XDG_CURRENT_DESKTOP", "");
+        return Arrays.stream(desktops.split(":")).anyMatch(desktop -> desktop.toUpperCase(Locale.ROOT).equals("GNOME"))
+                ? new PortalClock(sessionBus, locale) : locale;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.platforms;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.ClockSetting;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.StatusIcon;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
@@ -11,6 +12,7 @@ import nl.enadeag.carchargeplanner.host.AppName;
 import nl.enadeag.carchargeplanner.host.Host;
 import nl.enadeag.carchargeplanner.platform.windows.AwtTray;
 import nl.enadeag.carchargeplanner.platform.windows.CredentialManagerKeychain;
+import nl.enadeag.carchargeplanner.platform.windows.RegistryClock;
 import nl.enadeag.carchargeplanner.platform.windows.RegistryRunKey;
 import nl.enadeag.carchargeplanner.platform.windows.RegistryTextSize;
 import nl.enadeag.carchargeplanner.platform.windows.TaskbarShade;
@@ -51,6 +53,11 @@ final class WindowsParts implements PlatformParts {
     @Override
     public TextSizeSetting textSize() {
         return new RegistryTextSize(RegistryTextSize.ACCESSIBILITY_KEY);
+    }
+
+    @Override
+    public ClockSetting clock() {
+        return new RegistryClock(RegistryClock.INTERNATIONAL_KEY);
     }
 
     @Override

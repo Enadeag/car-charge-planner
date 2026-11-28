@@ -22,6 +22,8 @@ import java.util.stream.Stream;
 /** The days of one plan as the dashboard's tabs show them, in words, in the time zone of the owner's home. */
 public final class DayMapper {
 
+    private static final char NO_BREAK = '\u00A0';
+
     private final Messages messages;
     private final ZoneId zone;
     private final ChargeLevels levels;
@@ -70,7 +72,7 @@ public final class DayMapper {
                 messages.text(TextKey.DAY_FROM_GRID, messages.decimal(kwh)))));
         var note = sentences(laterWindows(day.later()), assumedNote(day));
         return new DayModel(day.name().date(), messages.tab(day.name()), title, day.kind(),
-                messages.text(TextKey.DAY_WINDOW), span(window), facts, chips, note, charts.map(day),
+                messages.text(TextKey.DAY_WINDOW), hero(window), facts, chips, note, charts.map(day),
                 batteries.map(day, levels), tripAdvice, Optional.empty(), List.of());
     }
 
@@ -128,6 +130,15 @@ public final class DayMapper {
         return day.assumedLevel()
                 .map(level -> messages.text(TextKey.DAY_BATTERY_ASSUMED, messages.whole(level.value())))
                 .orElse("");
+    }
+
+    /** The span with each time kept whole, so a large hero too wide for the card wraps only between its times. */
+    private String hero(Window window) {
+        return whole(messages.time(window.start(), zone)) + " – " + whole(messages.time(window.end(), zone));
+    }
+
+    private static String whole(String time) {
+        return time.replace(' ', NO_BREAK);
     }
 
     private String span(Window window) {

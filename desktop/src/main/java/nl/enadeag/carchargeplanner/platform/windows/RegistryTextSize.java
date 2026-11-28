@@ -4,14 +4,13 @@ import nl.enadeag.carchargeplanner.desktop.system.TextSize;
 import nl.enadeag.carchargeplanner.desktop.system.TextSizeSetting;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
-import java.lang.foreign.MemorySegment;
 import java.util.function.Consumer;
 
 /**
  * Windows' Text size (Settings, Accessibility), as the user's registry keeps it: the number value
- * {@code TextScaleFactor}, from 100 to 225, missing until the user first changes it. Read through {@link Advapi32} and followed by
- * the registry's change notification, on a thread of its own that waits for an event. JavaFX's own preferences do not
- * include it, and it changes nothing that they do include.
+ * {@code TextScaleFactor}, from 100 to 225, missing until the user first changes it. Read through {@link Advapi32} and
+ * followed by the registry's change notification, on a thread of its own that waits for an event. JavaFX's own
+ * preferences do not include it, and it changes nothing that they do include.
  */
 public final class RegistryTextSize implements TextSizeSetting {
 
@@ -40,75 +39,8 @@ public final class RegistryTextSize implements TextSizeSetting {
      */
     @Override
     public void follow(Consumer<TextSize> changed) {
-        var handle = MemorySegment.NULL;
-        var event = MemorySegment.NULL;
-        try {
-            var opened = Advapi32.openKey(key);
-            if (opened.isEmpty()) {
-                changed.accept(TextSize.NORMAL);
-                return;
-            }
-            handle = opened.get();
-            event = Kernel32.newEvent();
-            // asked before the first read, so a change right after it is not missed
-            Advapi32.signalOnChange(handle, event, key);
-        } catch (IOException e) {
-            LOG.log(Level.WARNING, "cannot follow Windows' text size; the windows keep the size they open with", e);
-            release(handle, event);
-            changed.accept(read());
-            return;
-        }
-        var size = read();
-        changed.accept(size);
-        var open = handle;
-        var signal = event;
-        Thread.ofPlatform().daemon().name("text-size").start(() -> watch(open, signal, size, changed));
-    }
-
-    /** Waits for each change and gives the new size, until the key is deleted or Windows refuses. */
-    private void watch(MemorySegment handle, MemorySegment event, TextSize first, Consumer<TextSize> changed) {
-        var last = first;
-        try {
-            while (true) {
-                Kernel32.await(event);
-                if (!Advapi32.signalOnChange(handle, event, key)) {
-                    break;
-                }
-                var now = read();
-                if (!now.equals(last)) {
-                    last = now;
-                    changed.accept(now);
-                }
-            }
-        } catch (IOException e) {
-            LOG.log(Level.WARNING, "stopped following Windows' text size", e);
-        } finally {
-            release(handle, event);
-        }
-    }
-
-    /**
-     * Closes the key and the event once they are no longer followed; one that was not opened, or that cannot be
-     * closed, is left as it is.
-     *
-     * @param handle the open key, or {@link MemorySegment#NULL} when it was not opened
-     * @param event the event, or {@link MemorySegment#NULL} when it was not made
-     */
-    private void release(MemorySegment handle, MemorySegment event) {
-        try {
-            if (!handle.equals(MemorySegment.NULL)) {
-                Advapi32.closeKey(handle, key);
-            }
-        } catch (IOException e) {
-            LOG.log(Level.WARNING, "cannot close the key of Windows' text size", e);
-        }
-        try {
-            if (!event.equals(MemorySegment.NULL)) {
-                Kernel32.close(event);
-            }
-        } catch (IOException e) {
-            LOG.log(Level.WARNING, "cannot close the event that follows Windows' text size", e);
-        }
+        new RegistryFollower<>(key, this::read, TextSize.NORMAL, "Windows' text size",
+                "the windows keep the size they open with", Level.WARNING, "text-size").follow(changed);
     }
 
     /** The size now; normal when the value is missing or cannot be read. */

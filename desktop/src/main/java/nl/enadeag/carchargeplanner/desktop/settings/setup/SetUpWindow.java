@@ -34,8 +34,9 @@ import javafx.stage.Stage;
  * in the background; closed, it is let go of entirely.
  *
  * <p>Set-up speaks the language and shows the appearance chosen on its App step at once, before they are saved; when
- * the owner saves another language or appearance in Settings meanwhile, set-up takes them over. Either way set-up is
- * made again, on the same step, with everything entered so far.
+ * the owner saves another language or appearance in Settings meanwhile, set-up takes them over. When the system's clock
+ * changes, set-up writes its times on the new clock and keeps the choices not saved yet. Either way set-up is made
+ * again, on the same step, with everything entered so far.
  *
  * <p>Make it on the JavaFX thread; {@link #open()} may be called from any thread.
  */
@@ -61,6 +62,8 @@ public final class SetUpWindow {
     private SettingsStorage.Stored start;
     private SetUpView view;
     private Messages spoken;
+    /** The language and clock {@link LanguageChoice} told last; on the thread that tells. */
+    private Messages told;
 
     /**
      * Makes what opens the window; no window is made yet.
@@ -92,7 +95,12 @@ public final class SetUpWindow {
         this.icon = icon;
         this.appName = appName;
         this.background = background;
-        language.onChange(_ -> Platform.runLater(this::takeOverSaved));
+        this.told = language.messages();
+        language.onChange(now -> {
+            var clockOnly = now.language() == told.language();
+            told = now;
+            Platform.runLater(clockOnly ? this::followClock : this::takeOverSaved);
+        });
         looks.saved().addListener((_, _, _) -> takeOverSaved());
     }
 
@@ -187,11 +195,18 @@ public final class SetUpWindow {
         }, failure -> { });
     }
 
-    /** Shows a draft on a step, in the language and appearance it holds; made again when the language differs. */
+    /** The system's clock changed: set-up is shown again on it, with the choices on its App step kept unsaved. */
+    private void followClock() {
+        if (stage != null && start != null) {
+            show(view.draft(), view.step());
+        }
+    }
+
+    /** Shows a draft on a step, in the language and appearance it holds; made again on another language or clock. */
     private void show(SetUpDraft draft, SetUpStep step) {
         appearance.set(draft.app().appearance());
         var now = draft.app().language().map(language::of).orElseGet(language::ofSystem);
-        if (now.language() != spoken.language()) {
+        if (now.language() != spoken.language() || now.clock() != spoken.clock()) {
             spoken = now;
             view = makeView(now, stage);
             stage.getScene().setRoot(view);

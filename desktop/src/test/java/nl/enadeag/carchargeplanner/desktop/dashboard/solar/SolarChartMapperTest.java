@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
@@ -64,6 +65,19 @@ class SolarChartMapperTest {
         assertThat(today.chart().steps().get(7).kw()).isEqualTo(4.2);
         assertThat(ticks(today)).containsExactly(tick(6, "06"), tick(9, "09"), tick(12, "12"),
                 tick(15, "15"), tick(18, "18"));
+    }
+
+    /**
+     * The marks stay the hours of a 24-hour clock: with a marker, "12 a.m." at midnight runs into "3 a.m." on a chart
+     * from midnight to midnight, at every text size. The readout's time follows the system's clock.
+     */
+    @Test
+    void onA12HourClockTheMarksStayTwoDigitHoursAndTheReadoutHasItsMarker() {
+        var english = curve(TWO_DAYS, 0, new Messages(Language.ENGLISH, ClockFormat.TWELVE_HOUR));
+
+        assertThat(ticks(english)).containsExactly(tick(6, "06"), tick(9, "09"), tick(12, "12"),
+                tick(15, "15"), tick(18, "18"));
+        assertThat(readoutFrom(english, 13)).startsWith("1:00\u202fpm");
     }
 
     @Test

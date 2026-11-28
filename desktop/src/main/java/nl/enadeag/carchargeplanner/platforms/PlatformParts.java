@@ -1,6 +1,7 @@
 package nl.enadeag.carchargeplanner.platforms;
 
 import nl.enadeag.carchargeplanner.desktop.system.AppIcon;
+import nl.enadeag.carchargeplanner.desktop.system.ClockSetting;
 import nl.enadeag.carchargeplanner.desktop.system.Notifications;
 import nl.enadeag.carchargeplanner.desktop.system.StartAtLogin;
 import nl.enadeag.carchargeplanner.desktop.system.TaskbarHiding;
@@ -17,7 +18,8 @@ import javafx.application.ColorScheme;
 import javafx.beans.value.ObservableValue;
 
 /**
- * The parts each operating system brings itself: the tray, notifications, keychain, start at login and the text size.
+ * The parts each operating system brings itself: the tray, notifications, keychain, start at login, the text size and
+ * the clock.
  */
 public sealed interface PlatformParts permits FreedesktopParts, WindowsParts {
 
@@ -73,6 +75,13 @@ public sealed interface PlatformParts permits FreedesktopParts, WindowsParts {
      * @return the setting; one that stays at normal size on a system whose toolkit scales the text itself
      */
     TextSizeSetting textSize();
+
+    /**
+     * The system's setting for a 12- or 24-hour clock, which every time the app shows or reads follows.
+     *
+     * @return the setting; one that gives the language's own clock where the system's cannot be read
+     */
+    ClockSetting clock();
 
     /**
      * How this system keeps the dashboard's popup out of its taskbar.

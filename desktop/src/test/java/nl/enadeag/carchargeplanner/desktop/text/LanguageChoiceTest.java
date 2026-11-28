@@ -2,6 +2,8 @@ package nl.enadeag.carchargeplanner.desktop.text;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -51,6 +53,35 @@ class LanguageChoiceTest {
     void aChoiceThatComesDownToTheLanguageSpokenTellsNobody() {
         language.choose(Language.DUTCH);
         language.followSystem();
+
+        assertThat(told).isEmpty();
+    }
+
+    @Test
+    void aChangeOfTheSystemsClockTellsTheListenersAndWritesTheTimesOnIt() {
+        var clocks = new ArrayList<ClockFormat>();
+        language.onChange(messages -> clocks.add(messages.clock()));
+
+        language.useClock(ClockFormat.TWELVE_HOUR);
+
+        assertThat(clocks).containsExactly(ClockFormat.TWELVE_HOUR);
+        assertThat(told).containsExactly(Language.DUTCH);
+        assertThat(language.messages().time(LocalTime.of(19, 30))).isEqualTo("7:30 p.m.");
+    }
+
+    @Test
+    void theClockStaysWhenTheLanguageChangesAndForALanguageBeingChosen() {
+        language.useClock(ClockFormat.TWELVE_HOUR);
+
+        language.choose(Language.ENGLISH);
+
+        assertThat(language.messages().clock()).isEqualTo(ClockFormat.TWELVE_HOUR);
+        assertThat(language.of(Language.DUTCH).clock()).isEqualTo(ClockFormat.TWELVE_HOUR);
+    }
+
+    @Test
+    void theClockWrittenAlreadyTellsNobody() {
+        language.useClock(ClockFormat.LANGUAGE);
 
         assertThat(told).isEmpty();
     }

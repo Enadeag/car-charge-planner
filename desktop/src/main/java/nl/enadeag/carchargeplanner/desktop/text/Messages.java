@@ -1,42 +1,79 @@
 package nl.enadeag.carchargeplanner.desktop.text;
 
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
 import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
 import java.math.RoundingMode;
 import java.text.MessageFormat;
 import java.text.NumberFormat;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.FormatStyle;
 import java.time.format.TextStyle;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 /**
  * The app's texts in one language, from the resource bundle {@code messages_<code>.properties} beside this class, with
- * the numbers, times and day names in them written the way that language writes them. Nothing here follows the JVM's
- * default locale: the language is the one given.
+ * the numbers, times and day names in them written the way that language writes them, and the clock times on the
+ * system's 12- or 24-hour clock. Nothing here follows the JVM's default locale: the language is the one given.
  */
 public final class Messages {
 
     private static final String BUNDLE = Messages.class.getPackageName() + ".messages";
 
     private final Language language;
+    private final ClockFormat clock;
     private final ResourceBundle bundle;
     private final DateTimeFormatter time;
+    private final boolean twelveHour;
+    private final TypedTime typed;
 
     /**
-     * Loads the language's texts.
+     * Loads the language's texts, with the times on the language's own clock.
      *
      * @param language the language to show the texts in; never null
      */
     public Messages(Language language) {
+        this(language, ClockFormat.LANGUAGE);
+    }
+
+    /**
+     * Loads the language's texts, with the times on the system's clock.
+     *
+     * @param language the language to show the texts in; never null
+     * @param clock the system's 12- or 24-hour clock, or {@link ClockFormat#LANGUAGE} for the language's own; the
+     *     marker of a 12-hour clock is the language's, such as "pm" in English and "p.m." in Dutch; never null
+     */
+    public Messages(Language language, ClockFormat clock) {
         this.language = language;
+        this.clock = clock;
         // without this control, a missing bundle would quietly fall back to the JVM's default locale
         this.bundle = ResourceBundle.getBundle(BUNDLE, language.locale(),
                 ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
-        this.time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(language.locale());
+        // the language's own hours and minutes on the clock asked for: "7:30 pm" in English and "7:30 p.m." in Dutch
+        this.time = (switch (clock) {
+            case LANGUAGE -> DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT);
+            case TWELVE_HOUR -> DateTimeFormatter.ofLocalizedPattern("hm");
+            case TWENTY_FOUR_HOUR -> DateTimeFormatter.ofLocalizedPattern("Hm");
+        }).withLocale(language.locale());
+        this.twelveHour = switch (clock) {
+            case LANGUAGE -> isTwelveHour(DateTimeFormatterBuilder.getLocalizedDateTimePattern(null, FormatStyle.SHORT,
+                    IsoChronology.INSTANCE, language.locale()));
+            case TWELVE_HOUR -> true;
+            case TWENTY_FOUR_HOUR -> false;
+        };
+        this.typed = new TypedTime(language.locale());
+    }
+
+    /** Whether a pattern of {@link DateTimeFormatter} has hours from 1 to 12, or from 0 to 11, outside its quotes. */
+    private static boolean isTwelveHour(String pattern) {
+        return pattern.replaceAll("'[^']*'", "").matches(".*[hK].*");
     }
 
     /**
@@ -46,6 +83,24 @@ public final class Messages {
      */
     public Language language() {
         return language;
+    }
+
+    /**
+     * The clock the times are written on.
+     *
+     * @return the system's 12- or 24-hour clock these messages were made with, or {@link ClockFormat#LANGUAGE}
+     */
+    public ClockFormat clock() {
+        return clock;
+    }
+
+    /**
+     * Whether the times are written on a 12-hour clock, with a marker, so a field for a time is made wider.
+     *
+     * @return true on a 12-hour clock, also when it is the language's own
+     */
+    public boolean twelveHour() {
+        return twelveHour;
     }
 
     /**
@@ -86,10 +141,36 @@ public final class Messages {
      *
      * @param moment the instant to tell, such as a charge window's start
      * @param zone the time zone of the owner's home, in which the time is told
-     * @return hours and minutes the way the language writes them, such as "09:05" on a 24-hour clock
+     * @return hours and minutes the way the language writes them on the system's clock, such as "09:05" on a 24-hour
+     *     clock and "9:05 am" on a 12-hour one
      */
     public String time(Instant moment, ZoneId zone) {
         return time.format(moment.atZone(zone));
+    }
+
+    /**
+     * A time of day as {@link #time(Instant, ZoneId)} writes it, also in a field the owner types a time in.
+     *
+     * @param time the time, to the minute
+     * @return such as "19:30" on a 24-hour clock, "7:30 pm" on a 12-hour one in English (with a narrow no-break space)
+     *     and "7:30 p.m." in Dutch
+     */
+    public String time(LocalTime time) {
+        return this.time.format(time);
+    }
+
+    /**
+     * The time of day a typed text stands for, on either clock whatever the system's: "19:30" and "7:30 pm" are the
+     * same time.
+     *
+     * @param text what the owner typed: hours and minutes from 0:00 to 23:59, a leading zero optional, such as "7:30"
+     *     for 07:30; or hours from 1 to 12 with or without minutes and a marker, "am" or "pm", or the language's own
+     *     such as Dutch "a.m.", in any case, with or without dots and a space, so "12 am" is 00:00 and "12 pm" noon;
+     *     spaces around it are ignored
+     * @return the time; empty when the text is none of these, or far longer than any of them
+     */
+    public Optional<LocalTime> readTime(String text) {
+        return typed.read(text);
     }
 
     /**

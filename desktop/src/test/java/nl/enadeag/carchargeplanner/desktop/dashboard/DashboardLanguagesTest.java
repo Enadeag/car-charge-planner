@@ -8,6 +8,8 @@ import nl.enadeag.carchargeplanner.desktop.Scenes;
 import nl.enadeag.carchargeplanner.desktop.TextScale;
 import nl.enadeag.carchargeplanner.desktop.app.Units;
 import nl.enadeag.carchargeplanner.desktop.dashboard.outlook.OutlookMapper;
+import nl.enadeag.carchargeplanner.desktop.system.ClockFormat;
+import nl.enadeag.carchargeplanner.desktop.system.TextSize;
 import nl.enadeag.carchargeplanner.desktop.text.Language;
 import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.desktop.text.TextKey;
@@ -131,15 +133,18 @@ class DashboardLanguagesTest {
      * config and the one without a forecast, the plan and the latter below warnings that providers refused their key.
      */
     private List<String> problems(Language language, Optional<TextScale> scale) throws Exception {
+        return problems(new Messages(language), scale.map(TextScale::size));
+    }
+
+    private List<String> problems(Messages messages, Optional<TextSize> size) throws Exception {
         return Fx.call(() -> {
-            var messages = new Messages(language);
             var mapper = new OutlookMapper(messages, Models.PROVIDERS);
             var view = new DashboardView(() -> { }, () -> { }, Fx.REDUCED_MOTION, AppName.TITLE, messages);
             view.onBatteryEntered(_ -> { });
             view.onOneOffAwayChange(_ -> { }, _ -> { }, Models.CLOCK);
             view.onTripChange(_ -> { }, (_, _) -> { }, _ -> { }, Models.CLOCK);
             view.lookup(".day-tabs").setStyle("-fx-open-tab-animation: none;"); // a growing tab is narrow on purpose
-            stage = scale.map(larger -> Scenes.show(view, ColorScheme.LIGHT, larger))
+            stage = size.map(larger -> Scenes.show(view, ColorScheme.LIGHT, larger))
                     .orElseGet(() -> Scenes.show(view, ColorScheme.LIGHT));
             var found = new ArrayList<String>();
             var plan = mapper.map(planned(), awayPeriods(), trips(), Units.METRIC);
@@ -157,7 +162,7 @@ class DashboardLanguagesTest {
             // the away entry open at part of the day, refusing an end before the start
             view.lookupAll(".button").stream().map(Button.class::cast)
                     .filter(button -> button.getText().equals(messages.text(TextKey.ONE_OFF_ADD))).findFirst().orElseThrow().fire();
-            OneOffAwayEntry.enterTimes(view, "16:00", "10:00");
+            OneOffAwayEntry.enterTimes(view, messages.time(LocalTime.of(16, 0)), messages.time(LocalTime.of(10, 0)));
             OneOffAwayEntry.save(view);
             found.addAll(check(view));
             // tomorrow's trips, and the trip entry refusing a distance that is not a number
@@ -181,6 +186,7 @@ class DashboardLanguagesTest {
         view.layout();
         var found = new ArrayList<>(Scenes.cutOff(view));
         found.addAll(Scenes.overlapping(view));
+        found.addAll(Scenes.textFieldsTooNarrow(view));
         return found;
     }
 
@@ -200,5 +206,21 @@ class DashboardLanguagesTest {
     @MethodSource("languagesAndScales")
     void withLargerTextNoTextIsCutOffOrOverlapsEither(Language language, TextScale scale) throws Exception {
         assertThat(problems(language, Optional.of(scale))).isEmpty();
+    }
+
+    static Stream<Arguments> languagesAndSizesOnA12HourClock() {
+        return Stream.of(Language.values()).flatMap(language -> Stream.of(Optional.<TextSize>empty(),
+                Optional.of(new TextSize(200)), Optional.of(new TextSize(TextSize.MAX_PERCENT)))
+                .map(size -> Arguments.of(language, size)));
+    }
+
+    /**
+     * On a 12-hour clock, whose times are longer ("10:00 p.m. – 4:00 a.m."), also with the system's text at its
+     * largest: no text is cut off or overlaps, and the time fields show their whole time.
+     */
+    @ParameterizedTest
+    @MethodSource("languagesAndSizesOnA12HourClock")
+    void onA12HourClockNoTextIsCutOffOrOverlapsEither(Language language, Optional<TextSize> size) throws Exception {
+        assertThat(problems(new Messages(language, ClockFormat.TWELVE_HOUR), size)).isEmpty();
     }
 }
