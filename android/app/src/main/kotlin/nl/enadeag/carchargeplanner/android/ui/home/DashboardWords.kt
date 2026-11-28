@@ -137,25 +137,35 @@ internal class DashboardWords(private val resources: Resources, private val loca
 
     /**
      * @return such as "92% solar", "Battery 50 → 74%", on the day a trip leaves "Battery 50 → 74%, 70% after the
-     *     trip", or "0.4 kWh from the grid"
+     *     trip" or "Battery 50%, 80% after the return", or "0.4 kWh from the grid"
      */
     fun figure(figure: SourceFigure): String = when (figure) {
         is SourceFigure.SolarShare -> text(R.string.day_solar_share, whole(figure.share.value()))
-        is SourceFigure.Battery -> battery(figure.levels, R.string.day_battery, R.string.day_battery_trip,
-            R.string.day_battery_charge_trip)
+        is SourceFigure.Battery -> battery(figure.levels, CHIP)
         is SourceFigure.FromGrid -> text(R.string.day_from_grid, decimal(figure.kwh))
     }
 
     /**
-     * The battery levels in one of three wordings: the start and after charging; on the day a trip leaves, the start
-     * and the end of the day after the trip; or, with a charge before the trip, all three.
+     * The battery levels in the wording of the day's charging: the start and after charging; on the day a trip leaves,
+     * the start, the departure when the day charges before it, and the end of the day after the trip, or the highest
+     * level when the day charges after the return.
      */
-    private fun battery(levels: BatteryLevels, plain: Int, trip: Int, chargeAndTrip: Int): String {
+    private fun battery(levels: BatteryLevels, texts: BatteryTexts): String {
         val start = whole(levels.startPct().value())
         val after = whole(levels.afterPct().value())
-        val end = levels.afterTripPct().orElse(null)?.let { whole(it.value()) } ?: return text(plain, start, after)
-        return if (levels.chargesBeforeTrip()) text(chargeAndTrip, start, after, end) else text(trip, start, end)
+        return when (levels.charging()) {
+            BatteryLevels.Charging.NO_DEPARTURE -> text(texts.plain, start, after)
+            BatteryLevels.Charging.NONE -> text(texts.trip, start, end(levels))
+            BatteryLevels.Charging.BEFORE_TRIP -> text(texts.chargeTrip, start, departure(levels), end(levels))
+            BatteryLevels.Charging.AFTER_RETURN -> text(texts.afterReturn, start, after)
+            BatteryLevels.Charging.BEFORE_TRIP_AND_AFTER_RETURN ->
+                text(texts.chargeReturn, start, departure(levels), after)
+        }
     }
+
+    private fun departure(levels: BatteryLevels): String = whole(levels.departurePct().orElseThrow().value())
+
+    private fun end(levels: BatteryLevels): String = whole(levels.afterTripPct().orElseThrow().value())
 
     /**
      * @return "Charge window", "Grid charge needed", "Charging not needed" or "No charge window"
@@ -294,10 +304,10 @@ internal class DashboardWords(private val resources: Resources, private val loca
     }
 
     /**
-     * @return such as "50 → 74%", or on the day a trip leaves "50 → 74%, 70% after the trip"
+     * @return such as "50 → 74%", or on the day a trip leaves "50 → 74%, 70% after the trip" or "50%, 80% after the
+     *     return"
      */
-    fun batteryLevels(battery: BatteryLevels): String =
-        battery(battery, R.string.battery_levels, R.string.battery_levels_trip, R.string.battery_levels_charge_trip)
+    fun batteryLevels(battery: BatteryLevels): String = battery(battery, LEVELS)
 
     /**
      * @return such as "min 30%"
@@ -405,9 +415,18 @@ internal class DashboardWords(private val resources: Resources, private val loca
 
     private fun text(id: Int, vararg args: Any): String = resources.getString(id, *args)
 
+    /** The string resources of one place's battery wordings, one for each of the day's charging. */
+    private class BatteryTexts(val plain: Int, val trip: Int, val chargeTrip: Int, val afterReturn: Int,
+        val chargeReturn: Int)
+
     private companion object {
         /** Keeps a window's times together on one line. */
         const val NO_BREAK = '\u00A0'
+
+        val CHIP = BatteryTexts(R.string.day_battery, R.string.day_battery_trip, R.string.day_battery_charge_trip,
+            R.string.day_battery_return, R.string.day_battery_charge_return)
+        val LEVELS = BatteryTexts(R.string.battery_levels, R.string.battery_levels_trip,
+            R.string.battery_levels_charge_trip, R.string.battery_levels_return, R.string.battery_levels_charge_return)
     }
 }
 

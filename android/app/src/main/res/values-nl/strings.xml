@@ -196,6 +196,8 @@
   <string name="day_battery">Accu %1$s → %2$s%%</string>
   <string name="day_battery_trip">Accu %1$s → %2$s%% na de rit</string>
   <string name="day_battery_charge_trip">Accu %1$s → %2$s%%, %3$s%% na de rit</string>
+  <string name="day_battery_return">Accu %1$s%%, %2$s%% na terugkomst</string>
+  <string name="day_battery_charge_return">Accu %1$s → %2$s%%, %3$s%% na terugkomst</string>
   <string name="day_grid_why">Zonnestroom is niet genoeg om boven het minimum te blijven: zie het advies over laden uit het net bij Vandaag.</string>
   <string name="day_too_little_solar">Er is te weinig zonnestroom terwijl de auto thuis is.</string>
   <string name="day_none_trip">De auto is weg voor een rit, of er is te weinig zonnestroom terwijl hij thuis is.</string>
@@ -244,6 +246,8 @@
   <string name="battery_levels">%1$s → %2$s%%</string>
   <string name="battery_levels_trip">%1$s → %2$s%% na de rit</string>
   <string name="battery_levels_charge_trip">%1$s → %2$s%%, %3$s%% na de rit</string>
+  <string name="battery_levels_return">%1$s%%, %2$s%% na terugkomst</string>
+  <string name="battery_levels_charge_return">%1$s → %2$s%%, %3$s%% na terugkomst</string>
   <string name="battery_minimum">min. %1$s%%</string>
   <string name="battery_target">doel %1$s%%</string>
 

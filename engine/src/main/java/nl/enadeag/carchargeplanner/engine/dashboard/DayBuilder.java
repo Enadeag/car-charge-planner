@@ -100,11 +100,13 @@ final class DayBuilder {
         return NoWindowReason.TOO_LITTLE_SOLAR;
     }
 
-    private BatteryLevels battery(DayPlan day) {
-        if (departures.contains(day.date())) {
-            return new BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct(),
-                    Optional.of(day.endLevelPct()));
-        }
-        return new BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct(), Optional.empty());
+    /**
+     * The level at the first departure and after the trip come from the plan's day, which has departures exactly on
+     * the days its trip advice leaves.
+     */
+    private static BatteryLevels battery(DayPlan day) {
+        var departure = day.departureLevelPcts().stream().findFirst();
+        return new BatteryLevels(day.startLevelPct(), day.levelAfterChargingPct(), departure,
+                departure.map(ignored -> day.endLevelPct()));
     }
 }

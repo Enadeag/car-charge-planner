@@ -345,35 +345,55 @@ class TripAdviceWordsTest {
             Optional.ofNullable(assumed),
             DayChart(6.0, 20.0, 1.0, listOf(), 0.3, listOf(), Optional.empty(), listOf(), Optional.empty()))
 
-    @Test
-    fun onTheDayATripLeavesTheBatteryChipAndLineSayTheLevelAfterTheTrip() {
-        val words = words()
-        val charged = BatteryLevels(Percent(50.0), Percent(74.0), Optional.of(Percent(70.0)))
-        val notCharged = BatteryLevels(Percent(50.0), Percent(50.4), Optional.of(Percent(30.0)))
+    /** The levels of a day a trip leaves on: at its start, the departure, the highest and its end. */
+    private fun departing(start: Double, departure: Double, after: Double, end: Double) =
+        BatteryLevels(Percent(start), Percent(after), Optional.of(Percent(departure)), Optional.of(Percent(end)))
 
-        assertThat(words.figure(SourceFigure.Battery(charged))).isEqualTo("Battery 50 → 74%, 70% after the trip")
-        assertThat(words.figure(SourceFigure.Battery(notCharged))).isEqualTo("Battery 50 → 30% after the trip")
-        assertThat(words.batteryLevels(charged)).isEqualTo("50 → 74%, 70% after the trip")
-        assertThat(words.batteryLevels(notCharged)).isEqualTo("50 → 30% after the trip")
-        assertThat(words.batteryLevels(BatteryLevels(Percent(50.0), Percent(74.0), Optional.empty()))).isEqualTo("50 → 74%")
+    /** The four wordings of a departure day: no charge, before the trip only, after the return only, and both. */
+    private val departureDays = listOf(departing(50.0, 50.0, 50.4, 31.0), departing(50.0, 80.0, 80.0, 61.0),
+        departing(50.0, 50.0, 80.0, 71.0), departing(50.0, 60.0, 80.0, 71.0))
+
+    @Test
+    fun onTheDayATripLeavesTheBatteryChipAndLineSayWhetherItChargesBeforeTheTripAfterTheReturnOrBoth() {
+        val words = words()
+
+        assertThat(departureDays.map { words.figure(SourceFigure.Battery(it)) }).containsExactly(
+            "Battery 50 → 31% after the trip", "Battery 50 → 80%, 61% after the trip",
+            "Battery 50%, 80% after the return", "Battery 50 → 60%, 80% after the return")
+        assertThat(departureDays.map { words.batteryLevels(it) }).containsExactly(
+            "50 → 31% after the trip", "50 → 80%, 61% after the trip", "50%, 80% after the return",
+            "50 → 60%, 80% after the return")
+        assertThat(words.batteryLevels(
+            BatteryLevels(Percent(50.0), Percent(74.0), Optional.empty(), Optional.empty()))).isEqualTo("50 → 74%")
+    }
+
+    @Test
+    fun aDayWithTwoTripsAndSunBetweenThemChargesAfterTheReturn() {
+        // the engine's levels of the day: the first trip leaves at the 50% start, the sun charges to 80% before the
+        // second leaves, and the day ends at 59.3%
+        val twoTrips = departing(50.0, 50.0, 80.0, 59.3)
+
+        assertThat(words().figure(SourceFigure.Battery(twoTrips))).isEqualTo("Battery 50%, 80% after the return")
     }
 
     @Test
     @Config(qualifiers = "nl")
-    fun onTheDayATripLeavesTheBatteryChipAndLineSayTheLevelAfterTheTripInDutch() {
+    fun onTheDayATripLeavesTheBatteryChipAndLineSayWhetherItChargesBeforeTheTripAfterTheReturnOrBothInDutch() {
         val words = words(Locale.forLanguageTag("nl"))
-        val charged = BatteryLevels(Percent(50.0), Percent(74.0), Optional.of(Percent(70.0)))
-        val notCharged = BatteryLevels(Percent(50.0), Percent(50.0), Optional.of(Percent(30.0)))
 
-        assertThat(words.figure(SourceFigure.Battery(charged))).isEqualTo("Accu 50 → 74%, 70% na de rit")
-        assertThat(words.figure(SourceFigure.Battery(notCharged))).isEqualTo("Accu 50 → 30% na de rit")
-        assertThat(words.batteryLevels(charged)).isEqualTo("50 → 74%, 70% na de rit")
+        assertThat(departureDays.map { words.figure(SourceFigure.Battery(it)) }).containsExactly(
+            "Accu 50 → 31% na de rit", "Accu 50 → 80%, 61% na de rit", "Accu 50%, 80% na terugkomst",
+            "Accu 50 → 60%, 80% na terugkomst")
+        assertThat(departureDays.map { words.batteryLevels(it) }).containsExactly(
+            "50 → 31% na de rit", "50 → 80%, 61% na de rit", "50%, 80% na terugkomst", "50 → 60%, 80% na terugkomst")
+        assertThat(words.figure(SourceFigure.Battery(departing(50.0, 50.0, 80.0, 59.3))))
+            .isEqualTo("Accu 50%, 80% na terugkomst")
     }
 
     @Test
     fun aDaysNoteSaysWhyItHasNoWindowAsTheDashboardTellsIt() {
         val words = words()
-        val levels = BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty())
+        val levels = BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty(), Optional.empty())
 
         assertThat(words.note(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.AWAY)))
             .isEqualTo("The car is away on a trip, or there is too little solar power while it is home.")
@@ -387,7 +407,7 @@ class TripAdviceWordsTest {
     @Test
     fun aDaysHeadingComesFromWhyItHasNoWindow() {
         val words = words()
-        val levels = BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty())
+        val levels = BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty(), Optional.empty())
 
         assertThat(NoWindowReason.values().associateWith { words.heading(day(DayName.Tomorrow(TOMORROW), levels, it)) })
             .containsExactlyInAnyOrderEntriesOf(mapOf(
@@ -401,7 +421,8 @@ class TripAdviceWordsTest {
 
     @Test
     fun todayThatNeedsNoChargingNotesOnlyTheAssumedLevel() {
-        val today = day(DayName.Today(TODAY), BatteryLevels(Percent(80.0), Percent(80.0), Optional.empty()),
+        val today = day(DayName.Today(TODAY),
+            BatteryLevels(Percent(80.0), Percent(80.0), Optional.empty(), Optional.empty()),
             NoWindowReason.NOT_NEEDED, assumed = Percent(80.0))
 
         assertThat(words().note(today)).isEqualTo(
@@ -412,7 +433,7 @@ class TripAdviceWordsTest {
     @Config(qualifiers = "nl")
     fun theTwoNewDaysWithoutAWindowInDutch() {
         val words = words(Locale.forLanguageTag("nl"))
-        val levels = BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty())
+        val levels = BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty(), Optional.empty())
 
         assertThat(words.heading(day(DayName.Tomorrow(TOMORROW), levels, NoWindowReason.NOT_NEEDED)))
             .isEqualTo("Laden niet nodig")
@@ -423,7 +444,8 @@ class TripAdviceWordsTest {
     @Test
     fun aDayAGridChargeStartsOnSaysOnlyThatThereIsNoChargeWindowAndShowsItsBattery() {
         val words = words()
-        val day = day(DayName.Today(TODAY), BatteryLevels(Percent(80.0), Percent(94.0), Optional.empty()),
+        val day = day(DayName.Today(TODAY),
+            BatteryLevels(Percent(80.0), Percent(94.0), Optional.empty(), Optional.empty()),
             NoWindowReason.GRID_CHARGE_STARTS)
         val figures = SourceFigure.of(day)
 
@@ -436,7 +458,8 @@ class TripAdviceWordsTest {
     @Config(qualifiers = "nl")
     fun aDayAGridChargeStartsOnInDutch() {
         val words = words(Locale.forLanguageTag("nl"))
-        val day = day(DayName.Today(TODAY), BatteryLevels(Percent(80.0), Percent(94.0), Optional.empty()),
+        val day = day(DayName.Today(TODAY),
+            BatteryLevels(Percent(80.0), Percent(94.0), Optional.empty(), Optional.empty()),
             NoWindowReason.GRID_CHARGE_STARTS)
 
         assertThat(words.heading(day)).isEqualTo("Geen laadvenster")
@@ -446,7 +469,8 @@ class TripAdviceWordsTest {
     @Test
     @Config(qualifiers = "nl")
     fun aDayAwayOnATripSaysSoInDutch() {
-        val day = day(DayName.Tomorrow(TOMORROW), BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty()), NoWindowReason.AWAY)
+        val day = day(DayName.Tomorrow(TOMORROW),
+            BatteryLevels(Percent(50.0), Percent(50.0), Optional.empty(), Optional.empty()), NoWindowReason.AWAY)
 
         assertThat(words(Locale.forLanguageTag("nl")).note(day))
             .isEqualTo("De auto is weg voor een rit, of er is te weinig zonnestroom terwijl hij thuis is.")

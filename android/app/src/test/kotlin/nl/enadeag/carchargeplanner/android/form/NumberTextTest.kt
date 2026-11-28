@@ -104,24 +104,43 @@ class NumberTextTest {
         assertThat(english.hasThousandsSeparator(text, 1)).isFalse()
     }
 
+    /** Every half from 0 to 100 and the closest numbers on either side of it. */
+    private val levels = (0..200).flatMap { half ->
+        val value = half / 2.0
+        listOf(Math.nextDown(value), value, Math.nextUp(value), value + 0.25)
+    }.filter { it in 0.0..100.0 }
+
+    private fun departing(start: Double, departure: Double, after: Double) =
+        BatteryLevels(Percent(start), Percent(after), Optional.of(Percent(departure)), Optional.of(Percent(0.0)))
+
     @Test
-    fun theEngineSaysTheBatteryChargesBeforeTheTripExactlyWhenTheWrittenLevelsDiffer() {
-        // every half from 0 to 100 and the closest numbers on either side of it, as the dashboard writes them
-        val levels = (0..200).flatMap { half ->
-            val value = half / 2.0
-            listOf(Math.nextDown(value), value, Math.nextUp(value), value + 0.25)
-        }.filter { it in 0.0..100.0 }
+    fun theEngineSaysTheBatteryChargesBeforeTheTripExactlyWhenTheWrittenStartAndDepartureDiffer() {
         for (numbers in listOf(english, dutch)) {
             val written = levels.associateWith { numbers.write(it, 0) }
 
             val disagree = levels.flatMap { start ->
-                levels.filter { after ->
-                    BatteryLevels(Percent(start), Percent(after), Optional.empty()).chargesBeforeTrip() ==
-                        (written[start] == written[after])
-                }.map { after -> "$start and $after" }
+                levels.filter { departure ->
+                    departing(start, departure, 100.0).chargesBeforeTrip() == (written[start] == written[departure])
+                }.map { departure -> "$start and $departure" }
             }
 
             assertThat(written).containsEntry(49.5, "50").containsEntry(Math.nextDown(49.5), "49")
+            assertThat(disagree).isEmpty()
+        }
+    }
+
+    @Test
+    fun theEngineSaysTheBatteryChargesAfterTheReturnExactlyWhenTheWrittenDepartureAndHighestLevelDiffer() {
+        for (numbers in listOf(english, dutch)) {
+            val written = levels.associateWith { numbers.write(it, 0) }
+
+            val disagree = levels.flatMap { departure ->
+                levels.filter { after ->
+                    after >= departure &&
+                        departing(0.0, departure, after).chargesAfterReturn() == (written[departure] == written[after])
+                }.map { after -> "$departure and $after" }
+            }
+
             assertThat(disagree).isEmpty()
         }
     }

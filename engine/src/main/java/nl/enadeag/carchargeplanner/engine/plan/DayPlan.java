@@ -10,6 +10,8 @@ import java.util.List;
  *
  * @param date the local date
  * @param startLevelPct the battery level at the start of the day
+ * @param departureLevelPcts the battery level at each of the day's departures, in time order, after the solar
+ *     charging and a trip's grid charge before it; empty on a day without a departure
  * @param windows the charge windows of the day in time order, possibly none
  * @param levelAfterChargingPct the highest of the day's battery levels: its start level, the level at each departure,
  *     the level after its last solar charging, and its end level
@@ -28,6 +30,7 @@ import java.util.List;
 public record DayPlan(
         LocalDate date,
         Percent startLevelPct,
+        List<Percent> departureLevelPcts,
         List<Window> windows,
         Percent levelAfterChargingPct,
         Percent chargeToPct,
@@ -37,13 +40,21 @@ public record DayPlan(
         List<ForecastStep> forecast) {
 
     /**
-     * Checks the driving the battery cannot hold, and copies the lists of windows and forecast steps.
+     * Checks the departure levels and the driving the battery cannot hold, and copies the lists of departure levels,
+     * windows and forecast steps.
      *
-     * @throws IllegalArgumentException when the driving the battery cannot hold is below 0, more than the day's
-     *     driving or not a number
-     * @throws NullPointerException when the windows or the steps are null or hold null
+     * @throws IllegalArgumentException when a departure level is above the highest level, or the driving the battery
+     *     cannot hold is below 0, more than the day's driving or not a number
+     * @throws NullPointerException when the departure levels, the windows or the steps are null or hold null
      */
     public DayPlan {
+        departureLevelPcts = List.copyOf(departureLevelPcts);
+        for (var departurePct : departureLevelPcts) {
+            if (departurePct.value() > levelAfterChargingPct.value()) {
+                throw new IllegalArgumentException("a departure level, " + departurePct.value()
+                        + " %, must be at most the day's highest level, " + levelAfterChargingPct.value() + " %");
+            }
+        }
         if (drivingShortPct < 0 || Double.isNaN(drivingShortPct)) {
             throw new IllegalArgumentException(
                     "the driving the battery cannot hold must be 0 % or more, not " + drivingShortPct + " %");

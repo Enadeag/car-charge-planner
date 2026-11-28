@@ -23,6 +23,7 @@ Each term in `CONTEXT.md` has one word per language, used everywhere the app sho
 | One-off away period | afwezig |  | Away day, absence, trip |
 | Trip | rit |  | Journey, ride, away period (which has no distance) |
 | Departure | vertrek |  | Deadline, start |
+| Return | terugkomst | the car coming back from a trip, as in "after the return" ("na terugkomst") on the battery's levels of the day a trip leaves | Arrival, back home |
 | Trip surcharge | ritopslag |  | Margin, buffer |
 | Daily distance | dagelijkse afstand | the car's field, without a unit in its name, as the desktop can show miles; its hint "How far you drive on a normal day, for example for shopping, school or sport. Trips you enter separately do not count." ("Hoeveel je op een gewone dag rijdt, bijvoorbeeld voor boodschappen, school of sport. Ritten die je apart invoert, tellen niet mee.") | Other driving, distance per day, average distance |
 | Charging hours | laaduren |  | Awake hours, charge times |

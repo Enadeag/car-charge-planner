@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -73,6 +74,20 @@ class DashboardBatteryTest {
                 Parts.source(now)));
     }
 
+    /** 12 kW of sun from {@code fromHour} to {@code toHour}, so 9 to 17 charges a 100 kWh car from 31 % to 80 %. */
+    private static Map<Integer, Double> sunFrom(int fromHour, int toHour) {
+        var sun = new HashMap<Integer, Double>();
+        for (int hour = fromHour; hour < toHour; hour++) {
+            sun.put(hour, 12.0);
+        }
+        return sun;
+    }
+
+    /** The distance of a trip that takes {@code pct} of a 100 kWh battery, at 18 kWh per 100 km and 15 % on top. */
+    private static double kmFor(double pct) {
+        return pct / (0.18 * 1.15);
+    }
+
     private static BatteryLevels battery(DashboardView view, LocalDate date) {
         return view.days().stream().filter(day -> day.name().date().equals(date)).findFirst().orElseThrow().battery();
     }
@@ -95,7 +110,7 @@ class DashboardBatteryTest {
     }
 
     @Test
-    void aDayWithTwoTripsShowsTheLevelTheSunReachesBetweenThemAndTheLevelAfterTheLast() {
+    void aDayWithTwoTripsShowsTheLevelTheSunReachesBetweenThemAsChargingAfterTheReturn() {
         // a 100 kWh car without a daily distance: each 100 km trip takes 20.7 % and needs 50.7 %; the first leaves
         // with the 50 % the day starts with, is back with 29.3 %, and the sun charges it to the 80 % target before the
         // second leaves; the day ends at 59.3 %, after the second
@@ -107,5 +122,124 @@ class DashboardBatteryTest {
         assertThat(saturday.startPct().value()).isCloseTo(50, CLOSE);
         assertThat(saturday.afterPct().value()).isCloseTo(80, CLOSE);
         assertThat(saturday.afterTripPct().orElseThrow().value()).isCloseTo(59.3, CLOSE);
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(50, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.AFTER_RETURN);
+    }
+
+    @Test
+    void theIssuesDayLeavesAtItsStartAndChargesOnlyAfterTheReturn() {
+        // the 100 kWh car leaves at 6:00 with the 50 % the day starts with, is back at 8:00 with 31 %, and the sun
+        // charges it to the 80 % target
+        var view = dashboard(home(100, 0), forecast(SAT, List.of(sunFrom(9, 17))), 50, at(SAT, 0, 0),
+                new Trip(at(SAT, 6, 0), at(SAT, 8, 0), kmFor(19), false));
+
+        var saturday = battery(view, SAT);
+
+        assertThat(saturday.startPct().value()).isCloseTo(50, CLOSE);
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(50, CLOSE);
+        assertThat(saturday.afterPct().value()).isCloseTo(80, CLOSE);
+        assertThat(saturday.afterTripPct().orElseThrow().value()).isCloseTo(80, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.AFTER_RETURN);
+    }
+
+    @Test
+    void withDailyDrivingTheDayAfterTheReturnStillReachesItsHighestLevelBeforeTheDriving() {
+        // 50 km a day take 9 %: the trip needs 30 + 19 + 9 = 58 %, so the day starts at 60 %; the sun charges the
+        // 41 % it is back with to 80 %, and the day ends at 71 %
+        var view = dashboard(home(100, 50), forecast(SAT, List.of(sunFrom(9, 17))), 60, at(SAT, 0, 0),
+                new Trip(at(SAT, 6, 0), at(SAT, 8, 0), kmFor(19), false));
+
+        var saturday = battery(view, SAT);
+
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(60, CLOSE);
+        assertThat(saturday.afterPct().value()).isCloseTo(80, CLOSE);
+        assertThat(saturday.afterTripPct().orElseThrow().value()).isCloseTo(71, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.AFTER_RETURN);
+    }
+
+    @Test
+    void theIssuesDayThatChargesBeforeTheTripLeavesAtTheLevelTheSunReaches() {
+        var view = dashboard(home(100, 0), forecast(SAT, List.of(sunFrom(9, 17))), 50, at(SAT, 0, 0),
+                new Trip(at(SAT, 18, 0), at(SAT, 20, 0), kmFor(19), false));
+
+        var saturday = battery(view, SAT);
+
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(80, CLOSE);
+        assertThat(saturday.afterPct().value()).isCloseTo(80, CLOSE);
+        assertThat(saturday.afterTripPct().orElseThrow().value()).isCloseTo(61, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.BEFORE_TRIP);
+    }
+
+    @Test
+    void aDayThatChargesBeforeTheTripAndAfterTheReturnLeavesBelowItsHighestLevel() {
+        // an hour of sun before the 10:00 departure charges at 32 A, 7.36 kW, 90 % of which is 6.624 % of the
+        // battery; the afternoon's sun after the return charges it to the target
+        var sun = sunFrom(12, 19);
+        sun.put(9, 12.0);
+        var view = dashboard(home(100, 0), forecast(SAT, List.of(sun)), 50, at(SAT, 0, 0),
+                new Trip(at(SAT, 10, 0), at(SAT, 11, 0), kmFor(19), false));
+
+        var saturday = battery(view, SAT);
+
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(56.624, CLOSE);
+        assertThat(saturday.afterPct().value()).isCloseTo(80, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.BEFORE_TRIP_AND_AFTER_RETURN);
+    }
+
+    @Test
+    void aGridChargeBeforeTheDepartureIsChargingBeforeTheTrip() {
+        // no sun: the trip needs 30 + 19 = 49 %, so the 9 % the 40 % start lacks come from the grid that day
+        var view = dashboard(home(100, 0), forecast(SAT, List.of(Map.of())), 40, at(SAT, 0, 0),
+                new Trip(at(SAT, 18, 0), at(SAT, 20, 0), kmFor(19), false));
+
+        var saturday = battery(view, SAT);
+
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(49, CLOSE);
+        assertThat(saturday.afterPct().value()).isCloseTo(49, CLOSE);
+        assertThat(saturday.afterTripPct().orElseThrow().value()).isCloseTo(30, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.BEFORE_TRIP);
+    }
+
+    @Test
+    void aLaterTripsGridChargeThatEveningIsChargingAfterTheReturn() {
+        // the issue's Saturday of #508 with a short trip in the morning: the 60 kWh car leaves with its 59 %, and
+        // the evening's grid charge for Sunday's trip brings it to 93.75 %
+        var view = dashboard(home(60, 40), forecast(SAT, List.of(Map.of(), Map.of(), Map.of())), 59, at(SAT, 0, 0),
+                new Trip(at(SAT, 8, 0), at(SAT, 9, 0), 20, false),
+                new Trip(at(SUN, 8, 30), at(SUN, 18, 0), 150, false));
+
+        var saturday = battery(view, SAT);
+
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(59, CLOSE);
+        assertThat(saturday.afterPct().value()).isCloseTo(93.75, CLOSE);
+        assertThat(saturday.afterTripPct().orElseThrow().value()).isCloseTo(93.75, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.AFTER_RETURN);
+    }
+
+    @Test
+    void aDayWithTwoTripsInTheMorningChargesAfterTheReturns() {
+        // two 50 km trips in the morning, then the sun charges the car to the 80 % target
+        var view = dashboard(home(100, 0), forecast(SAT, List.of(sunFrom(10, 18))), 60, at(SAT, 0, 0),
+                new Trip(at(SAT, 6, 0), at(SAT, 7, 0), 50, false),
+                new Trip(at(SAT, 8, 0), at(SAT, 9, 0), 50, false));
+
+        var saturday = battery(view, SAT);
+
+        assertThat(saturday.departurePct().orElseThrow().value()).isCloseTo(60, CLOSE);
+        assertThat(saturday.afterPct().value()).isCloseTo(80, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.AFTER_RETURN);
+    }
+
+    @Test
+    void aTripBackOnALaterDayNeverChargesAfterTheReturnOnItsDepartureDay() {
+        // the car is away in Saturday's sun
+        var view = dashboard(home(100, 0), forecast(SAT, List.of(sunFrom(9, 17), sunFrom(9, 17))), 60,
+                at(SAT, 0, 0), new Trip(at(SAT, 8, 0), at(SUN, 12, 0), kmFor(19), false));
+
+        var saturday = battery(view, SAT);
+
+        assertThat(saturday.afterPct().value()).isCloseTo(60, CLOSE);
+        assertThat(saturday.afterTripPct().orElseThrow().value()).isCloseTo(41, CLOSE);
+        assertThat(saturday.charging()).isEqualTo(BatteryLevels.Charging.NONE);
     }
 }

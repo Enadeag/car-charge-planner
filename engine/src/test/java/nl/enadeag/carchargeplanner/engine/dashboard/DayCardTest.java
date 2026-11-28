@@ -48,6 +48,12 @@ class DayCardTest {
                 List.of());
     }
 
+    /** A day a trip leaves on at the level after charging. */
+    private static DayPlan leaving(LocalDate date, List<Window> windows, double start, double after, double end) {
+        return DayPlans.departing(date, new Percent(start), List.of(new Percent(after)), windows, new Percent(after),
+                new Percent(40), new Percent(end), 0, List.of());
+    }
+
     /** A day without a window that starts at one level while the plan charges up to another. */
     private static DayPlan chargingTo(LocalDate date, double start, double chargeTo) {
         return DayPlans.of(date, new Percent(start), List.of(), new Percent(start), new Percent(chargeTo),
@@ -366,8 +372,6 @@ class DayCardTest {
 
         assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.NOT_NEEDED),
                 Optional.of(NoWindowReason.AWAY), Optional.of(NoWindowReason.DEPARTURE));
-        assertThat(shown).extracting(day -> day.battery().afterTripPct())
-                .containsExactly(Optional.empty(), Optional.empty(), Optional.of(new Percent(55)));
     }
 
     @Test
@@ -407,8 +411,6 @@ class DayCardTest {
 
         assertThat(reasons(shown)).containsExactly(Optional.of(NoWindowReason.NOT_NEEDED),
                 Optional.of(NoWindowReason.DEPARTURE), Optional.of(NoWindowReason.AWAY));
-        assertThat(shown).extracting(day -> day.battery().afterTripPct())
-                .containsExactly(Optional.empty(), Optional.of(new Percent(55)), Optional.empty());
     }
 
     @Test
@@ -445,7 +447,7 @@ class DayCardTest {
     @Test
     void aDayWithAWindowIsTheSameWhateverTheTrips() {
         var leaving = trip(TODAY, 18, TODAY, 22);
-        var plan = List.of(day(TODAY, List.of(window(TODAY, 11, 14, 0))));
+        var plan = List.of(leaving(TODAY, List.of(window(TODAY, 11, 14, 0)), 40, 60, 55));
 
         var shown = days(plan, Optional.empty(), List.of(advice(leaving)), List.of(leaving)).get(0);
 
@@ -455,28 +457,43 @@ class DayCardTest {
     }
 
     @Test
-    void theBatteryIsAtTheStartAndAfterChargingAndOnlyTheDayATripLeavesAfterTheTrip() {
+    void theBatteryIsAtTheStartAndAfterChargingAndOnlyTheDayATripLeavesAtTheDepartureAndAfterTheTrip() {
         var leaving = trip(TOMORROW, 7, TOMORROW, 18);
-        var plan = List.of(levels(TODAY, List.of(), 40, 60, 55), levels(TOMORROW, List.of(), 60, 74, 30));
+        var plan = List.of(levels(TODAY, List.of(), 40, 60, 55), leaving(TOMORROW, List.of(), 60, 74, 30));
 
         var shown = days(plan, Optional.empty(), List.of(advice(leaving)), List.of(leaving));
 
         assertThat(shown).extracting(DashboardDay::battery).containsExactly(
-                new BatteryLevels(new Percent(40), new Percent(60), Optional.empty()),
-                new BatteryLevels(new Percent(60), new Percent(74), Optional.of(new Percent(30))));
+                new BatteryLevels(new Percent(40), new Percent(60), Optional.empty(), Optional.empty()),
+                new BatteryLevels(new Percent(60), new Percent(74), Optional.of(new Percent(74)),
+                        Optional.of(new Percent(30))));
     }
 
     @ParameterizedTest
     @CsvSource({"50, 50, false", "49.5, 50.4, false", "50, 50.4999, false", "50, 50.5, true", "49.4999, 49.5, true",
         "49.5, 50.5, true", "0, 0.4, false", "99.5, 100, false", "74, 50, true"})
-    void theBatteryChargesBeforeTheTripWhenTheLevelsDifferInWholePercentRoundedHalfUp(double start, double after,
+    void theBatteryChargesBeforeTheTripWhenTheLevelsDifferInWholePercentRoundedHalfUp(double start, double departure,
             boolean charges) {
         var leaving = trip(TODAY, 18, TODAY, 22);
-        var plan = List.of(levels(TODAY, List.of(), start, after, 30));
+        var plan = List.of(leaving(TODAY, List.of(), start, departure, 30));
 
         var shown = days(plan, Optional.empty(), List.of(advice(leaving)), List.of(leaving)).get(0).battery();
 
         assertThat(shown.chargesBeforeTrip()).isEqualTo(charges);
+    }
+
+    @Test
+    void theDayTwoTripsLeaveOnHasTheFirstDepartureFromThePlan() {
+        var first = trip(TODAY, 7, TODAY, 9);
+        var second = trip(TODAY, 18, TODAY, 20);
+        var plan = List.of(DayPlans.departing(TODAY, new Percent(50), List.of(new Percent(50), new Percent(80)),
+                List.of(), new Percent(80), new Percent(80), new Percent(59.3), 0, List.of()));
+
+        var shown = days(plan, Optional.empty(), List.of(advice(first), advice(second)), List.of(first, second))
+                .get(0).battery();
+
+        assertThat(shown.departurePct()).contains(new Percent(50));
+        assertThat(shown.afterTripPct()).contains(new Percent(59.3));
     }
 
     @Test

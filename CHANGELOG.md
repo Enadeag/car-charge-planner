@@ -4,6 +4,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Fixed
+- The battery card of the day a trip leaves says whether the car charges before the trip, after the return or both. A day that starts at 50%, leaves at 50%, is back at 31% and then charges on solar power to 80% read "Battery 50 → 80%, 80% after the trip", as if the car charged before it left; it now reads "Battery 50%, 80% after the return". With a charge before the trip as well it reads, for example, "Battery 50 → 60%, 80% after the return", and the middle figure of "Battery 50 → 80%, 61% after the trip" is now the level the car leaves with. A charge after the return is also a later trip's grid charge that evening, and with two trips on a day the charging between them (#512).
+
 ### Android
 
 - A settings file with a value the app cannot plan with no longer loads, with the same bounds as the desktop app: the usable battery from 1 to 1000 kWh, the consumption from 1 to 200 kWh per 100 km, the daily distance at most 1000 km, the charging efficiency from 1 to 100%, the minimum and the maximum charge current from 1 to 80 A, and the voltage from 100 to 400 V. Earlier versions saved any value above 0, so a value outside these makes the settings file unusable, and **Set up again** starts over; Settings now refuses such a value under its field (#410).
@@ -13,6 +16,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Trips and one-off away periods in the files beyond the bounds count as damaged entries, as on the desktop (#410).
 - A forecast, a stored forecast or the stored announced windows with a moment far in the past or the future, or a clock that was put back, no longer hangs a planning round or makes it fail, as on the desktop (#408).
 - Screen readers are no longer supported, and what was built only for TalkBack is gone, as on the desktop: the spoken sentences and names, headings, live regions and the focus on a new page's title; the sentence under the solar chart stays, and when the notification card swaps its button the focus goes to the new one (#435).
+- The battery card of the day a trip leaves says whether the car charges before the trip, after the return or both, as on the desktop: a day that leaves at its 50% start and charges to 80% only after it is back read "Battery 50 → 80%, 80% after the trip"; it now reads "Battery 50%, 80% after the return" ("Accu 50%, 80% na terugkomst") (#512).
 
 ## [0.8.0] - 2026-11-28
 
