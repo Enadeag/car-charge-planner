@@ -76,6 +76,14 @@
   </screenshots>
 
   <releases>
+    <release version="0.8.0" date="2026-11-28">
+      <url type="details">https://github.com/Enadeag/car-charge-planner/releases/tag/v0.8.0</url>
+      <description>
+        <p>Times follow your system's 12- or 24-hour clock, and Settings and the trip entry refuse a value the app
+          cannot plan with under its field, naming the limit. A forecast far in the past or future no longer hangs
+          the plan, and the battery card no longer shows a level the car never reaches.</p>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-11-13">
       <url type="details">https://github.com/Enadeag/car-charge-planner/releases/tag/v0.7.0</url>
       <description>
