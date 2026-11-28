@@ -49,6 +49,10 @@ public final class BatteryCard extends VBox {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         var heading = line(messages.text(TextKey.BATTERY_HEADING), "card-label");
         heading.setLabelFor(editor.field());
+        // the levels wrap onto a second line where a wide font leaves too little room beside the heading
+        heading.setMinWidth(Region.USE_PREF_SIZE);
+        update.setMinWidth(Region.USE_PREF_SIZE);
+        levels.setWrapText(true);
         var header = new HBox(heading, spacer, levels, update);
         header.getStyleClass().add("chart-header");
         getChildren().setAll(header, bar, editor);
