@@ -357,6 +357,7 @@ public final class Planner {
         var dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant();
         var runs = input.runsByDay().getOrDefault(date, List.of());
         var windows = new ArrayList<Window>();
+        var departureLevels = new ArrayList<Percent>();
         double level = startPct;
         // charging only raises the level, so the first departure's level, or without one the level after the day's
         // charging, is at least the start
@@ -382,6 +383,7 @@ public final class Planner {
                 level = Math.min(100, level + gridPct(charge));
             }
             highestPct = Math.max(highestPct, level);
+            departureLevels.add(new Percent(level));
             double returned = Math.max(0, level - charge.tripPct());
             departures.add(new Departure(Math.max(0, level - gridPct(charge)), level, returned));
             shortPct += Math.max(0, charge.tripPct() - level);
@@ -397,8 +399,9 @@ public final class Planner {
         shortPct += Math.max(0, otherPct - level);
         double end = Math.min(100, Math.max(0, level - otherPct) + laterGridPct);
         double after = Math.max(Math.max(highestPct, level), end);
-        return new DayPlan(date, new Percent(startPct), windows, new Percent(after), new Percent(chargeToPct),
-                new Percent(end), otherPct + tripsPct, shortPct, input.stepsByDay().getOrDefault(date, List.of()));
+        return new DayPlan(date, new Percent(startPct), departureLevels, windows, new Percent(after),
+                new Percent(chargeToPct), new Percent(end), otherPct + tripsPct, shortPct,
+                input.stepsByDay().getOrDefault(date, List.of()));
     }
 
     /**

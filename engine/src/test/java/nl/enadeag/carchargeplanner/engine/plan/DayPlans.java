@@ -11,11 +11,22 @@ public final class DayPlans {
     private DayPlans() {
     }
 
-    /** A day whose battery holds all its driving: none of it is short. A test that needs a shortfall builds the day. */
+    /**
+     * A day without a departure whose battery holds all its driving: none of it is short. A test that needs a
+     * shortfall builds the day.
+     */
     public static DayPlan of(LocalDate date, Percent startLevelPct, List<Window> windows,
             Percent levelAfterChargingPct, Percent chargeToPct, Percent endLevelPct, double drivingPct,
             List<ForecastStep> forecast) {
-        return new DayPlan(date, startLevelPct, windows, levelAfterChargingPct, chargeToPct, endLevelPct, drivingPct, 0,
-                forecast);
+        return departing(date, startLevelPct, List.of(), windows, levelAfterChargingPct, chargeToPct, endLevelPct,
+                drivingPct, forecast);
+    }
+
+    /** A day with departures, at the given levels, whose battery holds all its driving. */
+    public static DayPlan departing(LocalDate date, Percent startLevelPct, List<Percent> departureLevelPcts,
+            List<Window> windows, Percent levelAfterChargingPct, Percent chargeToPct, Percent endLevelPct,
+            double drivingPct, List<ForecastStep> forecast) {
+        return new DayPlan(date, startLevelPct, departureLevelPcts, windows, levelAfterChargingPct, chargeToPct,
+                endLevelPct, drivingPct, 0, forecast);
     }
 }

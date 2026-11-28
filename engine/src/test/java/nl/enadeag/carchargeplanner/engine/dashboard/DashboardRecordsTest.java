@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -28,13 +29,65 @@ class DashboardRecordsTest {
     private static final Instant NOON = Instant.parse("2026-06-01T10:00:00Z");
     private static final LocalDate DAY = LocalDate.of(2026, 6, 1);
 
+    private static BatteryLevels departing(double start, double after, double... departures) {
+        return new BatteryLevels(new Percent(start), new Percent(after),
+                Arrays.stream(departures).mapToObj(Percent::new).toList(), Optional.of(new Percent(20)));
+    }
+
     @ParameterizedTest
     @CsvSource({"50, 50, false", "49.5, 50, false", "50, 50.4, false", "49.4999, 50, true", "49.4, 50, true",
         "50, 50.5, true", "40, 60, true"})
-    void aDayChargesBeforeTheTripExactlyWhenTheWholePercentagesDiffer(double start, double after, boolean charges) {
-        var levels = new BatteryLevels(new Percent(start), new Percent(after), Optional.empty());
+    void aDayChargesBeforeTheTripExactlyWhenTheStartAndTheDepartureDifferInWholePercent(double start,
+            double departure, boolean charges) {
+        assertThat(departing(start, 100, departure).chargesBeforeTrip()).isEqualTo(charges);
+    }
 
-        assertThat(levels.chargesBeforeTrip()).isEqualTo(charges);
+    @ParameterizedTest
+    @CsvSource({"50, 50, false", "49.5, 50, false", "50, 50.4, false", "50, 50.5, true", "49.4999, 49.5, true",
+        "31, 80, true"})
+    void aDayChargesAfterTheReturnExactlyWhenItsHighestLevelIsAboveTheDepartureInWholePercent(double departure,
+            double after, boolean charges) {
+        assertThat(departing(departure, after, departure).chargesAfterReturn()).isEqualTo(charges);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"80, 80, false", "80, 79.6, false", "80, 79.4, true", "80, 30, true"})
+    void aDayWithTwoTripsChargesAfterTheReturnOnlyAboveBothDepartures(double after, double second,
+            boolean charges) {
+        assertThat(departing(50, after, 50, second).chargesAfterReturn()).isEqualTo(charges);
+    }
+
+    @Test
+    void theDepartureLevelIsTheFirstDepartures() {
+        assertThat(departing(50, 80, 60, 80).departurePct()).contains(new Percent(60));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"50, 50, 50, NONE", "50, 80, 80, BEFORE_TRIP", "50, 50, 80, AFTER_RETURN",
+        "50, 60, 80, BEFORE_TRIP_AND_AFTER_RETURN"})
+    void theChargingFollowsWhetherTheDayChargesBeforeTheTripAndAfterTheReturn(double start, double departure,
+            double after, BatteryLevels.Charging charging) {
+        assertThat(departing(start, after, departure).charging()).isEqualTo(charging);
+    }
+
+    @Test
+    void aDayNoTripLeavesOnChargesNeitherBeforeATripNorAfterAReturn() {
+        var levels = new BatteryLevels(new Percent(40), new Percent(60), List.of(), Optional.empty());
+
+        assertThat(levels.departurePct()).isEmpty();
+        assertThat(levels.chargesBeforeTrip()).isFalse();
+        assertThat(levels.chargesAfterReturn()).isFalse();
+        assertThat(levels.charging()).isEqualTo(BatteryLevels.Charging.NO_DEPARTURE);
+    }
+
+    @Test
+    void departuresWithoutALevelAfterTheTripOrTheReverseAreRefused() {
+        var level = new Percent(50);
+
+        assertThatThrownBy(() -> new BatteryLevels(level, level, List.of(level), Optional.empty()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new BatteryLevels(level, level, List.of(), Optional.of(level)))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static DayChart chart(double from, double to, double scale, double baseload) {
@@ -118,7 +171,8 @@ class DashboardRecordsTest {
 
     private static final Window WINDOW = new Window(NOON, NOON.plusSeconds(3600), 10, 2.3, 2.3, 0);
     private static final Optional<MainCharge> MAIN = Optional.of(new MainCharge(WINDOW, OptionalDouble.empty()));
-    private static final BatteryLevels BATTERY = new BatteryLevels(new Percent(40), new Percent(50), Optional.empty());
+    private static final BatteryLevels BATTERY = new BatteryLevels(new Percent(40), new Percent(50), List.of(),
+            Optional.empty());
 
     private static DashboardDay day(Optional<MainCharge> main, List<Window> later, Optional<NoWindowReason> noWindow) {
         return new DashboardDay(new DayName.Today(DAY), main, later, noWindow, BATTERY, Optional.empty(),
