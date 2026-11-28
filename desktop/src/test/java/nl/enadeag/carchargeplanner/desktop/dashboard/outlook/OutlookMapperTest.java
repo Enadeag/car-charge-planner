@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class OutlookMapperTest {
 
@@ -296,10 +298,16 @@ class OutlookMapperTest {
     private static final Trip OTHER_CAR = new Trip(at(TODAY.plusDays(4), 8, 0), at(TODAY.plusDays(4), 18, 0), 200,
             false, true);
 
-    /** Today with a window, Saturday the trip leaves after charging or not, Sunday to Tuesday without windows. */
-    private static DashboardModel.Plan withTrip(Messages messages, double saturdayAfterPct) {
-        var saturday = DayPlans.of(TODAY.plusDays(1), new Percent(94), List.of(), new Percent(saturdayAfterPct),
-                new Percent(94), new Percent(32), 70, List.of());
+    /** Today with a window, Saturday the trip leaves without charging, Sunday to Tuesday without windows. */
+    private static DashboardModel.Plan withTrip(Messages messages) {
+        return withTrip(messages, 94, 94, 94, 32);
+    }
+
+    /** As above, with Saturday's levels at the start, the departure, the highest and the end. */
+    private static DashboardModel.Plan withTrip(Messages messages, double startPct, double departurePct,
+            double afterPct, double endPct) {
+        var saturday = DayPlans.departing(TODAY.plusDays(1), new Percent(startPct), List.of(new Percent(departurePct)),
+                List.of(), new Percent(afterPct), new Percent(94), new Percent(endPct), 70, List.of());
         var days = List.of(day(TODAY, window(TODAY, 11, 14, 0)), saturday,
                 DayPlans.of(TODAY.plusDays(2), new Percent(32), List.of(), new Percent(32), new Percent(80),
                         new Percent(32), 0, List.of()),
@@ -317,7 +325,7 @@ class OutlookMapperTest {
 
     @Test
     void theDayATripLeavesShowsTheLevelItLeavesAndDoesNotSayTheCarNeedsNoCharging() {
-        var saturday = withTrip(new Messages(Language.ENGLISH), 94).days().get(1);
+        var saturday = withTrip(new Messages(Language.ENGLISH)).days().get(1);
 
         assertThat(saturday.chips()).containsExactly(
                 new ChipModel(EnergySource.CAR, "Battery 94 → 32% after the trip"));
@@ -326,21 +334,26 @@ class OutlookMapperTest {
         assertThat(saturday.battery().levels()).isEqualTo("94 → 32% after the trip");
     }
 
-    @Test
-    void theDayATripLeavesAfterACharge() {
-        var english = withTrip(new Messages(Language.ENGLISH), 100).days().get(1);
-        var dutch = withTrip(new Messages(Language.DUTCH), 100).days().get(1);
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', textBlock = """
+            50 | 50 | 50 | 31 | Battery 50 → 31% after the trip       | Accu 50 → 31% na de rit
+            50 | 80 | 80 | 61 | Battery 50 → 80%, 61% after the trip  | Accu 50 → 80%, 61% na de rit
+            50 | 50 | 80 | 71 | Battery 50%, 80% after the return     | Accu 50%, 80% na terugkomst
+            50 | 60 | 80 | 71 | Battery 50 → 60%, 80% after the return | Accu 50 → 60%, 80% na terugkomst
+            """)
+    void theDayATripLeavesSaysWhetherItChargesBeforeTheTripAfterTheReturnOrBoth(double start, double departure,
+            double after, double end, String english, String dutch) {
+        var inEnglish = withTrip(new Messages(Language.ENGLISH), start, departure, after, end).days().get(1);
+        var inDutch = withTrip(new Messages(Language.DUTCH), start, departure, after, end).days().get(1);
 
-        assertThat(english.chips()).extracting(ChipModel::text).containsExactly("Battery 94 → 100%, 32% after the trip");
-        assertThat(english.battery().levels()).isEqualTo("94 → 100%, 32% after the trip");
-        assertThat(dutch.chips()).extracting(ChipModel::text).containsExactly("Accu 94 → 100%, 32% na de rit");
-        assertThat(dutch.battery().levels()).isEqualTo("94 → 100%, 32% na de rit");
+        assertThat(inEnglish.chips()).extracting(ChipModel::text).containsExactly(english);
+        assertThat(inDutch.chips()).extracting(ChipModel::text).containsExactly(dutch);
     }
 
     @Test
     void theDaysTheCarIsAwayOnATripSaySoWithTheirBatteryChipAndATripWithoutThisCarDoesNot() {
-        var english = withTrip(new Messages(Language.ENGLISH), 94).days();
-        var dutch = withTrip(new Messages(Language.DUTCH), 94).days();
+        var english = withTrip(new Messages(Language.ENGLISH)).days();
+        var dutch = withTrip(new Messages(Language.DUTCH)).days();
 
         assertThat(english.subList(2, 4)).extracting(DayModel::note).containsOnly(
                 "The car is away on a trip, or there is too little solar power while it is home.");
@@ -577,7 +590,7 @@ class OutlookMapperTest {
 
     @Test
     void eachDayListsTheTripsTheEngineListsWithItInTheirWords() {
-        var plan = withTrip(new Messages(Language.ENGLISH), 94);
+        var plan = withTrip(new Messages(Language.ENGLISH));
         var away = "Away Tomorrow 08:30 – Mon 6 Jul 19:00 · 300 km there and back";
 
         assertThat(plan.days()).extracting(day -> day.trips().stream().map(TripsModel.Listed::text).toList())
@@ -588,7 +601,7 @@ class OutlookMapperTest {
 
     @Test
     void thePlanTellsTheTripsInTheHomesZoneAndTheOwnersUnits() {
-        var plan = withTrip(new Messages(Language.ENGLISH), 94);
+        var plan = withTrip(new Messages(Language.ENGLISH));
 
         assertThat(plan.trips()).isEqualTo(new TripsModel(BRUSSELS, Units.METRIC));
     }

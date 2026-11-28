@@ -102,19 +102,29 @@ public final class DayMapper {
     }
 
     /**
-     * The levels at the start and after charging; on a day a trip leaves also the level the trip leaves at the
-     * end of the day, and without a charge before it only the start and the end.
+     * The levels at the start and after charging; on a day a trip leaves, the start, the departure when the day charges
+     * before it, and the end of the day, or the highest level when the day charges after the return.
      */
     private ChipModel batteryChip(BatteryLevels battery) {
         var start = messages.whole(battery.startPct().value());
         var after = messages.whole(battery.afterPct().value());
-        if (battery.afterTripPct().isEmpty()) {
-            return new ChipModel(EnergySource.CAR, messages.text(TextKey.DAY_BATTERY, start, after));
-        }
-        var end = messages.whole(battery.afterTripPct().get().value());
-        return new ChipModel(EnergySource.CAR, battery.chargesBeforeTrip()
-                ? messages.text(TextKey.DAY_BATTERY_CHARGE_TRIP, start, after, end)
-                : messages.text(TextKey.DAY_BATTERY_TRIP, start, end));
+        var text = switch (battery.charging()) {
+            case NO_DEPARTURE -> messages.text(TextKey.DAY_BATTERY, start, after);
+            case NONE -> messages.text(TextKey.DAY_BATTERY_TRIP, start, end(battery));
+            case BEFORE_TRIP -> messages.text(TextKey.DAY_BATTERY_CHARGE_TRIP, start, departure(battery), end(battery));
+            case AFTER_RETURN -> messages.text(TextKey.DAY_BATTERY_RETURN, start, after);
+            case BEFORE_TRIP_AND_AFTER_RETURN ->
+                    messages.text(TextKey.DAY_BATTERY_CHARGE_RETURN, start, departure(battery), after);
+        };
+        return new ChipModel(EnergySource.CAR, text);
+    }
+
+    private String departure(BatteryLevels battery) {
+        return messages.whole(battery.departurePct().orElseThrow().value());
+    }
+
+    private String end(BatteryLevels battery) {
+        return messages.whole(battery.afterTripPct().orElseThrow().value());
     }
 
     private String laterWindows(List<Window> later) {

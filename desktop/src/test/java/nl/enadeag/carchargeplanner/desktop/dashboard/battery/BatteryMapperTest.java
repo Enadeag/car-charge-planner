@@ -8,6 +8,12 @@ import nl.enadeag.carchargeplanner.desktop.text.Messages;
 import nl.enadeag.carchargeplanner.engine.Outlook;
 import nl.enadeag.carchargeplanner.engine.config.Percent;
 import nl.enadeag.carchargeplanner.engine.dashboard.BatteryLevels;
+import nl.enadeag.carchargeplanner.engine.dashboard.ChargeLevels;
+import nl.enadeag.carchargeplanner.engine.dashboard.DashboardDay;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayChart;
+import nl.enadeag.carchargeplanner.engine.dashboard.DayName;
+import nl.enadeag.carchargeplanner.engine.dashboard.NoWindowReason;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,11 +21,15 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
 class BatteryMapperTest {
 
     private static final Messages ENGLISH = new Messages(Language.ENGLISH);
+    private static final LocalDate TOMORROW = LocalDate.of(2026, 7, 4);
+    private static final DayChart CHART = new DayChart(6, 20, 1, List.of(), 0, List.of(), Optional.empty(), List.of(),
+            Optional.empty());
 
     private static BatteryModel map(Outlook.Planned planned, int day, Messages messages) {
         var dashboard = planned.dashboard(List.of(), List.of());
@@ -62,20 +72,63 @@ class BatteryMapperTest {
         return written;
     }
 
+    private static BatteryLevels departing(double start, double departure, double after) {
+        return new BatteryLevels(new Percent(start), new Percent(after), List.of(new Percent(departure)),
+                Optional.of(new Percent(0)));
+    }
+
     @ParameterizedTest
     @EnumSource(Language.class)
-    void theEngineSaysTheBatteryChargesBeforeTheTripExactlyWhenTheWrittenLevelsDiffer(Language language) {
+    void theEngineSaysTheBatteryChargesBeforeTheTripExactlyWhenTheWrittenStartAndDepartureDiffer(Language language) {
         var written = written(new Messages(language));
         var disagree = new ArrayList<String>();
 
-        written.forEach((start, startText) -> written.forEach((after, afterText) -> {
-            var levels = new BatteryLevels(new Percent(start), new Percent(after), Optional.empty());
-            if (levels.chargesBeforeTrip() == startText.equals(afterText)) {
-                disagree.add(start + " and " + after);
+        written.forEach((start, startText) -> written.forEach((departure, departureText) -> {
+            if (departing(start, departure, 100).chargesBeforeTrip() == startText.equals(departureText)) {
+                disagree.add(start + " and " + departure);
             }
         }));
 
         assertThat(written).containsEntry(49.5, "50").containsEntry(Math.nextDown(49.5), "49");
         assertThat(disagree).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(Language.class)
+    void theEngineSaysTheBatteryChargesAfterTheReturnExactlyWhenTheWrittenDepartureAndHighestLevelDiffer(
+            Language language) {
+        var written = written(new Messages(language));
+        var disagree = new ArrayList<String>();
+
+        written.forEach((departure, departureText) -> written.forEach((after, afterText) -> {
+            if (after >= departure
+                    && departing(0, departure, after).chargesAfterReturn() == departureText.equals(afterText)) {
+                disagree.add(departure + " and " + after);
+            }
+        }));
+
+        assertThat(disagree).isEmpty();
+    }
+
+    /** A departure day's levels in words, as {@code BatteryMapper} gives the bar. */
+    private static String levels(Messages messages, double start, double departure, double after, double end) {
+        var levels = new BatteryLevels(new Percent(start), new Percent(after), List.of(new Percent(departure)),
+                Optional.of(new Percent(end)));
+        var day = new DashboardDay(new DayName.Tomorrow(TOMORROW), Optional.empty(), List.of(),
+                Optional.of(NoWindowReason.DEPARTURE), levels, Optional.empty(), CHART);
+        return new BatteryMapper(messages).map(day, new ChargeLevels(new Percent(30), new Percent(80))).levels();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', textBlock = """
+            50 | 50 | 50 | 31 | 50 → 31% after the trip       | 50 → 31% na de rit
+            50 | 80 | 80 | 61 | 50 → 80%, 61% after the trip  | 50 → 80%, 61% na de rit
+            50 | 50 | 80 | 71 | 50%, 80% after the return     | 50%, 80% na terugkomst
+            50 | 60 | 80 | 71 | 50 → 60%, 80% after the return | 50 → 60%, 80% na terugkomst
+            """)
+    void aDepartureDaysLevelsSayWhetherTheDayChargesBeforeTheTripAfterTheReturnOrBoth(double start,
+            double departure, double after, double end, String english, String dutch) {
+        assertThat(levels(ENGLISH, start, departure, after, end)).isEqualTo(english);
+        assertThat(levels(new Messages(Language.DUTCH), start, departure, after, end)).isEqualTo(dutch);
     }
 }

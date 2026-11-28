@@ -41,13 +41,26 @@ public enum TextKey {
     BATTERY_HEADING,
     /** The battery's levels: {0} at the start, {1} after charging, in %. */
     BATTERY_LEVELS,
-    /** The battery's levels on a day a trip leaves without charging first: {0} at the start, {1} at the end, in %. */
+    /**
+     * The battery's levels on a day a trip leaves without charging before it or after the return: {0} at the start,
+     * {1} at the end, in %.
+     */
     BATTERY_LEVELS_TRIP,
     /**
-     * The battery's levels on a day a trip leaves: {0} at the start, {1} after charging, {2} at the end after the
-     * trip, in %.
+     * The battery's levels on a day a trip leaves after charging, without charging after the return: {0} at the start,
+     * {1} at the departure, {2} at the end after the trip, in %.
      */
     BATTERY_LEVELS_CHARGE_TRIP,
+    /**
+     * The battery's levels on a day a trip leaves without charging first and charges after the return: {0} at the
+     * start, {1} the highest after the return, in %.
+     */
+    BATTERY_LEVELS_RETURN,
+    /**
+     * The battery's levels on a day a trip leaves after charging and charges after the return: {0} at the start,
+     * {1} at the departure, {2} the highest after the return, in %.
+     */
+    BATTERY_LEVELS_CHARGE_RETURN,
     /** The label of the minimum charge level's mark: {0} the minimum, a number of percent without the sign. */
     BATTERY_MINIMUM,
     /** The label of the target charge level's mark: {0} the target, a number of percent without the sign. */
@@ -274,13 +287,26 @@ public enum TextKey {
     DAY_NONE_TRIP,
     /** The battery chip: {0} the level at the start of the day, {1} after charging, both in %. */
     DAY_BATTERY,
-    /** The battery chip on a day a trip leaves without charging first: {0} the level at its start, {1} at its end. */
+    /**
+     * The battery chip on a day a trip leaves without charging before it or after the return: {0} the level at its
+     * start, {1} at its end, both in %.
+     */
     DAY_BATTERY_TRIP,
     /**
-     * The battery chip on a day a trip leaves: {0} the level at its start, {1} after charging, {2} at its end after
-     * the trip, all in %.
+     * The battery chip on a day a trip leaves after charging, without charging after the return: {0} the level at its
+     * start, {1} at the departure, {2} at its end after the trip, all in %.
      */
     DAY_BATTERY_CHARGE_TRIP,
+    /**
+     * The battery chip on a day a trip leaves without charging first and charges after the return: {0} the level at
+     * its start, {1} the highest after the return, both in %.
+     */
+    DAY_BATTERY_RETURN,
+    /**
+     * The battery chip on a day a trip leaves after charging and charges after the return: {0} the level at its
+     * start, {1} at the departure, {2} the highest after the return, all in %.
+     */
+    DAY_BATTERY_CHARGE_RETURN,
     /** A later window of the same day: {0} its times, {1} the current in A. */
     DAY_LATER_WINDOW,
     /** The later windows of the same day: {0} the windows, separated by commas. */

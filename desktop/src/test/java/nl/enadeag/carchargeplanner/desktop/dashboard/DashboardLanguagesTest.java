@@ -84,7 +84,7 @@ class DashboardLanguagesTest {
 
     /**
      * Every kind of day: one with two windows and grid energy, one that needs the grid charge and that a trip leaves on
-     * after a charge, one without a window;
+     * after a charge and charges after the return, one without a window;
      * and the advice for tomorrow's trip with its longest texts: solar power, a grid charge outside the charging hours
      * and a charging stop; both providers refused their key.
      */
@@ -93,9 +93,10 @@ class DashboardLanguagesTest {
                 List.of(new Window(at(TODAY, 10), at(TODAY, 13), 10, 2.3, 7.3, 0.6),
                         new Window(at(TODAY, 14), at(TODAY, 15), 8, 1.8, 1.8, 0)),
                 new Percent(74), new Percent(80), new Percent(62), 12, sunny(TODAY));
-        // tomorrow a trip leaves after a charge: the longest battery chip and levels
-        var tomorrow = DayPlans.of(TODAY.plusDays(1), new Percent(62), List.of(), new Percent(100), new Percent(100),
-                new Percent(22), 12, sunny(TODAY.plusDays(1)));
+        // tomorrow a trip leaves after a charge and the car charges after the return: the longest battery chip and
+        // levels
+        var tomorrow = DayPlans.departing(TODAY.plusDays(1), new Percent(62), List.of(new Percent(99)), List.of(),
+                new Percent(100), new Percent(100), new Percent(22), 12, sunny(TODAY.plusDays(1)));
         var friday = DayPlans.of(TODAY.plusDays(2), new Percent(22), List.of(), new Percent(22), new Percent(80),
                 new Percent(10), 12, List.of());
         var night = new Window(at(TODAY, 22), at(TODAY.plusDays(1), 4), 16, 3.7, 0, 11.0);
