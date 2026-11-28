@@ -4,6 +4,20 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Android
+
+- A settings file with a value the app cannot plan with no longer loads, with the same bounds as the desktop app: the usable battery from 1 to 1000 kWh, the consumption from 1 to 200 kWh per 100 km, the daily distance at most 1000 km, the charging efficiency from 1 to 100%, the minimum and the maximum charge current from 1 to 80 A, and the voltage from 100 to 400 V. Earlier versions saved any value above 0, so a value outside these makes the settings file unusable, and **Set up again** starts over; Settings now refuses such a value under its field (#410).
+- Settings and set-up name the limit when they refuse a number, as on the desktop ("Type a number from 1 to 1000.") (#317).
+- The trip entry refuses a trip of more than 20,000 km there and back, or one that lasts more than 366 days, and says so (#410).
+- A trip's distance is typed as a whole number, as on the desktop and in Settings: "12.5" and "1.000" are refused with Settings' texts, where "1.000" used to be read as 1 km, and a number too long to read is refused as too far. The distance field has the number keyboard (#543).
+- Trips and one-off away periods in the files beyond the bounds count as damaged entries, as on the desktop (#410).
+- A forecast, a stored forecast or the stored announced windows with a moment far in the past or the future, or a clock that was put back, no longer hangs a planning round or makes it fail, as on the desktop (#408).
+- Screen readers are no longer supported, and what was built only for TalkBack is gone, as on the desktop: the spoken sentences and names, headings, live regions and the focus on a new page's title; the sentence under the solar chart stays, and when the notification card swaps its button the focus goes to the new one (#435).
+
+## [0.8.0] - 2026-11-28
+
+Times follow your system's 12- or 24-hour clock, and Settings, set-up and the trip entry check a number against the same rules as the plan: a value the app cannot plan with is refused under its field with its limit, and a trip's distance is a whole number. A forecast or file with a moment far in the past or future no longer hangs the plan, the battery card no longer shows a level the car never reaches, and a keychain that refuses a change no longer hides your other API keys.
+
 ### Added
 - The desktop app shows times on your system's 12- or 24-hour clock: Windows' time format, GNOME's clock format, and on KDE Plasma and other desktops the time format of your region (`LC_TIME`), such as "7:30 pm" in English and "7:30 p.m." in Dutch, on the dashboard, in the tray icon's tooltip, the notifications and every time field; a change on Windows or GNOME applies at once. Every time field reads either clock: "19:30", "7:30 pm" and "7:30 p.m." are the same time, "7:30" is in the morning and "12 am" is midnight. The chart's time axis keeps its hours 00 to 24, and the settings file keeps 24-hour times (#319).
 
@@ -23,16 +37,6 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Changing a trip so short that the entry shows its distance as 0 no longer refuses the distance when you leave it as it showed: the trip keeps its own distance, as on Android (#390).
 - The battery card no longer shows a level the car never reaches. On a day with a grid charge for a trip on a later day it read, for example, 47 → 100% where the car goes to 35% after the day's driving and to 94% after the charge; it now reads 47 → 94%, as the trip advice and the next day's start say. The same holds for a day with two trips and for a trip day with solar charging after the return (#508).
 - A forecast, a stored forecast or `announced.json` with a moment far in the past or the future, or a clock that was put back, no longer hangs a planning round or makes it fail. A forecast must lie between 1970 and the year 9999 and span at most 16 days, or the provider's answer is refused with that reason; a stored forecast that breaks this is fetched again, and a stored wait outside it is ignored; a plan covers at most 16 days; a provider's time to wait before it is asked again counts for at most a day; and `announced.json` is not used when a window has a power above 96 kW, more energy than that power delivers, more than 16 days, an end before its start or a moment outside 1970 to 9999, and such a window may then be announced again (#408).
-
-### Android
-
-- A settings file with a value the app cannot plan with no longer loads, with the same bounds as the desktop app: the usable battery from 1 to 1000 kWh, the consumption from 1 to 200 kWh per 100 km, the daily distance at most 1000 km, the charging efficiency from 1 to 100%, the minimum and the maximum charge current from 1 to 80 A, and the voltage from 100 to 400 V. Earlier versions saved any value above 0, so a value outside these makes the settings file unusable, and **Set up again** starts over; Settings now refuses such a value under its field (#410).
-- Settings and set-up name the limit when they refuse a number, as on the desktop ("Type a number from 1 to 1000.") (#317).
-- The trip entry refuses a trip of more than 20,000 km there and back, or one that lasts more than 366 days, and says so (#410).
-- A trip's distance is typed as a whole number, as on the desktop and in Settings: "12.5" and "1.000" are refused with Settings' texts, where "1.000" used to be read as 1 km, and a number too long to read is refused as too far. The distance field has the number keyboard (#543).
-- Trips and one-off away periods in the files beyond the bounds count as damaged entries, as on the desktop (#410).
-- A forecast, a stored forecast or the stored announced windows with a moment far in the past or the future, or a clock that was put back, no longer hangs a planning round or makes it fail, as on the desktop (#408).
-- Screen readers are no longer supported, and what was built only for TalkBack is gone, as on the desktop: the spoken sentences and names, headings, live regions and the focus on a new page's title; the sentence under the solar chart stays, and when the notification card swaps its button the focus goes to the new one (#435).
 
 ## [0.7.0] - 2026-11-13
 
@@ -244,7 +248,8 @@ First version, for Linux.
 - Installation with `pipx` as the command `car-charge-planner`.
 - `config.toml` and `state.json` say which file format they are in, so later versions can upgrade them. A config file from a newer version of the app is refused with a clear message, and a newer state file is left alone. A config file written before this release, with a single `[panels]` table, is read as one panel array.
 
-[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Enadeag/car-charge-planner/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Enadeag/car-charge-planner/compare/v0.4.0...v0.5.0
