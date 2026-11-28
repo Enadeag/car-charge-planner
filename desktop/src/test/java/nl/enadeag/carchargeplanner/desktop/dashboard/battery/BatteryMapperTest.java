@@ -111,12 +111,23 @@ class BatteryMapperTest {
     }
 
     /** A departure day's levels in words, as {@code BatteryMapper} gives the bar. */
-    private static String levels(Messages messages, double start, double departure, double after, double end) {
-        var levels = new BatteryLevels(new Percent(start), new Percent(after), List.of(new Percent(departure)),
-                Optional.of(new Percent(end)));
+    private static String levels(Messages messages, BatteryLevels levels) {
         var day = new DashboardDay(new DayName.Tomorrow(TOMORROW), Optional.empty(), List.of(),
                 Optional.of(NoWindowReason.DEPARTURE), levels, Optional.empty(), CHART);
         return new BatteryMapper(messages).map(day, new ChargeLevels(new Percent(30), new Percent(80))).levels();
+    }
+
+    private static String levels(Messages messages, double start, double departure, double after, double end) {
+        return levels(messages, new BatteryLevels(new Percent(start), new Percent(after),
+                List.of(new Percent(departure)), Optional.of(new Percent(end))));
+    }
+
+    @Test
+    void withTwoTripsTheLevelsGiveTheFirstDeparture() {
+        var levels = new BatteryLevels(new Percent(50), new Percent(80), List.of(new Percent(60), new Percent(80)),
+                Optional.of(new Percent(59)));
+
+        assertThat(levels(ENGLISH, levels)).isEqualTo("50 → 60%, 59% after the trip");
     }
 
     @ParameterizedTest

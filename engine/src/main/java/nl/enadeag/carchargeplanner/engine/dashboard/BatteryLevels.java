@@ -58,8 +58,8 @@ public record BatteryLevels(Percent startPct, Percent afterPct, List<Percent> de
 
     /**
      * Whether the day charges after the return: its highest level is above every departure level in whole percent.
-     * Charging between two trips counts as after the return; a charge after the return that stays at or under a
-     * departure level does not show in the levels, so it does not count.
+     * Charging between two trips counts as after the return, and so does a later trip's grid charge that evening, but
+     * only where it lifts the highest level above every departure level.
      *
      * @return true when the highest level is above every departure level; false otherwise, and on a day no trip the
      *     plan advises on leaves
