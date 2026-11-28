@@ -30,7 +30,8 @@ class SourceFigureTest {
 
         assertThat(SourceFigure.of(day).map { it.source to it }).containsExactly(
             EnergySource.SOLAR to SourceFigure.SolarShare(day.main().orElseThrow().window().solarSharePct()),
-            EnergySource.CAR to SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(50.0), Optional.empty())),
+            EnergySource.CAR to
+                SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(50.0), listOf(), Optional.empty())),
             EnergySource.GRID to SourceFigure.FromGrid(0.69))
     }
 
@@ -43,12 +44,12 @@ class SourceFigureTest {
 
     /** A day without a charge window, for a reason. */
     private fun withoutWindow(why: NoWindowReason) = DashboardDay(DayName.Tomorrow(today.plusDays(1)), Optional.empty(),
-        listOf(), Optional.of(why), BatteryLevels(Percent(40.0), Percent(40.0), Optional.empty()), Optional.empty(),
-        day(listOf()).chart())
+        listOf(), Optional.of(why), BatteryLevels(Percent(40.0), Percent(40.0), listOf(), Optional.empty()),
+        Optional.empty(), day(listOf()).chart())
 
     @Test
     fun aDayWithoutAWindowForTheGridAdviceADepartureATripOrAGridChargeThatStartsShowsOnlyItsBattery() {
-        val battery = SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(40.0), Optional.empty()))
+        val battery = SourceFigure.Battery(BatteryLevels(Percent(40.0), Percent(40.0), listOf(), Optional.empty()))
 
         for (why in listOf(NoWindowReason.GRID, NoWindowReason.DEPARTURE, NoWindowReason.AWAY,
             NoWindowReason.GRID_CHARGE_STARTS)) {

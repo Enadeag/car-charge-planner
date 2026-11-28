@@ -243,11 +243,17 @@
   <!-- %1$s the battery level at the start of the day; %2$s after its charging; both written already, such as 50 -->
   <string name="day_battery">Battery %1$s → %2$s%%</string>
   <!-- on the day a trip leaves: %1$s the battery level at the start of the day; %2$s at its end, after the trip;
-       both written already. Without a charge before the trip -->
+       both written already. Without a charge before the trip or after the return -->
   <string name="day_battery_trip">Battery %1$s → %2$s%% after the trip</string>
-  <!-- with a charge before the trip: %1$s the level at the start of the day; %2$s after its charging; %3$s at its
-       end, after the trip; all written already -->
+  <!-- with a charge before the trip: %1$s the level at the start of the day; %2$s at the departure; %3$s at its
+       end, after the trip; all written already. Without a charge after the return -->
   <string name="day_battery_charge_trip">Battery %1$s → %2$s%%, %3$s%% after the trip</string>
+  <!-- with a charge after the return only: %1$s the level at the start of the day, which the car leaves with; %2$s
+       the highest level after the return; both written already -->
+  <string name="day_battery_return">Battery %1$s%%, %2$s%% after the return</string>
+  <!-- with a charge before the trip and after the return: %1$s the level at the start of the day; %2$s at the
+       departure; %3$s the highest level after the return; all written already -->
+  <string name="day_battery_charge_return">Battery %1$s → %2$s%%, %3$s%% after the return</string>
   <!-- a day's note, after its later windows: why a day has no charge window; "Today" names today's tab, day_today -->
   <string name="day_grid_why">Solar power is not enough to stay above the minimum: see the grid advice on Today.</string>
   <!-- why a day without a charge window has none, on a day the car could use a charge -->
@@ -339,10 +345,17 @@
   <string name="battery_heading">Car battery</string>
   <string name="battery_levels">%1$s → %2$s%%</string>
   <!-- on the day a trip leaves: %1$s the level at the start of the day; %2$s at its end, after the trip, without a
-       charge before it -->
+       charge before it or after the return -->
   <string name="battery_levels_trip">%1$s → %2$s%% after the trip</string>
-  <!-- with a charge before the trip: %1$s the level at the start; %2$s after charging; %3$s at the end of the day -->
+  <!-- with a charge before the trip: %1$s the level at the start; %2$s at the departure; %3$s at the end of the day.
+       Without a charge after the return -->
   <string name="battery_levels_charge_trip">%1$s → %2$s%%, %3$s%% after the trip</string>
+  <!-- with a charge after the return only: %1$s the level at the start, which the car leaves with; %2$s the highest
+       level after the return -->
+  <string name="battery_levels_return">%1$s%%, %2$s%% after the return</string>
+  <!-- with a charge before the trip and after the return: %1$s the level at the start; %2$s at the departure; %3$s
+       the highest level after the return -->
+  <string name="battery_levels_charge_return">%1$s → %2$s%%, %3$s%% after the return</string>
   <!-- the marks on the battery bar; %1$s the minimum or target charge level, written already -->
   <string name="battery_minimum">min %1$s%%</string>
   <string name="battery_target">target %1$s%%</string>

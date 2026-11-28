@@ -65,7 +65,7 @@ internal object Plans {
 
     /**
      * A plan made at a moment, with one window list per day from that moment's day on; each day starts at 40% and
-     * ends its charging 10 points higher per window.
+     * ends its charging 10 points higher per window, and a trip with advice leaves at that level.
      *
      * @param madeAt when it was made, in the home's time zone
      * @param days each day's windows, today first
@@ -90,8 +90,9 @@ internal object Plans {
         val plans = days.mapIndexed { index, windows ->
             val after = Percent(40.0 + 10.0 * windows.size)
             val date = madeAt.toLocalDate().plusDays(index.toLong())
-            DayPlan(date, level, windows, after, Percent(chargeToPct(date)), endPct(date)?.let { Percent(it) } ?: after,
-                0.0, 0.0, forecast(date))
+            val departures = tripAdvice.filter { it.trip().firstDay(madeAt.zone) == date }.map { after }
+            DayPlan(date, level, departures, windows, after, Percent(chargeToPct(date)),
+                endPct(date)?.let { Percent(it) } ?: after, 0.0, 0.0, forecast(date))
         }
         return Outlook.Planned(madeAt.toInstant(), madeAt.zone, plans, level, assumed, Optional.ofNullable(gridAdvice),
             tripAdvice, source, baseloadKw, Percent(minimum), Percent(target))
